@@ -30,9 +30,9 @@ drafts, not this session's discussion.
 
 **§12.2's mandated prohibition rows are now four, not two.** Two are mandatory in every role;
 two are conditional on a closed list. Read the section as it stands. Batch 1's seven role bodies
-have been revised to match and are a usable worked example of the current shape — but they are
-not yet committed and not yet through review, so treat them as an illustration of form, never as
-authority for content. §12.2 is the authority.
+have been revised to match and are a usable worked example of the current shape — they are
+committed at `9a63e19` and `6c3c60c` but not yet through review, so treat them as an illustration
+of form, never as authority for content. §12.2 is the authority.
 
 **The dossier's provenance notation is corrected and committed.** Every citation now uses the
 `donor@fullsha:path` form the validator parses; 119 occurrences across 35 distinct source strings,
@@ -75,7 +75,22 @@ reaching for a neighbour's, that is a finding about the seat, and it goes in the
 
 ## Review
 
-An independent reviewer follows, reading the produced files, the dossier and `AUTHORING.md` —
-never your narrative. At most two fix cycles; anything open after the second is reported with its
-evidence. `ak validate` gates the commit, and an open item in your report is a normal outcome.
-A stub written to make the report look clean is not.
+§10 governs the review — who the reviewer is, what it is given, what it must record, and what
+happens when the cycle limit is reached. Read it there. This brief states none of it, and the
+reason is worth your attention rather than your trust.
+
+The previous version of this section summarised §10 in four lines and narrowed it three times.
+It listed three reviewer inputs where §10 lists four, dropping the prior findings that §10 calls
+*"not optional and not the writer's to withhold"*. It reduced the cycle limit to "report what is
+open", dropping the explicit blocked-or-replan decision and the route that makes a twice-failing
+batch a defect in **this brief** rather than a verdict on your work. And it omitted the rule that
+a reviewer records the revision it read.
+
+Each clause that survived was the one a reader would have supplied unprompted. Each clause that
+vanished was the one the rule exists to pin down. The first would have re-imposed on your reviewer
+exactly the amnesia that cost batch 1 a cycle, in a brief written after that cycle was paid for.
+
+That is what a four-line summary of a governing section costs, and it is why the rule at the top of
+this brief — that it restates nothing — is load-bearing rather than stylistic. Apply the same
+suspicion to your own bodies: §12.2 will tempt you to paraphrase a neighbouring seat's boundary
+instead of citing it, and the paraphrase will read as complete.
