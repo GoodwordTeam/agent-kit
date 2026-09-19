@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { checkInvocation, extractSkillReferences } from "../src/validation/invocation.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
@@ -34,17 +36,23 @@ function ctxFor(files: Record<string, string>) {
 }
 
 const head = (n: string) => `---\nname: ${n}\ndescription: d\n---\n`;
+// The key names here are the authored policy's: `operations`, with `exposed_by`
+// on each entry. This fixture used to say `phase_operations` and `behind`,
+// which `policies/invocation.yaml` has never used -- so the loader read an
+// empty operation table from the real file while every test here passed.
 const POLICY = `schema_version: 1
-phase_operations:
+policy: invocation
+operations:
   - id: compound.capture
-    behind: compound
+    exposed_by: compound
     authority: delegated-grant
-    grants: [publish-lesson]
+    grant:
+      covers: publish-lesson
   - id: review.delta
-    behind: super-review
+    exposed_by: super-review
     authority: active-review-run
   - id: ship.prepare
-    behind: ship
+    exposed_by: ship
     authority: explicit
 `;
 
@@ -200,5 +208,38 @@ describe("packager enforcement of the law", () => {
     });
     expect(checkInvocation(ctx).filter((i) => i.rule === "invocation.declaration-conflict")).toEqual([]);
     expect(checkInvocation(withM).some((i) => i.rule === "invocation.declaration-conflict")).toBe(true);
+  });
+
+  test("a declared operation resolves, so a controller reference is not reported", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/scout/SKILL.md": `${head("scout")}Run \`review.delta\` under a grant.\n`,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/compound/SKILL.md": head("compound"),
+    });
+    const issues = checkInvocation(ctx);
+    expect(issues.filter((i) => i.rule === "invocation.undeclared-operation")).toEqual([]);
+    // And the operation's authority is read, not defaulted: `active-review-run`
+    // is delegable, so the side-door check stays quiet too.
+    expect(issues.filter((i) => i.rule === "invocation.operation-not-delegated")).toEqual([]);
+  });
+
+  test("the loader reads the operation table the authored policy actually writes", () => {
+    // Deliberately reads `policies/invocation.yaml` from the repository rather
+    // than a fixture, because a fixture is what hid this: the loader looked for
+    // `phase_operations` and the authored file has always said `operations`, so
+    // the table came back empty and every operation reference in the tree would
+    // have been reported as undeclared the moment a skill body cited one.
+    //
+    // This test is coupled to the real file on purpose. If the policy renames
+    // that key, the loader has to be updated in the same commit.
+    const real = readFileSync(join(import.meta.dir, "..", "policies", "invocation.yaml"), "utf8");
+    const ctx = ctxFor({
+      "policies/invocation.yaml": real,
+      "skills/scout/SKILL.md": `${head("scout")}Run \`review.delta\` under a grant.\n`,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/compound/SKILL.md": head("compound"),
+    });
+    expect(checkInvocation(ctx).filter((i) => i.rule === "invocation.undeclared-operation")).toEqual([]);
   });
 });

@@ -57,9 +57,15 @@ export function extractSkillReferences(text: string, namespace: string): SkillRe
   return out;
 }
 
+/**
+ * Only what the graph check consumes. `exposed_by` is deliberately not carried:
+ * `checkPolicies` already resolves it against the catalog, and the field this
+ * replaced (`behind`) was written by the loader and read by nothing -- a field
+ * no caller consumes is a field no test misses, which is how the key it was
+ * parsed from stayed wrong.
+ */
 interface PhaseOperation {
   id: string;
-  behind?: string;
   authority: string;
 }
 
@@ -84,7 +90,13 @@ function loadInvocationPolicy(root: string): InvocationPolicy {
 
   const record =
     parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
-  const raw = record["phase_operations"] ?? record["phase-operations"];
+  // `operations`, which is what `policies/invocation.yaml` writes and what
+  // `checkPolicies` already validates. This read used to be `phase_operations`,
+  // a key the authored policy has never had: the table came back empty, and
+  // because the file still parsed, `available` stayed true -- so the run looked
+  // healthy while every phase-operation reference in the tree would have been
+  // reported as undeclared, blaming the policy for the loader's key.
+  const raw = record["operations"];
   const operations = new Map<string, PhaseOperation>();
   if (Array.isArray(raw)) {
     for (const item of raw) {
@@ -95,7 +107,6 @@ function loadInvocationPolicy(root: string): InvocationPolicy {
         id: entry["id"],
         authority: typeof entry["authority"] === "string" ? entry["authority"] : "",
       };
-      if (typeof entry["behind"] === "string") op.behind = entry["behind"];
       operations.set(op.id, op);
     }
   }
