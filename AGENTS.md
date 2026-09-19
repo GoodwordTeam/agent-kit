@@ -52,9 +52,12 @@ which the law forbids. The resolution (arch §7.1, §11) is **not** an exception
 | Public entrypoint | A human, explicitly. For a U skill only the slash command counts | `/ak:super-review` |
 | Phase operation | A delegated controller, **only** under a runner-validated grant | `review.delta` |
 
-A human invokes the entrypoint. A controller invokes the phase operation. Where a host cannot
-validate a grant, the skill **stops for explicit invocation** rather than reproducing a forbidden
-command's effect through a side door.
+A human invokes the entrypoint. A controller invokes the phase operation, and only when the runner
+validates a grant that covers it. **Ordinary workers cannot manufacture a grant or start a new gated
+phase**, and public wrappers and the supervisor pair run the same protocol, so there is no second
+pipeline. Where a host cannot validate a grant, the skill **stops for explicit invocation** rather
+than reproducing a forbidden command's effect through a side door (ruling
+`entrypoint-phase-operation-split`).
 
 `authority` values live in `schemas/common.schema.json#/$defs/authority`:
 `explicit`, `explicit-or-delegated`, `delegated-grant`, `active-review-run`, `model`.
@@ -73,8 +76,13 @@ was replaced with a role- or evidence-based equivalent:
 | Named-model implementer seating | An `implementer` role; the runner binds who fills it |
 | "Cross-family on purpose" supervisor pairing | Two `supervisor` seats declared **independent**; independence is a runner-enforced constraint |
 | "Fail closed on low confidence" | "Fail closed when required evidence is absent" |
-| "Do not put <model> on security" | The security seat may not be filled by the implementer or the spec approver |
+| "Do not put <model> on security" | The security seat may not be filled by the implementer of the change under review nor by whoever approved its spec (ruling `missing-supervisor-never-implementer`) |
 | In-skill cost/token caps | Budgets passed in by the runner; the repo enforces only the cap it was handed |
+
+What the right-hand column cannot carry, because it is a translation table and not the rule: a seat
+that cannot be filled independently is **unavailable**, and unavailability blocks the checkpoint. It
+is never backfilled — not by the implementer, not by the author, not by the spec approver, and not by
+a seat already sitting on the panel (ruling `missing-supervisor-never-implementer`).
 
 `ak validate` fails on any denylist hit outside `provenance/` and `research/sources/`, which quote the
 sources verbatim by design. The non-routing concepts arch § tells us to keep — per-finding solution
@@ -133,9 +141,12 @@ Arch §2.6. These are selections, not gaps — re-adding one is a design change,
 
 ## Numeric heuristics are guidance, not gates
 
-The ~100-line PR target and the 80/15/5 test pyramid are configurable starting points (arch §3, §11).
-Real constraints are set per project, and exceptions are **recorded** rather than forcing artificial
-file splits or meaningless tests.
+The ~100-line PR target and the 80/15/5 test pyramid are configurable starting points, established
+per project and carried in the project record. **Neither is validated or enforced here, and neither
+is grounds for a finding on its own** — that clause is the whole point, and it is the one a reader
+supplies wrongly if it is left out. Real constraints are set per project, and exceptions are
+**recorded** rather than forcing artificial file splits or meaningless tests (ruling
+`numeric-heuristics-are-guidance`; arch §3, §11).
 
 ## Before you commit
 

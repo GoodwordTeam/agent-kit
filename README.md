@@ -99,14 +99,20 @@ content denylist (model names, pricing, effort ladders, placeholders) outside `p
   does not inherit the old plan's approval; a changed patch does not inherit stale receipts.
 - **Findings are P0–P3.** Critical/Important/Nit/FYI are presentation labels, not a replacement.
   Synthesis may only *worsen* a grade. Low-confidence security findings are adjudicated, never
-  silently filtered.
-- **Only independent verification closes a finding.** Reviewer or classifier confidence is advisory.
-- **Delta review is bounded by affected behavior, not changed lines.** A serious newly discovered
-  issue in an untouched caller stays reportable.
-- **"Fresh reviewer" means independent of the author**, not amnesiac between cycles.
-- **Two fix cycles, then stop.** Anything still open is reported, not looped.
-- **Numeric heuristics are guidance.** The ~100-line PR target and 80/15/5 pyramid are configurable,
-  not gates.
+  silently filtered (ruling `low-confidence-security-adjudicated`).
+- **Only independent verification closes a finding.** Reviewer or classifier confidence is advisory
+  (ruling `closure-requires-independent-verification`).
+- **Delta review is bounded by affected behavior, not changed lines.** A new finding needs novelty
+  evidence — what changed or regressed that makes it new — and unrelated low-priority discovery does
+  not restart the loop. Within that bound, a serious newly discovered issue in an untouched affected
+  caller stays reportable (ruling `delta-scope-affected-behavior`).
+- **"Fresh reviewer" means independent of the author**, not amnesiac between cycles (ruling
+  `reviewer-continuity-not-amnesia`).
+- **Two fix cycles, then stop.** Anything still open is reported, not looped (ruling
+  `two-fix-cycles-then-stop`).
+- **Numeric heuristics are guidance.** The ~100-line PR target and 80/15/5 pyramid are configurable
+  starting points, not gates, and neither is grounds for a finding on its own (ruling
+  `numeric-heuristics-are-guidance`).
 
 ## Provenance
 
