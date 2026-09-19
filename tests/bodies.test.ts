@@ -627,14 +627,39 @@ describe("every counterpart the table declares is named (AUTHORING 12.2)", () =>
     expect(issue?.file).toBe("AUTHORING.md");
   });
 
-  test("a one-way family is a warning naming both, because a reader arrives from either side", () => {
+  test("a one-way family is an error naming both, because a reader arrives from either side", () => {
     const ctx = panelTree("code-review/security", "- **`doc-review/security-lens`.** Reads a plan.\n", {
       "AUTHORING.md": AUTHORING,
     }, OTHER_PANEL_SEATS);
     const issue = checkBodyShapes(ctx).find((i) => i.rule === "role.counterpart-table-asymmetric");
-    expect(issue?.severity).toBe("warning");
+    expect(issue?.severity).toBe("error");
     expect(issue?.message).toContain("code-review/security");
     expect(issue?.message).toContain("doc-review/security-lens");
+  });
+
+  test("the table is checked with no role body on disk at all, because the table is the specification", () => {
+    // This one is the whole point: the asymmetry that shipped was introduced by
+    // editing the table, with no role edit anywhere. A check that only ran when
+    // a body moved would have passed it.
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n${OTHER_PANEL_SEATS}`,
+      "AUTHORING.md": AUTHORING,
+    });
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-table-asymmetric");
+    expect(issue?.file).toBe("AUTHORING.md");
+  });
+
+  test("the coverage of the census is reported, since a symmetry guard cannot prove completeness", () => {
+    const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
+      "AUTHORING.md": authoringWith([
+        ["code-review/security", "`doc-review/security-lens`"],
+        ["doc-review/security-lens", "`code-review/security`"],
+      ]),
+    }, OTHER_PANEL_SEATS);
+    const note = checkBodyShapes(ctx).find((i) => i.rule === "role.counterpart-census-coverage");
+    expect(note?.severity).toBe("note");
+    expect(note?.message).toContain("2");
+    expect(note?.message).toContain("3");
   });
 
   test("the families parse out of AUTHORING.md rather than being a second copy in the checker", () => {

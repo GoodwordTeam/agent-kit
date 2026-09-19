@@ -380,3 +380,91 @@ describe("universal is a claim binds has to keep", () => {
     expect(loadRulings(root).rows[0]?.universal).toEqual(["roles"]);
   });
 });
+
+/**
+ * AUTHORING.md §12.3 lets a doctrine file live loose in a section tree with no
+ * `catalog.yaml` entry. That is a deliberate contract choice, and its cost is
+ * structural: `binds` is keyed by catalog kind and id, so no ruling could name
+ * such a file and no `binds`-derived check could reach it. The gap was not that
+ * one file was missed -- it is that reachability was implicit, so a count of
+ * bound files read clean over a space nothing had examined.
+ */
+describe("a file with no catalog entry is reachable from binds (AUTHORING 12.3)", () => {
+  const DOCTRINE = "# Invocation authority\n\nWhat several protocols lean on.\n";
+
+  test("a loose doctrine file no ruling binds is reported, not silently skipped", () => {
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(ROW("one-thing")),
+      "protocols/invocation-authority.md": DOCTRINE,
+    });
+    const issue = checkRulings(ctx).find((i) => i.rule === "rulings.doctrine-unreachable");
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.file).toBe("protocols/invocation-authority.md");
+  });
+
+  test("the property is having no catalog entry, not being one known file", () => {
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(ROW("one-thing")),
+      "references/house-style.md": DOCTRINE,
+    });
+    const found = checkRulings(ctx)
+      .filter((i) => i.rule === "rulings.doctrine-unreachable")
+      .map((i) => i.file);
+    expect(found).toEqual(["references/house-style.md"]);
+  });
+
+  test("material inside a declared entry's directory is already reachable through that entry", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}protocols:\n  - id: alpha\n    status: authored\n`,
+      "policies/resolved-conflicts.yaml": rulings(ROW("one-thing")),
+      "protocols/alpha/PROTOCOL.md": DOCTRINE,
+      "protocols/alpha/references/long-material.md": DOCTRINE,
+    });
+    expect(checkRulings(ctx).filter((i) => i.rule === "rulings.doctrine-unreachable")).toEqual([]);
+  });
+
+  test("a binds group names a loose file by path, which is what closes the hole", () => {
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(
+        ROW("one-thing", "    binds:\n      doctrine: [protocols/invocation-authority.md]\n"),
+      ),
+      "protocols/invocation-authority.md": `${DOCTRINE}\nSee ruling \`one-thing\`.\n`,
+    });
+    const issues = checkRulings(ctx);
+    expect(issues.filter((i) => i.rule === "rulings.doctrine-unreachable")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.unknown-binds-kind")).toEqual([]);
+  });
+
+  test("a bound loose file that cites nothing fails the same way a bound entry does", () => {
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(
+        ROW("one-thing", "    binds:\n      doctrine: [protocols/invocation-authority.md]\n"),
+      ),
+      "protocols/invocation-authority.md": DOCTRINE,
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.binding-not-cited");
+    expect(issue?.file).toBe("protocols/invocation-authority.md");
+  });
+
+  test("binding a path that is not a loose doctrine file is an error, so the kind cannot be a wildcard", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}protocols:\n  - id: alpha\n    status: authored\n`,
+      "policies/resolved-conflicts.yaml": rulings(
+        ROW("one-thing", "    binds:\n      doctrine: [protocols/alpha/PROTOCOL.md]\n"),
+      ),
+      "protocols/alpha/PROTOCOL.md": DOCTRINE,
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.binds-unknown-doctrine-file");
+    expect(issue?.message).toContain("protocols/alpha/PROTOCOL.md");
+  });
+
+  test("doctrine is not a catalog section, so universal: [doctrine] is still refused", () => {
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(
+        ROW("one-thing", "    universal: [doctrine]\n    binds:\n      doctrine: [protocols/invocation-authority.md]\n"),
+      ),
+      "protocols/invocation-authority.md": `${DOCTRINE}\nSee ruling \`one-thing\`.\n`,
+    });
+    expect(errors(checkRulings(ctx)).some((i) => i.rule === "rulings.unknown-universal-kind")).toBe(true);
+  });
+});

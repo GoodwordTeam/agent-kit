@@ -23,7 +23,15 @@
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
-import { ALL_SECTIONS, entryBodyPath, entryFilePath, isDirectorySection, type Section } from "../catalog/layout.ts";
+import {
+  ALL_SECTIONS,
+  DIRECTORY_SECTIONS,
+  entryBodyPath,
+  entryDir,
+  entryFilePath,
+  isDirectorySection,
+  type Section,
+} from "../catalog/layout.ts";
 import { readTextIfPresent, walkFiles } from "../util/fs.ts";
 import { citedRulings } from "./bodies.ts";
 import type { CheckContext } from "./context.ts";
@@ -52,6 +60,8 @@ export interface RulingRow {
    * says the enumeration is the whole section rather than a selection from it.
    */
   readonly universal: ReadonlyArray<string>;
+  /** The `ruling:` prose itself. The restatement scan measures bodies against it. */
+  readonly text: string;
   readonly scenario: number | null;
 }
 
@@ -179,7 +189,9 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
       );
     }
 
-    rows.push({ id, binds, universal, scenario });
+    const text = typeof row["ruling"] === "string" ? row["ruling"] : "";
+
+    rows.push({ id, binds, universal, text, scenario });
   }
 
   const declared = doc["rows"];
@@ -326,12 +338,70 @@ function checkCitations(ctx: CheckContext, known: ReadonlySet<string>): Issue[] 
   return issues;
 }
 
+/**
+ * The `binds` key for a §12.3 doctrine file, which has no catalog entry and so
+ * has no kind/id pair to be named by.
+ *
+ * `binds` is otherwise keyed by catalog section, and that is the whole reason
+ * the gap existed: a loose file is not addressable, so no row could name it and
+ * every `binds`-derived count excluded it without saying so. Giving it a kind
+ * whose ids are repo-relative paths makes the binding writable; the reachability
+ * report below is what makes the unwritten ones visible.
+ */
+const DOCTRINE_KIND = "doctrine";
+
+/**
+ * Markdown in a section tree that belongs to no catalog entry.
+ *
+ * The property is structural -- no entry claims the path -- not a list of known
+ * files. Material *inside* an entry's directory is reachable through that entry
+ * and is not loose; only a file that no entry's directory contains is.
+ */
+function looseDoctrineFiles(ctx: CheckContext): string[] {
+  const found: string[] = [];
+  for (const section of DIRECTORY_SECTIONS) {
+    const claimed = ctx.catalog.bySection(section).map((entry) => `${entryDir(section, entry.id)}/`);
+    for (const file of walkFiles(ctx.root, section)) {
+      if (!file.endsWith(".md")) continue;
+      if (claimed.some((dir) => file.startsWith(dir))) continue;
+      found.push(file);
+    }
+  }
+  return found.sort();
+}
+
+/**
+ * Reachability as a reported number rather than an implicit one.
+ *
+ * AUTHORING.md §12.3 makes §6 the writer's obligation alone for these files. It
+ * can stay that way -- what cannot stay is the tool knowing the file exists,
+ * excluding it from every binding check, and printing a clean count. A warning
+ * here says which files no row reaches, so the exclusion is something a reader
+ * can see from inside `ak validate` instead of deducing from the contract.
+ */
+function checkDoctrineReachability(ctx: CheckContext, rows: ReadonlyArray<RulingRow>): Issue[] {
+  const bound = new Set(rows.flatMap((row) => row.binds[DOCTRINE_KIND] ?? []));
+  return looseDoctrineFiles(ctx)
+    .filter((file) => !bound.has(file))
+    .map((file) =>
+      warning(
+        "rulings.doctrine-unreachable",
+        file,
+        `This file has no catalog.yaml entry, so no ruling's binds block names it and no binds-derived check reaches it (AUTHORING.md §12.3). Bind it with \`doctrine: [${file}]\` if a ruling governs it; leaving it unbound is allowed, but it is then excluded from every citation count rather than passing them.`,
+      ),
+    );
+}
+
 function checkBinds(ctx: CheckContext, rows: ReadonlyArray<RulingRow>): Issue[] {
   const issues: Issue[] = [];
   const { root, catalog } = ctx;
 
   for (const row of rows) {
     for (const [kind, ids] of Object.entries(row.binds)) {
+      if (kind === DOCTRINE_KIND) {
+        issues.push(...checkDoctrineBinding(ctx, row, ids));
+        continue;
+      }
       if (!isSection(kind)) {
         issues.push(error("rulings.unknown-binds-kind", RULINGS_FILE, `${row.id} binds a kind '${kind}', which is not a catalog section`));
         continue;
@@ -367,6 +437,42 @@ function checkBinds(ctx: CheckContext, rows: ReadonlyArray<RulingRow>): Issue[] 
         );
       }
     }
+  }
+
+  return issues;
+}
+
+/**
+ * A doctrine binding names a path, so what it can name is checked: the path has
+ * to be a file that is actually loose. Allowing it to name an entry's own body
+ * would make `doctrine:` a second spelling for a binding the kind/id form
+ * already covers, and the two would drift.
+ */
+function checkDoctrineBinding(ctx: CheckContext, row: RulingRow, paths: ReadonlyArray<string>): Issue[] {
+  const issues: Issue[] = [];
+  const loose = new Set(looseDoctrineFiles(ctx));
+
+  for (const path of paths) {
+    if (!loose.has(path)) {
+      issues.push(
+        error(
+          "rulings.binds-unknown-doctrine-file",
+          RULINGS_FILE,
+          `${row.id} binds doctrine/${path}, which is not a loose doctrine file. The doctrine kind names markdown that no catalog.yaml entry claims; an entry's own files are bound by kind and id.`,
+        ),
+      );
+      continue;
+    }
+    const text = readTextIfPresent(join(ctx.root, path));
+    if (text === null) continue;
+    if (text.includes(row.id)) continue;
+    issues.push(
+      error(
+        "rulings.binding-not-cited",
+        path,
+        `ruling \`${row.id}\` binds this file but it cites the ruling nowhere. The row already decided this file touches the conflict (AUTHORING.md §6).`,
+      ),
+    );
   }
 
   return issues;
@@ -429,5 +535,11 @@ export function checkRulings(ctx: CheckContext): Issue[] {
   if (!present) return issues;
 
   const known = new Set(rows.map((r) => r.id));
-  return [...issues, ...checkCitations(ctx, known), ...checkBinds(ctx, rows), ...checkUniversal(ctx, rows)];
+  return [
+    ...issues,
+    ...checkCitations(ctx, known),
+    ...checkBinds(ctx, rows),
+    ...checkUniversal(ctx, rows),
+    ...checkDoctrineReachability(ctx, rows),
+  ];
 }

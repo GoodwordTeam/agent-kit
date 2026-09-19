@@ -19,7 +19,7 @@ import { entryDir, preferredBodyFile, type DirectorySection } from "../catalog/l
 import { exists, isDir, readTextIfPresent } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import type { CheckContext } from "./context.ts";
-import { error, warning, type Issue } from "./types.ts";
+import { error, note, type Issue } from "./types.ts";
 
 /** §3's ten headings with `## Authority` replaced by `## Invoked by` (§12.1). */
 export const PROTOCOL_SECTIONS: ReadonlyArray<string> = [
@@ -675,7 +675,7 @@ function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, 
     for (const counterpart of counterparts) {
       if ((families.get(counterpart) ?? []).includes(seat)) continue;
       issues.push(
-        warning(
+        error(
           "role.counterpart-table-asymmetric",
           AUTHORING_FILE,
           `§12.2's table has ${seat} naming ${counterpart}, but not the reverse. A reader with the wrong file open arrives from either side, so ${counterpart} is not told to name ${seat}.`,
@@ -683,6 +683,21 @@ function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, 
       );
     }
   }
+
+  // Symmetry is a property of the rows that are there. It says nothing about the
+  // rows that are not, and the table is a hand-maintained census of a set the
+  // catalog also holds -- the same shape as `universal:` beside `binds`, and as
+  // `count:` beside an entrypoint list. Neither this check nor any other can
+  // tell a family that was considered and rejected from one nobody looked for,
+  // so the honest thing is to report the coverage rather than imply the census
+  // is complete by staying silent.
+  issues.push(
+    note(
+      "role.counterpart-census-coverage",
+      AUTHORING_FILE,
+      `§12.2's counterpart table covers ${families.size} of ${roles.size} catalog roles. Symmetry and seat existence are checked; completeness is not checkable, so an undeclared family is invisible here and stays a handback obligation on the batch that authors the seats.`,
+    ),
+  );
 
   return issues;
 }
