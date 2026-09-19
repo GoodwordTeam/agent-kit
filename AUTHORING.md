@@ -739,10 +739,19 @@ that exist today:
 | Seat | Counterpart at another layer |
 |---|---|
 | `code-review/security` | `doc-review/security-lens` |
+| `doc-review/security-lens` | `code-review/security` |
 | `reviewer-standards` | `code-review/project-standards` |
+| `code-review/project-standards` | `reviewer-standards` |
 | `code-review/adversarial` | `doc-review/adversarial-document`, `plan-review/critic` |
 | `doc-review/adversarial-document` | `code-review/adversarial`, `plan-review/critic` |
 | `plan-review/critic` | `code-review/adversarial`, `doc-review/adversarial-document` |
+
+**Every pairing is stated in both directions, and a new pair is added as two rows or it is not
+added.** A reader arrives from whichever file they happen to have open, so a one-directional pairing
+is a coin flip on whether the boundary is stated at all — and the direction that gets omitted is the
+one nobody was holding when the row was written. A family of three is three rows naming two each.
+This table had the defect it exists to prevent: the `security` and `standards` pairs were entered one
+way round, which left the reverse naming missing from the two seats that had not been authored yet.
 
 The adversarial family is three seats, not a pair: each of the three names the other two. The
 standards pair needs the most care, because those two seats carry conditional `## Never` row 4 in
@@ -859,6 +868,20 @@ not the fix.**
 
 A loose doctrine file carries shared doctrine that several protocols cite. It has no required section
 list, no frontmatter and no sidecar. It is prose, and §8 governs it.
+
+**§6's citation rule binds it too, and nothing checks that it does.** A loose file has no catalog
+entry, so no ruling's `binds` block can name it and no `binds`-derived check can reach it. That makes
+it the one place in the package where a restated rule is invisible to the tooling — and restating is
+exactly what a doctrine file is for, since its whole job is to say something several protocols lean
+on. So the obligation is the writer's alone: **where a doctrine file states a rule that a ruling
+already decides, it cites the ruling, and it states the rule at the ruling's full width.**
+
+The second half is the one that fails quietly. A restatement that drops a clause reads as complete,
+and a reader with no citation cannot discover that it is not — there is no link back to check
+against. The clauses that get dropped are the non-obvious actors and the edge conditions, which are
+the clauses the ruling exists to pin down; the obvious half of a rule was never the part in dispute.
+When a sentence would be awkward at full width, cite the ruling and defer to it rather than shipping
+a narrower version of it.
 
 ### 12.4 Before handing a protocol or a role back
 
