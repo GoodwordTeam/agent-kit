@@ -101,6 +101,60 @@ needs a guarantee one of those seats makes, cite the seat, do not restate the gu
 resolution and it is the one your body follows. This is the one input on the list that is neither
 contract nor dossier, and it exists because the two design sources disagree.
 
+## Which bodies must link which packs, and the one path spelling that decides it
+
+Nothing in this tree references `references/` today: not one of the thirty-six bodies, and not the
+loose doctrine file either. Zero mentions. This batch writes the first ones, so the conventions
+below have no precedent to copy, and getting them wrong fails in two opposite directions — one of
+which passes validation.
+
+Three links must exist when you hand this batch back:
+
+| From | To |
+|---|---|
+| `super-align` | `references/codebase-design/REFERENCE.md` |
+| `super-align` | `references/domain-modeling/REFERENCE.md` |
+| `super-bound` | `references/domain-modeling/REFERENCE.md` |
+
+That is `catalog.yaml`'s `loaded_by` read in the only direction that makes it mean anything. A pack
+whose declared loader never loads it is a pack nobody reaches, and `loaded_by` is §12.5's *defining*
+property of the shape — so an unlinked pack is not a missing nicety, it is a reference pack that
+isn't one.
+
+**Do not expect the validator to tell you when a link is missing.** `loaded_by` has always been
+enforced in the direction that catches a pack naming a loader that does not exist; the reciprocal —
+a loader that never links its pack — is a check I have commissioned and whose state when you read
+this I cannot predict. Find out by running it rather than by trusting this paragraph. Either way it
+changes nothing about what you owe: write the three links because they are correct, not because
+something might catch you. A rule you satisfy only when watched is one you will drop in batch 9,
+when the watcher is looking somewhere else.
+
+**The spelling decides whether a link is a link.** `src/util/links.ts` extracts two forms — a
+markdown `](target)`, and a path inside backticks *that starts with `./` or `../`*. A backticked
+path without that prefix is invisible to it. So:
+
+- ``[codebase design](../../references/codebase-design/REFERENCE.md)`` — a link. Resolved, and an
+  error if it does not exist.
+- ``` `../../references/domain-modeling/REFERENCE.md` ``` — also a link, same treatment.
+- ``` `references/domain-modeling/REFERENCE.md` ``` — **not** a link. A path-shaped sentence.
+
+`AUTHORING.md` writes paths the third way throughout, because it is prose about the tree rather
+than a body reaching into it. Your three rows above must use one of the first two.
+
+**`doc-review` is the exception, and it is the one to get right.** Its `loaded_by` pack is
+`references/prose-quality`, which is batch 6. Link it and you get `links.broken-source`, an error,
+because the file does not exist yet — the batch cannot pass. Omit it entirely and the batch passes
+while the connection quietly does not exist. Neither is acceptable, so take the third spelling
+deliberately: name `references/prose-quality/REFERENCE.md` in backticks, without a dot prefix, in
+the body section where its material would be loaded, and say in that sentence that the pack arrives
+in batch 6. It is not a link, so nothing breaks; it is a named anchor, so batch 6 has something to
+find and convert. Do not invent the pack's contents or headings to fill the gap — you have no
+dossier for it and it is not yours to write.
+
+This is the only forward reference in the batch. `codebase-design`'s second consumer,
+`improve-architecture`, is batch 9 and runs the other way: the pack exists and the consumer does
+not, which needs nothing from you beyond what the paragraph above already says.
+
 ## The three failure modes I expect, named so you can report them rather than absorb them
 
 **Writing a skill like a role.** Thirty-six bodies in this tree, none of them a skill. Pattern-matching
