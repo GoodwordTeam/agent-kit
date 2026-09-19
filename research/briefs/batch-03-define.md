@@ -49,8 +49,12 @@ three kinds and §11's handback requires them to exist. I probed the gate agains
 `1e32a9a` before writing this, so the numbers are measured rather than assumed: a skill declaring
 three cases with no `evals/` tree produces three blocking `evals.declaration-without-case` errors,
 and a skill declaring none produces `evals.too-few-cases` plus three `evals.missing-case-kind`.
-**There is no value of `tests[]` that lands clean without the case files.** `evals/` does not exist
-yet; you are creating it. Dossier §10 already designs the behaviors per skill, including the
+**There is no value of `tests[]` that lands clean without the case files.** The reachable end state
+was probed too, because a gate nothing can satisfy would be a different finding and this brief asks
+you to satisfy it: three declared cases with three matching `evals/<skill-id>/<case-id>/case.yaml`
+files clears every eval error, leaving only the informational note that the corpus does not yet
+cover all twenty-four release scenarios — which is a Phase 5 criterion across the catalog, not
+something this batch can or should close. `evals/` does not exist yet; you are creating it. Dossier §10 already designs the behaviors per skill, including the
 non-trigger neighbours and the pressure cases — work from it.
 
 **Two of your four skills are U, which makes the invocation law load-bearing for the first time.**
