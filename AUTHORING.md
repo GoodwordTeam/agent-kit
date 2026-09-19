@@ -15,6 +15,25 @@ improvise. See §10.
 
 `SKILL.md` is **≤150 lines**, hard cap **300**. `ak validate` fails above 300 and warns above 150.
 
+That count is raw lines, blanks and headings included, and it is raw deliberately. Any narrower
+measure — "instruction lines", "lines that could move to a reference" — has to define what counts,
+and every definition is a seam to argue at and a shape to write around. Raw lines have no seam, and
+a writer can check the number without running the validator. That is how every other rule here
+works: the contract binds, and the tool follows.
+
+The target is advisory; the cap is the gate. A body between 151 and 300 lines is not a defect, and
+it is never shortened to clear the number — trimming a sentence out of a reviewed body to move a
+count is the defect, not the fix, and rewrapping to a wider column to reclaim a line is the same
+move with the content left in. The warning asks one question: is there material in this body that
+belongs behind a `references/` file? Answer it by looking, and record the answer where the body's
+review is recorded. A body holding only the trigger, boundary, workflow, gates and stop conditions
+is the right length at whatever length that turns out to be.
+
+This is not `numeric-heuristics-are-guidance`. That ruling governs the ~100-line change target and
+the test pyramid, and it turns on those being "neither validated nor enforced here" — where §1's
+target is validated and does warn. The reasoning rhymes; the ruling does not reach. Citing it here
+would make its `binds` group a mention index.
+
 Everything longer lives behind `references/` in the skill's own directory and is loaded on demand:
 
 ```markdown
