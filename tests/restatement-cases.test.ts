@@ -76,8 +76,15 @@ function pathFor(item: (typeof LABELLED)[number]): string {
   return item.format === "yaml" ? `policies/${item.id}.yaml` : `protocols/${item.id}/PROTOCOL.md`;
 }
 
+interface Measured {
+  /** The cosine this case's own ruling was given in this case's block. */
+  readonly score: number;
+  /** Whether that ruling leads some window in the block, rather than trailing one. */
+  readonly leads: boolean;
+}
+
 /** Every case in its own body, so one case cannot cite or shadow another. */
-function scanAll(): Map<string, number> {
+function scanAll(): Map<string, Measured> {
   const files: Record<string, string> = {
     "catalog.yaml": CATALOG_HEAD,
     "policies/resolved-conflicts.yaml": policyYaml(),
@@ -93,7 +100,7 @@ function scanAll(): Map<string, number> {
   // the same unit the capture used. Taking the best in the whole file would
   // score a neighbouring paragraph for a case captured whole, which is what a
   // YAML case has to be.
-  const scored = new Map<string, number>();
+  const scored = new Map<string, Measured>();
   for (const item of LABELLED) {
     const path = pathFor(item);
     const lines = `${item.text}\n`.split("\n");
@@ -103,10 +110,20 @@ function scanAll(): Map<string, number> {
     let hi = at;
     while (lo > 0 && (lines[lo - 1] ?? "").trim() !== "") lo--;
     while (hi < lines.length - 1 && (lines[hi + 1] ?? "").trim() !== "") hi++;
-    const best = issues
-      .filter((i) => i.file === path && (i.line ?? 0) >= lo + 1 && (i.line ?? 0) <= hi + 1)
-      .map((i) => Number(/\((\d\.\d+)\)/.exec(i.message)?.[1] ?? 0));
-    scored.set(item.id, Math.max(0, ...best));
+    // And it is the score this case's *ruling* was given, not the block's
+    // leader. A block can be led by an unrelated window naming a different
+    // ruling -- `review-delta-novelty-evidence` is led by a `two-fix-cycles`
+    // window at 0.34 while the clause the case is about scores 0.30 -- and
+    // storing the leader would put a number in the fixture that describes a
+    // sentence the case is not about.
+    const wanted = new RegExp(`\`${item.ruling}\` \\((\\d\\.\\d+)\\)`);
+    const inBlock = issues.filter((i) => i.file === path && (i.line ?? 0) >= lo + 1 && (i.line ?? 0) <= hi + 1);
+    const best = inBlock.map((i) => Number(wanted.exec(i.message)?.[1] ?? 0));
+    // Leading matters separately from scoring. The check prints ranked
+    // candidates precisely because the leader is often the wrong sibling, so a
+    // ruling that only ever trails is one this text does not restate.
+    const leads = inBlock.some((i) => /`([a-z-]+)` \(\d\.\d+\)/.exec(i.message)?.[1] === item.ruling);
+    scored.set(item.id, { score: Math.max(0, ...best), leads });
   }
   return scored;
 }
@@ -119,7 +136,7 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       // A recall regression is the failure that matters here. A tuning change
       // that quietly drops one of these would otherwise look like a cleaner
       // report, which is the shape of every mistake made against this check.
-      expect(scores.get(item.id) ?? 0).toBeGreaterThanOrEqual(RESTATEMENT_THRESHOLD);
+      expect(scores.get(item.id)?.score ?? 0).toBeGreaterThanOrEqual(RESTATEMENT_THRESHOLD);
     });
   }
 
@@ -133,13 +150,13 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       // It fails when the check improves, and that failure is the point: the
       // recall claim in `checkRestatements` and this case's label have to move
       // in the same commit. Reclassify to `reported: true` and rewrite the note.
-      expect(scores.get(item.id) ?? 0).toBeLessThan(RESTATEMENT_THRESHOLD);
+      expect(scores.get(item.id)?.score ?? 0).toBeLessThan(RESTATEMENT_THRESHOLD);
 
       // And it is not the shared-nothing-vocabulary blind spot. The check
       // scores these well above zero and ranks the right ruling first; the
       // threshold is what cuts them. A miss at zero and a miss at 0.50 are
       // different failures and only one of them is reachable by tuning.
-      expect(scores.get(item.id) ?? 0).toBeGreaterThan(0.25);
+      expect(scores.get(item.id)?.score ?? 0).toBeGreaterThan(0.25);
     });
   }
 
@@ -149,7 +166,7 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       // report is above the line by construction, so a change that dragged
       // rejections up across it would leave no trace in a set built only from
       // what the check already emits.
-      expect(scores.get(item.id) ?? 0).toBeLessThan(RESTATEMENT_THRESHOLD);
+      expect(scores.get(item.id)?.score ?? 0).toBeLessThan(RESTATEMENT_THRESHOLD);
     });
   }
 
@@ -161,8 +178,48 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     for (const item of LABELLED) {
       expect({ id: item.id, reported: item.reported }).toEqual({
         id: item.id,
-        reported: (scores.get(item.id) ?? 0) >= RESTATEMENT_THRESHOLD,
+        reported: (scores.get(item.id)?.score ?? 0) >= RESTATEMENT_THRESHOLD,
       });
+    }
+  });
+
+  test("each case names a ruling the check ranks first somewhere in its block", () => {
+    // A weak invariant, deliberately, and worth being precise about what it
+    // does and does not do.
+    //
+    // What catches a swapped ruling id is the drift test, because `score` is
+    // the score of the case's *own* ruling: storing an id the text does not
+    // restate moves the number, and the number is pinned. That is how the two
+    // mis-attributions in this file were found -- one filed under
+    // `supervisor-agreement-is-not-authority` whose 0.49 belonged to
+    // `delta-baseline-reset-not-third-loop`, one under
+    // `missing-supervisor-never-implementer` at 0.20 whose claim scores 0.50.
+    // Both had a plausible id, a plausible number and a `why` describing the
+    // right phenomenon; nothing measured whether the id and the number
+    // belonged to each other, because `score` was the block's leader.
+    //
+    // This test catches the weaker failure the drift test cannot: a ruling
+    // that scores but never leads, which the check would never propose for
+    // this text and which therefore cannot be what the case is about.
+    const wrong = LABELLED.filter((item) => {
+      // A case whose captured unit cites its own ruling is suppressed by
+      // design, so no window can name it. That is the file-scope rule working
+      // and it is what `product-prototype-rationale` exists to hold.
+      if (item.text.includes(item.ruling)) return false;
+      return !(scores.get(item.id)?.leads ?? false);
+    }).map((item) => ({ id: item.id, ruling: item.ruling }));
+    expect(wrong).toEqual([]);
+  });
+
+  test("a suppressed case is suppressed by its own citation, not by a low score", () => {
+    // The other half of that rule. `product-prototype-rationale` scores zero in
+    // its file and 0.50 as an isolated block, and only the citation explains
+    // the difference -- so the case is evidence about scope, not about cosine.
+    // Without this, a change that merely stopped scoring the file would look
+    // identical to the citation being honoured.
+    for (const item of LABELLED.filter((c) => c.text.includes(c.ruling))) {
+      expect({ id: item.id, score: scores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, score: 0 });
+      expect(longestSharedRun(item.text, RULINGS_AT_REVISION.find((r) => r.id === item.ruling)?.text ?? "")).toBeGreaterThan(10);
     }
   });
 
@@ -215,7 +272,7 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     // Tolerance, not equality: an edit to a ruling legitimately moves these,
     // and should show up as a re-measure rather than as a broken build. A
     // change to the scoring path moves them much further than this.
-    const drifted = LABELLED.map((item) => ({ id: item.id, was: item.score, now: scores.get(item.id) ?? 0 })).filter(
+    const drifted = LABELLED.map((item) => ({ id: item.id, was: item.score, now: scores.get(item.id)?.score ?? 0 })).filter(
       (row) => Math.abs(row.now - row.was) > 0.05,
     );
     expect(drifted).toEqual([]);

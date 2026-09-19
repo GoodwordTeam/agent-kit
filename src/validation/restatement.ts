@@ -82,17 +82,26 @@ import { note, warning, type Issue } from "./types.ts";
  * without naming it. A block carrying one citation looks attributed to a reader
  * skimming for backticks, and that is exactly the miss worth catching.
  *
- * What the number cannot buy, at any setting. Two uncited restatements found by
- * reading `AUTHORING.md` at `a13ccc0` score 0.40 and 0.50 and are missed here,
- * and they are not a tuning problem: `:419` quotes its ruling for 80 characters
- * and scores 0.40, where `:607` quotes 79 and scores 0.55, and
- * `:31` quotes 65 and scores 0.50 where `AGENTS.md:136` quotes the same 65 and
- * scores 0.78. Cosine is not monotone in how much a passage quotes, so lowering
- * the cutoff to reach them reorders nothing -- it buys the forty-row band and
- * leaves 34-character paraphrases ranked above 80-character quotations. The
- * signal that reaches this class is the verbatim run itself, which needs no
- * corpus, no threshold and no revision to mean something. Both cases are in the
- * labelled corpus as known misses; see `tests/fixtures/restatement-cases.ts`.
+ * What the number cannot buy, at any setting.
+ *
+ * The honest recall measurement is on the sample this check did not select.
+ * Five clauses were found to restate a ruling by reading `78f8918`, before this
+ * scan existed, and fixed at `36e7cf4`; this scan reports two of them and
+ * misses three, at 0.48, 0.49 and 0.30. Two more found later in `AUTHORING.md`
+ * at `a13ccc0` by matching verbatim runs score 0.40 and 0.50. Two of seven.
+ *
+ * All five misses rank the correct ruling first, so ranking is not what fails.
+ * Nor is the cutoff: `:419` quotes its ruling for 80 characters and scores
+ * 0.40 where `:607` quotes 79 and scores 0.55, and `:31` quotes 65 and scores
+ * 0.50 where `AGENTS.md:136` quotes the same 65 and scores 0.78. Cosine is not
+ * monotone in how much a passage quotes, so lowering the cutoff to reach them
+ * reorders nothing -- it buys the forty-row band and still leaves 34-character
+ * paraphrases above 80-character quotations. The signal that reaches this class
+ * is the verbatim run itself, which needs no corpus, no threshold and no
+ * revision to mean something.
+ *
+ * All seven are in the labelled corpus, the five as known misses; see
+ * `tests/fixtures/restatement-cases.ts`.
  */
 export const RESTATEMENT_THRESHOLD = 0.55;
 
@@ -385,7 +394,7 @@ export function checkRestatements(ctx: CheckContext, threshold: number = RESTATE
     note(
       "rulings.restatement-scan-coverage",
       RULINGS_FILE,
-      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is measured rather than estimated: at least three uncited restatements found by reading are absent from this report. One restates its ruling in none of its words and scores zero. The other two quote their rulings verbatim for 80 and 65 characters, rank the right ruling first, and still score 0.40 and 0.50 -- while a passage quoting 79 characters scores 0.55 and one quoting 34 scores 0.60. Cosine measures vocabulary shared with a corpus, not quotation, so it does not order these by how much they quote: a cutoff low enough to admit the two admitted forty rows at the calibration revision and still ranked them below shorter quotations. A clean run is therefore evidence about this instrument, not about the tree.`,
+      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is now a measurement rather than an estimate, taken on the only sample this instrument did not select: seven restatements in this repo were found without it, five by reading before it existed and two by matching verbatim runs, and it reports two of the seven. The five missed score 0.48, 0.49, 0.40, 0.30 and 0.50, every one of them ranking the correct ruling first and falling short of the line. They are not a threshold setting. Cosine measures vocabulary shared with a corpus, not quotation, and does not order these by how much they quote: 80 verbatim characters score 0.40 where 79 score 0.55 and 34 score 0.60, so a cutoff low enough to admit the misses admitted forty rows at the calibration revision and still ranked them below shorter paraphrases. A restatement sharing none of its ruling's words scores zero by construction, which no threshold reaches at all. A clean run is therefore evidence about this instrument, not about the tree.`,
     ),
   );
 

@@ -1,12 +1,19 @@
 // Generated from e15be71 by scratchpad/gen.ts -- do not hand-edit the captured
 // text or scores. Regenerate against a revision and commit the diff.
 //
-// Each case names its own revision in `origin`, and two of them are from
-// a13ccc0 rather than e15be71. That is safe here only because the ruling corpus
-// is byte-identical across those two revisions (`git diff e15be71 a13ccc0 --
-// policies/resolved-conflicts.yaml` is empty), so one pinned corpus scores both.
-// A case captured at a revision where the corpus had moved would need its own,
-// and mixing them silently would reproduce neither.
+// Each case names its own revision in `origin`, and they come from three:
+// e15be71, a13ccc0 and 78f8918. That is safe only because the `ruling:` texts
+// are byte-identical across all three -- checked by loading each revision's
+// policy file and comparing against RULINGS_AT_REVISION, not by reading a diff,
+// since e15be71 does change that file and the change is entirely `binds`,
+// `doctrine` and comments, which this scan never reads. A case captured where
+// the ruling texts had moved would need its own corpus, and mixing them
+// silently would reproduce neither.
+//
+// The five cases from 78f8918 and e15be71 that `36e7cf4` fixed are the recall
+// gold standard: they were found by reading, before this check existed, so
+// their membership here is not selected by the instrument being measured. They
+// are the only cases in the set that can support a recall number at all.
 //
 // What this set deliberately leaves out: `policies/review.yaml`, at 17KB. It
 // exercises the file-scope suppression path `product-prototype-rationale`
@@ -190,16 +197,52 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     score: 0.50,
   },
   {
+    id: "tdd-receipt-emission-step",
+    origin: "protocols/tdd/PROTOCOL.md:63 at 78f8918",
+    text: "1. Discover the verification command and record it with the ticket. Record the environment\n   identity it runs in.\n2. Propose the seam — the public interface under test — and get it confirmed. Record it.\n3. Write one failing test against the seam, expressing one acceptance criterion or, on the bug\n   path, reproducing the reported symptom.\n4. Verify RED: run the command and read the failure. It must fail, and fail for the reason\n   expected. A test that fails on a typo in the test, an import error or an unrelated defect is\n   not a red step; fix the test and repeat.\n5. Write the minimum production code that makes it pass. Nothing beyond the ticket's\n   `allowed_changes`.\n6. Verify GREEN: run the command again and read the pass. Confirm it passes because the new code\n   path ran, not incidentally.\n7. Refactor with the test green, re-running the command after each change.\n8. Emit a `schemas/verification.schema.json` receipt carrying the command, exit status, output\n   digest, source revision and environment identity, bound to the revision under test.\n9. Repeat from step 3 for the next criterion. One criterion per cycle.",
+    format: "markdown",
+    anchor: "digest, source revision and environment identity, bound to the revision under test",
+    ruling: "closure-requires-independent-verification",
+    label: "defect",
+    reported: false,
+    why: "Gold standard: one of five clauses found by reading at 78f8918, confirmed by quotation before any score existed, and fixed at 36e7cf4 by citing the ruling. Step 8 states the receipt's contents -- command, exit status, output digest, source revision, environment identity -- which is the ruling's own enumeration, in a block that cites nothing. The check ranks the right ruling first and scores 0.48.",
+    score: 0.48,
+  },
+  {
+    id: "review-delta-novelty-evidence",
+    origin: "protocols/review-delta/PROTOCOL.md:65 at 78f8918",
+    text: "1. Fail fast before dispatch: confirm the comparison base resolves, the fix diff is non-empty and\n   the receipts bind to `reviewed_head`. A bad base or an empty diff stops here, before either\n   lane is seated.\n2. Freeze the snapshot and record its hashes in the `schemas/review.schema.json` record.\n3. Seat `reviewer-spec` and `reviewer-standards` in parallel on that snapshot, each with the\n   packet and neither with the other's output.\n4. Collect each lane's result as `complete`, `empty` or `unavailable`.\n5. For each prior finding, record `ADDRESSED` or `NOT ADDRESSED` with a `file:line` reference in\n   the fix diff. This is a closure check, not a re-litigation of whether the finding was valid.\n6. Check the fix diff alone for new breakage it introduced. Do not re-review the whole file.\n7. Admit a new finding only with novelty evidence: what changed, or what regressed, that makes\n   this finding new. Unrelated low-priority discovery is ledgered as an out-of-scope\n   observation, never looped into another round.\n8. Route unresolved security, data or API findings back to that specialist seat alone. Do not\n   trigger another full fan-out.\n9. Synthesize the verdict: a required lane `unavailable` yields `blocked` (ruling\n   `required-lane-failure-is-unavailable`); else a lane requesting changes yields\n   `changes-requested`; `approved` requires every required lane `complete` or `empty` and every\n   prior finding independently closed (ruling `closure-requires-independent-verification`).\n10. If findings remain open, hand control back for the next fix cycle — at most twice — and\n    record `fix_cycles`.",
+    format: "markdown",
+    anchor: "observation, never looped into another round",
+    ruling: "delta-scope-affected-behavior",
+    label: "defect",
+    reported: false,
+    why: "Gold standard, and the worst miss in the set at 0.30. Step 7 states the novelty-evidence rule almost in the ruling's words -- 'what changed, or what regressed, that makes this finding new' -- and the block cites two other rulings at step 9, which is the `AUTHORING.md:607` shape: a block carrying a citation reads as attributed to anyone skimming for backticks. It is also the case that shows why a block's leading score is not the case's score. The block's best window is 0.34 against `two-fix-cycles-then-stop`, fired by step 10's cycle limit, which is a different sentence stating a different rule.",
+    score: 0.30,
+  },
+  {
+    id: "implementer-receipt-bullet",
+    origin: "roles/implementer/ROLE.md:37 at 78f8918",
+    text: "- The ticket id, and for each acceptance criterion the change that satisfies it\n  (`schemas/ticket.schema.json`).\n- The `schemas/verification.schema.json` receipt for each behavior change: the command or probe,\n  exit status, output digest, source revision and environment identity. A description of a green\n  run is not a receipt.\n- The observed red step and the observed green step for each cycle (`protocols/tdd/PROTOCOL.md`).\n- For anything adjacent that was noticed and deliberately left alone: what it is, where it is,\n  and why it is outside this ticket.",
+    format: "markdown",
+    anchor: "run is not a receipt",
+    ruling: "closure-requires-independent-verification",
+    label: "defect",
+    reported: false,
+    why: "Gold standard, and the narrowest margin of the three at 0.49. It carries the ruling's closing sentence, 'A description of a green run is not a receipt', and enumerates the receipt's five fields, citing a schema path and a protocol path but never the ruling. A path is not a ruling id, which is the `agents-numeric-heuristics` class again -- caught there at 0.78 and missed here at 0.49 for the same act.",
+    score: 0.49,
+  },
+  {
     id: "product-prototype-rationale",
     origin: "profiles/product.yaml:69 at e15be71",
     text: "# profiles/product.yaml — product judgment, kept out of ordinary implementation contexts.\n#\n# Authority: plan §2.3 (retained standalone supporting skills), §6.5 (product lens and premise\n# review), §11 (opt-in profiles).\n#\n# Machine-read by `ak validate` against the `profiles:` field in catalog.yaml.\n#\n# A profile is a capability and scope set. It names no model, provider, cost or routing rule.\n\nschema_version: 1\nprofile: product\ndefault: false\nrequires: [core]\n\nwhy_it_exists: >-\n  Four skills that decide what is worth building rather than how to build it. They are separated\n  from core because a recommendation is not authorization, and because in a repository with no\n  standing product anchors they have nothing to ground a judgment on. A team that has those\n  anchors gets real value; a team that does not gets confident opinions, which is worse than\n  silence.\n\nincludes:\n  skills:\n    count: 4\n    entries: [ideate, pov, strategy, product-pulse]\n    notes:\n      ideate: Generate options, then critique them. No implicit commitment or scope expansion.\n      pov: >-\n        Project-grounded recommendation with optional independent opinions. Read-only. Dissent\n        and insufficient-evidence results survive to the output; a recommendation authorizes\n        nothing.\n      strategy: >-\n        Works from standing product goals and strategic constraints. No automatic feature\n        expansion.\n      product-pulse: >-\n        Inspects changes and signals against existing product anchors. A report, not permission\n        to change the roadmap.\n\n  packs: []\n  protocols: []\n  roles: []\n  references: []\n  rationale_for_empty: >-\n    The product lens these skills need is already installed with core: `doc-review/product-lens`\n    and `doc-review/adversarial-document` ship in core because `doc-review` does. This profile\n    adds entrypoints, not judgment machinery.\n\n  capabilities:\n    required: [repository-read, artifact-write]\n    optional: [kb-read, network-fetch, human-channel]\n\nprerequisites:\n  - >-\n    A project record with standing goals, anchors or constraints. Without one, `pov` returns an\n    insufficient-grounding result and `strategy` and `product-pulse` have no baseline to compare\n    against. That is the correct behavior, not a failure, but it makes the install pointless.\n\ndeliberately_excludes:\n  - id: authorization\n    why: >-\n      None of these skills approves, plans or implements anything. A chosen option becomes work\n      through super-align and super-bound, with a human approving the direction.\n  - id: reopening-settled-decisions\n    why: >-\n      A rejected product option is not silently reopened. Reopening requires new evidence, named\n      and bound to a revision (release scenario 12).\n  - id: prototype\n    why: >-\n      `prototype` is a core primitive, not a product skill. A product question that only an\n      artifact can settle reaches for it there — and stays blocked without a human when the\n      question is about human experience.\n  - id: bakeoff\n    why: >-\n      Competing bounded experiments in separate workspaces are repository maintenance work, not\n      product judgment. It ships in maintainer.\n\nrulings: [prototype-human-experience-needs-human, full-catalog-opt-in-profiles]",
     format: "yaml",
     anchor: "`prototype` is a core primitive",
-    ruling: "missing-supervisor-never-implementer",
+    ruling: "prototype-human-experience-needs-human",
     label: "not-a-defect",
     reported: false,
-    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: as a block alone it scores 0.50 and reports, and in its file it scores 0.20 and does not. That gap is the file-scope rule working, and it is the reason a YAML case cannot be captured as a paragraph. Also the only case here well below threshold, so without it nothing guards a change that drags rejections up across the line.",
-    score: 0.20,
+    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: as an isolated block it scores 0.50 and reports, and in its own file no window names the ruling at all, because the file-level citation suppresses it. Zero here is the citation working rather than the instrument failing, which is why this case is stored with the file and not with the paragraph. It is also the guard on the scope rule itself: narrow YAML scope from the file to the section and this returns to 0.50 and fires. Corrected from `missing-supervisor-never-implementer` at 0.20, which was an unrelated window in the same block and never the claim this case is about.",
+    score: 0.0,
   },
   {
     id: "apply-findings-snapshot-bullet",
@@ -207,10 +250,10 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     text: "- Findings under `schemas/finding.schema.json` with `status: accepted`, each carrying\n  `spec_quality`, `difficulty`, `autofix_class`, `evidence` and `authorization_ref`. A finding\n  arriving from a peer lane with `autofix_class: safe_auto` is remapped to `gated_auto` on intake\n  and never dropped — the action class is not a claim about whether the finding is true (ruling\n  `safe-auto-restricted-per-seat`).\n- The prior-finding packet when this is not the first cycle: `finding_id`, `fingerprint`,\n  `severity`, `evidence`, `disposition`, `input_hashes`, `source_revision`\n  (`policies/review.yaml` `continuity`). The seat that closes a finding sees the old finding and\n  the new revision; independence is from the author, never amnesia (ruling\n  `reviewer-continuity-not-amnesia`).\n- The snapshot: comparison base, reviewed head and input hashes.\n- The verification command and environment the receipts will bind to.",
     format: "markdown",
     anchor: "The snapshot: comparison base, reviewed head and input hashes",
-    ruling: "supervisor-agreement-is-not-authority",
+    ruling: "delta-baseline-reset-not-third-loop",
     label: "not-a-defect",
     reported: false,
-    why: "A bullet naming snapshot fields, inside a block listing the packet a seat receives. The documented field-name class, and the nearest rejection in the set at 0.49 -- so it is the case that moves first if the threshold is lowered. Reported once as the third known true instance; it is not. The genuine one sits a few lines below and scores zero.",
+    why: "A bullet naming snapshot fields -- comparison base, reviewed head, input hashes -- which are the same field names the ruling requires a review run to record. That overlap is the whole of the resemblance and none of the substance, which is the documented field-name class in its purest form. The nearest rejection in the set at 0.49, so it is the case that moves first if the threshold is lowered. Corrected from `supervisor-agreement-is-not-authority`, which scores 0.13 on this text: the 0.49 was always this ruling, and the case had been stored against a row its words do not touch.",
     score: 0.49,
   },
 ];
