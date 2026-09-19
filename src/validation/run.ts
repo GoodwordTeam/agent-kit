@@ -24,6 +24,7 @@ import { checkBundleLinks, checkSourceLinks } from "./links.ts";
 import { checkPolicies } from "./policies.ts";
 import { checkSchemaRuleCoverage } from "./rulemap.ts";
 import { checkProvenance } from "./provenance.ts";
+import { checkRestatements } from "./restatement.ts";
 import { checkRulings } from "./rulings.ts";
 import { checkSchemas } from "./schemas.ts";
 import { error, hasErrors, sortIssues, type Issue } from "./types.ts";
@@ -69,6 +70,7 @@ export const CHECKS: readonly Check[] = [
   { name: "document-rules", run: checkDocumentRules },
   { name: "body-shapes", run: checkBodyShapes },
   { name: "rulings", run: checkRulings },
+  { name: "restatements", run: checkRestatements },
   { name: "evals", run: checkEvals },
 ];
 

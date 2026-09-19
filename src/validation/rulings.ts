@@ -20,6 +20,7 @@
  * the claim binding: the enumeration under `binds` must be exactly that section.
  */
 
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -351,11 +352,18 @@ function checkCitations(ctx: CheckContext, known: ReadonlySet<string>): Issue[] 
 const DOCTRINE_KIND = "doctrine";
 
 /**
- * Markdown in a section tree that belongs to no catalog entry.
+ * Markdown that belongs to no catalog entry.
  *
  * The property is structural -- no entry claims the path -- not a list of known
  * files. Material *inside* an entry's directory is reachable through that entry
  * and is not loose; only a file that no entry's directory contains is.
+ *
+ * That includes the repository root. A root file has no catalog entry for the
+ * same reason a §12.3 doctrine file has none, and the root is where the gap
+ * bites hardest rather than least: `AUTHORING.md` governs every body in the
+ * package and no ruling could name it. Scoping the property to the section
+ * trees would have been a convention the tool holds nowhere else -- the
+ * denylist and placeholder scans already run repo-wide.
  */
 function looseDoctrineFiles(ctx: CheckContext): string[] {
   const found: string[] = [];
@@ -367,7 +375,21 @@ function looseDoctrineFiles(ctx: CheckContext): string[] {
       found.push(file);
     }
   }
+  for (const file of rootMarkdown(ctx.root)) found.push(file);
   return found.sort();
+}
+
+/** Markdown at the repository root, which no section tree contains. */
+function rootMarkdown(root: string): string[] {
+  let entries: string[];
+  try {
+    entries = readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+  return entries.sort();
 }
 
 /**

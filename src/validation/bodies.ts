@@ -684,6 +684,8 @@ function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, 
     }
   }
 
+  issues.push(...checkCensusProse(ctx, families.size, roles.size));
+
   // Symmetry is a property of the rows that are there. It says nothing about the
   // rows that are not, and the table is a hand-maintained census of a set the
   // catalog also holds -- the same shape as `universal:` beside `binds`, and as
@@ -695,11 +697,95 @@ function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, 
     note(
       "role.counterpart-census-coverage",
       AUTHORING_FILE,
-      `§12.2's counterpart table covers ${families.size} of ${roles.size} catalog roles. Symmetry and seat existence are checked; completeness is not checkable, so an undeclared family is invisible here and stays a handback obligation on the batch that authors the seats.`,
+      `§12.2's counterpart table declares ${familyCount(families)} ${familyCount(families) === 1 ? "family" : "families"} covering ${families.size} of ${roles.size} catalog roles. A family is a group of mutually-paired seats, so a three-seat family counts once. Symmetry and seat existence are checked; completeness is not checkable, so an undeclared family is invisible here and stays a handback obligation on the batch that authors the seats.`,
     ),
   );
 
   return issues;
+}
+
+/**
+ * English cardinals, for the one sentence in §12.2 that states the census in
+ * words. A closed list up to the size of the roles section is enough, and a
+ * number it cannot read is left alone rather than guessed at.
+ */
+const CARDINALS: ReadonlyArray<string> = [
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
+  "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three", "twenty-four", "twenty-five",
+  "twenty-six", "twenty-seven", "twenty-eight", "twenty-nine", "thirty",
+];
+
+const CENSUS_SENTENCE = /\b([A-Za-z-]+) seats? of ([A-Za-z-]+) are named here\b/;
+
+function cardinal(word: string): number | null {
+  const index = CARDINALS.indexOf(word.toLowerCase());
+  return index === -1 ? null : index;
+}
+
+/**
+ * How many distinct families the table declares.
+ *
+ * A family is a connected component of the counterpart graph, not a pair. The
+ * adversarial family is three seats that all name each other; counting pairs
+ * calls it three families, and the error grows with family size in the
+ * direction that makes coverage look better than it is. Components track what
+ * the table actually declares: one group of mutually-paired seats, however many
+ * seats are in it.
+ */
+function familyCount(families: ReadonlyMap<string, ReadonlyArray<string>>): number {
+  const seen = new Set<string>();
+  let count = 0;
+  for (const seat of families.keys()) {
+    if (seen.has(seat)) continue;
+    count++;
+    const stack = [seat];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (current === undefined || seen.has(current)) continue;
+      seen.add(current);
+      for (const neighbour of families.get(current) ?? []) if (!seen.has(neighbour)) stack.push(neighbour);
+    }
+  }
+  return count;
+}
+
+/**
+ * §12.2 states its own coverage in prose, and the sentence is load-bearing: it
+ * is what tells a reader the table claims no completeness. So it stays, and the
+ * number in it is checked instead of trusted.
+ *
+ * This is the third instance of one shape -- `universal:` beside `binds`,
+ * `count:` beside an entrypoint list, and now a written-out count beside the
+ * table it counts. Each one is a claim a reader believes and nothing verified,
+ * and each goes stale on the next row added rather than at the moment someone
+ * next compares by eye.
+ */
+function checkCensusProse(ctx: CheckContext, seats: number, roles: number): Issue[] {
+  const text = readTextIfPresent(join(ctx.root, AUTHORING_FILE));
+  if (text === null) return [];
+  // Matched against whitespace-normalised text, because the sentence wraps.
+  const match = CENSUS_SENTENCE.exec(text.replace(/\s+/g, " "));
+  if (match === null) return [];
+
+  const statedSeats = cardinal(match[1] ?? "");
+  const statedRoles = cardinal(match[2] ?? "");
+  if (statedSeats === null || statedRoles === null) return [];
+  if (statedSeats === seats && statedRoles === roles) return [];
+
+  return [
+    error(
+      "role.counterpart-census-count-stale",
+      AUTHORING_FILE,
+      `§12.2 says "${match[0]}", but the table names ${seats} seat(s) and catalog.yaml declares ${roles} role(s). The sentence is what tells a reader the table claims no completeness, so it is the number that is wrong, not the sentence.`,
+      lineContaining(text, `${match[1]} seat`) ?? lineContaining(text, "are named here"),
+    ),
+  ];
+}
+
+function lineContaining(text: string, needle: string): number | undefined {
+  for (const [index, line] of text.split("\n").entries()) if (line.includes(needle)) return index + 1;
+  return undefined;
 }
 
 export function checkBodyShapes(ctx: CheckContext): Issue[] {

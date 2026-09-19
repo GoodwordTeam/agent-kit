@@ -649,6 +649,32 @@ describe("every counterpart the table declares is named (AUTHORING 12.2)", () =>
     expect(issue?.file).toBe("AUTHORING.md");
   });
 
+  test("the prose count beside the table is checked against the table, not trusted", () => {
+    // The sentence is load-bearing -- it is what tells a reader the table makes
+    // no completeness claim -- so it stays. What cannot stay is a hand-typed
+    // number standing beside the list it counts, which is the same shape that
+    // produced the asymmetry.
+    const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
+      "AUTHORING.md": `${authoringWith([
+        ["code-review/security", "`doc-review/security-lens`"],
+        ["doc-review/security-lens", "`code-review/security`"],
+      ])}\nSeven seats of twenty-nine are named here.\n`,
+    }, OTHER_PANEL_SEATS);
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-census-count-stale");
+    expect(issue?.message).toContain("Seven");
+    expect(issue?.message).toContain("2");
+  });
+
+  test("a prose count that matches the table is left alone", () => {
+    const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
+      "AUTHORING.md": `${authoringWith([
+        ["code-review/security", "`doc-review/security-lens`"],
+        ["doc-review/security-lens", "`code-review/security`"],
+      ])}\nTwo seats of three are named here.\n`,
+    }, OTHER_PANEL_SEATS);
+    expect(checkBodyShapes(ctx).filter((i) => i.rule === "role.counterpart-census-count-stale")).toEqual([]);
+  });
+
   test("the coverage of the census is reported, since a symmetry guard cannot prove completeness", () => {
     const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
       "AUTHORING.md": authoringWith([
@@ -660,6 +686,23 @@ describe("every counterpart the table declares is named (AUTHORING 12.2)", () =>
     expect(note?.severity).toBe("note");
     expect(note?.message).toContain("2");
     expect(note?.message).toContain("3");
+  });
+
+  test("a three-seat family counts once, because a family is not its pairs", () => {
+    // Counting undirected pairs inflates with family size: a triple reads as
+    // three families. The count has to track how many distinct groups exist,
+    // which is the number of connected components in the counterpart graph.
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: a/one\n    status: contract\n  - id: b/two\n    status: contract\n  - id: c/three\n    status: contract\n`,
+      "AUTHORING.md": authoringWith([
+        ["a/one", "`b/two`, `c/three`"],
+        ["b/two", "`a/one`, `c/three`"],
+        ["c/three", "`a/one`, `b/two`"],
+      ]),
+    });
+    const note = checkBodyShapes(ctx).find((i) => i.rule === "role.counterpart-census-coverage");
+    expect(note?.message).toContain("1 family");
+    expect(note?.message).not.toContain("3 families");
   });
 
   test("the families parse out of AUTHORING.md rather than being a second copy in the checker", () => {

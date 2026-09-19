@@ -423,6 +423,31 @@ describe("a file with no catalog entry is reachable from binds (AUTHORING 12.3)"
     expect(checkRulings(ctx).filter((i) => i.rule === "rulings.doctrine-unreachable")).toEqual([]);
   });
 
+  test("root markdown is loose too: the file governing every body is bound by no entry", () => {
+    // AUTHORING.md sits outside every section tree, so it has no catalog entry
+    // for the same structural reason a section-tree doctrine file has none. The
+    // property is "no entry claims this path", and the repository root is where
+    // that is most true, not least.
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(ROW("one-thing")),
+      "AUTHORING.md": DOCTRINE,
+    });
+    const found = checkRulings(ctx)
+      .filter((i) => i.rule === "rulings.doctrine-unreachable")
+      .map((i) => i.file);
+    expect(found).toContain("AUTHORING.md");
+  });
+
+  test("a root file can be bound by path like any other loose file", () => {
+    const ctx = ctxFor({
+      "policies/resolved-conflicts.yaml": rulings(ROW("one-thing", "    binds:\n      doctrine: [AUTHORING.md]\n")),
+      "AUTHORING.md": `${DOCTRINE}\nSee ruling \`one-thing\`.\n`,
+    });
+    const issues = checkRulings(ctx);
+    expect(issues.filter((i) => i.rule === "rulings.doctrine-unreachable")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.binds-unknown-doctrine-file")).toEqual([]);
+  });
+
   test("a binds group names a loose file by path, which is what closes the hole", () => {
     const ctx = ctxFor({
       "policies/resolved-conflicts.yaml": rulings(

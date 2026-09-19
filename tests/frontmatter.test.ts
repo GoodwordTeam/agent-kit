@@ -115,3 +115,38 @@ describe("instruction budget", () => {
     expect(checkBudget(ctxFor({ "skills/alpha/SKILL.md": body }))).toEqual([]);
   });
 });
+
+/**
+ * §12 says §1 applies to protocol and role bodies unchanged, and the budget
+ * check read only `SKILL.md`. The cost was concrete: a 151-line protocol body
+ * got a formal exception record written for a threshold the validator never
+ * applied to it.
+ */
+describe("the line budget reaches every body §1 governs", () => {
+  function bodyCtx(files: Record<string, string>) {
+    const root = makeTree({
+      "catalog.yaml": `schema_version: 1\npackage:\n  id: ak\n  name: agent-kit\n  version: 0.1.0\n  namespace: "/ak:"\n  default_profile: core\nprotocols:\n  - id: alpha\n    status: authored\nroles:\n  - id: beta\n    status: authored\n`,
+      ...files,
+    });
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    return { root, catalog };
+  }
+
+  test("a protocol body over the target is a warning, as §1 says it is", () => {
+    const issues = checkBudget(bodyCtx({ "protocols/alpha/PROTOCOL.md": "line\n".repeat(SKILL_LINE_WARN + 1) }));
+    expect(issues[0]?.rule).toBe("budget.body-over-target");
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.file).toBe("protocols/alpha/PROTOCOL.md");
+  });
+
+  test("a role body over the hard cap is an error", () => {
+    const issues = checkBudget(bodyCtx({ "roles/beta/ROLE.md": "line\n".repeat(SKILL_LINE_FAIL + 1) }));
+    expect(issues[0]?.rule).toBe("budget.body-over-cap");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("a body inside the target produces nothing", () => {
+    expect(checkBudget(bodyCtx({ "protocols/alpha/PROTOCOL.md": "line\n".repeat(20) }))).toEqual([]);
+  });
+});
