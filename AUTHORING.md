@@ -824,8 +824,9 @@ carries host frontmatter — no `disable-model-invocation`, no `argument-hint`, 
 The packager emits host frontmatter for `skills` alone (`src/packaging/plan.ts`), and
 `policies/invocation.yaml`'s statement `protocols-and-roles-are-not-entrypoints` states the rule for
 the first two by name. §5's provenance law, §6's ruling citations, §7's prohibitions and §8's
-writing standard apply to all four unchanged. **§1 does not.** Its size rule reaches protocols and
-roles; §12.3 and §12.5 each say what it does and does not mean for the shape they govern.
+writing standard apply to all four unchanged. **§1 does not.** Its size rule and progressive
+disclosure reach protocols and roles unchanged; §12.3 and §12.5 each say what §1 does and does not
+mean for the shape they govern.
 
 ### 12.1 Protocols
 
