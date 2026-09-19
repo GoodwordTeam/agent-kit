@@ -57,13 +57,101 @@ donors:
     license: MIT
     copyright: "Copyright (c) 2026 Yeachan-Heo"
     license_file: provenance/licenses/Yeachan-Heo_oh-my-codex.LICENSE
+# ---------------------------------------------------------------------------
+# Local sources: third-party or design material held in-repo rather than at a
+# donor pin. Nothing machine-reads this block; it is the register that says what
+# these files are, who owns them, and how they may be cited.
+#
+# DECISION (2026-09-19, standing): a local source is real provenance, there is
+# deliberately no `source:` spelling for citing one, and building one is
+# deferred until a row needs it.
+#
+#   Why they are real provenance and not fabrications. A local source is
+#   material this repository actually holds and actually distributes. The MIT
+#   obligation that attaches to holding it is discharged here, in NOTICE, and in
+#   provenance/licenses/ - `license`, `copyright` and `attribution_donor` below
+#   are that discharge. That obligation is separate from an adaptations row,
+#   which records a derivation rather than a holding: a file held but derived
+#   from owes attribution and still carries no row.
+#
+#   Why nothing cites one. Cite the pin wherever the claim survives there. For
+#   pocock-two-axis-backup, every claim batch 2 drew on survives at the pin
+#   verbatim, so every one of them cites the pin. The per-entry `relation_to_pin`
+#   below records the measured divergence and the two ways citing this copy by
+#   its own line numbers goes wrong.
+#
+#   The spelling, reserved but not implemented:
+#
+#       local:<local_source_id>@sha256:<64-hex>[#L<start>-<end>]
+#
+#   It resolves an id through this block exactly as an adaptations row resolves a
+#   donor id through `donors:`, so license and copyright keep one lookup rule. It
+#   cannot be misparsed as a donor source: `parseDonorSource`
+#   (src/validation/provenance.ts) forbids `:` in its first group, so the two
+#   grammars are disjoint. A writer who reaches for it before it exists fails
+#   today as `provenance.malformed-source` - loudly, and never silently accepted.
+#
+#   The digest is mandatory and a bare line number is forbidden. A G:L range into
+#   the design transcript is safe because there is only one transcript; a line
+#   range into a file that has a near-twin at a pin is safe only when it is
+#   anchored to content. See `relation_to_pin.numbering`.
+#
+#   Trigger to implement. The first time a catalog file adapts material that
+#   survives at no pin. Then, and not before: teach the check loop in
+#   src/validation/provenance.ts a `local:` branch verifying that the row digest,
+#   this block's digest and sha256(working_copy) all agree and that any line range
+#   is in bounds - a check needing no clone, so it runs unconditionally, unlike
+#   donor-path-at-pin. Amend the header string in `renderAdaptations`, which names
+#   donor@commit:path as the only source form and is compared to the generated
+#   file byte for byte, and regenerate with `ak build` in the same commit. Until a
+#   real row exercises it, none of this is built: an unexercised parser branch
+#   looks supported and is not.
+#
+# AUTHORING.md section 5 carries the operative rule for writers. This block
+# carries the evidence, so that neither has to be re-derived.
+# ---------------------------------------------------------------------------
 local_sources:
   - id: pocock-two-axis-backup
     description: Original Pocock Standards/Spec two-axis code-review SKILL.md, preserved before OMX overwrote the local copy.
     original_path: ~/.omx/backups/setup/2026-07-15T23-45-31.075Z/.codex/skills/code-review/SKILL.md
     working_copy: research/sources/pocock-code-review-two-axis.SKILL.md
+    sha256: 6a65cc61114f96db07ec41e3920e67c9c5bf70dd6e0901eb9460ebcb2bdc209f
+    lines: 89
     license: MIT
     copyright: "Copyright (c) 2026 Matt Pocock"
+    # The pinned donor whose license and copyright govern this file. Absence of
+    # this field means no upstream author, which is the `conversation` entry.
+    attribution_donor: pocock
+    # No adaptations row cites this file. See `relation_to_pin.guidance`.
+    cited_in_adaptations: false
+    relation_to_pin:
+      donor_path: skills/engineering/code-review/SKILL.md
+      donor_sha256: 47f4e52c21694def9c7c11cbfbf891ca35eac7a93e395797515be3c8a409ae50
+      identical: false
+      evidence: >-
+        A sibling revision of the same work, not the bytes at the pin: 87 lines there, 89 here,
+        58 lines differing. That last figure is literally true and substantively misleading -
+        nearly all of it is typography, a colon restyled to an em dash and changed quote glyphs.
+        Normalised for punctuation, the substance differs in exactly three places: this copy
+        writes "PRD/spec" where the pin writes "spec" (here L3, L9, L31); it carries a sub-agent
+        dispatch sentence at L60 that the pin does not have; and it words the issue-tracker
+        instruction differently. The twelve-item Fowler smell baseline, both rules binding it,
+        both sub-agent briefs, the aggregation rules and the "why two axes" rationale are
+        word-identical.
+      numbering: >-
+        Line numbers here do not correspond to the pin's, and the offset is not constant: the
+        extra line at L60 shifts the tail, and six further tail lines differ on their own account.
+        Two ranges first cited by this file's numbering land, at the pin's same numbers, on real
+        text saying something else. L78 here is the no-merge-no-rerank rule, while L78 at the pin
+        is the one-line-summary rule; L86-87 here are the two divergence examples, while L86-87 at
+        the pin are the conclusion drawn from them. Both resolve. Both would have been wrong.
+        Re-read at the pin; never renumber by arithmetic.
+      guidance: >-
+        Cite the pin wherever the claim survives there, which for this file is nearly everywhere.
+        Where a claim does not survive, prefer the pin's wording on its merits anyway: it is the
+        later revision, and "spec" is this catalog's own vocabulary where this copy says "PRD".
+        Only a body that must adapt wording existing solely here would need the reserved `local:`
+        spelling, and that need is the trigger described above.
   - id: conversation
     description: Design transcript (Grok) that specified the catalog. Cited as G:L<start>-<end>.
     working_copy: research/sources/grok-transcript.md

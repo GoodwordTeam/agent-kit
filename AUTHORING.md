@@ -311,6 +311,20 @@ moved or never existed is `origin: conversation`, not a guess at where it used t
 transcript's description of a donor, not from a donor's own README about itself. If the clone is not
 present, the citation is not available and the writer says so rather than paraphrasing.
 
+**Material held in `research/sources/` is cited at the pin, or not at all.** Some third-party
+material lives in-repo rather than at a donor pin — a recovered copy, a preserved earlier revision —
+and `provenance/upstream.lock.yaml` registers each one under `local_sources:` with its license and
+copyright. Registering it discharges the license obligation for holding it; it does not make it
+citable, and there is deliberately no `source:` spelling for a local source. Cite the pin wherever
+the claim survives there, and establish that it survives by reading the pin — never by renumbering.
+A recovered copy's line numbers do not correspond to the pin's, and a range carried across resolves
+against real text that says something else. Where a claim survives at no pin, cite the pin for the
+surrounding mechanism and say in the row's `rationale:` that the specific wording came from the
+registered local source; that row keeps its machine-checkable `source:` and states its one
+unverifiable element instead of hiding it. Do not invent a spelling — the reserved one, the evidence
+behind this rule and the trigger that would implement it are recorded beside `local_sources:` in the
+lockfile.
+
 ---
 
 ## 6. Ruling citations
@@ -487,6 +501,28 @@ Where a brief needs to say something this contract does not, that is evidence th
 something. **Amend the contract before the batch starts**; never carry the difference in the brief. A
 writer that finds this contract underspecified reports the strain and stops, rather than silently
 reconciling two instructions — and a writer is never at fault for having followed this file.
+
+**That report has a destination: `CONTRACT-DEFECTS.md` at the repository root.** Append an entry;
+create the file if it is not there yet. Mid-batch there is no handback to carry the report, and the
+only surface a writer can write is the artifacts it was commissioned to produce — so a correct
+diagnosis filed inside one of those lands in a file whose readers are looking for something else.
+Root placement is the whole mechanism: the entry appears in the diff of the very commit that would
+otherwise bury it, so readership does not depend on anyone remembering a path. **Never file a
+contract defect in a commissioned artifact**, however well the comment is written.
+
+An entry records three things, and the middle one is what makes it actionable without re-derivation:
+
+1. **The instruction followed** — the section, quoted.
+2. **What following it produced** — the concrete result, named precisely enough to reproduce. "A row
+   keyed `target:` is skipped by the parser" is the report; "§5 seems wrong" is not.
+3. **What the correct behavior appears to be**, or that the writer cannot tell.
+
+**An open entry blocks the batch commit until the contract owner rules on it.** Without that clause
+the file degrades into a suggestions box, which is the failure it exists to prevent: the defect that
+prompted this rule was reported correctly and nothing was obliged to read it. Ruling may mean
+amending the contract, or recording that the instruction is right and the writer misread it — both
+close the entry. Neither is the writer's to decide, and a writer that filed one is not waiting on
+its own judgment.
 
 **A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
 ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
@@ -717,6 +753,18 @@ Resolve the counterpart in `catalog.yaml` before describing it. A seat that a pa
 to contain is not a counterpart, and describing its concurrency model or verdict vocabulary invents
 unfalsifiable detail about a seat that does not exist — worse than no entry, for a reader who opened
 the file precisely to tell two seats apart.
+
+**Notation, and it is what makes the invention unwritable: a bullet that refers to a seat names that
+seat by its `catalog.yaml` id, in backticks.** A kind-3 bullet leads with the counterpart's id. A
+bullet that carries no id is a kind-2 non-seat boundary — the synthesis step, the closure decision,
+the ticket author — and it must not be phrased as a seat. Prose describing a seat is how an invented
+counterpart gets written: an id would have had to resolve, and a description never does.
+
+Two shapes are legitimate and a checker must not flag them. A sibling in **this** seat's own panel
+may be named without an id when the id would be the seat's own — a second instance of the same role
+is *the other seat*, not a different one. And a bullet may lead with a collective noun as long as the
+seats it covers are named by id inside it. What is never legitimate is naming another panel in prose
+with no id anywhere in the bullet, which is exactly the shape an invented counterpart takes.
 
 `## What it must be given` is the one heading that **states an obligation on the caller** rather than
 on the seat. `## Never` binds the seat's behavior; this binds whoever seats the role. Hold that
