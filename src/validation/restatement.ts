@@ -88,9 +88,13 @@ import { note, warning, type Issue } from "./types.ts";
  * Five clauses were found to restate a ruling by reading `78f8918`, before this
  * scan existed, and fixed at `36e7cf4`; this scan reports two of them and
  * misses three, at 0.48, 0.49 and 0.30. Two more found later in `AUTHORING.md`
- * at `a13ccc0` by matching verbatim runs score 0.40 and 0.50. Two of seven.
+ * at `a13ccc0` by matching verbatim runs score 0.40 and 0.50. An eighth is the
+ * `lesson.publish` hard gate in `policies/invocation.yaml` at `6c3c60c`, which a
+ * human cited by hand at `e15be71` -- thirteen minutes before `3e29c75` added
+ * this scan, so that fix is not this instrument's output either. Two of eight.
  *
- * All five misses rank the correct ruling first, so ranking is not what fails.
+ * All five sub-threshold misses rank the correct ruling first, so ranking is
+ * not what fails.
  * Nor is the cutoff: `:419` quotes its ruling for 80 characters and scores
  * 0.40 where `:607` quotes 79 and scores 0.55, and `:31` quotes 65 and scores
  * 0.50 where `AGENTS.md:136` quotes the same 65 and scores 0.78. Cosine is not
@@ -100,7 +104,17 @@ import { note, warning, type Issue } from "./types.ts";
  * is the verbatim run itself, which needs no corpus, no threshold and no
  * revision to mean something.
  *
- * All seven are in the labelled corpus, the five as known misses; see
+ * The eighth is not a cutoff question at all, and it is the one case here that
+ * no amount of tuning touches. `invocation.yaml` cites the ruling on the
+ * *neighbouring* operation, YAML citation scope is the whole file, and so the
+ * operation that actually needed the citation produces no window. Delete that
+ * one line and the claim scores 0.52 -- under the line as well. Scope hides it,
+ * and the threshold would hide it even if scope did not, so neither change is a
+ * fix on its own. Whether YAML scope should be the file or the operation is a
+ * contract question about what a reader relies on, not a tuning question, and
+ * this check does not get to answer it.
+ *
+ * All eight are in the labelled corpus, the six as known misses; see
  * `tests/fixtures/restatement-cases.ts`.
  */
 export const RESTATEMENT_THRESHOLD = 0.55;
@@ -394,7 +408,7 @@ export function checkRestatements(ctx: CheckContext, threshold: number = RESTATE
     note(
       "rulings.restatement-scan-coverage",
       RULINGS_FILE,
-      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is now a measurement rather than an estimate, taken on the only sample this instrument did not select: seven restatements in this repo were found without it, five by reading before it existed and two by matching verbatim runs, and it reports two of the seven. The five missed score 0.48, 0.49, 0.40, 0.30 and 0.50, every one of them ranking the correct ruling first and falling short of the line. They are not a threshold setting. Cosine measures vocabulary shared with a corpus, not quotation, and does not order these by how much they quote: 80 verbatim characters score 0.40 where 79 score 0.55 and 34 score 0.60, so a cutoff low enough to admit the misses admitted forty rows at the calibration revision and still ranked them below shorter paraphrases. A restatement sharing none of its ruling's words scores zero by construction, which no threshold reaches at all. A clean run is therefore evidence about this instrument, not about the tree.`,
+      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is now a measurement rather than an estimate, taken on the only sample this instrument did not select: eight restatements in this repo were found without it, six by reading before it existed and two by matching verbatim runs, and it reports two of the eight. Five of the misses score 0.48, 0.49, 0.40, 0.30 and 0.50, every one of them ranking the correct ruling first and falling short of the line. They are not a threshold setting. Cosine measures vocabulary shared with a corpus, not quotation, and does not order these by how much they quote: 80 verbatim characters score 0.40 where 79 score 0.55 and 34 score 0.60, so a cutoff low enough to admit the misses admitted forty rows at the calibration revision and still ranked them below shorter paraphrases. A restatement sharing none of its ruling's words scores zero by construction, which no threshold reaches at all. The sixth miss is not scored at all: in YAML the citation scope is the whole file, so a ruling named on one operation silences a restatement of it in every other operation of that file, and this check emits no row for the one that needed it. A clean run is therefore evidence about this instrument, not about the tree.`,
     ),
   );
 

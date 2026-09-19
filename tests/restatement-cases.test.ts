@@ -83,13 +83,30 @@ interface Measured {
   readonly leads: boolean;
 }
 
+/**
+ * A case whose own captured unit cites its own ruling, so the check is required
+ * to stay silent on it. Derived rather than declared: the citation is in the
+ * text or it is not, and a flag could disagree with the text it describes.
+ */
+function suppressed(item: (typeof LABELLED)[number]): boolean {
+  return item.text.includes(item.ruling);
+}
+
+/** The same text with every line naming its ruling removed. Identity elsewhere. */
+function uncited(item: (typeof LABELLED)[number]): string {
+  return item.text
+    .split("\n")
+    .filter((line) => !line.includes(item.ruling))
+    .join("\n");
+}
+
 /** Every case in its own body, so one case cannot cite or shadow another. */
-function scanAll(): Map<string, Measured> {
+function scanAll(body: (item: (typeof LABELLED)[number]) => string = (item) => item.text): Map<string, Measured> {
   const files: Record<string, string> = {
     "catalog.yaml": CATALOG_HEAD,
     "policies/resolved-conflicts.yaml": policyYaml(),
   };
-  for (const item of LABELLED) files[pathFor(item)] = `${item.text}\n`;
+  for (const item of LABELLED) files[pathFor(item)] = `${body(item)}\n`;
   const root = makeTree(files);
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
@@ -103,7 +120,7 @@ function scanAll(): Map<string, Measured> {
   const scored = new Map<string, Measured>();
   for (const item of LABELLED) {
     const path = pathFor(item);
-    const lines = `${item.text}\n`.split("\n");
+    const lines = `${body(item)}\n`.split("\n");
     const at = lines.findIndex((line) => line.includes(item.anchor));
     if (at < 0) throw new Error(`anchor missing from captured text: ${item.id}`);
     let lo = at;
@@ -129,6 +146,8 @@ function scanAll(): Map<string, Measured> {
 }
 
 const scores = scanAll();
+/** The same cases with their own citation removed. Only suppressed cases differ. */
+const uncitedScores = scanAll(uncited);
 
 describe("the labelled corpus, which is what any recall claim rests on", () => {
   for (const item of LABELLED.filter((c) => c.label === "defect" && c.reported)) {
@@ -140,8 +159,8 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     });
   }
 
-  for (const item of LABELLED.filter((c) => c.label === "defect" && !c.reported)) {
-    test(`${item.id} is a known miss, pinned at ${item.score}: ${item.why.slice(0, 45)}...`, () => {
+  for (const item of LABELLED.filter((c) => c.label === "defect" && !c.reported && !suppressed(c))) {
+    test(`${item.id} is a known miss the threshold hides, pinned at ${item.score}: ${item.why.slice(0, 45)}...`, () => {
       // This pins a defect the instrument does not see. It is not an assertion
       // that the miss is acceptable -- it is what stops the miss from being
       // forgotten, because the coverage note's recall claim is only true while
@@ -157,6 +176,33 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       // threshold is what cuts them. A miss at zero and a miss at 0.50 are
       // different failures and only one of them is reachable by tuning.
       expect(scores.get(item.id)?.score ?? 0).toBeGreaterThan(0.25);
+    });
+  }
+
+  for (const item of LABELLED.filter((c) => c.label === "defect" && !c.reported && suppressed(c))) {
+    test(`${item.id} is a known miss a sibling citation hides, ${item.scoreIfUncited} without it: ${item.why.slice(0, 40)}...`, () => {
+      // A different failure from the one above, and the distinction is the
+      // reason this loop exists. The threshold misses score 0.30 to 0.52 and
+      // are hidden by one number. This one is hidden before any number is
+      // compared: the file cites the ruling on a *neighbouring* operation, YAML
+      // scope is the whole file, and so no window is emitted for the operation
+      // that actually needed the citation. `e15be71` added it there by hand,
+      // which is a human disagreeing with the scope rule on this file.
+      expect(scores.get(item.id)?.score ?? -1).toBe(0);
+
+      // The number the citation is hiding. Without this the zero above is
+      // indistinguishable from a case that shares no vocabulary with any
+      // ruling, and the whole claim about scope would rest on a comment.
+      const hidden = item.scoreIfUncited;
+      if (hidden === undefined) throw new Error(`suppressed case carries no scoreIfUncited: ${item.id}`);
+      expect(uncitedScores.get(item.id)?.score ?? -1).toBe(hidden);
+
+      // And the part that stops this case being read as a tuning argument:
+      // the hidden number is under the threshold too, so removing the
+      // suppression alone would still not report it. Both the scope rule and
+      // the threshold have to move, and a change to either one on its own is
+      // not a fix for this case.
+      expect(hidden).toBeLessThan(RESTATEMENT_THRESHOLD);
     });
   }
 
@@ -212,15 +258,31 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
   });
 
   test("a suppressed case is suppressed by its own citation, not by a low score", () => {
-    // The other half of that rule. `product-prototype-rationale` scores zero in
-    // its file and 0.50 as an isolated block, and only the citation explains
-    // the difference -- so the case is evidence about scope, not about cosine.
-    // Without this, a change that merely stopped scoring the file would look
-    // identical to the citation being honoured.
-    for (const item of LABELLED.filter((c) => c.text.includes(c.ruling))) {
+    // The other half of that rule, and the claim is now measured rather than
+    // asserted in a comment: each of these scores zero in its own file and
+    // `scoreIfUncited` with the citation line removed, and only the citation
+    // explains the difference -- so they are evidence about scope, not about
+    // cosine. Without the second assertion a change that merely stopped
+    // scoring these files would look identical to the citation being honoured.
+    //
+    // What this does not establish, because it was written here as though it
+    // did: that file scope is load-bearing at the shipping threshold. Both
+    // hidden scores are under 0.55, so narrowing scope to the block would
+    // change neither case's report. These guard the mechanism at the capture
+    // threshold. The behavioral question is open and needs a case that clears
+    // 0.55 uncited, which the set does not yet contain.
+    const suppressedCases = LABELLED.filter(suppressed);
+    expect(suppressedCases.length).toBeGreaterThan(1);
+    for (const item of suppressedCases) {
       expect({ id: item.id, score: scores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, score: 0 });
+      const hidden = item.scoreIfUncited;
+      if (hidden === undefined) throw new Error(`suppressed case carries no scoreIfUncited: ${item.id}`);
+      expect({ id: item.id, uncited: uncitedScores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, uncited: hidden });
       expect(longestSharedRun(item.text, RULINGS_AT_REVISION.find((r) => r.id === item.ruling)?.text ?? "")).toBeGreaterThan(10);
     }
+    // And the field belongs to exactly this set: a `scoreIfUncited` on a case
+    // with nothing to uncite would be a number describing no measurement.
+    expect(LABELLED.filter((c) => c.scoreIfUncited !== undefined).map((c) => c.id)).toEqual(suppressedCases.map((c) => c.id));
   });
 
   test("the set holds cases on both sides of the threshold, and on both axes", () => {

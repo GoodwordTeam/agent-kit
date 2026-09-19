@@ -1,28 +1,38 @@
 // Generated from e15be71 by scratchpad/gen.ts -- do not hand-edit the captured
 // text or scores. Regenerate against a revision and commit the diff.
 //
-// Each case names its own revision in `origin`, and they come from three:
-// e15be71, a13ccc0 and 78f8918. That is safe only because the `ruling:` texts
-// are byte-identical across all three -- checked by loading each revision's
+// Each case names its own revision in `origin`, and they come from four:
+// e15be71, a13ccc0, 78f8918 and 6c3c60c. That is safe only because the `ruling:`
+// texts are byte-identical across all four -- checked by loading each revision's
 // policy file and comparing against RULINGS_AT_REVISION, not by reading a diff,
 // since e15be71 does change that file and the change is entirely `binds`,
 // `doctrine` and comments, which this scan never reads. A case captured where
 // the ruling texts had moved would need its own corpus, and mixing them
 // silently would reproduce neither.
 //
-// The five cases from 78f8918 and e15be71 that `36e7cf4` fixed are the recall
-// gold standard: they were found by reading, before this check existed, so
-// their membership here is not selected by the instrument being measured. They
-// are the only cases in the set that can support a recall number at all.
+// The cases found by reading, before this check existed, are the recall gold
+// standard: five from 78f8918 and e15be71 that `36e7cf4` fixed, plus
+// `invocation-lesson-publish-ship-clause`, which `e15be71` fixed by adding the
+// operation-level citation. Their membership here is not selected by the
+// instrument being measured, so they are the only cases in the set that can
+// support a recall number at all.
 //
 // What this set deliberately leaves out: `policies/review.yaml`, at 17KB. It
-// exercises the file-scope suppression path `product-prototype-rationale`
-// already covers, and the only variable it adds is distance between the
+// exercises the same file-scope suppression path as the two cases that carry a
+// `scoreIfUncited`, and the only variable it adds is distance between the
 // restatement and the citation, which file scope makes irrelevant by
-// construction. It becomes the decisive case the moment anyone proposes
-// narrowing YAML scope from the file to the section -- that is the change it
-// would catch and `product-prototype-rationale` would not -- so it is an
-// omission with a trigger, not a gap.
+// construction.
+//
+// It was previously recorded here as the decisive case for narrowing YAML scope
+// from the file to the section. That was wrong, and the measurement that
+// corrects it is in `scoreIfUncited`: both suppressed cases score under 0.55
+// with their citation removed, so narrowing scope changes neither one's
+// behavior and neither one is evidence for or against the rule at the shipping
+// threshold. Whether `review.yaml` would be different is unmeasured -- it turns
+// entirely on whether its restatement clears 0.55 uncited, which nobody has
+// checked. So this is an omission with an open question attached, and the
+// question is the one to settle before anyone argues the scope rule from this
+// fixture in either direction.
 
 /** The ruling texts as of e15be71, which are the corpus the IDF is computed over. */
 export const RULINGS_AT_REVISION: ReadonlyArray<{ readonly id: string; readonly text: string }> = [
@@ -73,6 +83,21 @@ export interface LabelledCase {
   readonly why: string;
   /** Cosine at capture, under the shipping build. */
   readonly score: number;
+  /**
+   * For a case whose captured unit cites its own ruling: what the claim scores
+   * once that citation is removed. Absent on every other case.
+   *
+   * `score` is zero for these, and zero on its own cannot distinguish a claim
+   * the citation correctly suppressed from a claim that shares no vocabulary
+   * with any ruling. This is the number that tells them apart, and it is the
+   * only evidence in the set about what YAML file scope is actually deciding.
+   *
+   * Both known values are *below* the threshold, which is the uncomfortable
+   * part: narrowing scope to the block would change neither case's behavior at
+   * 0.55, so the suppression these cases pin is a mechanism, not a difference a
+   * user of `ak validate` could observe today.
+   */
+  readonly scoreIfUncited?: number;
 }
 
 export const LABELLED: ReadonlyArray<LabelledCase> = [
@@ -241,8 +266,9 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     ruling: "prototype-human-experience-needs-human",
     label: "not-a-defect",
     reported: false,
-    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: as an isolated block it scores 0.50 and reports, and in its own file no window names the ruling at all, because the file-level citation suppresses it. Zero here is the citation working rather than the instrument failing, which is why this case is stored with the file and not with the paragraph. It is also the guard on the scope rule itself: narrow YAML scope from the file to the section and this returns to 0.50 and fires. Corrected from `missing-supervisor-never-implementer` at 0.20, which was an unrelated window in the same block and never the claim this case is about.",
+    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: in its own file no window names the ruling at all, and with the `rulings:` line removed the same claim scores 0.50. Zero here is the citation working rather than the instrument failing, which is why this case is stored with the file and not with the paragraph. What it does not show, and was previously written here as though it did: narrowing YAML scope from the file to the section would *not* make this fire, because 0.50 is under the 0.55 threshold and stays under it. The guard holds the mechanism -- the case is scored at the capture threshold, where the difference is visible -- and not a behavior change a user of `ak validate` could observe. Corrected from `missing-supervisor-never-implementer` at 0.20, which was an unrelated window in the same block and never the claim this case is about.",
     score: 0.0,
+    scoreIfUncited: 0.5,
   },
   {
     id: "apply-findings-snapshot-bullet",
@@ -255,5 +281,18 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     reported: false,
     why: "A bullet naming snapshot fields -- comparison base, reviewed head, input hashes -- which are the same field names the ruling requires a review run to record. That overlap is the whole of the resemblance and none of the substance, which is the documented field-name class in its purest form. The nearest rejection in the set at 0.49, so it is the case that moves first if the threshold is lowered. Corrected from `supervisor-agreement-is-not-authority`, which scores 0.13 on this text: the 0.49 was always this ruling, and the case had been stored against a row its words do not touch.",
     score: 0.49,
+  },
+  {
+    id: "invocation-lesson-publish-ship-clause",
+    origin: "policies/invocation.yaml:280 at 6c3c60c",
+    text: "schema_version: 1\npolicy: invocation\n\noperations:\n  - id: lesson.capture\n    exposed_by: compound\n    authority: model\n    callable_by: [super-ship, autopilot]\n    purpose: >-\n      The `super-ship` -> `compound` need, resolved without a U -> U call. Capture draws a lesson\n      *candidate* from evidence already present in the run. It does not start the `compound`\n      entrypoint, does not publish, and produces a draft the human or a granted publish step acts on.\n    preconditions:\n      - a real failure, correction or surprising review result is referenced by artifact id\n    hard_gates:\n      - no candidate is produced merely because a run ended successfully (release scenario 23)\n      - the candidate is a draft; publication is `lesson.publish` and never implied by capture\n    side_effects: [kb-draft, artifact-write]\n    on_unvalidatable_grant: not-applicable\n    ruling: central-kb-owns-project-artifacts\n\n  - id: lesson.publish\n    exposed_by: compound\n    authority: explicit-or-delegated\n    grant:\n      covers: lesson-publication\n    callable_by: [compound, autopilot]\n    purpose: Publish a supported lesson candidate into the central knowledgebase.\n    preconditions:\n      - a lesson candidate exists with evidence references that still bind to their hashes\n    hard_gates:\n      - \"a completed ship is not permission to rewrite project knowledge (plan §7.1)\"\n      - the write goes to the central knowledgebase, never an application-local docs tree\n    side_effects: [kb-publish, artifact-write]\n    on_unvalidatable_grant: stop-for-explicit-invocation",
+    format: "yaml",
+    anchor: "a completed ship is not permission to rewrite project knowledge",
+    ruling: "central-kb-owns-project-artifacts",
+    label: "defect",
+    reported: false,
+    why: "Gold standard, and the only case in the set the check misses for two independent reasons. `lesson.publish`'s first hard gate carries the ruling's closing clause nearly verbatim and cites nothing; `e15be71` fixed it by adding `ruling: central-kb-owns-project-artifacts` to that operation, which is a human judging the citation missing. It is missed first because the sibling operation `lesson.capture` already carries that same citation and YAML scope is the file, so no window is emitted at all; and second because with that one line removed the claim scores 0.52, still under 0.55. Widening the threshold to 0.52 would not surface it and narrowing scope to the operation would not surface it -- both have to change, which is why it is the strongest case in the set against reading the threshold as the dial. Stored as the two operations rather than the whole 17.6KB file, licensed by measurement rather than convenience: the excerpt reproduces both facts exactly, suppressed as it stood and 0.52 with the citation stripped. It also cuts against the scope rule `product-prototype-rationale` guards, because `invocation.yaml` cites per operation, so the unit a reader relies on is the operation and not the file. Whether that makes YAML scope wrong or makes this file's shape an exception is a contract question for `policies`, and this fixture records the tension rather than settling it.",
+    score: 0.0,
+    scoreIfUncited: 0.52,
   },
 ];
