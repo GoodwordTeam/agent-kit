@@ -443,6 +443,29 @@ mechanical — take the ruling the specimen states and look for its id in prose.
 it found exactly one, §3's `## Not for` example, which is why that example now carries
 `missing-supervisor-never-implementer`.
 
+**A restatement may compress; it may not narrow.** There is no digest exemption. A README bullet, a
+translation-table row, a handback's one-line version of a rule — each restates by construction, and
+a form that is read first and most is the worst candidate for relaxed attribution. But the defect
+compression produces is not the missing id; it is the dropped bound. A restatement may leave out any
+clause that does not change what a reader does. It may never leave out a clause that *bounds* the
+rule: a bounded rule with its bound removed is not a shorter rule but a wider one, and a reader
+acting on it does what the ruling excludes.
+
+The diagnostic is reliable enough to use directly. The clause that survives compression is the one a
+reader would have supplied unprompted; the clause that vanishes is the one the rule exists to pin
+down. That is the asymmetry above, arrived at through length instead of through position.
+
+This is also why the citation is required and is not the point. The id is what makes a narrowing
+findable — someone resolves it, reads the row, and sees what is missing. Requiring it buys the check
+rather than the attribution.
+
+Two limits. A bullet stating something no ruling governs cites nothing, and that absence is
+information: it says the rule lives in a schema or a protocol rather than in a ruling, and a
+citation manufactured to make a list look uniform destroys the signal. And compression reaches a
+specimen exactly where carrying does — a block quote illustrating a shape stays exempt, while one
+that is a rule's only statement was never exempt, and compressing that is the same failure by a
+different route.
+
 ---
 
 ## 7. Prohibitions
