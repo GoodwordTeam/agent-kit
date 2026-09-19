@@ -26,6 +26,13 @@
 # Two files in this batch carry no `adaptations` row because catalog.yaml declares them
 # provenance_origin: conversation. They are under `conversation_origin:` at the bottom,
 # a key the fragment parser does not read.
+#
+# Recorded exception to the 150-line body target: protocols/review-delta/PROTOCOL.md is
+# 151 lines. The overage is two ruling ids totalling 78 characters, added to cite
+# required-lane-failure-is-unavailable and closure-requires-independent-verification at
+# the clauses they govern. A lossless reflow was attempted and saved nothing, so the only
+# remaining path was to cut a real clause. Recorded rather than forced, per ruling
+# numeric-heuristics-are-guidance.
 
 adaptations:
   - path: protocols/invocation-authority.md
@@ -114,9 +121,16 @@ adaptations:
       breakage check, and out-of-scope observations that are ledgered rather than looped.
   - path: protocols/worktree-ownership/PROTOCOL.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/using-git-worktrees/SKILL.md
-    rationale: Detect existing isolation by comparing resolved git dir against resolved common git
-      dir with a superproject guard; prefer the native worktree capability; verify the gitignore
-      entry; the rationalization rows behind this protocol's Hard gates table.
+    rationale: >-
+      Detect existing isolation by comparing resolved git dir against resolved common git dir with
+      a superproject guard; prefer the native worktree capability; verify the gitignore entry; the
+      rationalization rows behind this protocol's Hard gates table. Deliberate divergence on the
+      gitignore probe. The donor runs `git check-ignore -q` on the bare directory name, which is
+      correct for its own ordering because it verifies a directory that already exists. This
+      protocol probes before creating anything, so it uses the trailing-slash form. The two forms
+      agree in every case but one, a directory-only rule probed before the directory exists, where
+      git tests the bare name as a file and returns a false negative. The donor is authority for
+      what the donor does, not for what is correct under a different ordering.
   - path: protocols/worktree-ownership/PROTOCOL.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/dispatching-parallel-agents/SKILL.md
     rationale: What makes two workers actually concurrent, and the self-contained prompt shape that

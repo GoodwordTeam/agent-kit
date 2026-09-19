@@ -76,7 +76,7 @@ adaptations:
     rationale: What makes two workers actually concurrent, and the self-contained prompt shape that keeps parallel workers from sharing assumptions.
   - path: protocols/worktree-ownership/PROTOCOL.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/using-git-worktrees/SKILL.md
-    rationale: Detect existing isolation by comparing resolved git dir against resolved common git dir with a superproject guard; prefer the native worktree capability; verify the gitignore entry; the rationalization rows behind this protocol's Hard gates table.
+    rationale: Detect existing isolation by comparing resolved git dir against resolved common git dir with a superproject guard; prefer the native worktree capability; verify the gitignore entry; the rationalization rows behind this protocol's Hard gates table. Deliberate divergence on the gitignore probe. The donor runs `git check-ignore -q` on the bare directory name, which is correct for its own ordering because it verifies a directory that already exists. This protocol probes before creating anything, so it uses the trailing-slash form. The two forms agree in every case but one, a directory-only rule probed before the directory exists, where git tests the bare name as a file and returns a false negative. The donor is authority for what the donor does, not for what is correct under a different ordering.
   - path: roles/implementer/ROLE.md
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/incremental-implementation/SKILL.md
     rationale: The noticed-but-not-touching pattern, this seat's scope-discipline mechanism.
