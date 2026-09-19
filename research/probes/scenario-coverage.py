@@ -131,6 +131,13 @@ def main():
     )
     if uncovered:
         print(f"Named by neither: {', '.join(str(n) for n in uncovered)}.")
+    # Do not soften this into a summary line. It is load-bearing at the batch-5
+    # checkpoint, where the question is whether the evals exercise scenarios 7
+    # and 20 -- not whether something names them. A run that prints 24/24 and
+    # stops invites exactly the reading this sentence exists to block, and the
+    # reader most likely to be misled is the one who trusts the number because
+    # a probe produced it. Requested kept verbatim by team-lead; if a later
+    # edit needs the wording changed, the claim it makes has to survive.
     print("Named is not satisfied: this reads two indexes, not the bodies they point at.")
     return 1 if dangling else 0
 
