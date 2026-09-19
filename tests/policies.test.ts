@@ -188,24 +188,107 @@ describe("policies/invocation.yaml", () => {
     expect(rulesOf(checkPolicies(ctxFor(policy)))).toContain("policy.skill-not-classified");
   });
 
-  test("a per-entrypoint invocation that disagrees with the catalog is an error", () => {
-    const catalog = CATALOG.replace(
-      "policies:",
-      `  - id: super-review
+  // `per_entrypoint` is nested under `entrypoints:` in the authored policy, and
+  // every case below puts it there. It used to be appended at column 0 in this
+  // file, which is why the four checks that read it passed their tests for
+  // weeks while never once running against `policies/invocation.yaml`.
+  const REVIEW_SKILL = `  - id: super-review
     invocation: U
     status: contract
     entrypoints:
       full:
         authority: explicit-or-delegated
         invocation: U
-policies:`,
-    );
+      readiness:
+        authority: explicit-or-delegated
+        invocation: U
+policies:`;
+
+  function policyWithPerEntrypoint(block: string): string {
+    return POLICY.replace("skills: [super-align, autopilot]", "skills: [super-align, autopilot, super-review]")
+      .replace("count: 2", "count: 3")
+      .replace("operations:", `${block}operations:`);
+  }
+
+  test("a per-entrypoint invocation that disagrees with the catalog is an error", () => {
+    const catalog = CATALOG.replace("policies:", REVIEW_SKILL);
+    const policy = policyWithPerEntrypoint(`  per_entrypoint:
+    super-review:
+      full:
+        invocation: M
+        authority: explicit-or-delegated
+      readiness:
+        invocation: U
+        authority: explicit-or-delegated
+`);
+    expect(rulesOf(checkPolicies(ctxFor(policy, catalog)))).toContain("policy.entrypoint-disagrees-with-catalog");
+  });
+
+  test("a per-entrypoint authority that disagrees with the catalog is an error", () => {
+    const catalog = CATALOG.replace("policies:", REVIEW_SKILL);
+    const policy = policyWithPerEntrypoint(`  per_entrypoint:
+    super-review:
+      full:
+        invocation: U
+        authority: explicit
+      readiness:
+        invocation: U
+        authority: explicit-or-delegated
+`);
+    const messages = checkPolicies(ctxFor(policy, catalog))
+      .filter((i) => i.rule === "policy.entrypoint-disagrees-with-catalog")
+      .map((i) => i.message);
+    expect(messages.some((m) => m.includes("authority") && m.includes("explicit-or-delegated"))).toBe(true);
+  });
+
+  test("an entrypoint the catalog declares and the policy omits is an error", () => {
+    // The file heads this block "Must agree entry-for-entry with catalog.yaml",
+    // and agreement entry-for-entry fails in both directions. Only the
+    // policy-has-extra direction was ever checked.
+    const catalog = CATALOG.replace("policies:", REVIEW_SKILL);
+    const policy = policyWithPerEntrypoint(`  per_entrypoint:
+    super-review:
+      full:
+        invocation: U
+        authority: explicit-or-delegated
+`);
+    const messages = checkPolicies(ctxFor(policy, catalog))
+      .filter((i) => i.rule === "policy.entrypoint-disagrees-with-catalog")
+      .map((i) => i.message);
+    expect(messages.some((m) => m.includes("readiness"))).toBe(true);
+  });
+
+  test("a per_entrypoint block at the top level is reported rather than ignored", () => {
+    // The shape that hid the bug. Someone writing this block expects it to be
+    // validated, so the one outcome that must not happen is silence.
+    const catalog = CATALOG.replace("policies:", REVIEW_SKILL);
     const policy = `${POLICY.replace("skills: [super-align, autopilot]", "skills: [super-align, autopilot, super-review]").replace("count: 2", "count: 3")}per_entrypoint:
   super-review:
     full:
       invocation: M
       authority: explicit-or-delegated
 `;
-    expect(rulesOf(checkPolicies(ctxFor(policy, catalog)))).toContain("policy.entrypoint-disagrees-with-catalog");
+    const issues = checkPolicies(ctxFor(policy, catalog));
+    expect(rulesOf(issues)).toContain("policy.per-entrypoint-misplaced");
+    expect(issues.find((i) => i.rule === "policy.per-entrypoint-misplaced")?.message).toContain("entrypoints.per_entrypoint");
+  });
+
+  test("the authored policy's per-entrypoint block agrees with the catalog", () => {
+    // The regression guard that would have caught the dead path: a correct
+    // nested block produces no disagreement, so the checks are live and silent
+    // rather than dead and silent -- which the suite could not tell apart.
+    const catalog = CATALOG.replace("policies:", REVIEW_SKILL);
+    const policy = policyWithPerEntrypoint(`  per_entrypoint:
+    super-review:
+      full:
+        invocation: U
+        authority: explicit-or-delegated
+      readiness:
+        invocation: U
+        authority: explicit-or-delegated
+`);
+    const rules = rulesOf(checkPolicies(ctxFor(policy, catalog)));
+    expect(rules).not.toContain("policy.entrypoint-disagrees-with-catalog");
+    expect(rules).not.toContain("policy.per-entrypoint-misplaced");
   });
 });

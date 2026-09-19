@@ -189,12 +189,41 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
     }
   }
 
-  const perEntrypoint = obj(policy["per_entrypoint"]) ?? {};
+  // `per_entrypoint` is a key of `entrypoints`, not of the document. Reading it
+  // from the document root is where these four checks used to look, and the
+  // authored policy has never had it there -- so every one of them was dead on
+  // `policies/invocation.yaml` while passing a unit test that appended the
+  // block at column 0. A check that cannot fire is worse than an absent one,
+  // because the clean run is read as evidence.
+  const perEntrypoint = obj(entrypoints["per_entrypoint"]) ?? {};
+  if (obj(policy["per_entrypoint"]) !== null) {
+    issues.push(
+      error(
+        "policy.per-entrypoint-misplaced",
+        POLICY_FILE,
+        "per_entrypoint is declared at the document root; it is read at entrypoints.per_entrypoint and a block at the root is never checked against catalog.yaml.",
+      ),
+    );
+  }
   for (const [skillId, named] of Object.entries(perEntrypoint)) {
     const entry = catalogSkills.get(skillId);
     if (entry === undefined) {
       issues.push(error("policy.skill-not-in-catalog", POLICY_FILE, `per_entrypoint names ${skillId}, which catalog.yaml does not declare`));
       continue;
+    }
+    // Agreement is entry-for-entry, so it fails in both directions. Only the
+    // policy-declares-extra direction was checked; a catalog entrypoint the
+    // policy omits left the law with no machine-readable authority for it.
+    for (const name of Object.keys(entry.entrypoints ?? {})) {
+      if (obj(named)?.[name] === undefined) {
+        issues.push(
+          error(
+            "policy.entrypoint-disagrees-with-catalog",
+            POLICY_FILE,
+            `catalog.yaml declares entrypoint ${name} on ${skillId}, which per_entrypoint.${skillId} omits`,
+          ),
+        );
+      }
     }
     for (const [name, value] of Object.entries(obj(named) ?? {})) {
       const record = obj(value);
