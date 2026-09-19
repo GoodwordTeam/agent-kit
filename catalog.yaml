@@ -470,7 +470,7 @@ protocols:
   - id: phase-operations
     batch: 1
     provenance_origin: conversation
-    status: contract
+    status: authored
     summary: >-
       The split that satisfies the invocation law: a public entrypoint a human starts, and a phase
       operation a delegated controller may start only under a runner-validated grant. Where a host
@@ -478,7 +478,7 @@ protocols:
   - id: consensus-plan-gate
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Planner snapshot, then architect, then critic on the same fixed snapshot without seeing each
       other's analysis, then synthesis. Five rounds maximum. Invoked for genuine architectural
@@ -486,35 +486,35 @@ protocols:
   - id: tdd
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Red, green, refactor evidence for behavior changes. Non-testable work requires a recorded
       alternative verification plan, not an exemption.
   - id: apply-findings
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Apply only accepted, sufficiently specified findings under authorization. A smell is never an
       automatic fixer ticket. Independent verification closes them.
   - id: review-delta
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Two-axis delta over a fix, bounded by affected behavior rather than changed lines, with
       novelty evidence required. At most two fix cycles.
   - id: worktree-ownership
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Ownership-aware scheduling with an explicit integration owner and no overlapping writers.
       Dependency edges alone do not make parallelism safe.
   - id: attach-pack
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Deterministic pack selection by artifact and semantics with recorded rationale. Attaches
       constraints and lenses; never starts a phase.
@@ -527,24 +527,24 @@ roles:
   - id: supervisor
     batch: 1
     provenance_origin: conversation
-    status: contract
+    status: authored
     summary: >-
       Judges one decision card against the charter. Two seats, declared independent. Never
       implements. Agreement is not authority.
   - id: implementer
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Executes one approved implementation ticket. May not approve or close its own work.
   - id: reviewer-spec
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Checks whether accepted findings and ticket obligations were actually addressed.
   - id: reviewer-standards
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Checks fixes against the project's own designated rules, cited rule by rule. Absent
       standards return empty; they never become invented preferences.
@@ -553,17 +553,17 @@ roles:
   - id: plan-review/planner
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Produces the fixed plan snapshot the other two seats inspect.
   - id: plan-review/architect
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Structural judgment on the snapshot, without seeing the critic's analysis.
   - id: plan-review/critic
     batch: 1
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Adversarial judgment on the same snapshot, without seeing the architect's analysis.
 
   # Code review (15) — arch 6.1 keeps the CE panel. Donor names that encode a person
