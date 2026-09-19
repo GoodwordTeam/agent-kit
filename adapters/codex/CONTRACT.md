@@ -1,0 +1,161 @@
+# adapters/codex — host contract
+
+Contract only. No implementation lives here.
+
+The parallel host bundle. This file states what the Codex host provides, what the package requires,
+which `schemas/common.schema.json#/$defs/capability` values it can satisfy, precisely which of them
+**differ from `adapters/claude-code/CONTRACT.md`**, what degrades as a result, and how the bundle is
+tested.
+
+Observations marked **verified (donor)** were read from the pinned clone at
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1`. Observations marked
+**verified (CLI)** were taken from `codex-cli 0.154.0` on this machine. Everything else is a
+requirement on the packager.
+
+---
+
+## 1. The multi-host manifest pattern
+
+The donor pattern this package copies is **parallel per-host manifest directories at the repository
+root, over one shared content tree**. Verified (donor) at the pin:
+
+| Path | Contents |
+|---|---|
+| `.claude-plugin/plugin.json` | Identity only: `name`, `version`, `description`, `author`, `homepage`, `repository`, `license`, `keywords`. **No `skills` key** — the host discovers `skills/` |
+| `.claude-plugin/marketplace.json` | `name`, `owner`, `metadata`, and one `plugins[]` entry with `source: "./"` |
+| `.codex-plugin/plugin.json` | The same identity fields, **plus** `"skills": "./skills/"` and an `interface` block (display name, descriptions, category, capabilities, icon, brand color, default prompts) |
+| `.cursor-plugin/plugin.json` | Identity fields plus `displayName`; different `keywords` |
+| `plugin.json` (root), `.kimi-plugin/`, `.grok-plugin/`, `.devin-plugin/` | Further per-host copies of the same identity |
+
+Two properties of the pattern matter more than the file list:
+
+1. **The skill content tree is shared, not duplicated.** All manifests point at the same `skills/`.
+2. **Identity parity is machine-enforced.** The donor's release validator reads each manifest and
+   fails when a version disagrees with `package.json`
+   (`compound-engineering@05c42da:src/release/components.ts`, the `does not match` checks around
+   lines 197–213). The donor treats manifest drift as a release-blocking error, not a lint.
+
+A third property is a deliberate divergence rather than a copy. The donor's Codex manifest registers
+skills by **directory pointer** (`"skills": "./skills/"`) and its Claude manifest by **discovery**.
+This package enumerates explicitly for claude-code (`adapters/claude-code/CONTRACT.md` §1) because
+its install set is profile-dependent. For codex the packager emits whichever form the target CLI
+accepts, and `ak build --check` asserts that the set of skills the codex bundle exposes is identical
+to the set the claude-code bundle exposes for the same profile. Divergence between the two bundles is
+a build failure, not a host difference.
+
+What this package does **not** copy: the `interface` display block (marketing metadata, out of scope
+for a catalog of engineering instructions), and the further host manifests the donor ships for hosts
+this package does not target.
+
+**Unverified — do not assert.** The donor's converter comments describe Codex's native plugin flow as
+`codex plugin install` reading `.codex-plugin/plugin.json`
+(`compound-engineering@05c42da:src/converters/claude-to-codex.ts`, the comment above
+`includeSkills`). The CLI installed here exposes **`codex plugin add`**, not `install`
+(verified (CLI), §4). The package does not claim to know which is correct for a given Codex version;
+the packager pins the command the target CLI actually exposes and the smoke test in §5 is what
+confirms it.
+
+---
+
+## 2. Bundle shape
+
+```text
+dist/codex/
+├── .codex-plugin/plugin.json   # identity, skill registration, no interface block
+├── skills/<id>/SKILL.md        # same bodies as dist/claude-code, different generated keys
+├── skills/<id>/references/
+└── NOTICE, LICENSE
+```
+
+Same canonical bodies, different generated frontmatter. The canonical tree is host-neutral; that is
+the whole reason host keys are generated rather than written (`AUTHORING.md` §4).
+
+---
+
+## 3. Capabilities: what differs from claude-code
+
+Identical on both hosts: `repository-read`, `repository-write`, `process-exec`, `network-fetch`,
+`vcs-local`, `vcs-remote`, `human-channel`, and `artifact-write` (storage only, no hash binding).
+Also identical: `kb-read`, `kb-write`, `tracker-access`, `event-delivery` and `runner-grants` are
+**not provided** by either host, for the same reasons.
+
+The differences:
+
+| Capability / restriction | claude-code | codex | Consequence |
+|---|---|---|---|
+| Per-skill suppression of model invocation | `disable-model-invocation: true`, documented host behavior | **No equivalent key verified** on `codex-cli 0.154.0` | The structural half of the invocation law is unavailable. See §3.1 |
+| Tool restriction | `allowed-tools`, pre-approval only, denies nothing | Not emitted. The host has an OS-level sandbox instead, configured by the operator (`sandbox_permissions`, verified (CLI) in `codex plugin --help`) | Codex's confinement is real but **operator-owned and process-wide**, not per-skill. The package still declares side effects and still relies on neither |
+| Bundled behavioral eval runner | `claude plugin eval`, `<eval dir>/**/case.yaml` | **None verified** | The eval corpus is not executable against this bundle by a host-native runner. See §5 |
+| Manifest validator | `claude plugin validate --strict` | **None verified** | Bundle validation is `ak validate` plus an install smoke test |
+
+### 3.1 The degradation that matters: U skills on a host with no manual-invocation flag
+
+Plan §1.3: "Do not assume that a host's manual-invocation flag is portable." On this host it is not
+portable, and the package does not pretend otherwise.
+
+For every U skill in the codex bundle:
+
+1. The generated `description` carries an explicit non-trigger clause drawn from the skill's
+   `## Not for` section. On a host that cannot suppress model invocation, the description is the only
+   thing between a U skill and an unrequested start, so it is written to be read that way.
+2. The skill's own `## Authority` section states `explicit`, and its first workflow step is the
+   authority check: started without an explicit human request, the skill stops and says so rather
+   than proceeding.
+3. The non-trigger eval case for that skill is a **required** gate for this bundle rather than an
+   advisory one, because it is the only observation of a property the host does not enforce.
+
+Every U skill's `packaging.hosts[]` entry for `adapter: codex` records this explicitly:
+`mode: manual`, with the unsuppressible model invocation named in `unsupported`
+(`schemas/skill.schema.json`). A skill claiming `autonomous` on this host is an `ak validate`
+failure — the declaration is the record that the weakening was noticed rather than absorbed.
+
+And the general rule, unchanged from `adapters/claude-code/CONTRACT.md` §4: a host that cannot
+enforce a restriction an autonomous run requires exposes the skill in guided/manual mode and rejects
+autonomous mode. `profiles/autonomy` does not install against this host on its own, for the same
+missing `runner-grants` and `event-delivery` capabilities.
+
+---
+
+## 4. Install
+
+Verified (CLI), `codex-cli 0.154.0`:
+
+```bash
+codex plugin marketplace add <source>   # local path, owner/repo[@ref], HTTPS or SSH Git URL
+codex plugin add <plugin>               # install from a configured or remote marketplace
+codex plugin list
+codex plugin remove <plugin>
+```
+
+`codex plugin marketplace add` accepts `--ref` for Git sources. The packager records the exact
+command pair for the pinned target CLI version in the release notes; see the unverified-command note
+in §1.
+
+---
+
+## 5. Testing
+
+Tests this adapter owns, in `tests/adapters/`:
+
+1. **Bundle parity** — the skill id set in `dist/codex` equals the skill id set in
+   `dist/claude-code` for the same profile, and the `SKILL.md` bodies are byte-identical below the
+   frontmatter.
+2. **Manifest parity** — `name`, `version`, `description` and `license` agree across
+   `package.json`, `dist/claude-code/.claude-plugin/plugin.json` and
+   `dist/codex/.codex-plugin/plugin.json`. Adapted from the donor's own release check
+   (`compound-engineering@05c42da:src/release/components.ts`).
+3. **No leaked host keys** — the codex bundle contains no `disable-model-invocation` and no
+   `allowed-tools`; the claude-code bundle contains both where required. A key from one host's set
+   appearing in the other's bundle is a failure.
+4. **Non-trigger corpus completeness** — every U skill in the codex bundle has a non-trigger eval
+   case, and every such case's prompt is drawn from that skill's `## Not for` section.
+5. **Install smoke test** — `codex plugin marketplace add <dist/codex>` followed by
+   `codex plugin add`, then confirming the skills are listed. Run manually against the pinned CLI
+   version at release time and recorded as a receipt; not a CI gate, because it requires a host
+   install.
+
+**Reported honestly, not worked around:** with no verified host-native eval runner for this host, the
+behavioral corpus is executed against the claude-code bundle and, when a runner is attached, through
+the host-neutral harness in `adapters/runner-contract/CONTRACT.md`. Results for the codex bundle
+alone are `not-run`, recorded as such in the release evidence rather than inferred from the
+claude-code run.

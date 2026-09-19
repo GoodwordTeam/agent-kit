@@ -1,0 +1,204 @@
+import { describe, expect, test } from "bun:test";
+
+import { checkInvocation, extractSkillReferences } from "../src/validation/invocation.ts";
+import { loadCatalog } from "../src/catalog/load.ts";
+import { makeTree } from "./helpers/tree.ts";
+
+const CATALOG = `schema_version: 1
+package:
+  id: ak
+  name: agent-kit
+  version: 0.1.0
+  namespace: "/ak:"
+  default_profile: core
+skills:
+  - id: ship
+    status: authored
+    invocation: U
+  - id: compound
+    status: authored
+    invocation: U
+  - id: scout
+    status: authored
+    invocation: M
+policies:
+  - id: invocation
+    status: authored
+`;
+
+function ctxFor(files: Record<string, string>) {
+  const root = makeTree({ "catalog.yaml": CATALOG, ...files });
+  const { catalog } = loadCatalog(root);
+  if (catalog === null) throw new Error("fixture has no catalog");
+  return { root, catalog };
+}
+
+const head = (n: string) => `---\nname: ${n}\ndescription: d\n---\n`;
+const POLICY = `schema_version: 1
+phase_operations:
+  - id: compound.capture
+    behind: compound
+    authority: delegated-grant
+    grants: [publish-lesson]
+  - id: review.delta
+    behind: super-review
+    authority: active-review-run
+  - id: ship.prepare
+    behind: ship
+    authority: explicit
+`;
+
+describe("reference extraction", () => {
+  test("finds namespaced slash-command references", () => {
+    expect(extractSkillReferences("Run /ak:compound afterwards.\n", "/ak:").map((r) => r.target)).toEqual(["compound"]);
+  });
+
+  test("finds phase operation ids written in inline code", () => {
+    expect(extractSkillReferences("Invoke `review.delta` under a grant.\n", "/ak:").map((r) => r.target)).toEqual([
+      "review.delta",
+    ]);
+  });
+
+  test("does not mistake a filename for a phase operation", () => {
+    const refs = extractSkillReferences("Read `skill.yaml` and `plugin.json` and `notes.md`.\n", "/ak:");
+    expect(refs).toEqual([]);
+  });
+
+  test("records 1-based line numbers", () => {
+    expect(extractSkillReferences("a\nb\n/ak:scout\n", "/ak:")[0]?.line).toBe(3);
+  });
+});
+
+describe("the invocation law", () => {
+  test("a U skill starting another U skill directly is an error", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": `${head("ship")}\nThen run /ak:compound.\n`,
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    const issue = checkInvocation(ctx).find((i) => i.rule === "invocation.u-calls-u");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("skills/ship/SKILL.md");
+    expect(issue?.line).toBe(6);
+    expect(issue?.message).toContain("compound");
+  });
+
+  test("the same need expressed as a declared, grant-gated phase operation passes", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": `${head("ship")}\nInvoke \`compound.capture\` under a runner-validated grant.\n`,
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    expect(checkInvocation(ctx).filter((i) => i.severity === "error")).toEqual([]);
+  });
+
+  test("a U skill may start an M skill", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": `${head("ship")}\nDelegate to /ak:scout.\n`,
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    expect(checkInvocation(ctx).filter((i) => i.severity === "error")).toEqual([]);
+  });
+
+  test("an M skill may not start a U skill either: only a human starts those", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": `${head("scout")}\nThen /ak:compound.\n`,
+    });
+    expect(checkInvocation(ctx).some((i) => i.rule === "invocation.model-starts-user-skill")).toBe(true);
+  });
+
+  test("an operation the policy does not declare is an error", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": `${head("ship")}\nInvoke \`compound.invent\`.\n`,
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    const issue = checkInvocation(ctx).find((i) => i.rule === "invocation.undeclared-operation");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("policies/invocation.yaml");
+  });
+
+  test("a declared operation whose authority is not delegated cannot be a side door", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/compound/SKILL.md": `${head("compound")}\nInvoke \`ship.prepare\`.\n`,
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    const issue = checkInvocation(ctx).find((i) => i.rule === "invocation.operation-not-delegated");
+    expect(issue?.message).toContain("explicit");
+  });
+
+  test("skill.yaml calls are part of the graph, not only the prose body", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/ship/skill.yaml": "id: ship\ncalls: [compound]\n",
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    const issue = checkInvocation(ctx).find((i) => i.rule === "invocation.u-calls-u");
+    expect(issue?.file).toBe("skills/ship/skill.yaml");
+  });
+
+  test("a reference to a skill the catalog does not declare is an error", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": `${head("ship")}\nRun /ak:nonesuch.\n`,
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    expect(checkInvocation(ctx).some((i) => i.rule === "invocation.unknown-target")).toBe(true);
+  });
+
+  test("with no policy file the check fails closed: a U to U call is still an error", () => {
+    const ctx = ctxFor({
+      "skills/ship/SKILL.md": `${head("ship")}\nInvoke \`compound.capture\`.\nThen /ak:compound.\n`,
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    const issues = checkInvocation(ctx);
+    expect(issues.some((i) => i.rule === "invocation.policy-unavailable")).toBe(true);
+    expect(issues.some((i) => i.rule === "invocation.u-calls-u")).toBe(true);
+    expect(issues.some((i) => i.rule === "invocation.undeclared-operation")).toBe(true);
+  });
+});
+
+describe("packager enforcement of the law", () => {
+  test("every U skill is verified to receive disable-model-invocation: true", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    expect(checkInvocation(ctx).filter((i) => i.rule === "invocation.missing-disable-model-invocation")).toEqual([]);
+  });
+
+  test("a U skill whose generated frontmatter lacks the key is reported", () => {
+    const ctx = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    // Contradict the catalog from skill.yaml; the packager must not be able to downgrade a U skill.
+    const withM = ctxFor({
+      "policies/invocation.yaml": POLICY,
+      "skills/ship/SKILL.md": head("ship"),
+      "skills/ship/skill.yaml": "id: ship\ninvocation: M\n",
+      "skills/compound/SKILL.md": head("compound"),
+      "skills/scout/SKILL.md": head("scout"),
+    });
+    expect(checkInvocation(ctx).filter((i) => i.rule === "invocation.declaration-conflict")).toEqual([]);
+    expect(checkInvocation(withM).some((i) => i.rule === "invocation.declaration-conflict")).toBe(true);
+  });
+});

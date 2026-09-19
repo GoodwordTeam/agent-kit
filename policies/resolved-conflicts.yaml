@@ -1,0 +1,486 @@
+# policies/resolved-conflicts.yaml — where the sources disagreed, and what this repository does.
+#
+# Authority: plan §11 (the ten resolved design conflicts) plus the two rulings where the
+# architecture document deliberately overrides the design conversation: §6.3 (delta boundary)
+# and §6.4 (reviewer continuity). Rows 11-18 carry the same shape for tensions §11 states in
+# prose elsewhere in the plan.
+#
+# Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
+# every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
+# unique and kebab-case, and that every `ruling:` reference from a skill body, a policy or a
+# pack resolves to a row here.
+#
+# AUTHORING.md makes citing a ruling mandatory wherever a skill touches one. These ids are
+# stable: renaming one is a breaking change to every body that cites it.
+#
+# Row shape
+#   id         stable kebab-case identifier, cited verbatim from skill bodies
+#   tension    what the sources actually disagreed about
+#   ruling     what this repository does
+#   overrides  present only where the architecture doc deliberately overrules the conversation.
+#              Absence means the sources were reconciled, not that one lost.
+#   binds      the catalog.yaml entry ids this ruling governs, grouped by kind
+#   scenario   the numbered release scenario from plan §10 that tests it
+#   coverage   `direct` when that scenario tests this ruling head-on, `indirect` when it
+#              exercises the same structure on a neighbouring case; `note` says which
+#   source     plan §N, and a G:L locator into the design conversation where one applies
+#
+# No model, provider, cost or routing value appears here. The conversation's model-routing
+# illustrations are quoted only in research/sources/, which is denylist-exempt.
+
+schema_version: 1
+policy: resolved-conflicts
+rows: 18
+
+conflicts:
+
+  - id: entrypoint-phase-operation-split
+    tension: >-
+      The conversation forbids a user-invoked skill from starting another user-invoked skill,
+      and in the same breath makes compound human-invoked, has ship call compound, and lets a
+      supervisor pair operate the human gates. All four statements cannot hold literally.
+    ruling: >-
+      Split the public entrypoint from the shared phase operation. A human invokes the
+      entrypoint; a delegated controller invokes an exposed phase operation, and only when the
+      runner validates a grant that covers it. Ordinary workers cannot manufacture a grant or
+      start a new gated phase. Public wrappers and the supervisor pair run the same protocol, so
+      there is no second pipeline. Where a host cannot validate a grant, the skill stops for
+      explicit invocation rather than reproducing the forbidden command's effect through a side
+      door. Ship may draft a lesson candidate; publishing it needs explicit authority or a
+      charter grant.
+    overrides:
+      source: conversation
+      locator: G:L1950
+      position: "ship calls compound"
+      reason: >-
+        Kept as an effect, not as a call. `lesson.capture` drafts inside the run; the compound
+        entrypoint itself stays human-started.
+    binds:
+      skills: [super-ship, compound, autopilot, super-review, super-align, super-bound, wayfind, receiving-review, babysit-pr, ultraqa]
+      protocols: [phase-operations]
+      policies: [invocation]
+    scenario: 23
+    coverage: direct
+    source:
+      plan: "§7.1, §11"
+      locator: G:L1672-1676
+
+  - id: reviewer-continuity-not-amnesia
+    tension: >-
+      Per-task reviewers are described as fresh subagents, yet later closure passes are cheaper
+      and more accurate when the reviewer already knows the finding it is closing.
+    ruling: >-
+      "Fresh" means independent of the author, never ignorant of prior findings. A continuing
+      specialist may retain its earlier finding context, or a replacement receives a durable
+      prior-finding packet. Either way the seat sees the old finding, its fingerprint and
+      evidence, and the new revision. Independence from the author is mandatory; amnesia is not.
+    overrides:
+      source: conversation
+      locator: G:L1725-1726
+      position: "spec-reviewer and standards-reviewer are fresh subagents"
+      reason: >-
+        Read literally it resets every closure check to zero, which the same conversation calls
+        "amnesia with a bigger invoice" at G:L580. Independence is preserved; ignorance is not.
+    binds:
+      skills: [super-review]
+      protocols: [review-delta, apply-findings]
+      roles: [reviewer-spec, reviewer-standards, code-review/previous-comments]
+      schemas: [review, finding]
+    scenario: 9
+    coverage: direct
+    source:
+      plan: "§6.4, §11"
+      locator: G:L580
+
+  - id: delta-scope-affected-behavior
+    tension: >-
+      Delta findings are restricted to changed lines to keep the second pass cheap, but the
+      impact of a fix extends to callers the fix never touched.
+    ruling: >-
+      The delta is bounded by affected behavior, not by changed lines. It reviews the impact
+      neighbourhood of the fix. New findings require novelty evidence — what changed or what
+      regressed that makes this finding new — and unrelated low-priority discovery does not
+      restart. A serious newly discovered issue in an untouched affected caller stays
+      reportable. Scope discipline is not a reason to suppress relevant evidence.
+    overrides:
+      source: conversation
+      locator: G:L481
+      position: "NEW findings allowed only on changed lines, and only P0/P1"
+      reason: >-
+        A line-based boundary suppresses exactly the class of issue the delta exists to catch.
+        The plan labels this a safety refinement and takes it deliberately.
+    binds:
+      skills: [super-review]
+      protocols: [review-delta]
+      roles: [code-review/api-contract, code-review/security, code-review/data-migration, reviewer-spec, reviewer-standards]
+      policies: [review]
+    scenario: 8
+    coverage: direct
+    source:
+      plan: "§6.3, §11"
+      locator: G:L481
+
+  - id: closure-requires-independent-verification
+    tension: >-
+      A confidence score on a fix is used to mark a finding resolved, which makes closure a
+      property of the judge rather than of the evidence.
+    ruling: >-
+      Only independent verification evidence, plus a policy rule saying that evidence is
+      sufficient for that finding, closes a finding. Reviewer confidence and classifier output
+      are advisory and are recorded as such. An agent's description of a green run is not a
+      receipt: a receipt carries the command or probe, exit status, output digest, revision and
+      environment identity. An author may never close their own finding, and a changed patch
+      does not inherit stale receipts.
+    binds:
+      skills: [super-verify, super-review, diagnose, super-build]
+      protocols: [apply-findings, review-delta, tdd]
+      roles: [implementer, reviewer-spec, reviewer-standards]
+      schemas: [finding, verification, review]
+      policies: [review, authority-defaults]
+    scenario: 3
+    coverage: direct
+    note: >-
+      Scenario 3 requires the tenant-isolation finding to block unsupported closure; scenario 10
+      exercises the same rule from the evidence side.
+    source:
+      plan: "§5.6, §11"
+
+  - id: numeric-heuristics-are-guidance
+    tension: >-
+      A constraints file states a roughly hundred-line change target and an 80/15/5 test pyramid
+      as repository-wide rules, which reads as a gate a reviewer can fail a change on.
+    ruling: >-
+      Both are configurable starting points, established per project, carried in the project
+      record and explained in a reference pack. Neither is validated or enforced here, and
+      neither is grounds for a finding on its own. Real constraints are set per project and
+      exceptions are recorded, rather than forcing artificial file splits or meaningless tests.
+    overrides:
+      source: conversation
+      locator: G:L1706
+      position: "PR size ~100 LOC when possible, pyramid 80/15/5 as a per-repo constraints file"
+      reason: >-
+        Preserved as guidance in references/engineering-principles and schemas/project; demoted
+        from anything a validator or a reviewer can gate on.
+    binds:
+      skills: [super-bound, super-build, super-review, simplify]
+      packs: [pack-test]
+      references: [engineering-principles]
+      schemas: [project]
+      policies: [limits]
+    scenario: 2
+    coverage: indirect
+    note: >-
+      Scenario 2 requires the testing lens to fire on missing behavioral coverage — on evidence
+      about behavior, not on a ratio. A pyramid enforced as a gate would fire on the ratio
+      instead, and would fire on a change with adequate coverage in the wrong shape.
+    source:
+      plan: "§3, §11"
+      locator: G:L1706
+
+  - id: diagnose-patch-or-packet-never-both
+    tension: >-
+      Both the diagnosis skill and the build skill are described as producing the bug fix, which
+      allows the same patch to be written twice, or a diagnosis to ship work nobody approved.
+    ruling: >-
+      Diagnosis states the hypothesis before the edit and emits exactly one of two outputs: a
+      verified bounded patch, under a grant that covers it, or a diagnostic work packet. Never
+      both, and never a patch re-implemented from the packet after the packet already carried
+      one. A bug with a reproduction enters through diagnosis; only a fixed result is a work
+      source for the build lane.
+    binds:
+      skills: [diagnose, super-build, super-verify]
+      protocols: [tdd, apply-findings]
+      schemas: [ticket, finding]
+    also_recorded_in: docs/decisions/0001-kb-document-vocabulary.md §3
+    scenario: 6
+    coverage: indirect
+    note: >-
+      Scenario 6 forbids handing an under-specified finding to an automatic fixer. The work
+      packet is the same hand-off shape: it must be specified enough to be implemented once, or
+      it is sharpened rather than guessed at by a second implementer.
+    source:
+      plan: "§11"
+      locator: G:L2133
+
+  - id: ci-repair-restricts-purpose-not-permission
+    tension: >-
+      CI repair is described as "test failures only", which reads as permission to edit tests
+      until the pipeline is green.
+    ruling: >-
+      The rule restricts the purpose and scope of the repair, not the standard the change must
+      meet. No skipped checks, no weakened assertions, no lowered thresholds, no removed
+      coverage — without a separate decision. A required product-code change leaves CI repair
+      and re-enters diagnosis, a bounded patch, new verification and affected delta review.
+      Three bounded attempts, then stop.
+    overrides:
+      source: conversation
+      locator: G:L2201
+      position: "Max CI repair loops: 3, tests only"
+      reason: >-
+        The attempt cap is kept verbatim. The "tests only" clause is read as the scope of the
+        problem being repaired, never as authority over the tests themselves.
+    binds:
+      skills: [babysit-pr, diagnose, super-verify, super-review]
+      packs: [pack-test]
+      policies: [invocation, authority-defaults, limits]
+    scenario: 19
+    coverage: direct
+    source:
+      plan: "§7.5, §11"
+      locator: G:L2149
+
+  - id: prototype-human-experience-needs-human
+    tension: >-
+      A prototype is a model-invoked primitive that automation may reach for, yet its whole
+      purpose is to let a person feel something that discussion cannot settle.
+    ruling: >-
+      The evaluator is named in advance. A prototype answering a technical question may use
+      automated acceptance criteria and run unattended. A prototype whose question is about
+      human experience stays blocked without a human: on an unattended run it stops and
+      escalates rather than substituting an automated verdict for the experience it exists to
+      produce.
+    binds:
+      skills: [prototype, autopilot, pov, ideate]
+      schemas: [decision, ticket]
+    scenario: 4
+    coverage: indirect
+    note: >-
+      Scenario 4 forbids a reviewer failure from becoming an approval. The absent human
+      evaluator is the same structure: a required independent judgment that could not be
+      obtained is unavailable, never substituted.
+    source:
+      plan: "§11"
+      locator: G:L933
+
+  - id: central-kb-owns-project-artifacts
+    tension: >-
+      Lessons, decisions and context are written into a repository-local documentation tree,
+      while the same design requires one central knowledgebase to own project-derived material.
+    ruling: >-
+      The central knowledgebase owns every project-derived artifact: decisions, requirements,
+      plans, tickets, reviews, lessons and sanitized run receipts. This package owns reusable
+      instructions and templates only. Directory names under the knowledgebase root are
+      configurable; the central ownership is not. A skill never creates an application-local
+      documentation tree as a substitute, and a completed ship is not permission to rewrite
+      project knowledge.
+    overrides:
+      source: conversation
+      locator: G:L1950
+      position: "write one lesson per run into a repository-local lessons directory"
+      reason: >-
+        The lesson content and the keep/update/consolidate/replace/retire lifecycle survive; the
+        destination moves to the configured knowledgebase root.
+    binds:
+      skills: [compound, compound-refresh, super-ship, handoff, writing-skills]
+      roles: [code-review/learnings]
+      schemas: [lesson, decision]
+      references: [prose-quality]
+      adapters: [knowledgebase]
+    scenario: 21
+    coverage: direct
+    note: >-
+      Scenario 24 exercises the other half — a rolled-back skill leaves its lesson history intact.
+      docs/decisions/0001-kb-document-vocabulary.md is the repo-native record of this ruling: it
+      names the central equivalent of each application-local path, fixes the two artifact classes,
+      and holds that decision-record acceptance is not an authority a skill has.
+    source:
+      plan: "§1.2, §8, §11"
+      locator: G:L1766
+      adr: docs/decisions/0001-kb-document-vocabulary.md
+
+  - id: full-catalog-opt-in-profiles
+    tension: >-
+      Every capability in the inventory is wanted, and the same design demands a small context
+      and exactly one lifecycle.
+    ruling: >-
+      Ship the full catalog, install by profile, and load long material on demand through
+      reference packs. No duplicate donor lifecycles, no second run-everything entrypoint. The
+      default profile is the useful first operational release; the other profiles add scope
+      without adding a competing lifecycle. Progressive disclosure is the mechanism, not a
+      body that depends on another package's hooks.
+    binds:
+      profiles: [core, autonomy, product, maintainer]
+      references: [codebase-design, domain-modeling, engineering-principles, prose-quality]
+    scenario: 24
+    coverage: indirect
+    note: >-
+      Scenario 24 requires a skill to roll back without taking its supporting knowledge with it,
+      which is only possible when installation is a profile decision separate from the knowledge
+      the skill produced.
+    source:
+      plan: "§2.6, §11"
+      locator: G:L1986-1991
+
+  - id: two-fix-cycles-then-stop
+    tension: >-
+      A review loop that keeps iterating until the change is clean, against a bounded loop that
+      admits the plan may be wrong rather than the last patch.
+    ruling: >-
+      At most two fix-and-verify cycles after the first pass. The third stops with an explicit
+      blocked-or-replan decision and the open findings attached. Repeated failure is a signal
+      about the plan, not an invitation to a third loop. Anything still open is reported.
+    binds:
+      skills: [super-review, ultraqa, autopilot, babysit-pr]
+      protocols: [review-delta, apply-findings]
+      policies: [limits, review]
+    scenario: 18
+    coverage: direct
+    source:
+      plan: "§6.3, §7.2"
+      locator: G:L1041
+
+  - id: delta-baseline-reset-not-third-loop
+    tension: >-
+      A bounded delta loop and a change whose architecture, requirements or comparison base has
+      moved under it — where continuing the loop would review a snapshot nobody approved.
+    ruling: >-
+      When architecture, requirements, the comparison base or the affected surface changes
+      materially, affected approvals are invalidated and a new baseline is deliberately
+      established. That is a new review scope with its own pass 1, not an unbounded third delta
+      loop. A review run records its comparison base, its reviewed head and the last head
+      verified in the delta loop, so the three are never conflated.
+    binds:
+      skills: [super-review, super-verify]
+      protocols: [review-delta]
+      schemas: [review, verification]
+      policies: [limits]
+    scenario: 10
+    coverage: direct
+    source:
+      plan: "§6.3, §5.2"
+
+  - id: panel-composition-by-declared-risk
+    tension: >-
+      The first review pass is remembered as a fixed six-persona panel, while the same source
+      describes a layered catalog that shrinks for small low-risk diffs.
+    ruling: >-
+      The panel is layered. Correctness is the only unconditional seat; the standards gate runs
+      when the project declares standards or when discovery was uncertain; testing,
+      maintainability, agent-native and learnings fire when the diff earns them; security,
+      adversarial and the remaining conditional and stack seats are selected from artifact
+      evidence, in practice from the attached packs. A substantive feature lands at the
+      six-ish panel the design preserves. A documentation typo does not. Security, API and data
+      facts are never dropped because a classifier was uncertain.
+    binds:
+      skills: [super-review, doc-review]
+      protocols: [attach-pack]
+      roles: [code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/adversarial, code-review/api-contract, code-review/data-migration, code-review/performance, code-review/reliability, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios]
+      packs: [pack-api, pack-secure, pack-data, pack-perf, pack-test, pack-frontend]
+      policies: [review]
+    scenario: 1
+    coverage: direct
+    source:
+      plan: "§6.1"
+      locator: G:L1895
+
+  - id: required-lane-failure-is-unavailable
+    tension: >-
+      A review has to produce a verdict, and a required lane can fail to run at all — which
+      tempts a fallback to whoever is still available, including the author.
+    ruling: >-
+      A lane that could not run, could not be given its required context, or failed, returns
+      `unavailable`. That is a result, not an absence. A required lane that is `unavailable`
+      blocks approval, is never downgraded to an empty result, and is never backfilled by the
+      author, the implementer, another seat or the synthesis step. The review names the lane and
+      why, and stays resumable. Fail closed when required evidence is absent.
+    binds:
+      skills: [super-review, receiving-review]
+      roles: [reviewer-spec, reviewer-standards, code-review/project-standards]
+      schemas: [review]
+      policies: [review, authority-defaults]
+    scenario: 4
+    coverage: direct
+    source:
+      plan: "§2.5, §6.1"
+
+  - id: low-confidence-security-adjudicated
+    tension: >-
+      A generic confidence threshold is used to keep the finding list short, and a security
+      concern below that threshold is exactly the finding nobody can afford to drop.
+    ruling: >-
+      A low-confidence security concern stays visible and is adjudicated at the finding
+      adjudication checkpoint. It is never silently discarded by a filtering threshold, and the
+      security or adversarial seat is never skipped because a classifier was uncertain about the
+      artifact. Confidence is an evidence anchor recorded on the finding, not a gate in front of
+      it. Synthesis may not raise a nit's severity because several seats agreed on it either.
+    binds:
+      roles: [code-review/security, code-review/adversarial, doc-review/security-lens]
+      packs: [pack-secure]
+      schemas: [finding]
+      policies: [review]
+    scenario: 3
+    coverage: direct
+    source:
+      plan: "§6.1, §5.5"
+      locator: G:L667
+
+  - id: supervisor-agreement-is-not-authority
+    tension: >-
+      Two independent supervisors agreeing with high confidence is described as acting with the
+      human's authority, which makes confidence a source of permission.
+    ruling: >-
+      Agreement is necessary and not sufficient. The deterministic authority check runs
+      independently and must also pass: required evidence present and still bound to its hashes,
+      the charter listing this checkpoint and this action. Disagreement, missing evidence, a
+      supervisor failure or an out-of-charter action blocks the checkpoint and produces exactly
+      one escalation. There is no tie-breaking third supervisor and no repeated internal debate;
+      a tie goes to the human.
+    overrides:
+      source: conversation
+      locator: G:L2073
+      position: "Agreement + high confidence -> they act as you"
+      reason: >-
+        The two independent seats and the no-shared-scratchpad rule are kept. Confidence is
+        removed from the authority path; the charter and the evidence carry it instead.
+    binds:
+      skills: [autopilot]
+      roles: [supervisor]
+      schemas: [charter, decision]
+      policies: [authority-defaults]
+    scenario: 16
+    coverage: direct
+    source:
+      plan: "§7.3"
+      locator: G:L2170
+
+  - id: missing-supervisor-never-implementer
+    tension: >-
+      A checkpoint needs two independent judgments, and a run in which one seat is unavailable
+      still has an implementer sitting right there who knows the change best.
+    ruling: >-
+      A seat that cannot be filled independently is unavailable, and unavailability blocks the
+      checkpoint. It is never backfilled by the implementer, the author, the spec approver or a
+      seat already sitting on the panel. The supervisor pair never implements and never approves
+      a patch it produced. The security seat specifically may not be filled by the implementer
+      of the change under review nor by whoever approved its spec.
+    binds:
+      skills: [autopilot, super-build, super-review]
+      roles: [supervisor, implementer, code-review/security, code-review/adversarial]
+      schemas: [decision, charter]
+      policies: [authority-defaults]
+    scenario: 17
+    coverage: direct
+    source:
+      plan: "§7.3"
+
+  - id: sensitive-actions-need-approved-charter-entry
+    tension: >-
+      A delegated run that has been approved to build, verify, review and open a pull request
+      looks, from inside the run, like a run that has been approved to finish the job.
+    ruling: >-
+      Merge, deploy, production credentials, destructive data operations, new dependencies,
+      public-contract redesign, sensitive trust-boundary changes, scope expansion, force-push
+      and history rewrite are never granted by default. Each requires an explicit charter entry
+      a human approved up front, naming the action, exactly what is permitted, and an explicit
+      human approval bound to that charter's hash, with any expiry or single-use bound. The pair
+      may never enlarge its own authority; more autonomy is a more specific capability approved
+      in advance, not a decision taken mid-run.
+    binds:
+      skills: [autopilot, super-ship, deprecate, babysit-pr]
+      packs: [pack-secure, pack-data, pack-deps, pack-api, pack-delete]
+      schemas: [charter, decision]
+      policies: [authority-defaults]
+    scenario: 5
+    coverage: direct
+    source:
+      plan: "§7.2"

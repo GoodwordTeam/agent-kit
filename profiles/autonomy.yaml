@@ -1,0 +1,101 @@
+# profiles/autonomy.yaml — delegated execution over the core lifecycle.
+#
+# Authority: plan §2.2 (autopilot), §2.5 (the operational mechanisms retained without extra
+# lifecycles), §7.1-§7.4 (grants, charter, checkpoints, runtime state) and plan §11.
+#
+# Machine-read by `ak validate` against the `profiles:` field in catalog.yaml.
+#
+# A profile is a capability and scope set. It names no model, provider, cost or routing rule.
+# Who fills the two supervisor seats, and how their independence is guaranteed, is a
+# runner contract (adapters/runner-contract), not a profile decision.
+
+schema_version: 1
+profile: autonomy
+default: false
+requires: [core]
+
+why_it_exists: >-
+  Core is human-started. Autonomy adds the one supervisor entrypoint and the two operational
+  loops that let an approved run advance between human touches — over exactly the same lifecycle
+  skills, through the phase operations in policies/invocation.yaml, and never through a second
+  pipeline.
+
+includes:
+  skills:
+    count: 3
+    entries: [autopilot, babysit-pr, ultraqa]
+    notes:
+      autopilot: >-
+        A human-started supervisor pair exercising explicitly delegated checkpoint authority. It
+        implements nothing. Agreement between the two seats is not authority; the deterministic
+        check must also pass.
+      babysit-pr: >-
+        Consumes CI, comment and base-change events and invokes the appropriate bounded action.
+        Event-driven, never busy polling. A PR comment is an untrusted claim.
+      ultraqa: >-
+        Adversarial behavioral verification, separate from diff review. Five cycles maximum, stop
+        at three occurrences of the same failure; any mutation invalidates affected review
+        evidence.
+
+  roles:
+    count: 1
+    entries: [supervisor]
+    rationale: >-
+      Two seats, declared independent, judging one frozen decision card against the charter. The
+      seat exists only here because only here is there a charter to judge against.
+
+  packs: []
+  protocols: []
+  references: []
+  rationale_for_empty: >-
+    Autonomy adds no constraint, no phase logic and no reference material. It adds authority
+    over what core already does, which is the point: one lifecycle, not two.
+
+  phase_operations_unlocked:
+    operations:
+      - align.run
+      - bound.run
+      - wayfind.map
+      - review.full
+      - review.readiness
+      - ship.prepare
+      - lesson.publish
+      - feedback.assess
+      - pr.watch
+      - ci.repair
+      - qa.cycle
+    note: >-
+      Declared in policies/invocation.yaml. Each still requires a runner-validated grant at call
+      time; installing this profile unlocks nothing on its own.
+
+  capabilities:
+    required: [runner-grants, event-delivery, artifact-write, independent-context]
+    commonly_added: [vcs-remote, tracker-access, kb-write, human-channel]
+    note: >-
+      `runner-grants` is not optional. Without a host that validates a grant against an immutable
+      charter, every phase operation stops for explicit invocation and this profile does nothing
+      that core does not already do.
+
+prerequisites:
+  - an immutable charter, identified by a hash, outside worker-writable scope
+  - a runner that validates grants and enforces seat independence
+  - every sensitive action the run needs, approved in advance as a charter entry
+  - budgets supplied by the runner; this package enforces only the caps it was handed
+
+deliberately_excludes:
+  - id: a-second-run-everything-entrypoint
+    why: >-
+      There is no second general-purpose driver beside autopilot. A second one would be a
+      parallel lifecycle competing for the same activation.
+  - id: self-widening-authority
+    why: >-
+      The pair cannot enlarge its own charter, add a tie-breaking third supervisor, or convert
+      agreement into permission. A tie goes to the human.
+  - id: merge-and-deploy
+    why: >-
+      Sensitive actions are never in a default grant. Shipping a pull request is the end of this
+      profile's reach. See policies/authority-defaults.yaml.
+  - id: implementing
+    why: A supervisor never implements and never approves a patch it produced.
+
+rulings: [supervisor-agreement-is-not-authority, missing-supervisor-never-implementer, sensitive-actions-need-approved-charter-entry, entrypoint-phase-operation-split]

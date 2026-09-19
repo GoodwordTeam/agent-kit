@@ -1,0 +1,31 @@
+{
+  "name": "agent-kit",
+  "owner": {
+    "name": "Pibomeister"
+  },
+  "metadata": {
+    "description": "One engineering lifecycle amalgamated from six MIT donors, installable under /ak:.",
+    "version": "0.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ak",
+      "description": "Seven super skills plus packs, protocols and roles: align, bound, scout, build, verify, review, ship.",
+      "source": "./dist/claude-code",
+      "license": "MIT",
+      "author": {
+        "name": "Pibomeister"
+      },
+      "homepage": "https://github.com/Pibomeister/agent-kit",
+      "repository": "https://github.com/Pibomeister/agent-kit",
+      "keywords": [
+        "code-review",
+        "engineering-lifecycle",
+        "planning",
+        "tdd",
+        "verification",
+        "workflow-automation"
+      ]
+    }
+  ]
+}

@@ -757,19 +757,19 @@ schemas:
     summary: Shared $defs, the revision-bound envelope, escalation and phase-operation result.
   - id: catalog
     batch: 1
-    status: contract
+    status: authored
     summary: This file's own shape.
   - id: skill
     batch: 1
-    status: contract
+    status: authored
     summary: The per-skill execution contract (skill.yaml).
   - id: pack
     batch: 1
-    status: contract
+    status: authored
     summary: Pack manifest, activation evidence and recorded selection rationale.
   - id: project
     batch: 1
-    status: contract
+    status: authored
     summary: Project identity, standards paths, configured limits and tracker system of record.
   - id: ticket
     batch: 1
@@ -777,41 +777,41 @@ schemas:
     summary: One ticket, type decision or implementation. A decision ticket is never executable.
   - id: dossier
     batch: 1
-    status: contract
+    status: authored
     summary: Scout evidence. Structured hits, coverage limits, unknowns. Never a verdict.
   - id: finding
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       P0-P3 severity, confidence anchor, spec quality, difficulty, autofix class, fingerprint,
       authorization ref, closure receipt.
   - id: review
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       A review run distinguishing comparison base, reviewed head and last head verified in the
       delta loop, with per-lane coverage and unavailability.
   - id: verification
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       Receipts: command or probe, exit status, output digest, revision, environment, criteria
       supported. passed / failed / not-run / not-applicable / inconclusive tracked separately.
   - id: charter
     batch: 1
-    status: contract
+    status: authored
     summary: The immutable autopilot charter, identified by hash, outside worker-writable scope.
   - id: decision
     batch: 1
-    status: contract
+    status: authored
     summary: A decision card with bounded options and two independent supervisor judgments.
   - id: event
     batch: 1
-    status: contract
+    status: authored
     summary: An inbound repository or CI event with an idempotency key.
   - id: lesson
     batch: 1
-    status: contract
+    status: authored
     summary: A captured lesson with supersession, tied to real evidence.
 
 # ---------------------------------------------------------------------------
@@ -820,23 +820,23 @@ schemas:
 policies:
   - id: invocation
     batch: 1
-    status: contract
+    status: authored
     summary: Which skills are U or M, and which phase operations exist behind which entrypoints.
   - id: review
     batch: 1
-    status: contract
+    status: authored
     summary: Panel composition, required lanes, unavailability, synthesis and closure rules.
   - id: authority-defaults
     batch: 1
-    status: contract
+    status: authored
     summary: Default grants and the sensitive actions never granted by default.
   - id: limits
     batch: 1
-    status: contract
+    status: authored
     summary: Fix cycles, review rounds, scout turns, ultraqa cycles. Budgets come from the runner.
   - id: resolved-conflicts
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       Arch 11 plus the 6.3 and 6.4 overrides, each row carrying the tension, the ruling, the
       entries it binds and the release scenario that tests it. Citing a ruling is mandatory
@@ -848,22 +848,22 @@ policies:
 profiles:
   - id: core
     batch: 1
-    status: contract
+    status: authored
     default: true
     summary: >-
       The default install and the useful first operational release: the seven supers, the
       primitives they depend on, and the everyday standalone skills.
   - id: autonomy
     batch: 1
-    status: contract
+    status: authored
     summary: Adds autopilot and the operational loops. Requires runner-validated grants.
   - id: product
     batch: 1
-    status: contract
+    status: authored
     summary: Adds product judgment skills. Optional; off in ordinary implementation contexts.
   - id: maintainer
     batch: 1
-    status: contract
+    status: authored
     summary: Adds catalog and codebase maintenance skills.
 
 # ---------------------------------------------------------------------------
@@ -876,23 +876,23 @@ profiles:
 adapters:
   - id: claude-code
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       Plugin manifest, generated host frontmatter keys, and an honest statement of which
       restrictions this host actually enforces. allowed-tools is pre-approval, not a sandbox.
   - id: codex
     batch: 1
-    status: contract
+    status: authored
     summary: The parallel host bundle; the multi-host manifest pattern.
   - id: runner-contract
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       Grant validation, seat independence, budgets, idempotency keys, event delivery and tracker
       access. Skills never issue their own grants.
   - id: knowledgebase
     batch: 1
-    status: contract
+    status: authored
     summary: >-
       readContext, recordDecision, publishArtifact, linkCodeEvidence, requestImpactAnalysis,
       linkPullRequests, proposeLesson. Contract only; no implementation lives here.

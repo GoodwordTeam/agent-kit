@@ -1,0 +1,376 @@
+# policies/review.yaml — panel composition, lane results, delta scope and closure.
+#
+# Authority: plan §6.1 (keep the first CE panel), §6.2 (task checks are not final review),
+# §6.3 (delta closure), §6.4 (reviewer continuity), §6.5 (document review and consensus are
+# different), and the closure ruling in plan §11.
+#
+# Machine-read by `ak validate`, which checks that every `role` named here exists in
+# catalog.yaml, that every `pack` named here exists, that seat tiers agree with the catalog's
+# `tier` field, and that no lane can reach `approved` while a required lane is `unavailable`.
+#
+# This file names no model, provider or routing rule. Seat selection is driven by artifact
+# evidence and attached packs, never by a classifier's confidence.
+
+schema_version: 1
+policy: review
+
+# ---------------------------------------------------------------------------
+# Pass 1 — the panel over the first full snapshot (plan §6.1, G:L1874, G:L1895).
+#
+# The panel is layered, not a fixed six. Correctness is the only unconditional seat.
+# project-standards is gated on the project declaring standards. The generic-conditional seats
+# fire when the diff earns them. The conditional and stack-conditional seats are selected from
+# artifact evidence, in practice from the packs the `attach-pack` protocol already attached.
+#
+# A substantive feature therefore lands at roughly the six-seat panel plan §6.1 preserves, and a
+# documentation typo does not (release scenario 1).
+# ---------------------------------------------------------------------------
+pass_1:
+  snapshot:
+    immutable: true
+    records: [comparison_base, reviewed_head, source_revision, input_hashes]
+    rule: >-
+      Every seat receives the same immutable snapshot. A seat that would need a different
+      snapshot is a new review scope, not a re-run.
+
+  seat_context:
+    receives:
+      - the immutable snapshot
+      - the requirements and acceptance criteria the change claims to satisfy
+      - the project standards files relevant to that seat
+      - the tests and verification receipts bound to the reviewed head
+      - the dependency context the seat needs to judge impact
+    never_receives:
+      - the implementer's narrative, rationale or self-assessment
+      - another reviewer's findings, judgments or dispositions
+      - any approval context produced by the author lane
+    rule: >-
+      Independence comes from isolated evidence packets, not from scheduling. Two seats that
+      share a scratchpad are one seat.
+
+  seats:
+    - role: code-review/correctness
+      tier: always-on
+      activation: every pass-1 review, without exception
+      required: true
+
+    - role: code-review/project-standards
+      tier: standards-gate
+      activation: >-
+        The project declares standards files, or standards discovery returned an uncertain
+        result. Discovery uncertainty runs the seat so that an error never becomes a silent skip.
+      required: true
+      output_contract:
+        cites: actual rules, rule by rule, with the file and rule identifier
+        when_no_standards_exist: returns an empty result
+      hard_gate: >-
+        Absent standards never become invented preferences. A seat that cannot cite a rule
+        returns empty; it does not substitute its own taste for the project's.
+
+    - role: code-review/testing
+      tier: generic-conditional
+      activation: the change adds or alters behavior
+      pack_signal: pack-test
+
+    - role: code-review/maintainability
+      tier: generic-conditional
+      activation: the change introduces, moves or removes structure rather than only text
+
+    - role: code-review/agent-native
+      tier: generic-conditional
+      activation: the change adds or alters an action surface a user can take
+
+    - role: code-review/learnings
+      tier: generic-conditional
+      activation: the captured-lesson corpus is non-empty and has hits on the touched surface
+
+    - role: code-review/security
+      tier: conditional
+      activation: >-
+        Trust boundaries, authentication, authorization, tenancy, secrets, payments, money
+        movement, user-controlled input reaching a privileged path, or a declared risk in the
+        project's own standards.
+      pack_signal: pack-secure
+      required_when_activated: true
+
+    - role: code-review/adversarial
+      tier: conditional
+      activation: >-
+        The same evidence that activates the security seat, or a change large enough that the
+        project's configured size guidance was exceeded and the exception was recorded.
+      pack_signal: pack-secure
+      required_when_activated: true
+
+    - role: code-review/api-contract
+      tier: conditional
+      activation: an externally consumed boundary changes and downstream callers are evidenced
+      pack_signal: pack-api
+
+    - role: code-review/data-migration
+      tier: conditional
+      activation: >-
+        Migration or schema artifacts are present. Model-only or query-only changes do not
+        activate this seat.
+      pack_signal: pack-data
+
+    - role: code-review/performance
+      tier: conditional
+      activation: a stated performance budget exists, or a performance problem was measured
+      pack_signal: pack-perf
+
+    - role: code-review/reliability
+      tier: conditional
+      activation: error handling, retries, breakers, timeouts, background jobs or health checks
+
+    - role: code-review/previous-comments
+      tier: conditional
+      activation: the review target is a PR that already carries review comments or threads
+      skipped_entirely_when: no prior comments exist
+
+    - role: code-review/frontend-races
+      tier: stack-conditional
+      activation: DOM event wiring, timers or async UI flows with race potential
+      pack_signal: pack-frontend
+
+    - role: code-review/swift-ios
+      tier: stack-conditional
+      activation: SwiftUI state, concurrency, Core Data threading, entitlements, accessibility
+
+  proportionality:
+    rule: >-
+      Seat count follows artifact evidence, not ceremony. A documentation typo runs the
+      always-on seat and the standards gate if standards exist, and nothing else.
+    forbidden:
+      - spawning the full catalog on a small low-risk change
+      - hardcoding a fixed six seats regardless of the artifact
+      - dropping the security or adversarial seat because a classifier was uncertain
+    ruling: panel-composition-by-declared-risk
+    scenario: 1
+
+  not_a_seat:
+    - id: deployment-verification
+      note: >-
+        Plan §6.1 lists deployment verification among the broader lenses. This catalog has no
+        such role; the responsibility is carried by pack-data's rollback and irreversibility
+        constraints and by super-ship's release checks. Adding a seat is a catalog change.
+
+# ---------------------------------------------------------------------------
+# Lane results. A lane is one seat's run. Closed vocabulary.
+# ---------------------------------------------------------------------------
+lane_results:
+  values:
+    complete: the seat ran on the snapshot and returned its findings, possibly none
+    empty: >-
+      The seat ran and has nothing to report on its axis. For project-standards this is the
+      correct result when the project declares no standards.
+    unavailable: >-
+      The seat could not run, or could not be given its required context, or failed. This is a
+      result, not an absence.
+  unavailable_rules:
+    - a required lane that is `unavailable` blocks approval
+    - >-
+      an `unavailable` lane is never replaced by the author, the implementer, another seat's
+      judgment, or a re-read by the synthesis step
+    - >-
+      an `unavailable` lane is never downgraded to `empty`; "we could not look" and "we looked
+      and found nothing" are different claims
+    - the review reports which lane was unavailable and why, and remains resumable
+  outcome_when_required_lane_unavailable: blocked
+  ruling: required-lane-failure-is-unavailable
+  scenario: 4
+
+# ---------------------------------------------------------------------------
+# Synthesis. Findings from independent seats are merged, never negotiated.
+# ---------------------------------------------------------------------------
+synthesis:
+  may:
+    - deduplicate findings that share a fingerprint
+    - conservatively downgrade a finding's specification quality
+    - conservatively raise a finding's difficulty
+    - retain conflicting evidence from two seats as conflicting
+  may_not:
+    - make a ticket easier, more specified or more authorized than its originating seat said
+    - raise a nit's severity because several seats agreed on it
+    - drop a low-confidence security finding; it is adjudicated, never filtered
+    - change a lane result
+  severity:
+    canonical: [P0, P1, P2, P3]
+    note: Critical/Nit/FYI are presentation and disposition labels, not a replacement for severity.
+  low_confidence_security:
+    rule: >-
+      A low-confidence security concern stays visible and is adjudicated by the finding
+      adjudication checkpoint. A generic confidence threshold never discards it.
+    ruling: low-confidence-security-adjudicated
+    scenario: 3
+
+# ---------------------------------------------------------------------------
+# Pass 2 — delta (plan §6.3, protocol `review-delta`).
+# ---------------------------------------------------------------------------
+delta:
+  is_not: a second panel
+  packet:
+    persisted_from_pass_1: [finding_list, input_hashes, dispositions, evidence]
+    added_for_the_delta: [latest_fix_diff, touched_dependencies, verification_receipts]
+  lanes:
+    - role: reviewer-spec
+      axis: were the accepted findings and ticket obligations actually addressed
+    - role: reviewer-standards
+      axis: did the fixes introduce relevant regressions or new rule violations
+  lane_ordering: >-
+    Per-ticket build checks run spec compliance before standards review. The post-fix delta runs
+    the two lanes independently in parallel against the same snapshot.
+  scope:
+    boundary: affected behavior
+    not: changed lines
+    rule: >-
+      The delta reviews the impact neighbourhood of the fix. A serious newly discovered issue in
+      an untouched affected caller stays reportable; scope discipline is not a reason to suppress
+      relevant evidence.
+    ruling: delta-scope-affected-behavior
+    scenario: 8
+  new_findings:
+    require: novelty evidence — what changed, or what regressed, that makes this finding new
+    rejected_without_it: true
+    forbidden: restarting discovery for unrelated low-priority issues
+  specialist_return:
+    rule: >-
+      Unresolved security, data or API issues return to that specialist seat alone. They do not
+      trigger another full fan-out.
+  cycles:
+    max: 2
+    third_cycle: >-
+      Stops with an explicit blocked-or-replan decision. Anything still open is reported, not
+      looped.
+    ruling: two-fix-cycles-then-stop
+    scenario: 18
+  baseline_reset:
+    trigger: >-
+      Architecture, requirements, comparison base or the affected surface changes materially.
+    effect:
+      - affected approvals are invalidated
+      - a new baseline is deliberately established
+      - this is a new review scope, not an unbounded third delta loop
+    ruling: delta-baseline-reset-not-third-loop
+    scenario: 10
+
+# ---------------------------------------------------------------------------
+# Reviewer continuity (plan §6.4).
+# ---------------------------------------------------------------------------
+continuity:
+  fresh_means: independent of the author
+  fresh_does_not_mean: ignorant of prior findings
+  permitted:
+    - a continuing specialist retains its earlier finding context
+    - a replacement receives a durable prior-finding packet
+  required_in_either_case:
+    - the old finding, with its identity and fingerprint
+    - the new revision
+    - the disposition and evidence recorded when the finding was raised
+  prior_finding_packet:
+    fields: [finding_id, fingerprint, severity, evidence, disposition, input_hashes, source_revision]
+    rule: >-
+      The fingerprint is rule-or-cause plus location-or-symbol plus evidence. It is not the line
+      number, so moving a line neither duplicates a finding nor falsely suppresses one.
+  forbidden: resetting every closure check to amnesia
+  ruling: reviewer-continuity-not-amnesia
+  scenario: 9
+
+# ---------------------------------------------------------------------------
+# Closure. The hardest rule in this file.
+# ---------------------------------------------------------------------------
+closure:
+  closes_a_finding:
+    - independent verification evidence that binds to the revision under review
+    - plus a policy rule that says this evidence is sufficient for this finding
+  does_not_close_a_finding:
+    - reviewer confidence
+    - classifier or triage confidence
+    - the implementer's statement that the fix landed
+    - a green run recorded against a different revision
+    - agreement between two seats
+  rule: >-
+    Reviewer and classifier confidence are advisory. Only independent verification evidence and
+    policy close a finding.
+  author_may_never_close_own_finding: true
+  author_may_never_approve_own_change: true
+  reviewers_may_edit_source: false
+  ruling: closure-requires-independent-verification
+  scenario: 3
+
+# ---------------------------------------------------------------------------
+# Task checks are not final review (plan §6.2).
+# ---------------------------------------------------------------------------
+task_checks:
+  rule: >-
+    The build loop may run lightweight spec and standards checks per ticket. They never replace
+    the assembled change's pass-1 panel, and the pass-1 panel does not run after every ticket.
+  never: share an implementer's approval context with a reviewer
+
+# ---------------------------------------------------------------------------
+# Document review — a different catalog (plan §6.5).
+# ---------------------------------------------------------------------------
+doc_review:
+  classifies_from_content: [requirements, implementation-plan]
+  seats:
+    - role: doc-review/coherence
+      tier: always-on
+    - role: doc-review/feasibility
+      tier: always-on
+    - role: doc-review/product-lens
+      tier: conditional
+      activation: the document takes or implies an unsettled product position
+    - role: doc-review/design-lens
+      tier: conditional
+      activation: the document decides information architecture, interaction states or user flows
+    - role: doc-review/security-lens
+      tier: conditional
+      activation: >-
+        Plan-level auth assumptions, data exposure or API surface. Ordinary data handling is not
+        a trigger.
+    - role: doc-review/scope-guardian
+      tier: conditional
+      activation: the document proposes abstraction or framework work beyond its stated goal
+    - role: doc-review/adversarial-document
+      tier: conditional
+      activation: >-
+        More than five requirements or implementation units, a significant architectural
+        decision, a high-stakes domain, or a new abstraction. Not activated on a routine
+        in-scope plan with validated upstream provenance.
+  output_buckets: [applied, proposed-fix, decision, fyi]
+  rules:
+    - safe correction of an already-authorized fact may be applied under policy
+    - a contradictory product choice is a Decision, never a silent settlement
+    - >-
+      requirements documents get premise review; an implementation plan with approved
+      requirements does not reopen product choices without relevant new evidence
+    - >-
+      persist the primer, fingerprints, evidence snippets, settled decisions and input revisions
+      for subsequent passes
+  reopening_a_rejected_option:
+    requires: new evidence, named and bound to a revision
+    scenario: 12
+
+# ---------------------------------------------------------------------------
+# Consensus plan gate (plan §6.5, protocol `consensus-plan-gate`).
+# ---------------------------------------------------------------------------
+consensus_plan_gate:
+  emits: a whole-plan result, not finding buckets
+  ordering:
+    - role: plan-review/planner
+      produces: the fixed plan snapshot
+    - role: plan-review/architect
+      sees: the snapshot only
+    - role: plan-review/critic
+      sees: the same snapshot only
+  forbidden:
+    - running architect and critic in parallel
+    - showing either seat the other's analysis
+    - re-running the critic on a plan the architect never saw
+  rounds:
+    max: 5
+    source: policies/limits.yaml `consensus_rounds`
+  invoked_for:
+    - genuine architectural disagreement
+    - high-risk planning
+    - a review-driven replan
+  not_invoked: automatically on every bound invocation

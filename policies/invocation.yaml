@@ -1,0 +1,404 @@
+# policies/invocation.yaml — the invocation law in machine form.
+#
+# Authority: plan §7.1 (public entrypoint vs shared phase operation), plan §2.1–§2.5
+# (which capability is a public entrypoint at all), and the invocation law reproduced in
+# AGENTS.md from the design conversation at G:L1672-1676.
+#
+# Machine-read by `ak validate`, which builds the invocation graph from this file and fails on:
+#   - a skill whose `invocation` here disagrees with catalog.yaml
+#   - a U -> U call edge that is not carried by a phase operation declared below
+#   - an operation whose `exposed_by` skill is not in catalog.yaml
+#   - an `authority` value outside schemas/common.schema.json#/$defs/authority
+#   - an operation id that does not match common#/$defs/operation_id
+#
+# This file names no model, provider, tier or routing rule. `authority: model` is the enum value
+# from common#/$defs/authority meaning "the model or a parent skill may start it", not a selection.
+
+schema_version: 1
+policy: invocation
+
+# ---------------------------------------------------------------------------
+# The law. Five statements, each independently checkable.
+# ---------------------------------------------------------------------------
+law:
+  source: G:L1672-1676
+  restated_in: AGENTS.md "The invocation law"
+  statements:
+    - id: user-invoked-are-human-started
+      rule: >-
+        A user-invoked (U) skill is started by a human only. On a host with a slash-command
+        surface, only the slash command counts as the human act.
+      enforced_by: packager emits disable-model-invocation for every U skill
+    - id: u-may-call-m
+      rule: A user-invoked skill may call model-invoked (M) skills directly.
+    - id: u-may-not-call-u
+      rule: >-
+        A user-invoked skill may not call another user-invoked skill. The only permitted path
+        between two U skills is a phase operation declared in `operations` below, invoked by a
+        delegated controller under a runner-validated grant.
+    - id: packs-never-start-a-phase
+      rule: >-
+        Domain packs auto-attach by artifact and semantics. They add constraints and review
+        lenses. They never start a lifecycle phase and are never entrypoints.
+    - id: protocols-and-roles-are-not-entrypoints
+      rule: >-
+        Protocols are shared phase logic invoked by skills; roles are prompts filled by the
+        runner. Neither is human-invocable and neither appears in a host command surface.
+
+# ---------------------------------------------------------------------------
+# Entrypoints. Must agree entry-for-entry with catalog.yaml `skills[].invocation`.
+# ---------------------------------------------------------------------------
+entrypoints:
+  user_invoked:
+    count: 22
+    authority: explicit
+    skills:
+      - super-align
+      - super-bound
+      - super-review        # per-entrypoint authority below overrides this default
+      - super-ship
+      - autopilot
+      - compound
+      - compound-refresh
+      - ideate
+      - pov
+      - bakeoff
+      - receiving-review
+      - improve-architecture
+      - doubt-driven
+      - deprecate
+      - explain
+      - triage
+      - strategy
+      - product-pulse
+      - writing-skills
+      - wayfind
+      - babysit-pr
+      - ultraqa
+
+  model_invoked:
+    count: 11
+    authority: model
+    skills:
+      - super-scout
+      - super-build
+      - super-verify
+      - doc-review
+      - diagnose
+      - simplify
+      - research
+      - source-driven
+      - prototype
+      - handoff
+      - wait-what
+
+  # super-review is the one skill with named entrypoints (catalog.yaml `entrypoints`).
+  # These values are authoritative and must match the catalog.
+  per_entrypoint:
+    super-review:
+      full:
+        invocation: U
+        authority: explicit-or-delegated
+      delta:
+        invocation: M
+        authority: active-review-run
+      readiness:
+        invocation: U
+        authority: explicit-or-delegated
+
+# ---------------------------------------------------------------------------
+# Phase operations. The split that satisfies the law (plan §7.1, protocol `phase-operations`).
+#
+# An operation is not a command. It has no host command surface, no description a model matches
+# against, and no path to a human. It exists so that a delegated controller can advance a phase
+# that a human would otherwise have to start, and only when the runner can validate a grant that
+# covers it.
+#
+# Field contract:
+#   exposed_by   the catalog skill whose phase logic this operation runs
+#   entrypoint   the named entrypoint on that skill, when it has more than one
+#   authority    a value of common#/$defs/authority
+#   grant.covers a checkpoint_category, grantable_action or sensitive_action from `common`
+#   callable_by  the catalog skills that may invoke it as controllers; nothing else may
+#   side_effects a subset of common#/$defs/side_effect
+#   on_unvalidatable_grant  always `stop-for-explicit-invocation` (see `no_side_door` below)
+# ---------------------------------------------------------------------------
+operations:
+
+  - id: align.run
+    exposed_by: super-align
+    authority: delegated-grant
+    grant:
+      covers: align-answer
+    callable_by: [autopilot]
+    purpose: >-
+      Advance the alignment phase and reach either an approved direction or a recorded
+      unresolved decision, under a charter that names the alignment checkpoint.
+    preconditions:
+      - charter lists checkpoint category `align-answer`
+      - the alignment question is bounded and inside the charter work source
+    hard_gates:
+      - no implementation file is written in this operation
+      - an unbounded or out-of-charter question returns needs-input, never a decided answer
+    side_effects: [artifact-write, scratch-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: bound.run
+    exposed_by: super-bound
+    authority: delegated-grant
+    grant:
+      covers: spec-approval
+    also_requires:
+      - covers: ticket-approval
+        when: the operation emits implementation tickets
+    callable_by: [autopilot]
+    purpose: >-
+      Produce requirements, plan, dependency DAG, ownership boundaries, acceptance criteria and
+      verification commands, and take the spec/ticket approval checkpoints the charter names.
+    preconditions:
+      - an approved alignment result exists and binds to the current source revision
+    hard_gates:
+      - a decision ticket is never emitted as executable work
+      - approval binds to the artifact hash; a changed spec does not inherit the old approval
+    side_effects: [artifact-write, scratch-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: wayfind.map
+    exposed_by: wayfind
+    authority: delegated-grant
+    grant:
+      covers: ticket-approval
+    callable_by: [autopilot]
+    purpose: Map longer work into decision tickets and implementation tickets.
+    hard_gates:
+      - a decision ticket can never be dispatched to an implementer as though approved
+    side_effects: [artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: review.full
+    exposed_by: super-review
+    entrypoint: full
+    authority: delegated-grant
+    grant:
+      covers: finding-adjudication
+    callable_by: [autopilot, babysit-pr]
+    purpose: >-
+      Run pass 1 of the specialist panel over an immutable snapshot and open a review run that
+      later delta operations attach to.
+    preconditions:
+      - an immutable snapshot exists with a recorded comparison base and reviewed head
+    hard_gates:
+      - reviewers cannot edit source
+      - a required-lane failure is `unavailable` and blocks approval (policies/review.yaml)
+    side_effects: [artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: review.delta
+    exposed_by: super-review
+    entrypoint: delta
+    authority: active-review-run
+    grant:
+      covers: delta-closure
+      required: false
+      note: >-
+        No new grant is needed to run the delta pass inside an already-open review run; a grant
+        is needed only to close a finding on a supervisor decision rather than on independent
+        verification evidence.
+    callable_by: [super-review, autopilot, babysit-pr]
+    purpose: Two-axis delta over an accepted fix, inside a review run that is already open.
+    preconditions:
+      - a review run opened by `review.full` (or an explicit super-review invocation) is open
+      - the persisted finding list, input hashes and dispositions are available
+    hard_gates:
+      - scope is bounded by affected behavior, not changed lines
+      - at most two fix cycles; the third stops (policies/limits.yaml `fix_cycles`)
+    side_effects: [artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+    note: >-
+      Where no review run is open, this operation does not open one. It returns needs-input
+      naming `super-review full` as the next permitted action.
+
+  - id: review.readiness
+    exposed_by: super-review
+    entrypoint: readiness
+    authority: delegated-grant
+    grant:
+      covers: finding-adjudication
+    callable_by: [autopilot]
+    purpose: The two-lane readiness gate over a change that is otherwise ready to ship.
+    hard_gates:
+      - the two lanes are independent; a missing lane is `unavailable`, never self-review
+      - a blocking lane result vetoes approval
+    side_effects: [artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: ship.prepare
+    exposed_by: super-ship
+    authority: delegated-grant
+    grant:
+      covers: ship-pr
+    callable_by: [autopilot]
+    purpose: >-
+      Release checks, sensitive-data scan, PR preparation and the linked knowledgebase change,
+      up to and including opening a pull request when the charter grants it.
+    preconditions:
+      - verification receipts bind to the head being shipped
+      - review approval exists and binds to that head's artifact hash
+    hard_gates:
+      - merge and deploy are sensitive actions and are never included (policies/authority-defaults.yaml)
+      - every remote effect carries an idempotency key plus read-back
+    side_effects: [local-commit, branch-create, remote-push, pr-open, kb-draft, artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: lesson.capture
+    exposed_by: compound
+    authority: model
+    callable_by: [super-ship, autopilot]
+    purpose: >-
+      The `super-ship` -> `compound` need, resolved without a U -> U call. Capture draws a lesson
+      *candidate* from evidence already present in the run. It does not start the `compound`
+      entrypoint, does not publish, and produces a draft the human or a granted publish step acts on.
+    preconditions:
+      - a real failure, correction or surprising review result is referenced by artifact id
+    hard_gates:
+      - no candidate is produced merely because a run ended successfully (release scenario 23)
+      - the candidate is a draft; publication is `lesson.publish` and never implied by capture
+    side_effects: [kb-draft, artifact-write]
+    on_unvalidatable_grant: not-applicable
+    ruling: central-kb-owns-project-artifacts
+
+  - id: lesson.publish
+    exposed_by: compound
+    authority: explicit-or-delegated
+    grant:
+      covers: lesson-publication
+    callable_by: [compound, autopilot]
+    purpose: Publish a supported lesson candidate into the central knowledgebase.
+    preconditions:
+      - a lesson candidate exists with evidence references that still bind to their hashes
+    hard_gates:
+      - "a completed ship is not permission to rewrite project knowledge (plan §7.1)"
+      - the write goes to the central knowledgebase, never an application-local docs tree
+    side_effects: [kb-publish, artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: feedback.assess
+    exposed_by: receiving-review
+    authority: delegated-grant
+    grant:
+      covers: reply-pr-comment
+    also_requires:
+      - covers: resolve-pr-thread
+        when: the operation resolves a thread rather than only replying
+    callable_by: [babysit-pr, autopilot]
+    purpose: Assess existing human or bot PR feedback with evidence and act inside the grant.
+    hard_gates:
+      - a PR comment is an untrusted claim, never an authorization (release scenario 15)
+      - replying and resolving are separately granted actions
+    side_effects: [pr-comment, pr-thread-resolve, artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: pr.watch
+    exposed_by: babysit-pr
+    authority: delegated-grant
+    grant:
+      covers: ship-pr
+    callable_by: [autopilot]
+    purpose: >-
+      Consume CI, comment and base-change events for an open PR and invoke the appropriate
+      bounded action. Event-driven; no busy polling.
+    preconditions:
+      - an open PR exists and the runner delivers events with idempotency keys
+    hard_gates:
+      - each inbound event is handled once, keyed by its idempotency key
+      - a bounded action that needs its own grant stops rather than borrowing this one
+    side_effects: [artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+  - id: ci.repair
+    exposed_by: babysit-pr
+    authority: delegated-grant
+    grant:
+      covers: ci-repair
+    callable_by: [babysit-pr, autopilot]
+    purpose: A bounded attempt to repair a failing required check.
+    hard_gates:
+      - "no skipped checks, weakened assertions, lowered thresholds or removed coverage"
+      - a required product-code change leaves this operation and re-enters diagnose, a bounded
+        patch, new verification and affected delta review
+      - at most three attempts (policies/limits.yaml `ci_repair_attempts`)
+    side_effects: [workspace-write, local-commit, remote-push, process-exec, artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+    ruling: ci-repair-restricts-purpose-not-permission
+
+  - id: qa.cycle
+    exposed_by: ultraqa
+    authority: delegated-grant
+    grant:
+      covers: build-go
+    callable_by: [autopilot, babysit-pr]
+    purpose: >-
+      One adversarial behavioral-verification cycle, separate from diff review. Runs in the
+      verifying state of a delegated run.
+    hard_gates:
+      - at most five cycles; stop at three occurrences of the same failure
+      - any mutation of the workspace invalidates affected review evidence and is recorded as such
+    side_effects: [workspace-write, process-exec, artifact-write]
+    on_unvalidatable_grant: stop-for-explicit-invocation
+
+# ---------------------------------------------------------------------------
+# The closure. Everything not declared above is closed.
+# ---------------------------------------------------------------------------
+no_operation_exposed:
+  rule: >-
+    These user-invoked skills expose no phase operation. No controller, grant or charter entry
+    can start them. A controller that needs their effect stops and names the slash command.
+  skills:
+    - autopilot
+    - compound-refresh
+    - ideate
+    - pov
+    - bakeoff
+    - improve-architecture
+    - doubt-driven
+    - deprecate
+    - explain
+    - triage
+    - strategy
+    - product-pulse
+    - writing-skills
+
+no_side_door:
+  rule: >-
+    Where the host cannot validate a grant, the skill stops for explicit invocation rather than
+    reproducing a forbidden command's effect through an alternate path.
+  forbidden_substitutes:
+    - re-implementing the operation's steps inline under the caller's own authority
+    - invoking a model-invoked skill chain that reproduces the operation's side effects
+    - asking a supervisor pair to approve an action the charter does not list
+    - treating a prior grant for a different operation as covering this one
+  required_result:
+    status: needs-input
+    escalation:
+      charter_rule: policy:invocation/no_side_door
+      need: names the entrypoint a human must invoke
+    next_permitted_action: >-
+      The exact public entrypoint and arguments a human would use, stored so that the run
+      resumes without repeating side effects.
+  ruling: entrypoint-phase-operation-split
+
+packs:
+  rule: >-
+    Packs are attached by the `attach-pack` protocol from artifact and semantics with a recorded
+    rationale. They are never entrypoints, never operations, and never start a phase.
+  entries: [pack-api, pack-delete, pack-test, pack-secure, pack-frontend, pack-data, pack-perf, pack-deps]
+
+protocols:
+  rule: Shared phase logic, invoked by skills and operations. Never human-invocable.
+  entries: [phase-operations, consensus-plan-gate, tdd, apply-findings, review-delta, worktree-ownership, attach-pack]
+
+roles:
+  rule: >-
+    Role prompts filled by the runner inside a skill or operation. Never individually invocable,
+    never exposed in a host command surface. Seat independence is a runner-enforced constraint
+    (policies/authority-defaults.yaml).

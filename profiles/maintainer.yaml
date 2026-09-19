@@ -1,0 +1,96 @@
+# profiles/maintainer.yaml — maintaining a codebase, and maintaining this catalog.
+#
+# Authority: plan §2.3 (retained standalone supporting skills), §8 (compound-refresh changes
+# curated knowledge with provenance; writing-skills promotes a lesson to a candidate skill
+# change only through evaluation and a separate review), §11 (opt-in profiles).
+#
+# Machine-read by `ak validate` against the `profiles:` field in catalog.yaml.
+#
+# A profile is a capability and scope set. It names no model, provider, cost or routing rule.
+
+schema_version: 1
+profile: maintainer
+default: false
+requires: [core]
+
+why_it_exists: >-
+  Seven skills for work that changes a codebase's shape, its knowledge or this package itself,
+  rather than delivering a feature through it. Each one either edits something durable that
+  outlives a run, or needs a standing policy core does not assume.
+
+includes:
+  skills:
+    count: 7
+    entries: [compound-refresh, bakeoff, improve-architecture, simplify, deprecate, triage, writing-skills]
+    notes:
+      compound-refresh: >-
+        Keep, update, consolidate, replace or retire captured lessons, recording evidence and
+        supersession instead of silently erasing provenance.
+      bakeoff: >-
+        Competing bounded experiments in separate workspaces against criteria fixed first. Emits
+        an evaluation artifact, never automatic production adoption.
+      improve-architecture: >-
+        Survey module boundaries and propose one worthwhile deepening. No unsolicited
+        repository-wide rewrite; implementing the proposal is a separate human-started work
+        source.
+      simplify: >-
+        Also in core. Listed here because maintenance work leans on it constantly: reduce
+        complexity with behavioral evidence, explain existing behavior before deleting it, never
+        change the product contract under cleanup.
+      deprecate: >-
+        Plan and execute an approved retirement or migration with compatibility, sequencing,
+        rollback and consumer evidence. Irreversible steps stay separately gated.
+      triage: >-
+        Apply a configured issue-state and classification policy. Useful only with a real tracker
+        policy, and cannot silently reprioritize beyond delegated scope.
+      writing-skills: >-
+        Author and improve skills using behavioral tests and provenance. Required for
+        maintaining this package; a candidate edit passes evaluations and a separate review
+        before promotion.
+    overlap_with_core:
+      - skill: simplify
+        note: >-
+          Installed by core already. Its presence in both profile lists is intentional and
+          matches catalog.yaml; a skill is installed once.
+
+  packs: []
+  protocols: []
+  roles: []
+  references: []
+  rationale_for_empty: >-
+    Every constraint and reference these skills load already ships with core: `pack-delete` and
+    `pack-deps` for retirement work, `codebase-design` for module surgery, `prose-quality` for
+    skill and lesson prose, `engineering-principles` for simplification.
+
+  capabilities:
+    required: [repository-read, repository-write, artifact-write, process-exec]
+    commonly_added: [isolated-worktree, kb-read, kb-write, tracker-access, skill-source-write]
+    note: >-
+      `writing-skills` is the only skill in this package that writes skill source. That is a
+      distinct side effect (`skill-source-write`) precisely so a host can withhold it.
+
+prerequisites:
+  - compound-refresh needs an existing lesson corpus with provenance to refresh
+  - triage needs a configured tracker policy; without one it has nothing to apply
+  - deprecate needs an approved retirement decision before it starts sequencing
+  - writing-skills needs the evaluation suite and a reviewer separate from the author
+
+deliberately_excludes:
+  - id: self-promotion-of-skill-edits
+    why: >-
+      `writing-skills` produces a candidate. Promotion requires evaluations to pass and a
+      separate review pass. The author of a skill edit never approves it.
+  - id: automatic-adoption-of-a-bakeoff-winner
+    why: >-
+      A bakeoff emits an evaluation artifact. Adopting the winner is a normal approved change
+      through the lifecycle, with its own review.
+  - id: repository-wide-rewrites
+    why: >-
+      `improve-architecture` proposes one worthwhile deepening at a time. An unsolicited
+      repository-wide refactor is scope expansion, which is a sensitive action.
+  - id: erasing-superseded-knowledge
+    why: >-
+      A refresh records supersession. Rolling back a skill revision leaves the underlying lesson
+      and evidence history intact (release scenario 24).
+
+rulings: [central-kb-owns-project-artifacts, full-catalog-opt-in-profiles, sensitive-actions-need-approved-charter-entry]

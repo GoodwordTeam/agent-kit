@@ -1,0 +1,119 @@
+# profiles/core.yaml — the default install.
+#
+# Authority: plan §10 "Release criteria" (the useful first operational release is the seven
+# supers plus doc-review, diagnose, receiving-review, compound, handoff, source-driven behavior,
+# and the eight packs) and plan §11 (full catalog, opt-in profiles, on-demand references).
+#
+# Machine-read by `ak validate`, which checks this list against the `profiles:` field on every
+# catalog.yaml entry and fails on a disagreement in either direction.
+#
+# A profile is a capability and scope set. It names no model, provider, cost or routing rule,
+# and it never changes a skill's behavior — only whether the skill is installed.
+
+schema_version: 1
+profile: core
+default: true
+requires: []
+
+why_it_exists: >-
+  One lifecycle, installable and useful on its own. Core is what a team needs to take a request
+  from alignment through a shipped pull request with evidence, without installing autonomy,
+  product judgment or catalog maintenance. It is the release the evaluation scenarios are run
+  against first.
+
+includes:
+  skills:
+    count: 20
+    lifecycle: [super-align, super-bound, super-scout, super-build, super-verify, super-review, super-ship]
+    standalone: [compound, doc-review, receiving-review, diagnose, doubt-driven, simplify, research, source-driven, explain]
+    primitives: [prototype, handoff, wait-what, wayfind]
+
+  packs:
+    count: 8
+    entries: [pack-api, pack-delete, pack-test, pack-secure, pack-frontend, pack-data, pack-perf, pack-deps]
+    rationale: >-
+      Packs attach by artifact and semantics with a recorded rationale. Shipping seven of eight
+      would mean a change in the missing domain silently loses its constraints and its review
+      lens, which is the failure the pack mechanism exists to prevent.
+
+  protocols:
+    count: 7
+    entries: [phase-operations, consensus-plan-gate, tdd, apply-findings, review-delta, worktree-ownership, attach-pack]
+    rationale: >-
+      Every core skill depends on at least one. `phase-operations` is installed even though core
+      has no supervisor: `review.delta` and `lesson.capture` are core paths, and the rule that a
+      skill stops rather than reaching through a side door must hold in a core-only install.
+
+  roles:
+    count: 28
+    core: [implementer, reviewer-spec, reviewer-standards]
+    plan_review: [plan-review/planner, plan-review/architect, plan-review/critic]
+    code_review:
+      - code-review/correctness
+      - code-review/project-standards
+      - code-review/testing
+      - code-review/maintainability
+      - code-review/agent-native
+      - code-review/learnings
+      - code-review/security
+      - code-review/performance
+      - code-review/api-contract
+      - code-review/data-migration
+      - code-review/reliability
+      - code-review/adversarial
+      - code-review/previous-comments
+      - code-review/frontend-races
+      - code-review/swift-ios
+    doc_review:
+      - doc-review/coherence
+      - doc-review/feasibility
+      - doc-review/product-lens
+      - doc-review/design-lens
+      - doc-review/security-lens
+      - doc-review/scope-guardian
+      - doc-review/adversarial-document
+    rationale: >-
+      The full review catalog ships because seat selection is evidence-driven at run time. A seat
+      that is not installed cannot be selected, which turns an uninstalled role into a silently
+      skipped lane — the exact failure `unavailable` exists to make visible.
+
+  references:
+    count: 4
+    entries: [codebase-design, domain-modeling, engineering-principles, prose-quality]
+    rationale: Loaded on demand by the core skills that declare them; never exposed as commands.
+
+  capabilities:
+    required: [repository-read, repository-write, isolated-worktree, isolated-review-context, independent-context, process-exec, artifact-write]
+    optional: [vcs-local, vcs-remote, kb-read, kb-write, network-fetch, human-channel]
+    note: >-
+      Core runs without a runner that issues grants. Every skill in it is human-started or
+      model-invoked; `runner-grants` is only needed once a delegated controller is installed.
+
+deliberately_excludes:
+  - id: autopilot-and-operational-loops
+    entries: [autopilot, babysit-pr, ultraqa]
+    why: >-
+      They require a runner that validates grants, delivers events and enforces seat
+      independence. Installing them without one produces a supervisor pair with no authority
+      check, which is worse than not having them. See profiles/autonomy.yaml.
+  - id: product-judgment
+    entries: [ideate, pov, bakeoff, strategy, product-pulse]
+    why: >-
+      Product judgment is off in ordinary implementation contexts. An installed `strategy` or
+      `product-pulse` in a codebase with no standing product anchors invites a recommendation
+      with nothing to ground it. See profiles/product.yaml. `bakeoff` ships in maintainer.
+  - id: catalog-and-codebase-maintenance
+    entries: [compound-refresh, improve-architecture, deprecate, triage, writing-skills]
+    why: >-
+      Each needs something core does not assume: a curated lesson corpus, a repository large
+      enough for module surgery, an approved retirement, a real tracker policy, or this package
+      itself. See profiles/maintainer.yaml.
+  - id: the-supervisor-role
+    entries: [supervisor]
+    why: A seat with no charter to judge against. It arrives with autopilot.
+  - id: model-routing
+    why: >-
+      Not a profile decision and not present anywhere in this package. Who fills a seat is bound
+      by the runner; this profile only says which seats exist.
+
+ruling: full-catalog-opt-in-profiles

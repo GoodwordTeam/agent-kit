@@ -1,0 +1,77 @@
+# profiles/product.yaml — product judgment, kept out of ordinary implementation contexts.
+#
+# Authority: plan §2.3 (retained standalone supporting skills), §6.5 (product lens and premise
+# review), §11 (opt-in profiles).
+#
+# Machine-read by `ak validate` against the `profiles:` field in catalog.yaml.
+#
+# A profile is a capability and scope set. It names no model, provider, cost or routing rule.
+
+schema_version: 1
+profile: product
+default: false
+requires: [core]
+
+why_it_exists: >-
+  Four skills that decide what is worth building rather than how to build it. They are separated
+  from core because a recommendation is not authorization, and because in a repository with no
+  standing product anchors they have nothing to ground a judgment on. A team that has those
+  anchors gets real value; a team that does not gets confident opinions, which is worse than
+  silence.
+
+includes:
+  skills:
+    count: 4
+    entries: [ideate, pov, strategy, product-pulse]
+    notes:
+      ideate: Generate options, then critique them. No implicit commitment or scope expansion.
+      pov: >-
+        Project-grounded recommendation with optional independent opinions. Read-only. Dissent
+        and insufficient-evidence results survive to the output; a recommendation authorizes
+        nothing.
+      strategy: >-
+        Works from standing product goals and strategic constraints. No automatic feature
+        expansion.
+      product-pulse: >-
+        Inspects changes and signals against existing product anchors. A report, not permission
+        to change the roadmap.
+
+  packs: []
+  protocols: []
+  roles: []
+  references: []
+  rationale_for_empty: >-
+    The product lens these skills need is already installed with core: `doc-review/product-lens`
+    and `doc-review/adversarial-document` ship in core because `doc-review` does. This profile
+    adds entrypoints, not judgment machinery.
+
+  capabilities:
+    required: [repository-read, artifact-write]
+    optional: [kb-read, network-fetch, human-channel]
+
+prerequisites:
+  - >-
+    A project record with standing goals, anchors or constraints. Without one, `pov` returns an
+    insufficient-grounding result and `strategy` and `product-pulse` have no baseline to compare
+    against. That is the correct behavior, not a failure, but it makes the install pointless.
+
+deliberately_excludes:
+  - id: authorization
+    why: >-
+      None of these skills approves, plans or implements anything. A chosen option becomes work
+      through super-align and super-bound, with a human approving the direction.
+  - id: reopening-settled-decisions
+    why: >-
+      A rejected product option is not silently reopened. Reopening requires new evidence, named
+      and bound to a revision (release scenario 12).
+  - id: prototype
+    why: >-
+      `prototype` is a core primitive, not a product skill. A product question that only an
+      artifact can settle reaches for it there — and stays blocked without a human when the
+      question is about human experience.
+  - id: bakeoff
+    why: >-
+      Competing bounded experiments in separate workspaces are repository maintenance work, not
+      product judgment. It ships in maintainer.
+
+rulings: [prototype-human-experience-needs-human, full-catalog-opt-in-profiles]

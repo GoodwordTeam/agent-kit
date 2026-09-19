@@ -1,0 +1,1320 @@
+# provenance/conversation-map.yaml — the source map.
+#
+# Every capability named in the two design sources, mapped to exactly one disposition.
+# This file is the proof that nothing was silently dropped and nothing was silently
+# invented. `ak validate` reads it: every non-null `destination` must be a live
+# `catalog.yaml` entry, and every `G:L` locator must resolve inside
+# `research/sources/grok-transcript.md` (2264 lines).
+#
+# Sources
+#   G:L<start>-<end>   research/sources/grok-transcript.md — the design brief
+#   plan §N            research/sources/engineering-skills-repo-plan.md — the governing design
+#   Precedence: plan > later transcript turns > earlier transcript turns (AGENTS.md).
+#
+# Dispositions
+#   retained   Kept as its own catalog entry — a skill, pack, protocol or reference that a
+#              caller can reach by name.
+#   folded     The behavior survives, but inside something else: a protocol, a reference, a
+#              role prompt or an entrypoint of a super skill. Never a new slash command.
+#              Re-exposing a folded capability as its own command is a design change.
+#   reference  Kept as on-demand reading material under `references/`, loaded by named
+#              skills and never invocable.
+#   optional   Recognized by the design, deliberately outside the engineering catalog —
+#              carried as an adapter or an opt-in profile rather than a skill.
+#   excluded   Named in a source and deliberately not built. Destination is null.
+#
+# The `excluded` rows are load-bearing. They are selections the transcript and plan §2.6 make
+# on purpose — the shape of the package is as much about what is absent as what is present.
+# An `excluded` row is not a gap, not a backlog item and not missing coverage; re-adding one is
+# a design change that has to argue with the row, not a fix that closes a hole.
+#
+# Field notes
+#   origin          donor        = at least one pinned donor in provenance/upstream.lock.yaml
+#                                 implements this; the adapted file's row lives in
+#                                 provenance/adaptations.d/.
+#                   conversation = no pinned donor implements it. The capability is original to
+#                                 the transcript or to the plan and carries a locator instead of
+#                                 a source path. Never fabricate a donor path (plan §1.4).
+#                   Where a dossier distinguished "plan §8"-original from transcript-original,
+#                   both fold into `conversation` and the `note` preserves which one it was.
+#   acceptance_test The concrete behavior that proves the capability landed. Numbered release
+#                   scenarios refer to plan §10's list of 24.
+#   note            Present only where a reader would otherwise draw the wrong conclusion.
+
+schema_version: 1
+
+capabilities:
+
+  # =========================================================================
+  # The seven super skills (plan §2.1; G:L1680-1766)
+  # =========================================================================
+
+  - id: super-align
+    capability: Grill the request to an approved direction, establish shared vocabulary, hard-gate implementation behind human approval
+    disposition: retained
+    destination: skills/super-align
+    locator: G:L1684-1693; G:L1548-1553; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      Invoked on an unapproved request, no implementation file is written; the run ends at an
+      approved direction or an explicit unresolved decision. An unresolved fork leaves as a
+      decision ticket that no implementer may execute (release scenario 11).
+
+  - id: super-align-decision-ticket-threshold
+    capability: Where an unresolved alignment fork stops — a same-session escalation or one decision ticket, never an unrequested multi-ticket map
+    disposition: retained
+    destination: skills/super-align
+    locator: G:L1692-1692; plan §2.3
+    origin: conversation
+    acceptance_test: >-
+      An unresolved fork produces at most one decision ticket handed to the human; starting an
+      actual wayfind map is a separate human-initiated invocation, never a side effect of align.
+    note: >-
+      The transcript says unresolved forks become decision tickets but never says who builds the
+      map; the plan states no threshold. The dossier records the boundary as conversation-origin
+      so that a U skill never starts another U skill through the back door.
+
+  - id: super-bound
+    capability: Spec, tracer-bullet ticket DAG with exclusive file ownership, constraints file, acceptance criteria and named verification commands
+    disposition: retained
+    destination: skills/super-bound
+    locator: G:L1696-1706; G:L1554-1556; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      Emits a spec plus a ticket DAG whose implementation tickets are zero-context and
+      exclusive-file; anything that is still a product fork stays typed `decision` and cannot be
+      dispatched to an implementer (release scenario 11).
+
+  - id: super-scout
+    capability: Bounded read-only repository exploration returning a revision-bound evidence dossier, never an architectural verdict
+    disposition: retained
+    destination: skills/super-scout
+    locator: G:L1708-1710; G:L1288-1299; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      Returns file:line hits marked confirmed versus assumed, files not to touch, and an explicit
+      coverage limitation when an index or graph is stale (release scenario 14). Cannot edit and
+      cannot conclude.
+
+  - id: super-build
+    capability: Execute one approved ticket under TDD in an owned worktree, with separate spec and standards review passes
+    disposition: retained
+    destination: skills/super-build
+    locator: G:L1712-1735; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      The implementer's own report never closes the ticket; a failed reviewer lane blocks
+      completion and cannot be converted into approval by the implementer (release scenario 4).
+
+  - id: super-verify
+    capability: Verification distinct from review — an acceptance-to-evidence matrix with command, exit status, revision and environment identity
+    disposition: retained
+    destination: skills/super-verify
+    locator: G:L1737-1743; G:L1511-1511; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      A criterion with no receipt is reported as not-run rather than passed; a later code change
+      invalidates the older green receipts bound to the previous revision (release scenario 10).
+
+  - id: super-review
+    capability: A first-pass specialist panel over an immutable snapshot, a narrow delta pass over a fix, and reviewers who cannot edit
+    disposition: retained
+    destination: skills/super-review
+    locator: G:L1745-1757; G:L1872-1918; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      A documentation typo does not spawn the full panel (release scenario 1); a one-line fix
+      gets the delta entrypoint, not a repeat full panel (release scenario 7).
+
+  - id: code-review-persona-panel
+    capability: The CE specialist catalog as pass-1 discovery machinery — always-on, standards-gated, generic-conditional, conditional and stack-conditional seats selected from the diff
+    disposition: retained
+    destination: skills/super-review
+    locator: G:L1872-1895; G:L1897-1903
+    origin: donor
+    acceptance_test: >-
+      Panel composition is derived from the artifact, so a small low-risk diff seats fewer
+      specialists while an auth or tenancy change seats security and adversarial regardless of
+      classifier confidence (release scenarios 1 and 3).
+    note: >-
+      The panel is a capability of `super-review`; the individual seats live in `roles/code-review/*`
+      as role prompts. See the `ce-personas-as-invocable-skills` exclusion below for what this
+      deliberately is not.
+
+  - id: super-ship
+    capability: Release checks, sensitive-data scan, constraint checks and PR preparation, with the linked knowledgebase change
+    disposition: retained
+    destination: skills/super-ship
+    locator: G:L1759-1766; plan §2.1
+    origin: donor
+    acceptance_test: >-
+      An approved public-API ticket reaches an open PR and stops; merge and deploy remain separate
+      capabilities that ship never performs (release scenario 5).
+
+  # =========================================================================
+  # Supervisor (plan §2.2; G:L2040-2251)
+  # =========================================================================
+
+  - id: autopilot
+    capability: A human-started supervisor pair exercising explicitly delegated checkpoint authority over the same lifecycle skills
+    disposition: retained
+    destination: skills/autopilot
+    locator: G:L2050-2077; G:L2079-2119; G:L2121-2155; plan §2.2
+    origin: donor
+    acceptance_test: >-
+      Supervisors never implement, and supervisor disagreement produces one escalation rather than
+      further internal debate (release scenarios 16 and 17). Default end state is an open PR, never
+      a merge.
+
+  - id: autopilot-escalation-contract
+    capability: A single structured escalation message — need, options, what was already ruled out, default, which charter rule triggered, what is blocked
+    disposition: retained
+    destination: skills/autopilot
+    locator: G:L2174-2191
+    origin: donor
+    acceptance_test: >-
+      An escalation is one message with the six named fields; until it is answered no new tickets
+      start, nothing ships, and only read-only phases continue.
+
+  - id: autopilot-caps
+    capability: Per-run caps — wall clock, budget, maximum alignment turns, maximum tickets, two fix cycles, three CI-repair loops, no new dependencies
+    disposition: retained
+    destination: policies/limits
+    locator: G:L2193-2206; G:L1916-1916
+    origin: donor
+    acceptance_test: >-
+      The third fix cycle on the same finding stops rather than continuing (release scenario 18);
+      an unanswered escalation past the cap ends the run at CAP with nothing merged.
+    note: >-
+      Budget figures themselves come from the runner; the catalog enforces only the cap it was
+      handed. The transcript's per-run cost and token ceilings are not reproduced here.
+
+  - id: decision-card
+    capability: The decision card — a bounded question with options, evidence, two independent supervisor answers, a mechanical authority check and a recorded ruling
+    disposition: retained
+    destination: schemas/decision
+    locator: G:L2159-2173
+    origin: conversation
+    acceptance_test: >-
+      A card outside the charter escalates regardless of supervisor agreement; agreement plus
+      present evidence plus charter permission is required to act, and every outcome is ledgered
+      (release scenario 16).
+    note: >-
+      No donor has a typed decision-card artifact. The authority check is deterministic gate logic,
+      never a third judgment — there is no tie-breaking supervisor.
+
+  - id: supervisor-seat-independence
+    capability: Two supervisor seats, declared independent, answering the same card without a shared scratchpad
+    disposition: retained
+    destination: roles/supervisor
+    locator: G:L2159-2173; G:L2072-2074
+    origin: conversation
+    acceptance_test: >-
+      A missing supervisor output blocks the checkpoint; the implementer is never seated to fill it
+      (release scenario 17).
+    note: >-
+      The transcript expresses independence as a cross-family model pairing. Independence is
+      re-expressed here as a runner-enforced constraint on who may fill a seat, with no reference
+      to which system fills it.
+
+  - id: immutable-charter
+    capability: An authority charter fixed by hash outside worker-writable scope, enumerating what the pair may decide and what it must escalate
+    disposition: retained
+    destination: schemas/charter
+    locator: G:L2079-2119; plan §7.2
+    origin: conversation
+    acceptance_test: >-
+      A run cannot edit its own charter; an action outside the charter's granted set blocks the
+      checkpoint even when both seats agree.
+    note: >-
+      The hash mechanism has a donor analogue that pins a stage-profile selection, not a full
+      authority charter with granted and denied capability lists. Field content is plan-original.
+
+  - id: guided-checkpoint-mode
+    capability: An explicit named fallback state — full decision-card protocol in force, but each checkpoint proposed to the human because no adapter can yet validate a grant
+    disposition: retained
+    destination: skills/autopilot
+    locator: plan §9 (Milestone 7)
+    origin: conversation
+    acceptance_test: >-
+      With no runner adapter present, autopilot proposes each checkpoint resolution and asks for
+      confirmation rather than claiming to have enforced a grant it cannot verify.
+    note: >-
+      Deliberately carries no G:L locator. Both donor autopilots claim to enforce their own state
+      machines end to end; neither has a concept of "I would act here but cannot prove I am
+      authorized." This is the plan's own dry-run/checkpoint-observation mode, not a donor import.
+
+  - id: runner-validated-grant
+    capability: A delegated controller may start a phase operation only when a runner-validated grant covers it
+    disposition: retained
+    destination: adapters/runner-contract
+    locator: G:L2050-2077; plan §7.1
+    origin: conversation
+    acceptance_test: >-
+      A phase operation invoked with no validated grant stops for explicit invocation instead of
+      reproducing a forbidden command's effect through a side door.
+    note: >-
+      Plan-original language resolving four transcript statements that contradict each other. No
+      donor implements grant validation distinct from its own state-file writes.
+
+  - id: idempotent-remote-effects
+    capability: Idempotency keys plus remote read-back for branch creation, push, comments, thread resolution and PR creation
+    disposition: retained
+    destination: adapters/runner-contract
+    locator: G:L2121-2155; plan §7.4
+    origin: conversation
+    acceptance_test: >-
+      Restarting a run does not repeat a remote side effect, and a duplicate inbound event does not
+      duplicate an action (release scenario 20).
+    note: >-
+      The nearest donor mechanism is a compare-before-write guard against concurrent local events —
+      a single-writer race guard, not an idempotency key with remote read-back.
+
+  # =========================================================================
+  # Standalone supporting skills (plan §2.3; G:L1942-2028)
+  # =========================================================================
+
+  - id: compound
+    capability: Capture one reusable lesson tied to a real failure, correction or surprising review result
+    disposition: retained
+    destination: skills/compound
+    locator: G:L1950-1950; G:L1963-1963; G:L1766-1766; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      A successful routine run with no named failure emits no lesson (release scenario 23); the
+      lesson is written centrally and creates no application-local documentation tree
+      (release scenario 21).
+
+  - id: compound-refresh
+    capability: Keep, update, consolidate, replace or retire captured lessons rather than batching morals into one file
+    disposition: retained
+    destination: skills/compound-refresh
+    locator: G:L1950-1950; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      A superseded lesson records its supersession and keeps its history; rolling back a skill
+      bundle leaves the lesson corpus intact (release scenario 24).
+
+  - id: lesson-supersession
+    capability: Explicit supersedes / superseded_by links on a captured lesson
+    disposition: retained
+    destination: schemas/lesson
+    locator: G:L1950-1950; plan §8
+    origin: conversation
+    acceptance_test: >-
+      Replacing or consolidating a lesson leaves both the new and the superseded record readable,
+      with the link between them (release scenario 24).
+    note: No donor lesson schema names these fields; the need follows from the refresh verbs.
+
+  - id: ideate
+    capability: Generate options across frames, then critique them, with an adversarial cut before alignment
+    disposition: retained
+    destination: skills/ideate
+    locator: G:L1951-1951; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Produces a ranked option set and no commitment; a previously rejected option is not
+      re-surfaced without new evidence (release scenario 12).
+
+  - id: pov
+    capability: A read-only project-grounded verdict with an evidence floor, optional independent opinions, and a first-class Hold
+    disposition: retained
+    destination: skills/pov
+    locator: G:L1952-1952; G:L807-856; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Fails the project floor and returns Hold with an inspection list rather than a graded verdict;
+      the verdict never authorizes implementation, and re-running without changed evidence is
+      refused (release scenario 12).
+
+  - id: independent-reviewer-context
+    capability: The model-agnostic replacement for the transcript's cross-family oracle — an attestable independence flag on a reviewing context, with freeze-before-expose, inform-don't-vote, and disclosed failures
+    disposition: retained
+    destination: policies/review
+    locator: G:L874-881; plan §11
+    origin: conversation
+    acceptance_test: >-
+      The host position is frozen before any peer sees it; peers inform and never vote; a failed
+      peer is disclosed and does not block the solo judgment, and an unattested context does not
+      count as independent corroboration (release scenario 4).
+    note: >-
+      A required translation, not an invention — the donor mechanism exists but is expressed
+      entirely through vendor and family identity, which this catalog cannot carry. The resulting
+      vocabulary has no donor source.
+
+  - id: bakeoff
+    capability: Build competing bounded experiments in separate workspaces against criteria fixed first, then pick with evidence
+    disposition: retained
+    destination: skills/bakeoff
+    locator: G:L1953-1953; G:L832-832; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Emits an evaluation artifact, not a production adoption; a settled selection is not re-run
+      without new evidence (release scenario 12).
+
+  - id: doc-review
+    capability: A findings engine on requirements, plans, ADRs and context — a different persona catalog from code review, with meaning-changing forks escalated rather than settled
+    disposition: retained
+    destination: skills/doc-review
+    locator: G:L1954-1954; G:L610-642; G:L660-684; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      A contradiction the document itself can settle is applied; a contradiction that would pick a
+      side in a product fork is emitted as a Decision for a human and never auto-applied.
+
+  - id: doc-review-persona-catalog
+    capability: The separate document persona catalog — coherence and feasibility always on, product, design, security, scope and adversarial lenses conditional, with premise techniques suppressed on a validated plan
+    disposition: retained
+    destination: skills/doc-review
+    locator: G:L629-644
+    origin: donor
+    acceptance_test: >-
+      A plan with validated upstream provenance does not re-open "should we build this"; a
+      requirements document runs the full premise kit.
+    note: >-
+      The seats live in `roles/doc-review/*`. Code-review personas are never reused on a document
+      (G:L705).
+
+  - id: doc-review-durable-disposition
+    capability: Carrying a finding's disposition across sessions so a later, separate review run does not rediscover a settled item
+    disposition: retained
+    destination: skills/doc-review
+    locator: G:L707-717; plan §8
+    origin: conversation
+    acceptance_test: >-
+      A fresh invocation reconstructs prior dispositions from the recorded decisions rather than
+      re-dispatching the panel on unchanged inputs.
+    note: >-
+      The donor's primer is explicitly session-scoped; the plan mandates central storage. Neither
+      states how a later session reconstructs the primer. Recorded here as conversation-origin.
+
+  - id: receiving-review
+    capability: Assess and resolve existing human or bot PR feedback with evidence — apply, defer or skip per comment
+    disposition: retained
+    destination: skills/receiving-review
+    locator: G:L1955-1955; G:L435-442; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      A PR comment instructing the agent to ignore policy grants no authority (release scenario 15);
+      replying and resolving a thread require authorization, and an acknowledgement reaction is not
+      a finding.
+
+  - id: diagnose
+    capability: Reproduce, minimize, hypothesize, instrument, fix and regression-test, with the hypothesis stated before the edit
+    disposition: retained
+    destination: skills/diagnose
+    locator: G:L1956-1956; G:L1791-1791; G:L1558-1561; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Emits either a verified bounded patch under grant or a diagnostic work packet, never both, so
+      the same patch is not implemented twice; repeated failure triggers reconsideration rather
+      than unlimited edits.
+    note: >-
+      The transcript lists diagnose both as a keeper and as a primitive; plan §2.3 lists it once.
+      Both donor debugging skills fix in place; the split from build is a deliberate tightening.
+
+  - id: improve-architecture
+    capability: A periodic shallowness survey outside any feature loop, proposing one worthwhile deepening
+    disposition: retained
+    destination: skills/improve-architecture
+    locator: G:L1957-1957; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Produces one proposed deepening and a recorded decision; no unsolicited repository-wide
+      rewrite follows from the same run.
+
+  - id: improve-architecture-handoff
+    capability: Where the chosen deepening stops — a recorded decision, with implementation as a separate human-started work source
+    disposition: retained
+    destination: skills/improve-architecture
+    locator: G:L2006-2026
+    origin: conversation
+    acceptance_test: >-
+      The run ends at a grilled, recorded shape; it does not start alignment, does not open tickets,
+      and does not implement.
+    note: >-
+      Neither a donor nor a plan table states who implements the deepening. Synthesized from the
+      transcript's own placement of this skill outside the loop and its rule that none of these
+      skills may start align or ship.
+
+  - id: doubt-driven
+    capability: Independently challenge a consequential claim before it hardens — claim, evidence extraction, doubt, reconciliation, on a fresh context
+    disposition: retained
+    destination: skills/doubt-driven
+    locator: G:L1958-1958; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Runs before the claim becomes an assumption rather than after a diff exists; a cycle that
+      produces doubt theater escalates instead of looping again.
+
+  - id: simplify
+    capability: Reduce complexity or delete code with behavioral evidence, with the fence rule in force
+    disposition: retained
+    destination: skills/simplify
+    locator: G:L1959-1959; G:L1513-1513; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      A deletion whose existing behavior cannot be explained is skipped rather than applied; the
+      product contract is never changed under cleanup, and verification still runs when the caller
+      asks to skip it.
+
+  - id: research
+    capability: Gather cited external primary-source evidence, reporting source versions and uncertainty
+    disposition: retained
+    destination: skills/research
+    locator: G:L1971-1971; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Returns a cited note with source versions; an uncited claim is reported as uncertain rather
+      than asserted.
+
+  - id: research-vs-scout-boundary
+    capability: The explicit statement that research is external and scout is repository-local, so neither substitutes for the other
+    disposition: retained
+    destination: skills/research
+    locator: G:L1971-1971; plan §2.3
+    origin: conversation
+    acceptance_test: >-
+      A repository question routes to scout and an external-source question routes to research;
+      research does not return repository findings as primary evidence.
+    note: The donor's step ordering implies this boundary but never states it as a rule.
+
+  - id: source-driven
+    capability: Verify framework or library usage against authoritative sources for the version actually in use
+    disposition: retained
+    destination: skills/source-driven
+    locator: G:L1972-1972; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Loads only the dependency and version in use and cites the authoritative page; no API is used
+      from unverified recall.
+
+  - id: deprecate
+    capability: Plan and execute an approved retirement or migration with compatibility, sequencing, rollback and consumer evidence
+    disposition: retained
+    destination: skills/deprecate
+    locator: G:L1973-1973; G:L1516-1516; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Consumer evidence and a rollback path exist before any removal step; the removal itself needs
+      its own explicit go.
+
+  - id: deprecate-irreversible-gate
+    capability: The removal or drop step as a separately gated action, distinct from the initial deprecate invocation
+    disposition: retained
+    destination: skills/deprecate
+    locator: G:L2101-2111; plan §2.3
+    origin: conversation
+    acceptance_test: >-
+      Invoking deprecate authorizes planning and compatibility work; the destructive step stops for
+      a second explicit authorization.
+    note: >-
+      The donor treats removal as the next linear step after a zero-usage check, with no distinct
+      confirmation gate. Generalized here from the autopilot escalation list's irreversible-data and
+      destructive-git items.
+
+  - id: explain
+    capability: Explain how and why existing behavior works from repository and knowledgebase evidence
+    disposition: retained
+    destination: skills/explain
+    locator: G:L1974-1974; G:L833-833; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Returns a description with evidence and stops; it does not become a recommendation or an
+      implementation plan.
+
+  - id: triage
+    capability: Apply a configured issue-state and classification policy against a real tracker
+    disposition: retained
+    destination: skills/triage
+    locator: G:L1975-1975; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      With no configured tracker policy the skill reports that it has nothing to apply; it cannot
+      reprioritize beyond its delegated scope.
+
+  - id: strategy
+    capability: Work from standing product goals and strategic constraints
+    disposition: retained
+    destination: skills/strategy
+    locator: G:L1976-1976; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Reads the existing anchors and produces no automatic feature expansion. Off by default outside
+      the product profile.
+
+  - id: product-pulse
+    capability: Inspect changes and signals against existing product anchors
+    disposition: retained
+    destination: skills/product-pulse
+    locator: G:L1976-1976; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      Produces a report; it is not permission to change the roadmap. Off by default outside the
+      product profile.
+
+  - id: writing-skills
+    capability: Author and improve skills using behavioral tests and provenance
+    disposition: retained
+    destination: skills/writing-skills
+    locator: G:L1977-1977; plan §2.3
+    origin: donor
+    acceptance_test: >-
+      A candidate skill edit is accompanied by behavioral cases and a provenance row before it can
+      be promoted.
+
+  - id: writing-skills-promotion-gate
+    capability: A separate review before a candidate skill edit is promoted, distinct from the evaluations themselves
+    disposition: retained
+    destination: skills/writing-skills
+    locator: G:L1977-1977; plan §8
+    origin: conversation
+    acceptance_test: >-
+      Passing evaluations alone does not promote an edit; a separate reviewing pass is required, and
+      rolling a promotion back leaves the knowledge history intact (release scenario 24).
+    note: >-
+      The donor supplies the test-driven methodology that makes evaluation possible but states no
+      separate-review-before-promotion gate. This is the repository's own review-separation rule
+      applied to skill authorship.
+
+  # =========================================================================
+  # Primitives (plan §2.4; G:L1787-1795)
+  # =========================================================================
+
+  - id: prototype
+    capability: A bounded throwaway artifact answering a question discussion cannot settle
+    disposition: retained
+    destination: skills/prototype
+    locator: G:L1792-1792; G:L933-933; G:L1566-1568; plan §2.4
+    origin: donor
+    acceptance_test: >-
+      A technical question can use automated criteria; a human-experience question stays blocked
+      without a human and is never claimed validated by the run itself.
+
+  - id: prototype-evaluator-predeclaration
+    capability: Naming the evaluator before the artifact is built
+    disposition: retained
+    destination: skills/prototype
+    locator: G:L1787-1795; plan §2.4
+    origin: conversation
+    acceptance_test: >-
+      The run states who or what will judge the artifact before building it; an unnamed evaluator
+      blocks the build rather than being decided afterwards.
+    note: Both donors imply the evaluator but neither requires stating it in advance.
+
+  - id: handoff
+    capability: Preserve exact approved decisions, artifact references, status and outstanding work across a context boundary
+    disposition: retained
+    destination: skills/handoff
+    locator: G:L1793-1793; G:L1562-1564; plan §2.4
+    origin: donor
+    acceptance_test: >-
+      Approved decisions are carried verbatim; an unmarked summary never stands in for an
+      authoritative decision.
+
+  - id: handoff-staleness-flag
+    capability: Marking a cited artifact as possibly stale at write time, not only on resume
+    disposition: retained
+    destination: skills/handoff
+    locator: G:L1793-1793; plan §2.4
+    origin: conversation
+    acceptance_test: >-
+      A handoff citing evidence bound to an older revision carries an explicit staleness marker on
+      creation.
+    note: >-
+      Donor handoffs treat incoming material as needing re-verification but require nothing of the
+      writer. Grounded in the revision-bound artifact rule rather than a donor mechanism.
+
+  - id: wait-what
+    capability: Re-explain the present proposal in established project vocabulary without restarting alignment
+    disposition: retained
+    destination: skills/wait-what
+    locator: G:L1794-1794; G:L1562-1564; plan §2.4
+    origin: donor
+    acceptance_test: >-
+      Re-pitches the current proposal in the project's own terms; it does not start a new alignment
+      run and does not change the decision.
+    note: >-
+      The narrow scope is kept deliberately. A donor sibling explains any supplied artifact, which
+      would blur this primitive with `explain`.
+
+  - id: wayfind
+    capability: Map longer work into decision tickets and implementation tickets
+    disposition: retained
+    destination: skills/wayfind
+    locator: G:L1795-1795; G:L1554-1556; plan §2.4
+    origin: donor
+    acceptance_test: >-
+      A decision ticket cannot be dispatched to an implementer as though approved; resolving one is
+      a fresh alignment invocation, not a build (release scenario 11).
+
+  - id: ticket-type-refusal
+    capability: Ticket type (decision versus implementation) as an enforced, refusable field rather than a convention
+    disposition: retained
+    destination: schemas/ticket
+    locator: G:L1554-1556; G:L1692-1692
+    origin: conversation
+    acceptance_test: >-
+      An implementer handed a decision-typed ticket refuses to execute it (release scenario 11).
+    note: >-
+      Donors distinguish the two kinds conceptually; none encodes the refusal as a skill boundary.
+      The refusal mechanism is the part with no donor path.
+
+  # =========================================================================
+  # Operational skills retained from earlier turns (plan §2.5)
+  # =========================================================================
+
+  - id: babysit-pr
+    capability: A PR watch loop that consumes CI, comment and base-change events and invokes the appropriate bounded action
+    disposition: retained
+    destination: skills/babysit-pr
+    locator: G:L436-436; G:L537-537; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Quiet time costs nothing — no busy model polling; a duplicate webhook does not duplicate an
+      action; a green CI check achieved by deleting an assertion is not accepted
+      (release scenarios 19 and 20).
+    note: >-
+      Plan §2.5 instructs explicitly that this stays in the catalog because it appeared earlier in
+      the conversation. Its absence from the transcript's final summary is not a deletion.
+
+  - id: ultraqa
+    capability: Bounded adversarial behavioral verification, separate from diff review
+    disposition: retained
+    destination: skills/ultraqa
+    locator: G:L450-450; G:L494-494; G:L543-543; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      At most five cycles, stopping at three occurrences of the same failure; it runs after the diff
+      is clean, not instead of review.
+    note: >-
+      Same standing instruction as `babysit-pr`: plan §2.5 keeps it in the catalog despite its
+      omission from the transcript's final summary.
+
+  - id: ultraqa-mutation-invalidates-evidence
+    capability: Any code mutation produced by adversarial QA invalidates the affected review evidence
+    disposition: retained
+    destination: skills/ultraqa
+    locator: G:L543-543; plan §2.5; plan §5.2
+    origin: conversation
+    acceptance_test: >-
+      A commit produced during a QA cycle changes the revision the findings are bound to, so the
+      affected approvals do not carry forward (release scenario 10).
+    note: >-
+      No donor states the connecting rule — the donor QA loop is itself a mutator and has no
+      knowledge of a review verdict downstream. Expressed as a trigger of the existing
+      revision-binding rule rather than a new mechanism.
+
+  # =========================================================================
+  # Domain packs (plan §3; G:L1768-1785)
+  # =========================================================================
+
+  - id: pack-api
+    capability: Public interface, protocol and observable response-shape constraints — every observable will be depended on
+    disposition: retained
+    destination: packs/pack-api
+    locator: G:L1774-1774; plan §3
+    origin: donor
+    acceptance_test: >-
+      A change to an existing observable shape needs explicit authorization, not a green test; an
+      approved API ticket still does not grant deployment (release scenario 5).
+
+  - id: pack-delete
+    capability: Removal, deprecation and replacement constraints — explain the existing behavior before removing it, inventory consumers
+    disposition: retained
+    destination: packs/pack-delete
+    locator: G:L1775-1775; plan §3
+    origin: donor
+    acceptance_test: >-
+      A deletion with no recorded reason for the old behavior escalates rather than being applied.
+
+  - id: pack-test
+    capability: Meaningful regression coverage and appropriate test seams for new or changed behavior
+    disposition: retained
+    destination: packs/pack-test
+    locator: G:L1776-1776; plan §3
+    origin: donor
+    acceptance_test: >-
+      A behavioral change with no test work triggers the testing lens (release scenario 2); a raised
+      test count with no behavior covered does not satisfy it.
+
+  - id: pack-secure
+    capability: Authentication, authorization, tenancy, secrets, payments and trust-boundary constraints, failing closed
+    disposition: retained
+    destination: packs/pack-secure
+    locator: G:L1777-1777; plan §3
+    origin: donor
+    acceptance_test: >-
+      A tenant-isolation error seats security and adversarial review and blocks unsupported closure
+      (release scenario 3); the pack is never dropped because a classifier was uncertain.
+
+  - id: pack-frontend
+    capability: Accessibility, interaction behavior, internationalization and visual validation for user-facing changes
+    disposition: retained
+    destination: packs/pack-frontend
+    locator: G:L1778-1778; plan §3
+    origin: donor
+    acceptance_test: >-
+      A change adding user-visible strings attaches the pack and records why; mechanical fixes with
+      an existing automated check are the only ones eligible for gated application.
+    note: >-
+      Two open points, both conversation-origin and both recorded rather than invented here: no
+      source defines the internationalization activation evidence, and the fixed role catalog has
+      no generic accessibility or UI-quality seat — only the async and DOM-timing lens. Routing, not
+      a new role id, resolves it.
+
+  - id: pack-data
+    capability: Schema, migration, backfill and transformation constraints — integrity, rollback, irreversibility detection
+    disposition: retained
+    destination: packs/pack-data
+    locator: G:L1779-1779; plan §3
+    origin: donor
+    acceptance_test: >-
+      An additive or expand step may be applied under gate; any drop, in-place rename or backfill is
+      manual and separately gated for execution authority.
+
+  - id: pack-perf
+    capability: Baseline and after-measurements before any performance improvement is claimed
+    disposition: retained
+    destination: packs/pack-perf
+    locator: G:L1780-1780; plan §3
+    origin: donor
+    acceptance_test: >-
+      The pack attaches only when a budget was stated or a problem measured; a performance change
+      with no fresh re-measurement stays advisory and is never auto-applied.
+
+  - id: pack-deps
+    capability: Dependency scope, compatibility and supply-chain evidence on manifest and lockfile changes
+    disposition: retained
+    destination: packs/pack-deps
+    locator: G:L1781-1781; plan §3
+    origin: donor
+    acceptance_test: >-
+      A new dependency or a major upgrade requires explicit authorization; a patch or minor bump
+      with a clean audit may be gated-applied.
+    note: >-
+      The transcript names a dependency-audit reviewer that has no counterpart in the fixed role
+      catalog. Recorded as an open routing question, not resolved by inventing a role id.
+
+  - id: numeric-heuristics-as-guidance
+    capability: The ~100-line change target and the 80/15/5 test pyramid
+    disposition: folded
+    destination: references/engineering-principles
+    locator: G:L1706-1706; G:L1515-1515; plan §3; plan §11
+    origin: donor
+    acceptance_test: >-
+      Both appear as configurable starting points with their rationale; neither blocks a change, and
+      an exception is recorded rather than forcing an artificial file split or a meaningless test.
+    note: >-
+      The transcript states these as rules. Plan §3 and §11 demote them to advisory; that demotion
+      is the ruling this row records.
+
+  # =========================================================================
+  # Folded mechanisms — protocols, references and role prompts (plan §2.5).
+  # Each of these survives inside something else. None becomes a slash command.
+  # =========================================================================
+
+  - id: invocation-law
+    capability: User-invoked versus model-invoked, and the rule that a user-invoked skill may not call another user-invoked skill
+    disposition: retained
+    destination: protocols/phase-operations
+    locator: G:L1668-1676; G:L1530-1532; plan §7.1
+    origin: conversation
+    acceptance_test: >-
+      A user-invoked entrypoint started with no human and no validated grant does not run; a
+      controller reaches the shared phase operation instead, and where no grant can be validated the
+      skill stops for explicit invocation.
+    note: >-
+      The law itself is a donor rule, reproduced in AGENTS.md. What has no donor path is the
+      resolution that makes it satisfiable — the split between a public entrypoint and a phase
+      operation, the fixed two-list shape, and the named phase-operation catalog derived from
+      plan §2.1 rather than from any donor list.
+
+  - id: consensus-plan-gate
+    capability: Consensus plan review — a planner snapshot, then an architect and a critic on the same fixed snapshot without seeing each other's analysis, then synthesis
+    disposition: folded
+    destination: protocols/consensus-plan-gate
+    locator: G:L454-467; G:L545-549; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Five rounds maximum; the critic never reviews a snapshot the architect has not seen, and the
+      gate is invoked for genuine architectural disagreement or a review-driven replan, not on every
+      bound.
+    note: >-
+      Folded deliberately: it is a protocol invoked by `super-bound` or an explicit replan, never a
+      second planning command beside it. The three seats live in `roles/plan-review/*`.
+
+  - id: readiness-profile
+    capability: The two-lane readiness gate — independent lanes, a blocking verdict that vetoes approval, and missing evidence meaning unavailable rather than self-review
+    disposition: folded
+    destination: skills/super-review
+    locator: G:L444-448; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      A required-lane failure is unavailable, which blocks approval and never falls back to
+      self-review (release scenario 4).
+    note: Folded as an entrypoint of `super-review`, not a separate skill and not a separate command.
+
+  - id: readiness-composition-rule
+    capability: How the readiness gate composes with the first-pass panel — as an additional gate over the panel's synthesized verdict rather than a replacement for it
+    disposition: folded
+    destination: skills/super-review
+    locator: G:L1872-1918; plan §2.1
+    origin: conversation
+    acceptance_test: >-
+      Selecting the readiness entrypoint preserves the panel's finding taxonomy and adds the
+      fail-closed unavailable state; it does not silently substitute a two-lane check for discovery.
+    note: >-
+      No source states how a caller chooses between the two, or whether they compose. The donor's
+      own file assumes it is the only review mechanism running. The composition rule is original.
+
+  - id: tdd
+    capability: Red, green, refactor evidence for behavior changes, with written rebuttals to the standard excuses for skipping it
+    disposition: folded
+    destination: protocols/tdd
+    locator: G:L1724-1724; G:L1735-1735; G:L1577-1577; G:L1515-1515; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      A behavior change carries a failing test that preceded the fix; genuinely non-testable work
+      records an alternative verification plan rather than an exemption.
+    note: >-
+      Folded as a protocol under `super-build` and `diagnose`. Four donors ship a TDD command; none
+      of them is re-exposed here.
+
+  - id: spec-review-role
+    capability: The spec axis of review — did we build the ticket
+    disposition: folded
+    destination: roles/reviewer-spec
+    locator: G:L1534-1536; G:L1725-1725; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Runs as an internal role prompt in its own context, checking accepted findings and ticket
+      obligations only; it is not reachable as a command and does not share a context with the
+      standards axis.
+
+  - id: standards-review-role
+    capability: The standards axis of review — did we make a mess, against the project's own designated rules
+    disposition: folded
+    destination: roles/reviewer-standards
+    locator: G:L1534-1536; G:L1726-1726; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Cites the project's designated rules rule by rule; with no standards file it returns empty
+      rather than inventing preferences.
+    note: >-
+      Kept as two separate role prompts on purpose. Merging them, or exposing either as a command,
+      recreates the overlap plan §2.5 folds away.
+
+  - id: apply-findings
+    capability: Applying only accepted, sufficiently specified findings under authorization, closed by independent verification
+    disposition: folded
+    destination: protocols/apply-findings
+    locator: G:L1159-1160; G:L1176-1194; G:L2091-2092; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      A vague finding is not handed to an automatic fixer — it returns to the specialist or to
+      diagnosis (release scenario 6). A merge across seats may only worsen a grade, never brighten
+      it, and apply permission never follows from difficulty alone.
+
+  - id: finding-axes
+    capability: Solution specificity and difficulty as two co-equal axes on a finding, alongside severity, confidence and autofix class
+    disposition: retained
+    destination: schemas/finding
+    locator: G:L1085-1123; G:L1176-1194
+    origin: conversation
+    acceptance_test: >-
+      Each finding carries the axes independently; a specified high-severity finding and a vague
+      low-severity one route differently, and a finding is scored per finding rather than per change
+      (release scenario 6).
+    note: >-
+      Anchors with behavioral tests, never numeric sliders. The transcript's own proposal — the
+      donor had not adopted these two axes at the pinned commit — so there is no donor path for the
+      combination even though `autofix_class` alone has one.
+
+  - id: review-delta
+    capability: The two-axis delta pass over a fix — bounded scope, novelty evidence required, verdict monotonicity, at most two fix cycles
+    disposition: folded
+    destination: protocols/review-delta
+    locator: G:L468-500; G:L1753-1757; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      A one-line fix gets a delta pass, not a repeat panel (release scenario 7); moving a line number
+      neither duplicates nor falsely suppresses a finding (release scenario 9); the third cycle stops
+      (release scenario 18).
+
+  - id: delta-affected-behavior-boundary
+    capability: Bounding the delta pass by affected behavior rather than by changed lines
+    disposition: folded
+    destination: protocols/review-delta
+    locator: G:L481-481; G:L496-496; plan §11
+    origin: conversation
+    acceptance_test: >-
+      A new serious error in an affected but untouched caller stays reportable, while a new
+      low-severity finding on an unrelated file is rejected as reviewer shopping
+      (release scenario 8).
+    note: >-
+      The transcript sometimes restricts new findings to changed lines. Plan §11 overrides this with
+      the affected-behavior boundary; the override is the implementable rule, and it is plan-original.
+
+  - id: worktree-ownership
+    capability: Ownership-aware parallel dispatch — isolated worktrees, an explicit integration owner, exclusive file ownership
+    disposition: folded
+    destination: protocols/worktree-ownership
+    locator: G:L1731-1731; G:L555-555; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Independent tickets run in parallel and tickets sharing files do not; a worker does not expand
+      its diff into a neighbor's files.
+    note: >-
+      Folded as a build helper and protocol. Two donors ship a worktree command; neither is
+      re-exposed here.
+
+  - id: write-conflict-without-dependency-edge
+    capability: Serializing writers that touch the same files even when no ticket dependency edge connects them
+    disposition: folded
+    destination: protocols/worktree-ownership
+    locator: G:L1731-1731; plan §5.3
+    origin: conversation
+    acceptance_test: >-
+      Two tickets with no blocking edge but overlapping file ownership are serialized rather than
+      dispatched together (release scenario 13).
+    note: >-
+      The transcript's rule is stated as dependency edges doing the work. That alone is not
+      sufficient, and the write-conflict rule that closes the gap is plan-original.
+
+  - id: attach-pack
+    capability: Deterministic pack selection by artifact and semantics, with recorded rationale, attaching constraints and lenses without starting a phase
+    disposition: folded
+    destination: protocols/attach-pack
+    locator: G:L1768-1770; G:L1785-1785; G:L1522-1522; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      A twenty-line typo fix does not attach the whole catalog (release scenario 1); every attached
+      pack records why it was selected.
+
+  - id: attach-pack-uncertainty-rule
+    capability: What happens when activation evidence is ambiguous — the risk-bearing packs attach anyway, the rest decline with a stated reason
+    disposition: folded
+    destination: protocols/attach-pack
+    locator: G:L1785-1785; plan §3
+    origin: conversation
+    acceptance_test: >-
+      Security, API and data facts are never dropped because the evidence was ambiguous
+      (release scenario 3); a declining pack records the reason rather than failing silently, and the
+      lookup path stays usable with no classifier at all.
+    note: >-
+      The donor matches activation conditions semantically with no stated tie-break. Plan §3 requires
+      the risk-bearing packs to fail open; the per-pack rule that implements it has no donor source.
+
+  - id: codebase-design
+    capability: Deep-module vocabulary for interface design and where a seam goes
+    disposition: reference
+    destination: references/codebase-design
+    locator: G:L1978-1978; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Loaded on demand by `super-align` and `improve-architecture`; it has no invocation of its own
+      and is not exposed as a command.
+    note: >-
+      Plan §2.5 restricts loading to align and improve-architecture. `super-bound` reuses seam
+      vocabulary established during the preceding align run rather than re-loading the reference —
+      flagged here rather than settled silently.
+
+  - id: domain-modeling
+    capability: Modelling the domain before modelling the storage
+    disposition: reference
+    destination: references/domain-modeling
+    locator: G:L1978-1978; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Loaded on demand by `super-align` and `super-bound`; not a command.
+
+  - id: engineering-principles
+    capability: The standards library — dependency on observable behavior, the fence rule, the test pyramid, code as liability, and the anti-rationalization rebuttals
+    disposition: reference
+    destination: references/engineering-principles
+    locator: G:L1503-1519; G:L1621-1624; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Loaded on demand by `super-build`, `super-review` and `simplify`; the numeric targets it
+      carries are configurable guidance with their rationale, not gates.
+    note: >-
+      The donor ships this content behind its own six-command lifecycle. The content is imported;
+      the commands are not — see `donor-duplicate-lifecycle-commands` below.
+
+  - id: prose-quality
+    capability: Wording cleanup for document-producing skills, kept separate from substantive document decisions and from code simplification
+    disposition: reference
+    destination: references/prose-quality
+    locator: G:L625-625; G:L1959-1959; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Loaded by document-producing skills; a prose pass never changes a decision recorded in the
+      document and never reaches code.
+    note: >-
+      The transcript is explicit that the prose pass, the document findings engine and the verdict
+      skill are three different jobs and must not be merged.
+
+  # =========================================================================
+  # Cross-cutting contracts with no donor path
+  # =========================================================================
+
+  - id: revision-bound-artifacts
+    capability: A shared envelope binding every durable artifact to its inputs — schema version, run identity, creator role, input hashes, source revision, status
+    disposition: retained
+    destination: schemas/common
+    locator: G:L712-714; plan §5.2
+    origin: conversation
+    acceptance_test: >-
+      An approval binds to a revision rather than a filename; a changed artifact does not inherit
+      the previous approval, and a changed patch does not inherit stale receipts
+      (release scenario 10).
+    note: >-
+      Individual donors track some of these fields ad hoc; none has a unified revision-bound
+      envelope as a first-class concept.
+
+  - id: acceptance-to-evidence-matrix
+    capability: The verification artifact shape — one row per acceptance criterion, each mapped to a receipt with command, exit status, revision and environment
+    disposition: retained
+    destination: schemas/verification
+    locator: G:L1737-1743; plan §5.6
+    origin: conversation
+    acceptance_test: >-
+      A criterion with no receipt is visible as not-run; passed, failed, not-run, not-applicable and
+      inconclusive are tracked separately rather than collapsed into a boolean.
+    note: >-
+      The nearest donor table maps situations to actions, not acceptance criteria to receipts.
+
+  - id: knowledgebase-durable-output
+    capability: Every project-derived artifact published through the knowledgebase adapter instead of a repository-local documentation tree
+    disposition: retained
+    destination: adapters/knowledgebase
+    locator: plan §1.2; plan §8
+    origin: conversation
+    acceptance_test: >-
+      A lesson, decision or report is published centrally and creates no application-local docs
+      directory (release scenario 21).
+    note: >-
+      Marked `plan §8` rather than transcript-original in the dossiers: the operations are the plan's
+      own answer to a constraint the transcript never addresses. Folded into `conversation` here
+      because no donor implements them — every donor writes to a repository-local root.
+
+  - id: knowledgebase-pr-linkage
+    capability: Source PRs linked to their knowledgebase PRs, with a source merge activating the existing knowledgebase coordinator
+    disposition: retained
+    destination: adapters/knowledgebase
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      A source merge activates knowledgebase coordination without bypassing its checks
+      (release scenario 22); with no knowledgebase configured the linkage field is simply absent.
+    note: >-
+      Entirely plan-original scope. No donor has any concept of a paired knowledgebase PR or a merge
+      coordinator, so this is an optional output field rather than a hard dependency.
+
+  - id: knowledgebase-ticket-claim
+    capability: Claiming a ticket by assignment before any work starts, in the no-external-tracker fallback
+    disposition: retained
+    destination: adapters/knowledgebase
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      With no external tracker, a ticket is claimed before work begins so two workers cannot both
+      believe they own it.
+    note: >-
+      Deliberately carries no G:L locator: the claim mechanic exists in a donor but the transcript
+      never discusses it, and none of the knowledgebase operations plan §8 names covers it. Recorded
+      as an open item for the adapter contract rather than invented here.
+
+  - id: cross-skill-knowledgebase-reads
+    capability: Skills reading each other's recorded context and impact evidence through the adapter rather than through direct file access
+    disposition: retained
+    destination: adapters/knowledgebase
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      A skill needing another skill's recorded output reads it through the adapter; nothing reaches
+      into another skill's directory or a sibling's private files.
+    note: >-
+      Marked `plan §8` in the dossier rather than transcript-original. Every donor assumes direct
+      file or codebase access, so no donor path exists either way.
+
+  # =========================================================================
+  # Optional — recognized, deliberately outside the engineering catalog
+  # =========================================================================
+
+  - id: publishing-adapter
+    capability: Publishing local markdown to a shared collaborative editor for human review
+    disposition: optional
+    destination: null
+    locator: G:L935-935; plan §2.5
+    origin: donor
+    acceptance_test: >-
+      Not built in this package. If it is ever added it arrives as an external publishing adapter
+      under `adapters/`, with no lifecycle authority and no review or verdict semantics.
+    note: >-
+      Optional, not excluded — plan §2.5's last row keeps it in the design as collaboration
+      plumbing. It is the one row in this file with `destination: null` that is not an exclusion:
+      there is no catalog entry for it today because no adapter has been contracted, not because the
+      capability was rejected. The transcript is explicit that it is editor and publishing
+      machinery, not review.
+
+  # =========================================================================
+  # Excluded — deliberate selections (plan §2.6; G:L1817-1824, G:L1993-2000, G:L1629)
+  # These rows are the design's negative space. None of them is missing coverage.
+  # =========================================================================
+
+  - id: lfg-run-everything-entrypoint
+    capability: A second "run the whole company" entrypoint beside autopilot
+    disposition: excluded
+    destination: null
+    locator: G:L1995-1995; G:L1823-1823; G:L2241-2248; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      No catalog entry offers an unattended run-everything button. `autopilot` is the only
+      supervisor, it is user-started, and its defining refusals are exactly the ones the donor
+      entrypoint makes — it pauses, it does not plan and implement and review with one context, it
+      does not autofix ineligible findings, and it does not start from a prompt with no verified
+      work source.
+    note: >-
+      Excluding the entrypoint is not excluding the behavior: the useful parts (nothing implemented
+      without a work source verified this run, stop-and-verify between phases, open PR as the
+      default end state) are retained inside `autopilot`. What is refused is the never-pause
+      contract.
+
+  - id: teach
+    capability: A teaching or course-authoring command
+    disposition: excluded
+    destination: null
+    locator: G:L1996-1996; G:L1822-1822; G:L1629-1629; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      No catalog entry authors instructional material. `explain` covers how and why existing behavior
+      works from evidence and stops there.
+
+  - id: visual-review-html
+    capability: Visual review as rendered HTML with annotated diffs
+    disposition: excluded
+    destination: null
+    locator: G:L1997-1997; G:L1629-1629; plan §2.6
+    origin: conversation
+    acceptance_test: >-
+      No catalog entry emits an HTML review surface. Visual validation is a `pack-frontend`
+      constraint on the change, not a rendering pipeline.
+    note: >-
+      `origin: conversation` because the source attributes this to a repository that is not among the
+      six pinned donors — there is no donor path to exclude, only a named idea. A donor browser-based
+      mockup companion exists in the alignment lineage and is likewise not imported.
+
+  - id: donor-duplicate-lifecycle-commands
+    capability: Independent active copies of the donor brainstorm, plan, work, build, review, TDD and worktree commands
+    disposition: excluded
+    destination: null
+    locator: G:L1982-1991; G:L1817-1824; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      Every one of those behaviors resolves to a super skill or an internal protocol, and no second
+      command with an overlapping activation description exists beside it.
+    note: >-
+      This is the single largest exclusion by volume: four donors' full command sets. The behavior is
+      kept, the commands are not. Two commands with overlapping activation descriptions is the
+      failure this prevents.
+
+  - id: donor-second-sdlc-command-set
+    capability: A second six-phase lifecycle exposed as its own command set beside the retained one
+    disposition: excluded
+    destination: null
+    locator: G:L1819-1819; G:L1524-1524; G:L1584-1584; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      The standards content from that lineage is present as a reference and as packs; its phase
+      commands are absent, and there is exactly one lifecycle.
+
+  - id: build-auto-as-default
+    capability: Automatic build as the default path
+    disposition: excluded
+    destination: null
+    locator: G:L1999-1999; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      `super-build` executes one approved ticket. Nothing starts implementation from an unapproved
+      request, and no default path skips the approval gate.
+
+  - id: ce-personas-as-invocable-skills
+    capability: The seventeen review personas as individually invoked skills
+    disposition: excluded
+    destination: null
+    locator: G:L1998-1998; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      No persona has a public entrypoint. They exist only as role prompts under `roles/code-review/*`,
+      selected by the panel from the artifact.
+    note: >-
+      The personas themselves are retained — see `code-review-persona-panel`. What is excluded is
+      individual invocability, because they are pass-1 machinery and nothing else.
+
+  - id: panel-replay-on-every-loop
+    capability: Re-running the full specialist panel on every subsequent review loop
+    disposition: excluded
+    destination: null
+    locator: G:L1821-1821; G:L425-427; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      After pass one, a fix is reviewed by the delta protocol against the persisted finding list; the
+      panel is not replayed (release scenario 7).
+    note: >-
+      The panel is retained for the first pass. Only the replay is excluded — paying discovery prices
+      for a verification job is the specific failure being designed out.
+
+  - id: spec-supremacy-stance
+    capability: The stance that the code does not matter because the specification is the only contract
+    disposition: excluded
+    destination: null
+    locator: G:L1820-1820; plan §2.6
+    origin: donor
+    acceptance_test: >-
+      Both artifacts carry weight: the spec is the contract that `super-bound` fixes and the code is
+      what `super-review` and `super-verify` actually inspect. No skill treats a green spec as
+      evidence about the code, and none treats the code as self-justifying.
+    note: >-
+      A donor stance rather than a mechanism, but a real selection: the transcript takes the gates
+      from that donor and refuses its theology.
+
+  - id: side-by-side-donor-installs
+    capability: Installing the donor plugins alongside each other and relying on activation descriptions to route between them
+    disposition: excluded
+    destination: null
+    locator: G:L2000-2000; G:L1824-1824; G:L1493-1493; plan §1.1
+    origin: conversation
+    acceptance_test: >-
+      This package ships one lifecycle with one activation description per capability. No catalog
+      entry depends on a donor plugin being installed.
+    note: >-
+      No donor file implements this — it is a deployment strategy the sources reject twice, on the
+      grounds that overlapping descriptions fight.
+
+  - id: model-routing-and-tiering
+    capability: Model selection, tier ladders, confidence-gated routing before a spawn, seating tables and escalation ladders
+    disposition: excluded
+    destination: null
+    locator: G:L1361-1440; G:L1797-1815; G:L1012-1020; G:L2208-2224; plan §2.6
+    origin: conversation
+    acceptance_test: >-
+      No catalog file outside `provenance/` and `research/sources/` names a model, a provider, a tier
+      or an effort level. Each routing concept has a role- or evidence-based replacement: seats and
+      declared independence instead of named seating, evidence-absence instead of confidence gating,
+      deterministic policy checks instead of a classifier.
+    note: >-
+      A large fraction of the design brief. The non-routing concepts it carries — per-finding
+      solution specificity, difficulty, evidence classification, independent roles and iteration
+      limits — are all retained elsewhere in this file, expressed without any classifier.
+
+  - id: model-pricing-and-effort-tables
+    capability: Price-per-token tables, quota arithmetic and effort ladders used to choose who does the work
+    disposition: excluded
+    destination: null
+    locator: G:L963-978; G:L1012-1020; plan §2.6
+    origin: conversation
+    acceptance_test: >-
+      Budgets come from the runner and the catalog enforces only the cap it was handed; no file
+      states a price, a quota or an effort level.
