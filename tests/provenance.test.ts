@@ -600,3 +600,51 @@ ${fields}
     expect(issue?.message).toContain("origin: amalgam");
   });
 });
+
+describe("a locator that parses is not a locator that resolves", () => {
+  const PLAN_TEXT = "# Plan\n\n## 2. Scope\n\ntext\n\n### 2.1 A subsection\n\ntext\n\n## 9. Milestones\n\ntext\n";
+
+  function rowIssues(locator: string, origin = "conversation", withPlan = true) {
+    const files: Record<string, string> = {
+      "provenance/conversation-map.yaml": `schema_version: 1
+capabilities:
+  - id: invented-capability
+    disposition: retained
+    destination: skills/invented
+    origin: ${origin}
+    locator: ${locator}
+`,
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    };
+    if (withPlan) files["research/sources/engineering-skills-repo-plan.md"] = PLAN_TEXT;
+    return checkProvenance(ctxFor(files));
+  }
+
+  test("a document reference naming a real section passes", () => {
+    expect(rowIssues("plan §2.1").filter((i) => i.rule === "provenance.document-reference-unresolved")).toEqual([]);
+  });
+
+  test("a reference to a section the plan does not have is an error", () => {
+    const issue = rowIssues("plan §2.7").find((i) => i.rule === "provenance.document-reference-unresolved");
+    expect(issue?.message).toContain("plan §2.7");
+  });
+
+  test("the parenthetical form resolves on its number", () => {
+    expect(rowIssues("plan §9 (Milestone 7)").filter((i) => i.rule === "provenance.document-reference-unresolved")).toEqual([]);
+  });
+
+  test("an absent plan is a skip when a row cites a section, not a pass", () => {
+    const issue = rowIssues("plan §2.1", "conversation", false).find((i) => i.rule === "provenance.plan-unavailable");
+    expect(issue?.skipped).toBe("plan section references");
+  });
+
+  test("an absent plan is a note when nothing cites a section", () => {
+    const issue = rowIssues("G:L10-12", "conversation", false).find((i) => i.rule === "provenance.plan-unavailable");
+    expect(issue?.skipped).toBeUndefined();
+  });
+
+  test("an unknown origin is an error listing the three that exist", () => {
+    const issue = rowIssues("G:L10-12", "invented-by-me").find((i) => i.rule === "provenance.unknown-origin");
+    expect(issue?.message).toContain("donor, conversation, amalgam");
+  });
+});

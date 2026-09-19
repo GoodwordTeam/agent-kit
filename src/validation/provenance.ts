@@ -8,6 +8,7 @@ import type { CheckContext } from "./context.ts";
 import { error, note, skipped, warning, type Issue } from "./types.ts";
 
 const TRANSCRIPT = "research/sources/grok-transcript.md";
+const PLAN = "research/sources/engineering-skills-repo-plan.md";
 const LOCK = "provenance/upstream.lock.yaml";
 /**
  * `provenance/adaptations.yaml` is generated, never authored. Batches write one
@@ -72,6 +73,13 @@ const DOCUMENT_REFERENCE = /^(plan|arch) §(\d+(?:\.\d+)*(?: \([^()]+\))?)$/;
  * rather than by the act that drew it.
  */
 const AMALGAM_REFERENCE = /^amalgam (\S+) \+ (\S+)$/;
+
+/**
+ * The origins a map row may declare. `conversation-map.yaml` has no JSON schema,
+ * so nothing else constrains this field -- a row with a misspelled value, or with
+ * the key itself misspelled, was silently originless before this list existed.
+ */
+const ORIGINS = ["donor", "conversation", "amalgam"] as const;
 
 /** Render a reference the way the map writes it, so a message quotes the offending one. */
 export function formatLocatorReference(reference: LocatorReference): string {
@@ -483,6 +491,28 @@ function checkPathAtPin(root: string, donor: Donor, parsed: DonorSource, row: Ad
   );
 }
 
+/**
+ * Every numbered heading in the governing plan, as a set of section ids.
+ *
+ * Null when the plan is absent, which is a skip rather than a pass: a document
+ * reference that resolves against nothing looks exactly like one that resolves.
+ *
+ * `research/probes/map-coverage.py` reads the same headings with the same regex
+ * for a different question -- which sections no row claims. This is the other
+ * half: whether a cited section exists at all. The probe is run by hand, so the
+ * half that belongs in a gate is here.
+ */
+function planSections(root: string): Set<string> | null {
+  const text = readTextIfPresent(join(root, PLAN));
+  if (text === null) return null;
+  const out = new Set<string>();
+  for (const line of text.split("\n")) {
+    const match = /^#{2,6}\s+(?:§\s*)?(\d+(?:\.\d+)*)[.\s)]+\S/.exec(line);
+    if (match?.[1] !== undefined) out.add(match[1]);
+  }
+  return out;
+}
+
 function transcriptLineCount(root: string): number | null {
   const text = readTextIfPresent(join(root, TRANSCRIPT));
   if (text === null) return null;
@@ -617,6 +647,28 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
     );
   }
 
+  const planIndex = planSections(root);
+  if (planIndex === null) {
+    // Same criterion as the transcript above: the subject is the rows that cite a
+    // section, not the absent file. A map with no document references has nothing
+    // unexamined and a skip term there would be noise.
+    const citing = mapRows.filter((row) => {
+      const raw = row["locator"] ?? row["g_locator"] ?? row["gl"];
+      return typeof raw === "string" && (parseLocatorField(raw) ?? []).some((r) => r.kind === "document");
+    }).length;
+    const message = "Plan absent; plan and arch section references could not be resolved.";
+    issues.push(
+      citing > 0
+        ? skipped(
+            "provenance.plan-unavailable",
+            PLAN,
+            "plan section references",
+            `${message} ${citing} capability row${citing === 1 ? "" : "s"} cite${citing === 1 ? "s" : ""} a section, and a reference to a section that does not exist reads the same as one that does.`,
+          )
+        : note("provenance.plan-unavailable", PLAN, `${message} No row cites a section, so nothing went unresolved.`),
+    );
+  }
+
   // A destination may name any declared entry, file-backed sections included:
   // the map points at schemas, policies and adapters as readily as at skills.
   const owned = new Set(catalog.entries.map((entry) => `${entry.section}/${entry.id}`));
@@ -655,6 +707,16 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
     }
 
     const origin = row["origin"];
+    if (typeof origin !== "string" || !ORIGINS.includes(origin as (typeof ORIGINS)[number])) {
+      issues.push(
+        error(
+          "provenance.unknown-origin",
+          CONVERSATION_MAP,
+          `'${id}' declares origin: ${origin === undefined ? "(absent)" : String(origin)}. Every capability says where it came from, and the value is one of ${ORIGINS.join(", ")}.`,
+        ),
+      );
+    }
+
     if ((origin === "conversation" || origin === "amalgam") && typeof row["source"] === "string" && row["source"].length > 0) {
       issues.push(
         error(
@@ -665,7 +727,7 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
       );
     }
 
-    issues.push(...checkLocatorField(id, row, transcriptLines));
+    issues.push(...checkLocatorField(id, row, transcriptLines, planIndex));
     issues.push(...checkAmalgamOrigin(id, row, destination, owned));
   }
 
@@ -796,7 +858,12 @@ function checkAmalgamOrigin(
 }
 
 /** Every reference in a row's locator field, range-checked against the transcript. */
-function checkLocatorField(id: string, row: Record<string, unknown>, transcriptLines: number | null): Issue[] {
+function checkLocatorField(
+  id: string,
+  row: Record<string, unknown>,
+  transcriptLines: number | null,
+  planIndex: Set<string> | null,
+): Issue[] {
   const raw = row["locator"] ?? row["g_locator"] ?? row["gl"];
   if (typeof raw !== "string") {
     return [error("provenance.g-locator-missing", CONVERSATION_MAP, `'${id}' carries no locator; every capability cites where it came from.`)];
@@ -813,15 +880,29 @@ function checkLocatorField(id: string, row: Record<string, unknown>, transcriptL
     ];
   }
 
-  if (transcriptLines === null) return [];
   const issues: Issue[] = [];
   for (const reference of references) {
-    if (reference.kind !== "transcript" || reference.end <= transcriptLines) continue;
+    if (reference.kind === "transcript") {
+      if (transcriptLines === null || reference.end <= transcriptLines) continue;
+      issues.push(
+        error(
+          "provenance.g-locator-out-of-range",
+          CONVERSATION_MAP,
+          `'${id}' cites ${formatLocatorReference(reference)} but ${TRANSCRIPT} has ${transcriptLines} lines.`,
+        ),
+      );
+      continue;
+    }
+    if (reference.kind !== "document" || planIndex === null) continue;
+    // `plan §9 (Milestone 7)` carries a parenthetical for the reader; the heading
+    // it resolves against does not, so match on the number alone.
+    const section = reference.section.replace(/\s*\([^()]*\)$/, "");
+    if (planIndex.has(section)) continue;
     issues.push(
       error(
-        "provenance.g-locator-out-of-range",
+        "provenance.document-reference-unresolved",
         CONVERSATION_MAP,
-        `'${id}' cites ${formatLocatorReference(reference)} but ${TRANSCRIPT} has ${transcriptLines} lines.`,
+        `'${id}' cites ${formatLocatorReference(reference)}, which is not a numbered section of ${PLAN}. A reference that parses is not a reference that resolves; if the section was renumbered, the capability needs re-locating rather than the number nudging.`,
       ),
     );
   }
