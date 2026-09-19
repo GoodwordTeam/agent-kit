@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { checkSchemas } from "../src/validation/schemas.ts";
+import { checkArtifacts } from "../src/validation/artifacts.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -131,6 +132,27 @@ function findingErrors(overrides: Record<string, unknown>): string[] {
   return checkSchemas({ root, catalog })
     .filter((i) => i.file === "templates/finding.json" && i.severity === "error")
     .map((i) => i.message ?? "");
+}
+
+/**
+ * The artifact-level rules on the same document. Schema conformance is asserted
+ * separately by `findingErrors`, and the pair is the point: `checkArtifacts`
+ * reads raw values and never validates, so a rule tested only against a bare
+ * envelope cannot distinguish firing on a conforming finding from firing on
+ * anything at all. That is exactly how `finding.self-closed` stayed dead --
+ * every fixture for it spelled the receipt a way the schema forbids.
+ */
+function artifactRules(overrides: Record<string, unknown>): string[] {
+  const root = makeTree({
+    "catalog.yaml": CATALOG,
+    ...shippedSchemas(),
+    "templates/finding.json": JSON.stringify({ ...BASE, ...overrides }),
+  });
+  const { catalog } = loadCatalog(root);
+  if (catalog === null) throw new Error("fixture has no catalog");
+  return checkArtifacts({ root, catalog })
+    .filter((i) => i.file === "templates/finding.json" && i.severity === "error")
+    .map((i) => i.rule);
 }
 
 /** The reported errors as one string, for matching the guarded field. */
@@ -280,6 +302,28 @@ describe("only independent verification evidence closes a finding", () => {
     // Plan 5.6, release scenario 10.
     const { verification, ...withoutArtifact } = RECEIPT;
     expect(reason({ ...RESOLVED, closure_receipt: withoutArtifact })).toMatch(/verification/);
+  });
+
+  test("a finding that satisfies the schema in full and closes itself is reported", () => {
+    // The half the case above defers to the validator, asserted end to end on
+    // one document rather than split across two suites that cannot see each
+    // other. `BASE.created_by.role` is `implementer`, so naming `implementer`
+    // as the closer is the author signing their own closure. The first
+    // assertion is what makes the second mean anything: the document is not
+    // merely accepted by `checkArtifacts`, it conforms, so the rule is firing
+    // on the shape a real finding has.
+    const selfClosed = { ...RESOLVED, closure_receipt: { ...RECEIPT, closed_by: "implementer" } };
+    expect(findingErrors(selfClosed)).toEqual([]);
+    expect(artifactRules(selfClosed)).toContain("finding.self-closed");
+  });
+
+  test("the same finding closed by an independent role is clean on both axes", () => {
+    // The accepting half, for the reason the receipt pair above gives: without
+    // it the rejection could be the fixture being malformed rather than the
+    // rule biting. RECEIPT names `verifier`, who did not author the finding.
+    const independent = { ...RESOLVED, closure_receipt: RECEIPT };
+    expect(findingErrors(independent)).toEqual([]);
+    expect(artifactRules(independent)).not.toContain("finding.self-closed");
   });
 });
 
