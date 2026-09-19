@@ -55,9 +55,10 @@ tracing whether the code stops you.
   both quoted.
 - For a disabled protection: the line in this diff that disables it, on a production path. A
   protection that was never there is architecture advice, not a finding here.
-- For an issue in an untouched but affected caller: the impact path from the change to that
-  caller. The delta is bounded by affected behavior, not by changed lines (ruling
-  `delta-scope-affected-behavior`).
+- For a serious issue in an untouched but affected caller: the impact path from the change to
+  that caller. The delta is bounded by affected behavior, not by changed lines, and an unrelated
+  low-priority discovery does not restart it (ruling `delta-scope-affected-behavior`).
+- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
   evidence item (`schemas/finding.schema.json` `confidence_anchor`).
 
@@ -97,7 +98,8 @@ Findings on `schemas/finding.schema.json`, each carrying its traced path, and on
 `complete`, `empty` or `unavailable` (`policies/review.yaml` `lane_results`).
 
 This is a required lane where it is seated: `unavailable` here blocks approval rather than
-reducing the panel by one (`policies/review.yaml` `lane_results`).
+reducing the panel by one (ruling `required-lane-failure-is-unavailable`; `policies/review.yaml`
+`lane_results`).
 
 ## When it has nothing to say
 

@@ -3,9 +3,8 @@
 ## What this seat judges
 
 Whether the document's premises hold, its assumptions are warranted, and its decisions would
-survive contact with reality. It tries to falsify the plan rather than to evaluate it. Its
-territory is the **epistemological quality** of the document — not whether the document is good,
-but whether it is *right*.
+survive contact with reality — its territory is the document's epistemological quality, so it
+falsifies rather than evaluates.
 
 ## Not this seat
 
@@ -30,6 +29,10 @@ but whether it is *right*.
   That seat argues inside a round-capped consensus gate against a frozen plan snapshot and returns
   a position in that gate. This seat returns schema findings into a document review with no
   opponent and no rounds.
+- **Document quality.** Whether the document is well written, well organized or complete is a
+  judgment about the artifact; this seat judges whether what it claims is right. A well-made
+  document resting on an unexamined premise is this seat's finding, and a badly-made one whose
+  reasoning holds is not.
 - **The decision owner.** This seat shows a decision is unsupported. Whether to make it anyway is
   not its call.
 

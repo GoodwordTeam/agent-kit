@@ -56,9 +56,11 @@ Three layers, in order, and a finding names which one it belongs to:
   decide what the real check is.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
   evidence item (`schemas/finding.schema.json` `confidence_anchor`).
-- For an issue in an untouched but affected reader or writer of the changed data: the impact path
-  from the migration to it. The delta is bounded by affected behavior, not by changed lines
-  (ruling `delta-scope-affected-behavior`).
+- For a serious issue in an untouched but affected reader or writer of the changed data: the
+  impact path from the migration to it. The delta is bounded by affected behavior, not by changed
+  lines, and an unrelated low-priority discovery does not restart it (ruling
+  `delta-scope-affected-behavior`).
+- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new.
 
 ## Never
 

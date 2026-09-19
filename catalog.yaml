@@ -571,13 +571,13 @@ roles:
   - id: code-review/correctness
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: always-on
     summary: Logic errors, edge cases, state bugs, error propagation, intent-vs-implementation.
   - id: code-review/project-standards
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: standards-gate
     summary: >-
       Compliance with the project's designated criteria files, cited rule by rule. Runs when
@@ -585,31 +585,31 @@ roles:
   - id: code-review/testing
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: generic-conditional
     summary: Coverage gaps, weak assertions, brittle implementation-coupled tests.
   - id: code-review/maintainability
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: generic-conditional
     summary: Premature abstraction, needless indirection, dead code, coupling, obscuring names.
   - id: code-review/agent-native
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: generic-conditional
     summary: Any action a user can take, an agent can also take.
   - id: code-review/learnings
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: generic-conditional
     summary: Checks the change against the captured-lesson corpus for prior art.
   - id: code-review/security
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: >-
       Exploitable vulnerabilities at auth, public endpoints, input handling, permission and
@@ -617,37 +617,37 @@ roles:
   - id: code-review/performance
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Query shape, algorithmic complexity, batching and cache policy with material impact.
   - id: code-review/api-contract
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Breaking changes at an externally consumed boundary with evidenced downstream callers.
   - id: code-review/data-migration
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Migration and schema artifacts only, not model- or query-only changes.
   - id: code-review/reliability
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Error handling, retries, breakers, timeouts, background jobs, health checks.
   - id: code-review/adversarial
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Constructs failure scenarios rather than checking known patterns.
   - id: code-review/previous-comments
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: >-
       Whether prior review feedback was addressed. PR-only and comment-gated; skipped entirely
@@ -655,13 +655,13 @@ roles:
   - id: code-review/frontend-races
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: stack-conditional
     summary: DOM event wiring, timers, async UI flows and state transitions with race potential.
   - id: code-review/swift-ios
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: stack-conditional
     summary: SwiftUI state, concurrency, Core Data threading, entitlements, accessibility.
 
@@ -669,32 +669,32 @@ roles:
   - id: doc-review/coherence
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: always-on
     summary: Contradictions, terminology drift, structure, ambiguity where readers would diverge.
   - id: doc-review/feasibility
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: always-on
     summary: Whether the approach survives contact with the codebase it will land in.
   - id: doc-review/product-lens
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: >-
       Unsettled product positions and strategic weight. Domain-agnostic about who the users are.
   - id: doc-review/design-lens
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Information architecture, interaction states, user flows, missing design decisions.
   - id: doc-review/security-lens
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: >-
       Plan-level auth assumptions, data exposure, API surface and missing threat-model elements.
@@ -702,13 +702,13 @@ roles:
   - id: doc-review/scope-guardian
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: Scope alignment and unjustified complexity; premature frameworks and abstractions.
   - id: doc-review/adversarial-document
     batch: 2
     provenance_origin: donor
-    status: contract
+    status: authored
     tier: conditional
     summary: >-
       Challenges premises and stress-tests decisions rather than evaluating document quality.

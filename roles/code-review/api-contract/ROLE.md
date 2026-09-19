@@ -49,9 +49,10 @@ request to today's server — and whether anyone would find out before productio
 - For a sentinel contract overload: the existing value being reused for a new state, and the
   consumer that cannot distinguish "no data" from "data exists but cannot be summarized". Audit
   for semantic handling, not for type acceptance.
-- For an issue in an untouched but affected consumer: the impact path from the change to that
-  consumer. The delta is bounded by affected behavior, not by changed lines (ruling
-  `delta-scope-affected-behavior`).
+- For a serious issue in an untouched but affected consumer: the impact path from the change to
+  that consumer. The delta is bounded by affected behavior, not by changed lines, and an unrelated
+  low-priority discovery does not restart it (ruling `delta-scope-affected-behavior`).
+- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
   evidence item (`schemas/finding.schema.json` `confidence_anchor`).
 
