@@ -229,6 +229,7 @@ seat_separation:
         The security seat may not be filled by the implementer of the change under review, nor
         by whoever approved its spec.
       applies_to: [code-review/security, code-review/adversarial]
+      ruling: missing-supervisor-never-implementer
     - id: reviewers-outside-author-lane
       rule: >-
         Reviewers remain separate from the planning and implementation lanes. A reviewer never
@@ -237,6 +238,7 @@ seat_separation:
     - id: supervisors-never-implement
       rule: A supervisor never implements, and never approves a patch it produced.
       applies_to: [supervisor]
+      ruling: missing-supervisor-never-implementer
     - id: author-never-closes
       rule: >-
         An author may not approve their own change and may never close their own finding.

@@ -342,6 +342,10 @@ synthesis:
     - drop a low-confidence security finding; it is adjudicated, never filtered
     - change a lane result
     - drop a finding because of its `autofix_class`; an inbound `safe_auto` is remapped, not discarded
+  # `may_not` is a sequence of scalars, which has nowhere to carry a citation, so the rulings
+  # its entries reproduce are named on this mapping. The sub-mappings below keep their own
+  # `ruling:` keys: those are the precise per-rule citations and this one does not replace them.
+  rulings: [low-confidence-security-adjudicated, safe-auto-restricted-per-seat]
   severity:
     canonical: [P0, P1, P2, P3]
     note: Critical/Nit/FYI are presentation and disposition labels, not a replacement for severity.
