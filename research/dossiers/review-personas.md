@@ -2983,7 +2983,7 @@ changed tracing, not findings count (`#L38`).
 | 1 | Doc typo does not run a six-persona panel | §0.6 layered selection; `select-and-route.md#L36`, `#L44`; `G:L1874`, `G:L1895`. Seats are not selectors — the map is `policies/review.yaml`'s. |
 | 2 | Missing behavioral coverage triggers the testing lens | §3, `testing-reviewer.md#L15` (behavioral change with zero test work) |
 | 3 | Tenant-isolation error triggers security/adversarial, blocks unsupported closure | §7 `security-reviewer.md#L10`, `#L20`; §12 `adversarial-reviewer.md#L25-L43`; closure via §0.2(c) |
-| 4 | Reviewer failure cannot become approval | §0.7, `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:#L35`, `#L90`; gap G5 for the seat-visible half |
+| 4 | Reviewer failure cannot become approval | §0.7, `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md#L35`, `#L90`; gap G5 for the seat-visible half |
 | 6 | A vague finding is not given to an automatic fixer | §0.4 `smell` rule; §12 `adversarial-reviewer.md#L101`; `G:L1150`, `G:L1194` |
 | 8 | New serious error in an affected untouched caller remains reportable | §0.8 FP catalog `#L134`: a diff that makes a dormant issue newly relevant is a secondary finding, **not** `pre_existing` |
 | 9 | Moved line number does not duplicate or falsely suppress a finding | §0.5; gap G2; `synthesis-and-presentation.md#L297`, `#L313`; `G:L712` |
