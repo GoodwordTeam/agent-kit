@@ -35,7 +35,7 @@ cannot, which of the four closed-vocabulary outcomes describes why.
   (`schemas/ticket.schema.json`).
 - The `schemas/verification.schema.json` receipt for each behavior change: the command or probe,
   exit status, output digest, source revision and environment identity. A description of a green
-  run is not a receipt.
+  run is not a receipt (ruling `closure-requires-independent-verification`).
 - The observed red step and the observed green step for each cycle (`protocols/tdd/PROTOCOL.md`).
 - For anything adjacent that was noticed and deliberately left alone: what it is, where it is,
   and why it is outside this ticket.

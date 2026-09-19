@@ -39,7 +39,7 @@ The packet, assembled once and read by both lanes:
 - Added for the delta: the latest fix diff, the touched dependencies, and the
   `schemas/verification.schema.json` receipts bound to the new head.
 - The snapshot: `comparison_base`, `reviewed_head` and `last_head_verified`, recorded so the
-  three are never conflated.
+  three are never conflated (ruling `delta-baseline-reset-not-third-loop`).
 - For each finding, the prior-finding packet — `finding_id`, `fingerprint`, `severity`,
   `evidence`, `disposition`, `input_hashes`, `source_revision`. A continuing seat may retain its
   earlier context; a replacement receives this packet. Either way the seat sees the old finding
@@ -62,7 +62,7 @@ lane's findings (`policies/review.yaml` `pass_1.seat_context.never_receives`).
 6. Check the fix diff alone for new breakage it introduced. Do not re-review the whole file.
 7. Admit a new finding only with novelty evidence: what changed, or what regressed, that makes
    this finding new. Unrelated low-priority discovery is ledgered as an out-of-scope
-   observation, never looped into another round.
+   observation, never looped into another round (ruling `delta-scope-affected-behavior`).
 8. Route unresolved security, data or API findings back to that specialist seat alone. Do not
    trigger another full fan-out.
 9. Synthesize the verdict: a required lane `unavailable` yields `blocked` (ruling

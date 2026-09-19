@@ -61,7 +61,8 @@ protocol `phase-operations`).
    path ran, not incidentally.
 7. Refactor with the test green, re-running the command after each change.
 8. Emit a `schemas/verification.schema.json` receipt carrying the command, exit status, output
-   digest, source revision and environment identity, bound to the revision under test.
+   digest, source revision and environment identity, bound to the revision under test (ruling
+   `closure-requires-independent-verification`).
 9. Repeat from step 3 for the next criterion. One criterion per cycle.
 
 ## Hard gates
@@ -77,7 +78,8 @@ Gate: a green run recorded against a different revision does not carry forward. 
 does not inherit stale receipts (ruling `closure-requires-independent-verification`).
 
 Gate: an agent's description of a green run is not a receipt. A receipt carries the command or
-probe, exit status, output digest, revision and environment identity.
+probe, exit status, output digest, revision and environment identity (ruling
+`closure-requires-independent-verification`).
 
 Gate: work that genuinely cannot be red-green tested emits a recorded alternative verification
 plan — the probe, manual reproduction or inspection actually performed, as
