@@ -807,21 +807,25 @@ Then confirm by reading the file, not by remembering that you wrote it:
 - Three or more eval cases exist under `evals/<skill-id>/`, tagged with their scenarios.
 - Nothing in the body depends on a file this package does not install.
 
-For a protocol or a role body, §12 replaces this checklist.
+For a protocol, a role or a reference-pack body, §12 replaces this checklist — §12.4 for the first
+two, §12.5 for a reference pack.
 
 ---
 
 ## 12. Protocols, roles and loose doctrine files
 
-§1–§11 are written for skills. Three further body shapes exist in this package, and two of them are
-batch 1's entire output.
+§1–§11 are written for skills. Four further body shapes exist in this package: protocols (§12.1),
+roles (§12.2), loose doctrine files (§12.3) and reference packs (§12.5). Two of them are batch 1's
+entire output. Domain packs would be a fifth and are not governed here; §12.5 closes with what is
+missing before one can be authored.
 
-What all three share: none is human-invocable, none appears in a host command surface, and neither a
-protocol nor a role carries host frontmatter — no `disable-model-invocation`, no `argument-hint`, no
-`allowed-tools`, and the packager emits none of them (`policies/invocation.yaml`, statement
-`protocols-and-roles-are-not-entrypoints`). §1's size rule and progressive disclosure, §5's
-provenance law, §6's ruling citations, §7's prohibitions and §8's writing standard all apply
-unchanged.
+What all four share: none is human-invocable, none appears in a host command surface, and none
+carries host frontmatter — no `disable-model-invocation`, no `argument-hint`, no `allowed-tools`.
+The packager emits host frontmatter for `skills` alone (`src/packaging/plan.ts`), and
+`policies/invocation.yaml`'s statement `protocols-and-roles-are-not-entrypoints` states the rule for
+the first two by name. §5's provenance law, §6's ruling citations, §7's prohibitions and §8's
+writing standard apply to all four unchanged. **§1 does not.** Its size rule reaches protocols and
+roles; §12.3 and §12.5 each say what it does and does not mean for the shape they govern.
 
 ### 12.1 Protocols
 
@@ -1184,3 +1188,65 @@ a narrower version of it.
 - Authoring a body makes that entry's `status: contract` stale and raises
   `catalog.status-behind-body`. **`catalog.yaml` is owned outside this batch — report the entries you
   authored and let its owner flip them to `authored`; do not edit it yourself.**
+
+### 12.5 Reference packs
+
+`references/<id>/REFERENCE.md`, one directory per catalog entry.
+
+Shared material that skills load **mid-task**, named in the loading skill rather than reached by a
+trigger. This is the top-level form of the mechanism §1 describes inside a skill directory, and the
+two are not interchangeable. §1's `references/` belongs to one skill and ships inside it; a pack
+here has its own catalog entry, is shared, and is loaded by the skills that declare it.
+
+**`loaded_by` is the defining property, not a convenience.** `schemas/catalog.schema.json` requires
+it on every reference entry, and `ak validate` enforces it twice — a pack naming no loader fails,
+and a loader that is not a declared skill fails (`RULE_REFERENCE_LOADER`,
+`src/validation/configrules.ts`). That list is the pack's entire access surface. A reference pack is
+never an entrypoint, never appears in a host command surface and is not human-invocable. Note where
+that rule is written: `policies/invocation.yaml`'s `protocols-and-roles-are-not-entrypoints` names
+two shapes and a reference pack is not one of them, so the statement that binds here is the
+schema's. Do not cite the invocation statement for a reference pack; it does not reach it.
+
+No frontmatter and no `*.yaml` sidecar. The packager emits host frontmatter for `skills` alone
+(`src/packaging/plan.ts`), so there is nothing to declare and nothing to suppress. §9 does not reach
+a reference pack either: a reference entry has no `tests[]` and is not a skill, so it carries no
+eval obligation and authoring one is not a reason to add cases.
+
+**§1's numbers do not apply, and no other number replaces them.** A reference pack *is* the long
+material §1 sends behind the limit, so capping it at §1's target would defeat what it exists for.
+`BUDGETED` (`src/validation/budget.ts`) measures skills, protocols and roles, and a reference pack
+is deliberately absent from it. That is not licence to dump. The pack is loaded into a live context
+by every skill in `loaded_by`, so its length is paid by each of them at the moment of loading:
+material earns its place against the skills that name it, or it does not belong in the file.
+Progressive disclosure still applies — it is the mechanism this shape serves.
+
+**There is no required section list.** §12.1 and §12.2 mandate heading sets because a protocol and a
+seat each have one fixed job. The packs declared so far do not: a vocabulary, a set of modelling
+questions, a principles catalogue and a prose rubric have no shape in common worth forcing. Organise
+the pack for the skills in `loaded_by` and say what it is for in its opening lines. **Do not infer a
+required heading set from a sibling pack** — the first one authored is an example of one pack's
+material, not a template, and the second writer to treat it as one manufactures a convention this
+section declined to create.
+
+**What separates this from §12.3.** A loose doctrine file has no catalog entry, which is the premise
+§12.3 reasons from: no ruling's `binds` block can name it, no `binds`-derived check can reach it,
+and a rule restated there is invisible to tooling. A reference pack has an entry. A ruling's `binds`
+block **can** name it, so §6's citation rule is machine-checkable here and §12.3's argument does not
+transfer. Check your pack's id against the `binds` groups before deciding a ruling is irrelevant to
+you — the same obligation a protocol or role body carries.
+
+Before handing one back, §12.4's checklist applies with its two role-specific bullets skipped, and
+with the body-file bullet read as follows: `REFERENCE.md` is currently *preferred* rather than
+mandated (`MANDATORY_BODY_SECTIONS`, `src/catalog/layout.ts`), because that list takes its
+membership from the shapes §12 gave one body file. This section gives a reference pack one body
+file, so the promotion is now available to whoever owns the validator; until it lands, a differently
+named body raises `catalog.unexpected-body-name` as a warning rather than an error. Use
+`REFERENCE.md`.
+
+**Domain packs are the fifth shape and this contract does not govern them yet.** `catalog.yaml`
+declares its `packs` entries at batch 6, every one `status: contract` with no directory on disk.
+`policies/invocation.yaml` states how they attach and that they are never entrypoints; nothing
+states what a `PACK.md` contains. That section cannot be written from the catalog alone and is not
+written here, because inventing a shape for an artifact nobody has designed is the failure §10
+exists to catch. A writer dispatched to author a pack before it exists should report a contract
+defect (§10) rather than reason by analogy from this section.
