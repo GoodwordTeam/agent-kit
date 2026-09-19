@@ -10,7 +10,9 @@ import {
   ROLE_SECTIONS,
   STANDARDS_GATE_TIER,
   STANDARDS_GROUNDING_ROW,
+  COUNTERPART_TABLE_HEADER,
   checkBodyShapes,
+  counterpartFamilies,
 } from "../src/validation/bodies.ts";
 import { checkCompleteness } from "../src/validation/completeness.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -486,5 +488,157 @@ describe("the conditional standards-grounding row (AUTHORING 12.2)", () => {
       "roles/code-review/correctness/ROLE.md": seatBody(COMPLIANT_JUDGING_SEAT),
     });
     expect(errors(checkBodyShapes(ctx)).filter((i) => i.rule === "role.standards-row-mismatch")).toEqual([]);
+  });
+});
+
+
+/**
+ * §12.2's counterpart table, as AUTHORING.md writes it. The fixtures carry a
+ * small one rather than the real families, so a test asserts a rule and not a
+ * snapshot of today's catalog.
+ */
+function authoringWith(rows: ReadonlyArray<[string, string]>): string {
+  return [
+    "# Authoring",
+    "",
+    "The families that exist today:",
+    "",
+    COUNTERPART_TABLE_HEADER,
+    "|---|---|",
+    ...rows.map(([seat, counterparts]) => `| \`${seat}\` | ${counterparts} |`),
+    "",
+  ].join("\n");
+}
+
+/** A role body whose `## Not this seat` is exactly the given bullets. */
+function seatBodyNotThisSeat(bullets: string): string {
+  return body("Seat", ROLE_SECTIONS).replace(
+    "## Not this seat\n\nProse for this section.\n",
+    `## Not this seat\n\n${bullets}`,
+  );
+}
+
+function panelTree(id: string, bullets: string, extra: Record<string, string> = {}, catalogRows = "") {
+  return ctxFor({
+    "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: ${id}\n    status: authored\n${catalogRows}`,
+    [`roles/${id}/ROLE.md`]: seatBodyNotThisSeat(bullets),
+    ...extra,
+  });
+}
+
+const OTHER_PANEL_SEATS = "  - id: code-review/security\n    status: contract\n  - id: doc-review/security-lens\n    status: contract\n";
+
+describe("a bullet naming another panel names a seat in it (AUTHORING 12.2)", () => {
+  test("another panel in prose with no id anywhere in the bullet is an error", () => {
+    const bullets = "- **A code-review architect lane.** It runs a different concurrency model.\n";
+    const issue = errors(checkBodyShapes(panelTree("plan-review/architect", bullets, {}, OTHER_PANEL_SEATS))).find(
+      (i) => i.rule === "role.panel-mention-without-seat-id",
+    );
+    expect(issue?.file).toBe("roles/plan-review/architect/ROLE.md");
+    expect(issue?.message).toContain("code-review");
+  });
+
+  test("the same bullet naming a seat that resolves in catalog.yaml passes", () => {
+    const bullets = "- **`code-review/security`.** That seat judges a diff, not a plan.\n";
+    expect(
+      errors(checkBodyShapes(panelTree("plan-review/architect", bullets, {}, OTHER_PANEL_SEATS))).filter(
+        (i) => i.rule === "role.panel-mention-without-seat-id",
+      ),
+    ).toEqual([]);
+  });
+
+  test("a backticked token that is not a role does not satisfy it, which is the three-namespace collision", () => {
+    const bullets = "- **The synthesis step.** The code-review verdict comes from `consensus-plan-gate`.\n";
+    const catalogRows = `${OTHER_PANEL_SEATS}protocols:\n  - id: consensus-plan-gate\n    status: contract\n`;
+    const issue = errors(checkBodyShapes(panelTree("plan-review/architect", bullets, {}, catalogRows))).find(
+      (i) => i.rule === "role.panel-mention-without-seat-id",
+    );
+    expect(issue?.message).toContain("code-review");
+  });
+
+  test("this seat's own panel may be named without an id, which 12.2 permits", () => {
+    const bullets = "- **The other plan-review seat.** Two seats answer the same card independently.\n";
+    expect(
+      errors(checkBodyShapes(panelTree("plan-review/architect", bullets, {}, OTHER_PANEL_SEATS))).filter(
+        (i) => i.rule === "role.panel-mention-without-seat-id",
+      ),
+    ).toEqual([]);
+  });
+
+  test("a non-seat boundary with no panel and no id is a kind-2 bullet and passes", () => {
+    const bullets = "- **The closure decision.** This seat supplies the disposition, not the verdict.\n";
+    expect(
+      errors(checkBodyShapes(panelTree("plan-review/architect", bullets, {}, OTHER_PANEL_SEATS))).filter(
+        (i) => i.rule === "role.panel-mention-without-seat-id",
+      ),
+    ).toEqual([]);
+  });
+
+  test("a collective lead-in passes when the seats it covers are named by id inside it", () => {
+    const bullets = "- **A review lane.** `code-review/security` and `doc-review/security-lens` judge a change.\n";
+    expect(
+      errors(checkBodyShapes(panelTree("supervisor", bullets, {}, OTHER_PANEL_SEATS))).filter(
+        (i) => i.rule === "role.panel-mention-without-seat-id",
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("every counterpart the table declares is named (AUTHORING 12.2)", () => {
+  const AUTHORING = authoringWith([["code-review/security", "`doc-review/security-lens`"]]);
+
+  test("a seat that omits its declared counterpart is an error naming the missing id", () => {
+    const bullets = "- **The closure decision.** Not this seat's call.\n";
+    const ctx = panelTree("code-review/security", bullets, { "AUTHORING.md": AUTHORING }, OTHER_PANEL_SEATS);
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-not-named");
+    expect(issue?.file).toBe("roles/code-review/security/ROLE.md");
+    expect(issue?.message).toContain("doc-review/security-lens");
+  });
+
+  test("naming it passes", () => {
+    const bullets = "- **`doc-review/security-lens`.** That seat reads a plan, not a diff.\n";
+    const ctx = panelTree("code-review/security", bullets, { "AUTHORING.md": AUTHORING }, OTHER_PANEL_SEATS);
+    expect(errors(checkBodyShapes(ctx)).filter((i) => i.rule === "role.counterpart-not-named")).toEqual([]);
+  });
+
+  test("a three-seat family requires both of the other two, not either", () => {
+    const authoring = authoringWith([["code-review/security", "`doc-review/security-lens`, `plan-review/critic`"]]);
+    const bullets = "- **`doc-review/security-lens`.** That seat reads a plan.\n";
+    const rows = `${OTHER_PANEL_SEATS}  - id: plan-review/critic\n    status: contract\n`;
+    const ctx = panelTree("code-review/security", bullets, { "AUTHORING.md": authoring }, rows);
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-not-named");
+    expect(issue?.message).toContain("plan-review/critic");
+    expect(issue?.message).not.toContain("doc-review/security-lens");
+  });
+
+  test("a table naming a seat catalog.yaml does not declare is an error, not a silent requirement", () => {
+    const authoring = authoringWith([["code-review/security", "`doc-review/ghost`"]]);
+    const bullets = "- **The closure decision.** Not this seat's call.\n";
+    const ctx = panelTree("code-review/security", bullets, { "AUTHORING.md": authoring }, OTHER_PANEL_SEATS);
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-table-unknown-seat");
+    expect(issue?.message).toContain("doc-review/ghost");
+  });
+
+  test("a present AUTHORING.md whose table has gone is an error, not a check that quietly passes", () => {
+    const ctx = panelTree("code-review/security", "- **The closure decision.** Not this seat's call.\n", {
+      "AUTHORING.md": "# Authoring\n\nThe families that exist today:\n\nnone, apparently.\n",
+    }, OTHER_PANEL_SEATS);
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-table-unreadable");
+    expect(issue?.file).toBe("AUTHORING.md");
+  });
+
+  test("a one-way family is a warning naming both, because a reader arrives from either side", () => {
+    const ctx = panelTree("code-review/security", "- **`doc-review/security-lens`.** Reads a plan.\n", {
+      "AUTHORING.md": AUTHORING,
+    }, OTHER_PANEL_SEATS);
+    const issue = checkBodyShapes(ctx).find((i) => i.rule === "role.counterpart-table-asymmetric");
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.message).toContain("code-review/security");
+    expect(issue?.message).toContain("doc-review/security-lens");
+  });
+
+  test("the families parse out of AUTHORING.md rather than being a second copy in the checker", () => {
+    const root = makeTree({ "AUTHORING.md": authoringWith([["a/one", "`b/two`, `c/three`"]]) });
+    expect(counterpartFamilies(root).families).toEqual(new Map([["a/one", ["b/two", "c/three"]]]));
   });
 });

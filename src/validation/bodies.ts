@@ -19,7 +19,7 @@ import { entryDir, preferredBodyFile, type DirectorySection } from "../catalog/l
 import { exists, isDir, readTextIfPresent } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import type { CheckContext } from "./context.ts";
-import { error, type Issue } from "./types.ts";
+import { error, warning, type Issue } from "./types.ts";
 
 /** §3's ten headings with `## Authority` replaced by `## Invoked by` (§12.1). */
 export const PROTOCOL_SECTIONS: ReadonlyArray<string> = [
@@ -160,6 +160,24 @@ export const NAMED_STANDARDS_SEATS: ReadonlyArray<string> = ["reviewer-standards
 /** Every other standards seat comes from the catalog, so a batch-2 seat picks the row up by declaring it. */
 export const STANDARDS_GATE_TIER = "standards-gate";
 
+/**
+ * §12.2's counterpart table lives in AUTHORING.md, and this is the only copy of
+ * its shape.
+ *
+ * The families are not derivable. `code-review/security` pairs with
+ * `doc-review/security-lens` on a shared prefix, but `plan-review/critic` pairs
+ * with `code-review/adversarial` on nothing a string comparison can see. So the
+ * table is a declaration, and the checker reads it rather than keeping a second
+ * copy — two hand-maintained statements of the same fact is the drift shape
+ * `universal:` and `entrypoint-count-mismatch` exist to close.
+ */
+export const COUNTERPART_TABLE_HEADER = "| Seat | Counterpart at another layer |";
+
+const AUTHORING_FILE = "AUTHORING.md";
+
+/** A backticked catalog-id-shaped token: kebab segments, optionally panel-qualified. */
+const BACKTICKED_ID = /`([a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*)`/g;
+
 /** The sidecar that must not exist, by section. */
 const FORBIDDEN_SIDECAR: Readonly<Record<string, string>> = {
   protocols: "protocol.yaml",
@@ -222,6 +240,18 @@ export function citedRulings(text: string): string[] {
  * matches wherever the author happened to break the line.
  */
 export function neverRows(text: string): string[] {
+  return listItems(text).map(normalizeRow).filter((row) => row.length > 0);
+}
+
+/**
+ * The list items of a section, each with its wrapping undone and its markup
+ * intact.
+ *
+ * `neverRows` normalises away backticks, which is right for matching a clause
+ * and wrong for `## Not this seat`, where whether a token was backticked is the
+ * whole signal.
+ */
+export function listItems(text: string): string[] {
   const rows: string[] = [];
   let current: string[] | null = null;
   let fenced = false;
@@ -236,7 +266,7 @@ export function neverRows(text: string): string[] {
     if (current !== null) current.push(line);
   }
   if (current !== null) rows.push(current.join(" "));
-  return rows.map(normalizeRow).filter((row) => row.length > 0);
+  return rows.map((row) => row.replace(/\s+/g, " ").trim()).filter((row) => row.length > 0);
 }
 
 function normalizeRow(text: string): string {
@@ -323,6 +353,7 @@ function checkOneBody(
   section: DirectorySection,
   id: string,
   standardsSeats: ReadonlySet<string>,
+  families: ReadonlyMap<string, ReadonlyArray<string>> | null,
 ): Issue[] {
   const dir = entryDir(section, id);
   if (!isDir(join(ctx.root, dir))) return [];
@@ -400,6 +431,12 @@ function checkOneBody(
   // A body with no `## Never` is already reported as a missing section; there is
   // nothing to say about its rows on top of that.
   if (never !== undefined) issues.push(...checkNeverRows(file, id, never.text, never.line, standardsSeats));
+
+  const notThisSeat = sections.find((s) => s.heading === "## Not this seat");
+  if (notThisSeat !== undefined) {
+    issues.push(...checkPanelMentions(ctx, file, id, notThisSeat.text, notThisSeat.line));
+    if (families !== null) issues.push(...checkCounterparts(file, id, notThisSeat.text, notThisSeat.line, families));
+  }
 
   return issues;
 }
@@ -503,12 +540,172 @@ function standardsSeatIds(ctx: CheckContext): Set<string> {
   return seats;
 }
 
+/**
+ * §12.2's counterpart families, read out of AUTHORING.md's table.
+ *
+ * Returns `null` for `families` when AUTHORING.md is absent — nothing to check
+ * against, the same way an absent rulings policy resolves no citation. A table
+ * that is present but unreadable is a different thing and is reported by the
+ * caller: a check whose authority has silently vanished passes everything.
+ */
+export function counterpartFamilies(root: string): {
+  families: Map<string, string[]> | null;
+  tablePresent: boolean;
+} {
+  const text = readTextIfPresent(join(root, AUTHORING_FILE));
+  if (text === null) return { families: null, tablePresent: false };
+
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => line.trim() === COUNTERPART_TABLE_HEADER);
+  if (start === -1) return { families: null, tablePresent: true };
+
+  const families = new Map<string, string[]>();
+  for (const raw of lines.slice(start + 2)) {
+    const line = raw.trim();
+    if (!line.startsWith("|")) break;
+    const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+    const seat = cells[0] === undefined ? [] : [...cells[0].matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
+    const counterparts = cells[1] === undefined ? [] : [...cells[1].matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
+    if (seat.length !== 1 || seat[0] === undefined || counterparts.length === 0) continue;
+    families.set(seat[0], counterparts);
+  }
+
+  return { families: families.size === 0 ? null : families, tablePresent: true };
+}
+
+/** The panels in the catalog: the first segment of every qualified role id. */
+function panelNames(ctx: CheckContext): Set<string> {
+  const panels = new Set<string>();
+  for (const entry of ctx.catalog.bySection("roles")) {
+    const slash = entry.id.indexOf("/");
+    if (slash > 0) panels.add(entry.id.slice(0, slash));
+  }
+  return panels;
+}
+
+function backtickedIds(bullet: string): string[] {
+  return [...bullet.matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
+}
+
+/**
+ * The invention half (§12.2): a bullet that names another panel must name a seat
+ * in it by catalog id.
+ *
+ * Scoped by the bullet's *semantics* rather than by token shape, and that is
+ * what makes it sound. Role ids, protocol ids and ruling ids are all kebab-case
+ * and mutually indistinguishable, so "does this backticked token resolve as a
+ * role" would fail a correct protocol citation as readily as an invented seat.
+ * A protocol citation never mentions another panel, so it is never examined.
+ *
+ * The seat's own panel is exempt: §12.2 permits naming a sibling without an id
+ * when the id would be the seat's own.
+ */
+function checkPanelMentions(ctx: CheckContext, file: string, id: string, text: string, line: number): Issue[] {
+  const roles = new Set(ctx.catalog.bySection("roles").map((entry) => entry.id));
+  const slash = id.indexOf("/");
+  const ownPanel = slash > 0 ? id.slice(0, slash) : null;
+  const others = [...panelNames(ctx)].filter((panel) => panel !== ownPanel).sort();
+  if (others.length === 0) return [];
+
+  const issues: Issue[] = [];
+  for (const bullet of listItems(text)) {
+    const mentioned = others.filter((panel) => bullet.includes(panel));
+    if (mentioned.length === 0) continue;
+    if (backtickedIds(bullet).some((token) => roles.has(token))) continue;
+    issues.push(
+      error(
+        "role.panel-mention-without-seat-id",
+        file,
+        `${id} has a \`## Not this seat\` bullet naming the ${mentioned.join(" and ")} panel in prose with no seat id in it: "${bullet.slice(0, 110)}". Name the seat by its catalog.yaml id in backticks (§12.2). A description of a seat never has to resolve, which is how an invented counterpart gets written.`,
+        line,
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * The omission half (§12.2): every counterpart the table declares for this seat
+ * is named in its `## Not this seat`.
+ *
+ * A writer holding one panel cannot see the other two, so this is the half no
+ * reader of a single body can perform. Both defects this catches are invisible
+ * in a body that is internally coherent.
+ */
+function checkCounterparts(
+  file: string,
+  id: string,
+  text: string,
+  line: number,
+  families: ReadonlyMap<string, ReadonlyArray<string>>,
+): Issue[] {
+  const required = families.get(id);
+  if (required === undefined) return [];
+
+  const named = new Set(listItems(text).flatMap(backtickedIds));
+  const missing = required.filter((counterpart) => !named.has(counterpart));
+  if (missing.length === 0) return [];
+
+  return [
+    error(
+      "role.counterpart-not-named",
+      file,
+      `${id} does not name ${missing.length === 1 ? "its counterpart" : "these counterparts"} ${missing.join(", ")} in \`## Not this seat\`. AUTHORING.md §12.2 declares the family; the entry is required and does not count against the three-or-four budget. Resolve it in catalog.yaml and say what separates the layers.`,
+      line,
+    ),
+  ];
+}
+
+/** The table's own coherence: every seat it names exists, and a family reads both ways. */
+function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, ReadonlyArray<string>>): Issue[] {
+  const roles = new Set(ctx.catalog.bySection("roles").map((entry) => entry.id));
+  const issues: Issue[] = [];
+
+  for (const [seat, counterparts] of [...families].sort(([a], [b]) => a.localeCompare(b))) {
+    for (const named of [seat, ...counterparts]) {
+      if (roles.has(named)) continue;
+      issues.push(
+        error(
+          "role.counterpart-table-unknown-seat",
+          AUTHORING_FILE,
+          `§12.2's counterpart table names ${named}, which catalog.yaml does not declare as a role. A family naming a seat that does not exist imposes a requirement no body can satisfy, which is the invention the table exists to prevent.`,
+        ),
+      );
+    }
+    for (const counterpart of counterparts) {
+      if ((families.get(counterpart) ?? []).includes(seat)) continue;
+      issues.push(
+        warning(
+          "role.counterpart-table-asymmetric",
+          AUTHORING_FILE,
+          `§12.2's table has ${seat} naming ${counterpart}, but not the reverse. A reader with the wrong file open arrives from either side, so ${counterpart} is not told to name ${seat}.`,
+        ),
+      );
+    }
+  }
+
+  return issues;
+}
+
 export function checkBodyShapes(ctx: CheckContext): Issue[] {
   const issues: Issue[] = [];
   const standardsSeats = standardsSeatIds(ctx);
+
+  const { families, tablePresent } = counterpartFamilies(ctx.root);
+  if (families === null && tablePresent) {
+    issues.push(
+      error(
+        "role.counterpart-table-unreadable",
+        AUTHORING_FILE,
+        `§12.2's counterpart table could not be read: no rows under \`${COUNTERPART_TABLE_HEADER}\`. The table is this check's only authority, so losing it would let every seat pass with its twin unnamed.`,
+      ),
+    );
+  }
+  if (families !== null) issues.push(...checkCounterpartTable(ctx, families));
+
   for (const section of ["protocols", "roles"] as const) {
     for (const entry of ctx.catalog.bySection(section)) {
-      issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats));
+      issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats, families));
     }
   }
   return issues;
