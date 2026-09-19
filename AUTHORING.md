@@ -496,6 +496,13 @@ other way, because complying with a gate feels like discipline.
 **A reviewer follows** that does not see the writer's narrative — only the produced files, the
 dossier, and this contract. It cannot be told "I checked that already"; it re-derives.
 
+**A handback lists every donor file the writer cited that its dossier did not name.** Following a
+dossier's citation into the pinned clone and finding adjacent material is expected: it is how a
+dossier's coverage limits get discovered, and it is not an exception to justify. The list exists
+because the reviewer re-derives from the dossier, so material the dossier never named is material the
+reviewer cannot miss — artifact and packet still agree once it is gone. The delta is what makes that
+loss visible.
+
 **At most two fix cycles.** Anything still open after the second cycle is reported with its evidence,
 not looped. An open item in a batch report is a normal, expected outcome; a stub committed to make a
 report look clean is a fabricated completion and is treated as one.
@@ -528,6 +535,7 @@ Then confirm by reading the file, not by remembering that you wrote it:
 - Every `remote_side_effect` names its idempotency key source and read-back.
 - Every ruling the body touches is cited by `id`.
 - Every adapted file has a provenance row, and the cited path exists at the pin.
+- Every donor file cited that the dossier did not name is listed in the handback (§10).
 - Three or more eval cases exist under `evals/<skill-id>/`, tagged with their scenarios.
 - Nothing in the body depends on a file this package does not install.
 
@@ -709,6 +717,7 @@ list, no frontmatter and no sidecar. It is prose, and §8 governs it.
 - Every ruling whose `binds` block in `policies/resolved-conflicts.yaml` names this protocol or role
   is cited in the body. That block is the machine-checkable inverse of §6: it tells you before you
   write which rulings you owe a citation.
+- Every donor file cited that the dossier did not name is listed in the handback (§10).
 - Authoring a body makes that entry's `status: contract` stale and raises
   `catalog.status-behind-body`. **`catalog.yaml` is owned outside this batch — report the entries you
   authored and let its owner flip them to `authored`; do not edit it yourself.**
