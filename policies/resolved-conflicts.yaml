@@ -73,6 +73,11 @@
 #              Absence means the sources were reconciled, not that one lost.
 #   binds      the catalog.yaml entry ids this ruling governs, grouped by kind. Decide
 #              membership with the test above, not by searching for mentions.
+#              The `doctrine` kind is the exception to "entry ids": its members are
+#              repo-relative paths to §12.3 markdown that no catalog entry claims, which
+#              have no kind/id pair to be named by. The same test decides membership, and
+#              `ak validate` refuses a path that is not actually loose, so `doctrine:` cannot
+#              become a second spelling for a binding the kind/id form already covers.
 #   universal  the kinds this ruling governs *entirely*, as a claim rather than a census.
 #              A kind listed here asserts "every entry of this kind, including ones not yet
 #              written". `binds` still enumerates them, so the forward check keeps working
@@ -122,6 +127,7 @@ conflicts:
       policies: [invocation]
       profiles: [autonomy]
       adapters: [runner-contract, knowledgebase]
+      doctrine: [protocols/invocation-authority.md]
     scenario: 23
     coverage: direct
     source:
@@ -349,6 +355,7 @@ conflicts:
       policies: [invocation, authority-defaults]
       profiles: [maintainer]
       adapters: [knowledgebase]
+      doctrine: [protocols/invocation-authority.md]
     scenario: 21
     coverage: direct
     note: >-
@@ -464,6 +471,7 @@ conflicts:
       schemas: [review]
       policies: [review, authority-defaults]
       adapters: [runner-contract]
+      doctrine: [protocols/invocation-authority.md]
     universal: [roles]
     scenario: 4
     coverage: direct
@@ -561,6 +569,7 @@ conflicts:
       policies: [authority-defaults]
       profiles: [autonomy]
       adapters: [runner-contract]
+      doctrine: [protocols/invocation-authority.md]
     scenario: 16
     coverage: direct
     source:
@@ -584,6 +593,7 @@ conflicts:
       policies: [authority-defaults]
       profiles: [autonomy]
       adapters: [runner-contract]
+      doctrine: [protocols/invocation-authority.md]
     scenario: 17
     coverage: direct
     source:
@@ -608,6 +618,7 @@ conflicts:
       policies: [authority-defaults]
       profiles: [autonomy, maintainer]
       adapters: [runner-contract]
+      doctrine: [protocols/invocation-authority.md]
     scenario: 5
     coverage: direct
     source:

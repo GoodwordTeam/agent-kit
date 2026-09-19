@@ -281,6 +281,7 @@ operations:
       - the write goes to the central knowledgebase, never an application-local docs tree
     side_effects: [kb-publish, artifact-write]
     on_unvalidatable_grant: stop-for-explicit-invocation
+    ruling: central-kb-owns-project-artifacts
 
   - id: feedback.assess
     exposed_by: receiving-review
