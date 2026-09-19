@@ -1,6 +1,16 @@
 // Generated from e15be71 by scratchpad/gen.ts -- do not hand-edit the captured
 // text or scores. Regenerate against a revision and commit the diff.
 //
+// That instruction cannot currently be followed, and saying so is more useful
+// than leaving it to be discovered. `scratchpad/gen.ts` was never committed and
+// does not exist in the tree, so there is nothing to regenerate with; the
+// captured text is reproducible from the revisions in `origin`, and the scores
+// are reproducible by running the scan. `invocation-lesson-publish-ship-clause`
+// was re-scored by hand when YAML citation scope was narrowed from the file to
+// the mapping, by running the same scan the generator would have run and copying
+// the number out, which is what regeneration would have produced. Whoever
+// restores the generator should treat that one number as a thing to verify.
+//
 // Each case names its own revision in `origin`, and they come from four:
 // e15be71, a13ccc0, 78f8918 and 6c3c60c. That is safe only because the `ruling:`
 // texts are byte-identical across all four -- checked by loading each revision's
@@ -17,22 +27,25 @@
 // instrument being measured, so they are the only cases in the set that can
 // support a recall number at all.
 //
-// What this set deliberately leaves out: `policies/review.yaml`, at 17KB. It
-// exercises the same file-scope suppression path as the two cases that carry a
-// `scoreIfUncited`, and the only variable it adds is distance between the
-// restatement and the citation, which file scope makes irrelevant by
-// construction.
+// What this set deliberately leaves out: `policies/review.yaml`, at 17KB. Under
+// file scope it exercised the same suppression path as the two cases carrying a
+// `scoreIfUncited`, and the only variable it added was distance between the
+// restatement and the citation, which file scope made irrelevant by
+// construction. Ancestor scope makes distance matter again -- a citation now
+// reaches only what nests beneath it -- so the omission is no longer free and
+// `review.yaml` is the obvious next capture.
 //
 // It was previously recorded here as the decisive case for narrowing YAML scope
 // from the file to the section. That was wrong, and the measurement that
 // corrects it is in `scoreIfUncited`: both suppressed cases score under 0.55
-// with their citation removed, so narrowing scope changes neither one's
-// behavior and neither one is evidence for or against the rule at the shipping
-// threshold. Whether `review.yaml` would be different is unmeasured -- it turns
-// entirely on whether its restatement clears 0.55 uncited, which nobody has
-// checked. So this is an omission with an open question attached, and the
-// question is the one to settle before anyone argues the scope rule from this
-// fixture in either direction.
+// with their citation removed, so scope alone never decided either one's report
+// at the shipping threshold. That is still true, and it is worth keeping
+// straight against what the narrowing did do. Scope was narrowed for a reason
+// this set states rather than scores: a claim the check never emits a window for
+// cannot be argued about at any threshold, and one of these two was in that
+// position. It is now scored at 0.52 and still unreported. Nobody should read
+// the narrowing as a recall improvement, because it is not one, and this fixture
+// is what makes that checkable instead of a claim in a comment.
 
 /** The ruling texts as of e15be71, which are the corpus the IDF is computed over. */
 export const RULINGS_AT_REVISION: ReadonlyArray<{ readonly id: string; readonly text: string }> = [
@@ -291,8 +304,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     ruling: "central-kb-owns-project-artifacts",
     label: "defect",
     reported: false,
-    why: "Gold standard, and the only case in the set the check misses for two independent reasons. `lesson.publish`'s first hard gate carries the ruling's closing clause nearly verbatim and cites nothing; `e15be71` fixed it by adding `ruling: central-kb-owns-project-artifacts` to that operation, which is a human judging the citation missing. It is missed first because the sibling operation `lesson.capture` already carries that same citation and YAML scope is the file, so no window is emitted at all; and second because with that one line removed the claim scores 0.52, still under 0.55. Widening the threshold to 0.52 would not surface it and narrowing scope to the operation would not surface it -- both have to change, which is why it is the strongest case in the set against reading the threshold as the dial. Stored as the two operations rather than the whole 17.6KB file, licensed by measurement rather than convenience: the excerpt reproduces both facts exactly, suppressed as it stood and 0.52 with the citation stripped. It also cuts against the scope rule `product-prototype-rationale` guards, because `invocation.yaml` cites per operation, so the unit a reader relies on is the operation and not the file. Whether that makes YAML scope wrong or makes this file's shape an exception is a contract question for `policies`, and this fixture records the tension rather than settling it.",
-    score: 0.0,
+    why: "Gold standard, and the case that settled the YAML scope question rather than merely recording it. `lesson.publish`'s first hard gate carries the ruling's closing clause nearly verbatim and cites nothing; `e15be71` fixed it by adding `ruling: central-kb-owns-project-artifacts` to that operation, which is a human judging the citation missing. It used to be missed for two independent reasons: the sibling operation `lesson.capture` already carried that same citation and YAML scope was the whole file, so no window was emitted at all, and with that one line removed the claim scores 0.52, still under 0.55. Scope was narrowed to the mapping a citation is attached to and what nests beneath it, which is what `invocation.yaml`'s own shape always implied -- it cites per operation, so the unit a reader relies on is the operation. The sibling's key no longer reaches, the claim is scored, and one of the two reasons is gone. What remains is the threshold, so this case is now an ordinary member of the 0.30-to-0.52 band rather than the one case no tuning could touch. It stays a miss and recall stays two of eight. Its score and `scoreIfUncited` are now equal, which is the measurement showing the citation has become inert here: that equality, not the presence of the id in the text, is what distinguishes it from `product-prototype-rationale`, whose citation sits in its own mapping and still suppresses correctly. Stored as the two operations rather than the whole 17.6KB file, licensed by measurement rather than convenience: the excerpt reproduces the behaviour under both scope rules exactly.",
+    score: 0.52,
     scoreIfUncited: 0.52,
   },
 ];

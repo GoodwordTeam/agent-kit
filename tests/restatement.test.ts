@@ -275,6 +275,128 @@ describe("a score means the same thing twice, or it ranks nothing", () => {
   });
 });
 
+/**
+ * §6 gives YAML its own citation form -- a `ruling:` or `rulings:` key -- and
+ * that key attaches at a mapping rather than beside the clause. Scope was
+ * therefore the whole file, which is wider than any key can legitimately reach:
+ * a citation on one operation silenced a restatement in every other operation
+ * of the same document. That was miss eight of the eight the coverage note
+ * counts, and unlike the other misses it is not a threshold setting -- the
+ * window is never scored, because the scope cleared it first.
+ *
+ * Ancestor scope is what the citation form actually means. A key covers the
+ * mapping it sits in and everything nested beneath it, and nothing to either
+ * side.
+ */
+describe("in YAML a citation reaches its own mapping and what is nested under it", () => {
+  test("a citation on a sibling operation does not clear a restatement in another", () => {
+    // The live case, `policies/invocation.yaml`: the ruling was cited on the
+    // neighbouring operation, and the operation that needed the citation
+    // produced no finding. Under file scope any id anywhere cleared everything.
+    const doc = [
+      "schema_version: 1",
+      "operations:",
+      "  lesson.publish:",
+      "    rulings:",
+      "      - required-lane-failure-is-unavailable",
+      // Deliberately a filler topic rather than something that reads like a
+      // rule about publishing. The first draft of this line said a published
+      // lesson writes nothing into the working repository, which restates
+      // `central-kb-owns-project-artifacts` closely enough to be reported --
+      // the fixture would then have been measuring two things at once.
+      "    summary: A schema compiles once and validates many documents against the draft it declares.",
+      "  review.delta:",
+      "    summary: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "",
+    ].join("\n");
+    const found = hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc })));
+    expect(found.length).toBe(1);
+    expect(found[0]?.line).toBe(8);
+  });
+
+  test("a citation on the window's own mapping clears it", () => {
+    const doc = [
+      "schema_version: 1",
+      "operations:",
+      "  review.delta:",
+      "    rulings:",
+      "      - required-lane-failure-is-unavailable",
+      "    forbidden: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc })))).toEqual([]);
+  });
+
+  test("a citation on an ancestor mapping covers what is nested beneath it", () => {
+    // `policies/review.yaml` is the worked case and the reason this direction
+    // has to hold: `synthesis.may_not` is a sequence of scalars, so it has
+    // nowhere to carry a citation of its own and the coarsest legal attachment
+    // is the `synthesis` mapping above it. A scope that did not descend would
+    // report a claim whose citation is the only one the file's shape allows.
+    const doc = [
+      "schema_version: 1",
+      "synthesis:",
+      "  rulings:",
+      "    - required-lane-failure-is-unavailable",
+      "  may_not:",
+      "    - A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/review.yaml": doc })))).toEqual([]);
+  });
+
+  test("a citation inline in the scalar clears it, as it does in markdown", () => {
+    const doc = [
+      "schema_version: 1",
+      "operations:",
+      "  review.delta:",
+      "    forbidden: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase (ruling `required-lane-failure-is-unavailable`).",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc })))).toEqual([]);
+  });
+
+  test("a window that starts on the banner above a cited mapping is still covered by it", () => {
+    // A window is a run of consecutive sentences and nothing makes it stop at a
+    // mapping boundary, so it regularly begins on the `# ---` comment above a
+    // key and runs into the material that matches. Requiring the window to sit
+    // wholly inside the governed range reported three such windows on the
+    // authored tree -- `not_gates` in limits.yaml, `baseline_reset` in
+    // review.yaml, `seat_separation` in authority-defaults.yaml -- and in every
+    // one the restated clause and its `ruling:` key were both inside the
+    // mapping. Only the first sentence was outside. Overlap is the lenient
+    // reading, and this check misses rather than accuses.
+    const doc = [
+      "schema_version: 1",
+      "# ---------------------------------------------------------------------------",
+      "# Lanes that could not run. Structural, runner-enforced, not a preference.",
+      "# ---------------------------------------------------------------------------",
+      "lanes:",
+      "  rule: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "  ruling: required-lane-failure-is-unavailable",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/review.yaml": doc })))).toEqual([]);
+  });
+
+  test("a citation on a nested child does not clear the parent that restates the ruling", () => {
+    // The inverse of the ancestor case, and the one that keeps ancestor scope
+    // from collapsing back into file scope. A key beneath a claim is attached
+    // to something narrower than the claim, so it attributes nothing upward.
+    const doc = [
+      "schema_version: 1",
+      "operations:",
+      "  review.delta:",
+      "    forbidden: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "    escalation:",
+      "      rulings:",
+      "        - required-lane-failure-is-unavailable",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc }))).length).toBe(1);
+  });
+});
+
 describe("the scan reports its own reach, because a clean run is not an all-clear", () => {
   test("the coverage note is emitted even when nothing is flagged", () => {
     const note = checkRestatements(ctxFor({})).find((i) => i.rule === "rulings.restatement-scan-coverage");

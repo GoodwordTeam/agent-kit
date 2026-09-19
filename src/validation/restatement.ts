@@ -93,7 +93,7 @@ import { note, warning, type Issue } from "./types.ts";
  * human cited by hand at `e15be71` -- thirteen minutes before `3e29c75` added
  * this scan, so that fix is not this instrument's output either. Two of eight.
  *
- * All five sub-threshold misses rank the correct ruling first, so ranking is
+ * All six sub-threshold misses rank the correct ruling first, so ranking is
  * not what fails.
  * Nor is the cutoff: `:419` quotes its ruling for 80 characters and scores
  * 0.40 where `:607` quotes 79 and scores 0.55, and `:31` quotes 65 and scores
@@ -104,15 +104,19 @@ import { note, warning, type Issue } from "./types.ts";
  * is the verbatim run itself, which needs no corpus, no threshold and no
  * revision to mean something.
  *
- * The eighth is not a cutoff question at all, and it is the one case here that
- * no amount of tuning touches. `invocation.yaml` cites the ruling on the
- * *neighbouring* operation, YAML citation scope is the whole file, and so the
- * operation that actually needed the citation produces no window. Delete that
- * one line and the claim scores 0.52 -- under the line as well. Scope hides it,
- * and the threshold would hide it even if scope did not, so neither change is a
- * fix on its own. Whether YAML scope should be the file or the operation is a
- * contract question about what a reader relies on, not a tuning question, and
- * this check does not get to answer it.
+ * The eighth was not a cutoff question and is now half of one. `invocation.yaml`
+ * cites the ruling on the *neighbouring* operation; under the file scope this
+ * check used until `citationScope` was narrowed, the operation that actually
+ * needed the citation produced no window at all, so no threshold could reach it.
+ * Ancestor scope ends that: the sibling's key no longer covers it, the claim is
+ * scored, and it lands at 0.52. Still a miss, and now a miss of the same kind as
+ * the other five rather than a second kind -- it sits in the band between 0.30
+ * and 0.52 that the cutoff argument above already covers.
+ *
+ * Recall is unchanged at two of eight. Narrowing scope moved one case from
+ * unreachable to merely under the line, which is worth doing because a claim
+ * nothing scores cannot be argued about, but it is not a recall improvement and
+ * the note below does not claim one.
  *
  * All eight are in the labelled corpus, the six as known misses; see
  * `tests/fixtures/restatement-cases.ts`.
@@ -288,20 +292,111 @@ function scannedFiles(root: string): string[] {
  * ruling's third sentence verbatim while citing a different one. Section scope
  * finds the id six lines up and calls the restatement attributed.
  *
- * In YAML it is the file. §6 gives YAML a different citation form -- a `ruling:`
- * or `rulings:` key -- and that key attaches at a mapping level rather than
- * beside the clause it governs. Measured on the authored tree, block scope in
- * YAML reports the `forbidden:` line of a list item whose `rulings:` key sits
- * two levels up: a true claim, a real citation, and a finding that is wrong.
- * The scope follows the contract's citation form, not one rule for both.
+ * In YAML it is the mapping the citation is attached to, and everything nested
+ * beneath it. §6 gives YAML a different citation form -- a `ruling:` or
+ * `rulings:` key -- and that key attaches at a mapping level rather than beside
+ * the clause it governs, so block scope is too narrow: measured on the authored
+ * tree it reports the `forbidden:` line of a list item whose `rulings:` key sits
+ * two levels up, which is a true claim, a real citation and a wrong finding.
+ *
+ * This was the whole file until `021d36e`, and that was too wide by exactly the
+ * same argument. A key cannot attribute what it is not attached to, and file
+ * scope let a citation on one operation silence a restatement of the same
+ * ruling in every other operation of the document. It was not a tuning
+ * question and no threshold reached it, because the window was never scored --
+ * the scope cleared it before the cosine was computed. That is miss eight of
+ * the eight the coverage note counts, and it is the only one a scope change
+ * could ever have fixed.
+ *
+ * Ancestor scope is not a compromise between the two. It is what the citation
+ * form means: a key covers the mapping it sits in, and everything nested under
+ * that mapping, and nothing to either side.
+ *
+ * Two consequences worth naming rather than discovering.
+ *
+ * A sequence of scalars has nowhere to carry a citation, so the coarsest legal
+ * attachment for one of its items is the mapping above the sequence --
+ * `policies/review.yaml`'s `synthesis.may_not` is the live case. A key placed
+ * there necessarily covers every sub-mapping of `synthesis` too, including ones
+ * carrying their own precise `ruling:` keys, so a later uncited restatement
+ * anywhere under `synthesis` is silent. That is inherent in ancestor scope and
+ * in the shape of the file, not in where anyone put the key.
+ *
+ * And the direction is asymmetric on purpose: a citation nested *under* a claim
+ * attributes nothing, because it is attached to something narrower than the
+ * claim it would have to cover. Without that, ancestor scope collapses back
+ * into file scope the moment any key in the document cites anything.
+ *
+ * A window that overlaps the governed range is covered by it, rather than one
+ * that sits wholly inside. Requiring containment was the first rule here and it
+ * produced three findings on the authored tree, every one of them wrong in the
+ * same way: a window is a run of consecutive sentences and nothing makes it stop
+ * at a mapping boundary, so it routinely begins on the `# ---` banner above a
+ * key, or on the last line of the previous sibling, and then runs into the
+ * material that actually matches. `policies/limits.yaml` `not_gates`,
+ * `policies/review.yaml` `baseline_reset` and `policies/authority-defaults.yaml`
+ * `seat_separation` are the three, and in each the restated clause and its
+ * `ruling:` key are both inside the mapping -- only the window's first sentence
+ * was outside it. Overlap is the lenient reading and leniency is this check's
+ * standing bias: it should miss rather than accuse.
  */
+const CITATION_KEY = /^\s*(?:-\s+)?rulings?\s*:/;
+
+/** Indentation in columns, or -1 for a blank line, which belongs to no level. */
+function indentOf(line: string): number {
+  return line.search(/\S/);
+}
+
+/**
+ * The lines a YAML citation key governs: its parent mapping and that mapping's
+ * whole subtree, which is the range from the nearest line above it at a shallower
+ * indent through the last line before the next one.
+ */
+function governedRange(lines: ReadonlyArray<string>, at: number, indent: number): { from: number; to: number } {
+  let from = 0;
+  for (let i = at - 1; i >= 0; i--) {
+    const above = indentOf(lines[i] ?? "");
+    if (above >= 0 && above < indent) {
+      from = i;
+      break;
+    }
+  }
+  let to = lines.length - 1;
+  for (let i = at + 1; i < lines.length; i++) {
+    const below = indentOf(lines[i] ?? "");
+    if (below >= 0 && below < indent) {
+      to = i - 1;
+      break;
+    }
+  }
+  return { from, to };
+}
+
 function citationScope(file: string, lines: ReadonlyArray<string>, startLine: number, endLine: number): string {
-  if (!file.endsWith(".md")) return lines.join("\n");
-  let first = Math.max(0, startLine - 1);
-  let last = Math.min(lines.length - 1, endLine - 1);
-  while (first > 0 && (lines[first - 1] ?? "").trim() !== "") first--;
-  while (last < lines.length - 1 && (lines[last + 1] ?? "").trim() !== "") last++;
-  return lines.slice(first, last + 1).join("\n");
+  if (file.endsWith(".md")) {
+    let first = Math.max(0, startLine - 1);
+    let last = Math.min(lines.length - 1, endLine - 1);
+    while (first > 0 && (lines[first - 1] ?? "").trim() !== "") first--;
+    while (last < lines.length - 1 && (lines[last + 1] ?? "").trim() !== "") last++;
+    return lines.slice(first, last + 1).join("\n");
+  }
+
+  // The window's own lines first: §6's inline form is legal in YAML too, and a
+  // scalar that names its ruling in the sentence is attributed by the same rule
+  // markdown uses.
+  const parts: string[] = [...lines.slice(startLine - 1, endLine)];
+  const first = startLine - 1;
+  const last = endLine - 1;
+
+  for (const [at, line] of lines.entries()) {
+    if (!CITATION_KEY.test(line)) continue;
+    const indent = indentOf(line);
+    if (indent < 0) continue;
+    const { from, to } = governedRange(lines, at, indent);
+    if (last < from || first > to) continue;
+    parts.push(...lines.slice(from, to + 1));
+  }
+  return parts.join("\n");
 }
 
 export function checkRestatements(ctx: CheckContext, threshold: number = RESTATEMENT_THRESHOLD): Issue[] {
@@ -408,7 +503,7 @@ export function checkRestatements(ctx: CheckContext, threshold: number = RESTATE
     note(
       "rulings.restatement-scan-coverage",
       RULINGS_FILE,
-      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is now a measurement rather than an estimate, taken on the only sample this instrument did not select: eight restatements in this repo were found without it, six by reading before it existed and two by matching verbatim runs, and it reports two of the eight. Five of the misses score 0.48, 0.49, 0.40, 0.30 and 0.50, every one of them ranking the correct ruling first and falling short of the line. They are not a threshold setting. Cosine measures vocabulary shared with a corpus, not quotation, and does not order these by how much they quote: 80 verbatim characters score 0.40 where 79 score 0.55 and 34 score 0.60, so a cutoff low enough to admit the misses admitted forty rows at the calibration revision and still ranked them below shorter paraphrases. A restatement sharing none of its ruling's words scores zero by construction, which no threshold reaches at all. The sixth miss is not scored at all: in YAML the citation scope is the whole file, so a ruling named on one operation silences a restatement of it in every other operation of that file, and this check emits no row for the one that needed it. A clean run is therefore evidence about this instrument, not about the tree.`,
+      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is now a measurement rather than an estimate, taken on the only sample this instrument did not select: eight restatements in this repo were found without it, six by reading before it existed and two by matching verbatim runs, and it reports two of the eight. Six of the misses score 0.48, 0.49, 0.40, 0.30, 0.50 and 0.52, every one of them ranking the correct ruling first and falling short of the line. They are not a threshold setting. Cosine measures vocabulary shared with a corpus, not quotation, and does not order these by how much they quote: 80 verbatim characters score 0.40 where 79 score 0.55 and 34 score 0.60, so a cutoff low enough to admit the misses admitted forty rows at the calibration revision and still ranked them below shorter paraphrases. A restatement sharing none of its ruling's words scores zero by construction, which no threshold reaches at all. In YAML a citation covers the mapping it is attached to and everything nested beneath it, and nothing to either side; that scope is narrower than the whole file this check once used, under which a ruling named on one operation silenced a restatement of it in every other operation of the document. The sixth miss was hidden that way and is now scored, which changed no recall number and made one unreachable claim arguable. A clean run is therefore evidence about this instrument, not about the tree.`,
     ),
   );
 

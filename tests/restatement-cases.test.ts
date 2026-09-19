@@ -84,12 +84,34 @@ interface Measured {
 }
 
 /**
- * A case whose own captured unit cites its own ruling, so the check is required
- * to stay silent on it. Derived rather than declared: the citation is in the
- * text or it is not, and a flag could disagree with the text it describes.
+ * A case whose captured text names its own ruling somewhere, so there is
+ * something for `uncited` to remove and a `scoreIfUncited` to measure.
+ *
+ * Textual on purpose: whether the id appears is a fact about the fixture that
+ * no change to the check can alter.
+ */
+function namesOwnRuling(item: (typeof LABELLED)[number]): boolean {
+  return item.text.includes(item.ruling);
+}
+
+/**
+ * A case the check is required to stay silent on *because* of its citation.
+ *
+ * This used to be `namesOwnRuling`, and the two were the same thing only while
+ * YAML citation scope was the whole file: any id anywhere in the document
+ * cleared every claim in it. Under ancestor scope a citation reaches the
+ * mapping it is attached to and what nests beneath it, so a case can name its
+ * ruling and still be scored, which is exactly what happened to
+ * `invocation-lesson-publish-ship-clause` -- its citation sits on a sibling
+ * operation and is now inert.
+ *
+ * So suppression is measured rather than spelled: the citation has to make a
+ * difference. Both numbers are stored in the fixture and neither is read from
+ * the check at test time, so this does not ask the instrument whether it is
+ * working.
  */
 function suppressed(item: (typeof LABELLED)[number]): boolean {
-  return item.text.includes(item.ruling);
+  return namesOwnRuling(item) && (item.scoreIfUncited ?? 0) > item.score;
 }
 
 /** The same text with every line naming its ruling removed. Identity elsewhere. */
@@ -182,12 +204,14 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
   for (const item of LABELLED.filter((c) => c.label === "defect" && !c.reported && suppressed(c))) {
     test(`${item.id} is a known miss a sibling citation hides, ${item.scoreIfUncited} without it: ${item.why.slice(0, 40)}...`, () => {
       // A different failure from the one above, and the distinction is the
-      // reason this loop exists. The threshold misses score 0.30 to 0.52 and
-      // are hidden by one number. This one is hidden before any number is
-      // compared: the file cites the ruling on a *neighbouring* operation, YAML
-      // scope is the whole file, and so no window is emitted for the operation
-      // that actually needed the citation. `e15be71` added it there by hand,
-      // which is a human disagreeing with the scope rule on this file.
+      // reason this loop exists. The threshold misses are hidden by one number.
+      // A case here is hidden before any number is compared: its own citation
+      // covers the claim, so no window is emitted for it at all.
+      //
+      // This loop held two cases while YAML scope was the whole file. One of
+      // them, `invocation-lesson-publish-ship-clause`, was suppressed by a
+      // citation on a *sibling* operation, which ancestor scope no longer lets
+      // reach; it is scored now and has moved to the threshold loop above.
       expect(scores.get(item.id)?.score ?? -1).toBe(0);
 
       // The number the citation is hiding. Without this the zero above is
@@ -248,10 +272,12 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     // that scores but never leads, which the check would never propose for
     // this text and which therefore cannot be what the case is about.
     const wrong = LABELLED.filter((item) => {
-      // A case whose captured unit cites its own ruling is suppressed by
-      // design, so no window can name it. That is the file-scope rule working
-      // and it is what `product-prototype-rationale` exists to hold.
-      if (item.text.includes(item.ruling)) return false;
+      // A case whose citation actually covers its claim is suppressed by
+      // design, so no window can name it. That is the scope rule working and
+      // it is what `product-prototype-rationale` exists to hold. A case that
+      // merely mentions its ruling elsewhere is scored like any other and owes
+      // the same leading-candidate guarantee.
+      if (suppressed(item)) return false;
       return !(scores.get(item.id)?.leads ?? false);
     }).map((item) => ({ id: item.id, ruling: item.ruling }));
     expect(wrong).toEqual([]);
@@ -266,13 +292,20 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     // scoring these files would look identical to the citation being honoured.
     //
     // What this does not establish, because it was written here as though it
-    // did: that file scope is load-bearing at the shipping threshold. Both
-    // hidden scores are under 0.55, so narrowing scope to the block would
-    // change neither case's report. These guard the mechanism at the capture
-    // threshold. The behavioral question is open and needs a case that clears
-    // 0.55 uncited, which the set does not yet contain.
+    // did: that the scope rule is load-bearing at the shipping threshold. The
+    // hidden scores are under 0.55, so narrowing scope further would change no
+    // case's report. These guard the mechanism at the capture threshold. The
+    // behavioural question is open and needs a case that clears 0.55 uncited,
+    // which the set does not yet contain.
+    //
+    // The set held two of these and now holds one, because narrowing YAML scope
+    // to the mapping made the other's citation inert. That is a real weakening
+    // of this guard and it is recorded rather than papered over: with a single
+    // case left, this loop can no longer tell a general rule from one file's
+    // shape. `policies/review.yaml` is the capture that would restore it, and
+    // the fixture header says so.
     const suppressedCases = LABELLED.filter(suppressed);
-    expect(suppressedCases.length).toBeGreaterThan(1);
+    expect(suppressedCases.length).toBeGreaterThanOrEqual(1);
     for (const item of suppressedCases) {
       expect({ id: item.id, score: scores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, score: 0 });
       const hidden = item.scoreIfUncited;
@@ -280,9 +313,15 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       expect({ id: item.id, uncited: uncitedScores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, uncited: hidden });
       expect(longestSharedRun(item.text, RULINGS_AT_REVISION.find((r) => r.id === item.ruling)?.text ?? "")).toBeGreaterThan(10);
     }
-    // And the field belongs to exactly this set: a `scoreIfUncited` on a case
-    // with nothing to uncite would be a number describing no measurement.
-    expect(LABELLED.filter((c) => c.scoreIfUncited !== undefined).map((c) => c.id)).toEqual(suppressedCases.map((c) => c.id));
+    // And the field belongs to exactly the cases that name their own ruling: a
+    // `scoreIfUncited` on a case with nothing to uncite would be a number
+    // describing no measurement. That set is wider than the suppressed one now,
+    // and the difference is the point -- a case whose two numbers are equal is
+    // one whose citation no longer reaches it, which is a measurement worth
+    // keeping rather than a field to drop.
+    expect(LABELLED.filter((c) => c.scoreIfUncited !== undefined).map((c) => c.id)).toEqual(
+      LABELLED.filter(namesOwnRuling).map((c) => c.id),
+    );
   });
 
   test("the set holds cases on both sides of the threshold, and on both axes", () => {
