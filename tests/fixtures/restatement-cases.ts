@@ -1,5 +1,21 @@
 // Generated from e15be71 by scratchpad/gen.ts -- do not hand-edit the captured
 // text or scores. Regenerate against a revision and commit the diff.
+//
+// Each case names its own revision in `origin`, and two of them are from
+// a13ccc0 rather than e15be71. That is safe here only because the ruling corpus
+// is byte-identical across those two revisions (`git diff e15be71 a13ccc0 --
+// policies/resolved-conflicts.yaml` is empty), so one pinned corpus scores both.
+// A case captured at a revision where the corpus had moved would need its own,
+// and mixing them silently would reproduce neither.
+//
+// What this set deliberately leaves out: `policies/review.yaml`, at 17KB. It
+// exercises the file-scope suppression path `product-prototype-rationale`
+// already covers, and the only variable it adds is distance between the
+// restatement and the citation, which file scope makes irrelevant by
+// construction. It becomes the decisive case the moment anyone proposes
+// narrowing YAML scope from the file to the section -- that is the change it
+// would catch and `product-prototype-rationale` would not -- so it is an
+// omission with a trigger, not a gap.
 
 /** The ruling texts as of e15be71, which are the corpus the IDF is computed over. */
 export const RULINGS_AT_REVISION: ReadonlyArray<{ readonly id: string; readonly text: string }> = [
@@ -35,7 +51,17 @@ export interface LabelledCase {
   /** Citation scope follows the format: the block in markdown, the file in YAML. */
   readonly format: "markdown" | "yaml";
   readonly ruling: string;
+  /** What the text is. Judged by reading it, independently of what the check does. */
   readonly label: "defect" | "not-a-defect" | "undecided";
+  /**
+   * What the check does with it, stated rather than inferred from `score`.
+   *
+   * The two are separate axes and the fixture is only worth having because they
+   * are: `label: "defect"` with `reported: false` is a measured blind spot, and
+   * a set that could not express one would have quietly guarded two defects as
+   * correct rejections. Which is what it did until these cases arrived.
+   */
+  readonly reported: boolean;
   /** Why it carries that label. A verdict without reasoning propagates errors. */
   readonly why: string;
   /** Cosine at capture, under the shipping build. */
@@ -51,6 +77,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "A human invokes the entrypoint. A controller invokes the phase operation",
     ruling: "entrypoint-phase-operation-split",
     label: "defect",
+    reported: true,
     why: "Restates the invocation split in its own words and cites nothing. The section's table above it names the layers but carries no ruling id.",
     score: 0.65,
   },
@@ -62,6 +89,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "configurable starting points (arch",
     ruling: "numeric-heuristics-are-guidance",
     label: "defect",
+    reported: true,
     why: "Near-verbatim on the ruling's substance, and cites the architecture note instead of the ruling. A citation to a non-ruling source does not discharge 6.",
     score: 0.78,
   },
@@ -73,6 +101,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "Two clauses of that ruling are easy to lose",
     ruling: "central-kb-owns-project-artifacts",
     label: "defect",
+    reported: true,
     why: "States two clauses of the ruling and reaches its citation only through the words 'that ruling', across a blank line, in the paragraph above. 6 requires the citation inline at the sentence it governs, because an agent loading one paragraph never sees the line above it. Three agents first called this a false positive; it is not.",
     score: 0.60,
   },
@@ -84,6 +113,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "Repeated failure is a signal about the plan",
     ruling: "two-fix-cycles-then-stop",
     label: "defect",
+    reported: true,
     why: "Reproduces the ruling's third sentence verbatim while citing a different ruling at the end of the same paragraph. The strongest instance in the corpus, and the one a section-wide or file-wide citation scope would clear.",
     score: 0.55,
   },
@@ -95,6 +125,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "an agent's description of a green run is not a receipt",
     ruling: "closure-requires-independent-verification",
     label: "defect",
+    reported: true,
     why: "The second of two consecutive Gate paragraphs stating different clauses of one ruling. The first cites it; this one did not. N independent clauses generate N citation obligations.",
     score: 0.69,
   },
@@ -106,6 +137,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "The security seat may not be filled by the implementer",
     ruling: "missing-supervisor-never-implementer",
     label: "defect",
+    reported: true,
     why: "Overturned from not-a-defect. The right cell, under a column headed 'What this repo does instead', states the ruling's closing sentence in the repo's own voice with no authority attached, and an agent loading the row sees an actionable rule. Calling it 'a table row' was a form argument about the container -- the same move rejected one case above. The row directly beneath it quotes the closing sentence of `required-lane-failure-is-unavailable` verbatim, in quotation marks, also uncited. AGENTS.md now carries the citation this check named.",
     score: 0.56,
   },
@@ -117,7 +149,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "Delta review is bounded by affected behavior",
     ruling: "delta-scope-affected-behavior",
     label: "defect",
-    why: "Overturned from undecided. It is a restatement -- the surrounding block is six bullets restating six rulings, and at a lowered threshold five surfaced with the correct ruling ranked first each time, scoring 0.29 to 0.64 for the identical act. The open question was the unit, not the claim: the finding is the block and a reader could call the row unactionable. README has since been repaired bullet by bullet, six citations, which answers it in practice.",
+    reported: true,
+    why: "Overturned from undecided, and the defect is narrowing rather than the missing citation. The ruling requires novelty evidence for a new finding; the bullet drops that clause and keeps 'a serious newly discovered issue in an untouched caller stays reportable', so a bounded rule reads as an open one and a reviewer working from it admits findings the ruling excludes. It drops the word 'affected' from the ruling's 'untouched affected caller' as well, widening it a second time. That changes what a reader does, so 6 decides it without reaching the question of whether a root digest is exempt by genre -- and no exemption could attach to the form anyway, since a digest restates by construction and exempting it would exempt the documents read first. The citation's job was to make the narrowing findable.",
     score: 0.64,
   },
   {
@@ -128,8 +161,33 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "comparison_base`, `reviewed_head` and `last_head_verified`",
     ruling: "delta-baseline-reset-not-third-loop",
     label: "defect",
+    reported: true,
     why: "Overturned from not-a-defect, and the clearest of the three errors. I read it as the field-name class because it lists three field names -- but it also carries the ruling's own closing clause, 'so the three are never conflated', verbatim. The enumeration was the container and I never read the sentence. The bullet now cites the ruling this check named. The field-name class is real and is represented here by `apply-findings-snapshot-bullet`, which sits below the threshold.",
     score: 0.60,
+  },
+  {
+    id: "authoring-second-lifecycle-entrypoint",
+    origin: "AUTHORING.md:419 at a13ccc0",
+    text: "**No second lifecycle entrypoint.** There is one `autopilot` and one lifecycle. A skill may not\nintroduce a \"run everything\", \"do the whole thing\" or \"full loop\" entrypoint beside it, and may not\nreach a forbidden U-to-U call through a wrapper. Where a host cannot validate a grant, the skill\nstops for explicit invocation (`AGENTS.md`, \"The invocation law\").",
+    format: "markdown",
+    anchor: "Where a host cannot validate a grant, the skill",
+    ruling: "entrypoint-phase-operation-split",
+    label: "defect",
+    reported: false,
+    why: "A known miss, and the reason the coverage note can no longer say the blind spot is shared-nothing vocabulary. It quotes 80 characters of the ruling's closing sentence -- '. Where a host cannot validate a grant, the skill stops for explicit invocation ' -- and cites `AGENTS.md` rather than the ruling, which is the `agents-numeric-heuristics` class: a citation to a document does not discharge 6. The check ranks the right ruling first and still scores it 0.40, under a threshold of 0.55.",
+    score: 0.40,
+  },
+  {
+    id: "authoring-packaging-back-reference",
+    origin: "AUTHORING.md:31 at a13ccc0",
+    text: "That ruling also governs packaging, which this section does not: the full catalog ships and\nprofiles select what installs, so a skill is never trimmed, gated or duplicated to suit a profile.\nRead it before adding an entrypoint — \"no duplicate donor lifecycles, no second run-everything\nentrypoint\" is the same ruling, and §7 enforces it.",
+    format: "markdown",
+    anchor: "That ruling also governs packaging",
+    ruling: "full-catalog-opt-in-profiles",
+    label: "defect",
+    reported: false,
+    why: "The second known miss, and the same shape as `authoring-kb-two-clauses` one band lower. It quotes 65 characters of the ruling verbatim and reaches its citation only through the words 'That ruling', which 6 names explicitly: an anaphoric citation does not satisfy the rule at all, because it binds a position where every other citation binds an id. The caught instance of this shape scores 0.60 and this one scores 0.50, which is the whole distance between a reported defect and a silent one.",
+    score: 0.50,
   },
   {
     id: "product-prototype-rationale",
@@ -139,6 +197,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "`prototype` is a core primitive",
     ruling: "missing-supervisor-never-implementer",
     label: "not-a-defect",
+    reported: false,
     why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: as a block alone it scores 0.50 and reports, and in its file it scores 0.20 and does not. That gap is the file-scope rule working, and it is the reason a YAML case cannot be captured as a paragraph. Also the only case here well below threshold, so without it nothing guards a change that drags rejections up across the line.",
     score: 0.20,
   },
@@ -150,6 +209,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     anchor: "The snapshot: comparison base, reviewed head and input hashes",
     ruling: "supervisor-agreement-is-not-authority",
     label: "not-a-defect",
+    reported: false,
     why: "A bullet naming snapshot fields, inside a block listing the packet a seat receives. The documented field-name class, and the nearest rejection in the set at 0.49 -- so it is the case that moves first if the threshold is lowered. Reported once as the third known true instance; it is not. The genuine one sits a few lines below and scores zero.",
     score: 0.49,
   },

@@ -81,6 +81,18 @@ import { note, warning, type Issue } from "./types.ts";
  * `delta-baseline-reset-not-third-loop` and restates `two-fix-cycles-then-stop`
  * without naming it. A block carrying one citation looks attributed to a reader
  * skimming for backticks, and that is exactly the miss worth catching.
+ *
+ * What the number cannot buy, at any setting. Two uncited restatements found by
+ * reading `AUTHORING.md` at `a13ccc0` score 0.40 and 0.50 and are missed here,
+ * and they are not a tuning problem: `:419` quotes its ruling for 80 characters
+ * and scores 0.40, where `:607` quotes 79 and scores 0.55, and
+ * `:31` quotes 65 and scores 0.50 where `AGENTS.md:136` quotes the same 65 and
+ * scores 0.78. Cosine is not monotone in how much a passage quotes, so lowering
+ * the cutoff to reach them reorders nothing -- it buys the forty-row band and
+ * leaves 34-character paraphrases ranked above 80-character quotations. The
+ * signal that reaches this class is the verbatim run itself, which needs no
+ * corpus, no threshold and no revision to mean something. Both cases are in the
+ * labelled corpus as known misses; see `tests/fixtures/restatement-cases.ts`.
  */
 export const RESTATEMENT_THRESHOLD = 0.55;
 
@@ -373,7 +385,7 @@ export function checkRestatements(ctx: CheckContext, threshold: number = RESTATE
     note(
       "rulings.restatement-scan-coverage",
       RULINGS_FILE,
-      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is worse than precision and is not quoted here: a claim that restates a ruling in none of its words scores zero, and of the three uncited restatements found by hand in this repo this scan finds two, scoring the third at zero. A clean run is therefore evidence about this instrument, not about the tree.`,
+      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is the weaker side and it is measured rather than estimated: at least three uncited restatements found by reading are absent from this report. One restates its ruling in none of its words and scores zero. The other two quote their rulings verbatim for 80 and 65 characters, rank the right ruling first, and still score 0.40 and 0.50 -- while a passage quoting 79 characters scores 0.55 and one quoting 34 scores 0.60. Cosine measures vocabulary shared with a corpus, not quotation, so it does not order these by how much they quote: a cutoff low enough to admit the two admitted forty rows at the calibration revision and still ranked them below shorter quotations. A clean run is therefore evidence about this instrument, not about the tree.`,
     ),
   );
 

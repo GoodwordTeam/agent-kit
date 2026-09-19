@@ -42,6 +42,35 @@ function policyYaml(): string {
   return lines.join("\n");
 }
 
+/**
+ * The longest run of characters a case shares verbatim with its ruling.
+ *
+ * Whitespace is flattened first: a verbatim quotation in a wrapped markdown
+ * paragraph is broken by newlines that a reader never sees, and comparing
+ * against the raw text would score the wrapping rather than the quotation.
+ */
+function longestSharedRun(caseText: string, rulingText: string): number {
+  const a = caseText.replace(/\s+/g, " ").trim();
+  const b = rulingText.replace(/\s+/g, " ").trim();
+  let best = 0;
+  const row = new Array<number>(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    let diagonal = 0;
+    for (let j = 1; j <= b.length; j++) {
+      const above = row[j] ?? 0;
+      if (a[i - 1] === b[j - 1]) {
+        const run = diagonal + 1;
+        row[j] = run;
+        if (run > best) best = run;
+      } else {
+        row[j] = 0;
+      }
+      diagonal = above;
+    }
+  }
+  return best;
+}
+
 /** Format decides citation scope, so a YAML case has to stay YAML. */
 function pathFor(item: (typeof LABELLED)[number]): string {
   return item.format === "yaml" ? `policies/${item.id}.yaml` : `protocols/${item.id}/PROTOCOL.md`;
@@ -85,7 +114,7 @@ function scanAll(): Map<string, number> {
 const scores = scanAll();
 
 describe("the labelled corpus, which is what any recall claim rests on", () => {
-  for (const item of LABELLED.filter((c) => c.label === "defect")) {
+  for (const item of LABELLED.filter((c) => c.label === "defect" && c.reported)) {
     test(`${item.id} is still caught: ${item.why.slice(0, 60)}...`, () => {
       // A recall regression is the failure that matters here. A tuning change
       // that quietly drops one of these would otherwise look like a cleaner
@@ -94,7 +123,27 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     });
   }
 
-  for (const item of LABELLED.filter((c) => c.score < RESTATEMENT_THRESHOLD)) {
+  for (const item of LABELLED.filter((c) => c.label === "defect" && !c.reported)) {
+    test(`${item.id} is a known miss, pinned at ${item.score}: ${item.why.slice(0, 45)}...`, () => {
+      // This pins a defect the instrument does not see. It is not an assertion
+      // that the miss is acceptable -- it is what stops the miss from being
+      // forgotten, because the coverage note's recall claim is only true while
+      // this number is what it says.
+      //
+      // It fails when the check improves, and that failure is the point: the
+      // recall claim in `checkRestatements` and this case's label have to move
+      // in the same commit. Reclassify to `reported: true` and rewrite the note.
+      expect(scores.get(item.id) ?? 0).toBeLessThan(RESTATEMENT_THRESHOLD);
+
+      // And it is not the shared-nothing-vocabulary blind spot. The check
+      // scores these well above zero and ranks the right ruling first; the
+      // threshold is what cuts them. A miss at zero and a miss at 0.50 are
+      // different failures and only one of them is reachable by tuning.
+      expect(scores.get(item.id) ?? 0).toBeGreaterThan(0.25);
+    });
+  }
+
+  for (const item of LABELLED.filter((c) => c.label === "not-a-defect")) {
     test(`${item.id} stays rejected: ${item.why.slice(0, 55)}...`, () => {
       // The guard in the other direction. Every case found by reading the
       // report is above the line by construction, so a change that dragged
@@ -104,10 +153,62 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     });
   }
 
-  test("the set holds cases on both sides of the threshold", () => {
+  test("what the check does is recorded per case, not inferred from the score", () => {
+    // `reported` and `score` are stored separately and a disagreement between
+    // them is how a case silently changes which guard it gets. Until these two
+    // axes were split, a defect scoring below the threshold was picked up by
+    // the rejection guard and asserted to be correctly ignored.
+    for (const item of LABELLED) {
+      expect({ id: item.id, reported: item.reported }).toEqual({
+        id: item.id,
+        reported: (scores.get(item.id) ?? 0) >= RESTATEMENT_THRESHOLD,
+      });
+    }
+  });
+
+  test("the set holds cases on both sides of the threshold, and on both axes", () => {
     // A corpus of accepted cases only measures nothing about the threshold.
     expect(LABELLED.some((c) => c.score >= RESTATEMENT_THRESHOLD)).toBe(true);
     expect(LABELLED.some((c) => c.score < RESTATEMENT_THRESHOLD)).toBe(true);
+    // And a corpus with no known miss in it cannot support a recall claim at
+    // all -- it can only report the instrument's own output back to itself.
+    expect(LABELLED.some((c) => c.label === "defect" && !c.reported)).toBe(true);
+    expect(LABELLED.some((c) => c.label === "not-a-defect" && !c.reported)).toBe(true);
+  });
+
+  test("cosine does not order these by how much they quote, so no threshold fixes the misses", () => {
+    // The reason the two misses are not a tuning question, measured here rather
+    // than asserted. `:419` quotes 80 characters of its ruling and scores 0.40;
+    // `:607` quotes 79 and scores 0.55. `authoring-packaging-back-reference`
+    // and `agents-numeric-heuristics` quote an identical 65 and land 0.28
+    // apart, on opposite sides of the line. Cosine measures shared vocabulary
+    // against a corpus; an exact run measures quotation, and the two disagree.
+    //
+    // What follows from it: a second signal reaches this class and a threshold
+    // does not. An N-character run shared with an uncited ruling needs no
+    // corpus, no threshold and no version to be a finding, which is the same
+    // property that made the IDF worth pinning.
+    const runs = new Map(
+      LABELLED.map((c) => {
+        const ruling = RULINGS_AT_REVISION.find((r) => r.id === c.ruling);
+        if (ruling === undefined) throw new Error(`case cites a ruling outside the corpus: ${c.id}`);
+        return [c.id, longestSharedRun(c.text, ruling.text)] as const;
+      }),
+    );
+
+    // Sanity on the instrument doing the measuring, so a broken helper cannot
+    // make the inversion disappear by returning zero for everything.
+    expect(runs.get("authoring-second-lifecycle-entrypoint")).toBe(80);
+    expect(runs.get("authoring-repeated-failure")).toBe(79);
+
+    const missedDefects = LABELLED.filter((c) => c.label === "defect" && !c.reported);
+    const inversions = missedDefects.flatMap((missed) =>
+      LABELLED.filter((c) => c.reported && (runs.get(c.id) ?? 0) <= (runs.get(missed.id) ?? 0)).map((c) => ({
+        missed: missed.id,
+        reported: c.id,
+      })),
+    );
+    expect(inversions.length).toBeGreaterThan(0);
   });
 
   test("every case scores what it scored when it was labelled", () => {
