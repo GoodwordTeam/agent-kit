@@ -79,7 +79,8 @@ Concrete near-misses that must **not** fire this skill. At least three. These ar
 over-eager description would swallow; they are also the source of the non-trigger eval case (§9).
 
 > Not for a self-check an implementer runs on their own patch mid-build — that is `super-build`'s
-> own gate, and this skill's reviewers may not be the author.
+> own gate, and this skill's reviewers may not be the author (ruling
+> `missing-supervisor-never-implementer`).
 
 ### `## Authority`
 
@@ -408,6 +409,20 @@ section or reordering two blocks silently repoints them with nothing failing. Th
 it. A body loaded through progressive disclosure arrives at one passage without the ones above it,
 so a rule whose attribution sits seven lines up reaches the agent as a rule with no attribution —
 the state this section exists to prevent.
+
+**A quoted specimen is not a body, and this rule does not reach it.** The examples in §3 state rules
+without citing them, deliberately: nothing loads a specimen. No agent arrives at one through
+progressive disclosure, and the writer reading it has the governing section in front of them, so the
+consumer argument that makes an inline citation mandatory in a body does not transfer to a block
+quote illustrating that body's shape. Padding every specimen with citations would bury the one thing
+a specimen is for.
+
+The exemption ends where a specimen stops illustrating and starts carrying. If the rule a specimen
+states is not also stated, with its citation, in the prose that owns it, the specimen is this
+contract's only statement of that rule and it cites like any other governed sentence. The test is
+mechanical — take the ruling the specimen states and look for its id in prose. Applied to this file
+it found exactly one, §3's `## Not for` example, which is why that example now carries
+`missing-supervisor-never-implementer`.
 
 ---
 
