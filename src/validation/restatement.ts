@@ -47,26 +47,35 @@ import { note, warning, type Issue } from "./types.ts";
  * The revision is part of the measurement: the tree moves, and a figure
  * without one cannot be checked later.
  *
- * - `>= 0.65`: 3 rows, all three genuine. Tempting, and rejected -- three
- *   points is not a calibration, and it drops the most interesting row below.
- * - `>= 0.55`: 8 rows, 5 genuine -- `AGENTS.md:55`, `AGENTS.md:136`,
- *   `AUTHORING.md:431`, `AUTHORING.md:607`, `tdd:79`. The 3 false are a
- *   donor-mapping table row, README's bulleted digest of the rulings, and a
- *   field list that shares a ruling's nouns.
- * - `>= 0.40`: 40 rows. The class that arrives in bulk is the field list.
+ * - `>= 0.65`: 3 rows, all genuine.
+ * - `>= 0.55`: 8 rows, and every one of them has since been cited or rewritten
+ *   by the seat that owns the file, with the ruling this check ranked first.
+ * - `>= 0.40`: 40 rows. The class that arrives in bulk is the field list,
+ *   which at 0.55 sits below the line -- see `apply-findings-snapshot-bullet`
+ *   in the labelled corpus, a genuine rejection at 0.49.
  *
- * So five of eight at 0.55 are worth acting on. That figure replaces the much
- * better one measured on a handful of files, which never covered a corpus this
- * size.
+ * Read that repair rate as evidence and not as proof. A warning is cheap to
+ * silence, and a check whose reports are easy to make go away can manufacture
+ * its own confirmation. What raises it above that here is that each repair
+ * names the ruling this check named, and that three of the eight were argued
+ * through independently, in text, before anyone had looked at the repairs.
  *
- * `AUTHORING.md:431` was first classified false here, on the reasoning that it
- * reaches a citation seven lines up through the words "that ruling" and a
- * reader can see what it means. Two others reached the same reading and then
- * the same correction, so it is worth stating why it is wrong: 6 requires the
- * citation "inline at the sentence it governs", and says why -- the inline
- * citation is what the executing agent sees at the moment it would otherwise
- * improvise. An agent that loads one paragraph never sees the line above it.
- * Reading the file the way a human scrolls it is the wrong test.
+ * I recorded four of those eight as false in earlier revisions of this comment
+ * -- `AUTHORING.md:431`, a donor-mapping table row, README's digest bullet and
+ * a field list -- and all four were wrong in the same direction, for the same
+ * reason. Each time I argued from the container rather than the sentence: it
+ * is a back-reference, it is a table cell, it is a digest, it is an
+ * enumeration. The sentences said otherwise. The field list carries its
+ * ruling's closing clause verbatim; the table cell states its ruling's closing
+ * sentence in the repo's own voice; the digest bullet is one of six that each
+ * restate a ruling.
+ *
+ * 6 decides all four the same way. It requires the citation "inline at the
+ * sentence it governs" and gives the reason: the inline citation is what the
+ * executing agent sees at the moment it would otherwise improvise. An agent
+ * that loads one paragraph never sees the line above it, and it does not care
+ * what kind of container the sentence arrived in. Reading the file the way a
+ * human scrolls it is the wrong test, and so is reading it by shape.
  *
  * `AUTHORING.md:607` is why the threshold is not 0.65: it cites
  * `delta-baseline-reset-not-third-loop` and restates `two-fix-cycles-then-stop`
@@ -364,7 +373,7 @@ export function checkRestatements(ctx: CheckContext, threshold: number = RESTATE
     note(
       "rulings.restatement-scan-coverage",
       RULINGS_FILE,
-      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration five of the eight rows at this threshold were worth acting on, so a report is a candidate to read, not a defect to fix; the commonest false one is a list that shares a ruling's field names. Recall is worse than precision and is not quoted here: a claim that restates a ruling in none of its words scores zero, and of the three uncited restatements found by hand in this repo this scan finds two, scoring the third at zero. A clean run is therefore evidence about this instrument, not about the tree.`,
+      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration every row at this threshold was later cited or rewritten by the seat owning the file, naming the ruling this check named -- but a warning is cheap to silence, so read a report as a candidate rather than treating that rate as precision. The commonest false one is a list that shares a ruling's field names, and at this threshold it sits just below the line. Recall is worse than precision and is not quoted here: a claim that restates a ruling in none of its words scores zero, and of the three uncited restatements found by hand in this repo this scan finds two, scoring the third at zero. A clean run is therefore evidence about this instrument, not about the tree.`,
     ),
   );
 

@@ -105,8 +105,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     format: "markdown",
     anchor: "The security seat may not be filled by the implementer",
     ruling: "missing-supervisor-never-implementer",
-    label: "not-a-defect",
-    why: "A cell in a donor-concept mapping table, not a doctrinal claim in a body. It also states a different rule than the candidate it matched -- the wrong-sibling failure the report warns about. A fence- and table-aware extractor would drop it.",
+    label: "defect",
+    why: "Overturned from not-a-defect. The right cell, under a column headed 'What this repo does instead', states the ruling's closing sentence in the repo's own voice with no authority attached, and an agent loading the row sees an actionable rule. Calling it 'a table row' was a form argument about the container -- the same move rejected one case above. The row directly beneath it quotes the closing sentence of `required-lane-failure-is-unavailable` verbatim, in quotation marks, also uncited. AGENTS.md now carries the citation this check named.",
     score: 0.56,
   },
   {
@@ -116,8 +116,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     format: "markdown",
     anchor: "Delta review is bounded by affected behavior",
     ruling: "delta-scope-affected-behavior",
-    label: "undecided",
-    why: "A bullet in README's digest of the rulings, which restates all of them by construction. Whether a root digest owes inline citations is a contract question nobody has ruled on. Classified undecided rather than false so the number it contributes is not silently claimed either way.",
+    label: "defect",
+    why: "Overturned from undecided. It is a restatement -- the surrounding block is six bullets restating six rulings, and at a lowered threshold five surfaced with the correct ruling ranked first each time, scoring 0.29 to 0.64 for the identical act. The open question was the unit, not the claim: the finding is the block and a reader could call the row unactionable. README has since been repaired bullet by bullet, six citations, which answers it in practice.",
     score: 0.64,
   },
   {
@@ -127,8 +127,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     format: "markdown",
     anchor: "comparison_base`, `reviewed_head` and `last_head_verified`",
     ruling: "delta-baseline-reset-not-third-loop",
-    label: "not-a-defect",
-    why: "A list of the field names a ruling happens to mention. The documented bulk false-positive class: an enumeration scores like a restatement. Not filterable by comma density without blinding the check to every ruling that itself enumerates.",
+    label: "defect",
+    why: "Overturned from not-a-defect, and the clearest of the three errors. I read it as the field-name class because it lists three field names -- but it also carries the ruling's own closing clause, 'so the three are never conflated', verbatim. The enumeration was the container and I never read the sentence. The bullet now cites the ruling this check named. The field-name class is real and is represented here by `apply-findings-snapshot-bullet`, which sits below the threshold.",
     score: 0.60,
   },
   {
