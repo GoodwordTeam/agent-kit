@@ -1,0 +1,153 @@
+{
+  "schema": "dossier",
+  "schema_version": 1,
+  "id": "example-dossier-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "super-scout",
+    "operation": "scout.explore"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "limited",
+  "question": "Which call sites read the artifact loader, and which of them assume it returns every configured directory?",
+  "budget": {
+    "turns_allowed": 4,
+    "turns_used": 3,
+    "exhausted": false,
+    "reads_per_turn_parallel": true
+  },
+  "searches": [
+    {
+      "id": "loader-callers",
+      "tool": "lexical",
+      "query": "loadArtifacts",
+      "scope": [
+        "src/**"
+      ],
+      "result_count": 4,
+      "turn": 1
+    },
+    {
+      "id": "loader-paths",
+      "tool": "path",
+      "query": "src/loader/*",
+      "result_count": 2,
+      "turn": 1
+    },
+    {
+      "id": "loader-callers-indexed",
+      "tool": "graph",
+      "provider": "example-symbol-graph",
+      "query": "callers of loadArtifacts",
+      "result_count": 4,
+      "turn": 2
+    },
+    {
+      "id": "loader-generated",
+      "tool": "lexical",
+      "query": "loadArtifacts",
+      "scope": [
+        "generated/**"
+      ],
+      "result_count": 0,
+      "turn": 3
+    }
+  ],
+  "hits": [
+    {
+      "id": "loader-definition",
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/artifacts.ts",
+        "symbol": "loadArtifacts",
+        "line_range": {
+          "start": 24,
+          "end": 51
+        }
+      },
+      "excerpt": "export function loadArtifacts(ctx) {",
+      "relationship": "defines",
+      "confirmation": "confirmed",
+      "discovered_by": "lexical",
+      "search": "loader-callers"
+    },
+    {
+      "id": "report-caller",
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/report/index.ts",
+        "symbol": "buildReport"
+      },
+      "excerpt": "const { artifacts } = loadArtifacts(ctx);",
+      "relationship": "calls",
+      "confirmation": "confirmed",
+      "discovered_by": "graph",
+      "index": {
+        "provider": "example-symbol-graph",
+        "index_revision": "1111111111111111111111111111111111111111",
+        "indexed_at": "2026-09-19T09:00:00Z",
+        "freshness": "fresh"
+      },
+      "search": "loader-callers-indexed",
+      "note": "Reads the first entry only and discards the rest."
+    }
+  ],
+  "graph_providers": [
+    {
+      "name": "example-symbol-graph",
+      "available": true,
+      "index": {
+        "provider": "example-symbol-graph",
+        "index_revision": "1111111111111111111111111111111111111111",
+        "indexed_at": "2026-09-19T09:00:00Z",
+        "freshness": "fresh"
+      }
+    },
+    {
+      "name": "example-call-graph",
+      "available": false,
+      "unavailable_reason": "The provider is not installed in this environment."
+    }
+  ],
+  "coverage_limits": [
+    {
+      "area": "Dynamically dispatched call sites.",
+      "why": "index-unavailable",
+      "consequence": "A caller reached only through a dispatch table would not appear in these hits; the lexical pass is the only coverage there.",
+      "provider": "example-call-graph"
+    }
+  ],
+  "unknowns": [
+    "Does any caller outside this repository depend on the single-directory behaviour?"
+  ],
+  "do_not_touch": [
+    {
+      "path": "generated/**",
+      "reason": "Regenerated from the schema; an edit here is overwritten on the next build."
+    }
+  ],
+  "recommendation": {
+    "further_inspection": [
+      {
+        "what": "The dispatch table in src/report/registry.ts",
+        "why": "Lexical search found the identifier there but not a call; whether it reaches the loader was not settled.",
+        "suggested_tool": "manual-read"
+      }
+    ],
+    "priority_order": [
+      "The dispatch table in src/report/registry.ts"
+    ]
+  }
+}

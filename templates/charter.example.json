@@ -1,0 +1,147 @@
+{
+  "schema": "charter",
+  "schema_version": 1,
+  "id": "example-charter-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "human"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "0000000000000000000000000000000000000000"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "active",
+  "immutability": {
+    "immutable": true,
+    "worker_writable": false,
+    "hash": "sha256:b95c76edd38f95ae5b0efc83323dde4af5978bb7b79094a6aa63e5c39b29a760",
+    "location": "example-org/example-knowledgebase/projects/example-project/runs/example-run-1/charter.json"
+  },
+  "work_source": {
+    "kind": "ticket",
+    "ref": {
+      "id": "example-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision": "0000000000000000000000000000000000000000"
+    },
+    "summary": "Close the finding raised against the artifact loader in the example service."
+  },
+  "repos": [
+    {
+      "repo": "example-org/example-service",
+      "base_branch": "main",
+      "work_branch_prefix": "example-run/",
+      "paths": [
+        "src/**",
+        "tests/**"
+      ]
+    }
+  ],
+  "artifact_destinations": {
+    "kb_root": "example-org/example-knowledgebase",
+    "runs_path": "projects/example-project/runs",
+    "project": "example-project"
+  },
+  "allowed_capabilities": [
+    "repository-read",
+    "repository-write",
+    "isolated-worktree",
+    "isolated-review-context",
+    "process-exec",
+    "vcs-local",
+    "artifact-write",
+    "runner-grants"
+  ],
+  "default_grants": [
+    "approve-ticket",
+    "start-implementation-ticket",
+    "adjudicate-finding",
+    "local-commit",
+    "publish-lesson"
+  ],
+  "denied_actions": [
+    "merge",
+    "deploy",
+    "production-credentials",
+    "force-push",
+    "history-rewrite"
+  ],
+  "checkpoints": [
+    "ticket-approval",
+    "finding-adjudication",
+    "lesson-publication"
+  ],
+  "limits": {
+    "fix_cycles": 2,
+    "ci_repair_attempts": 3,
+    "alignment_questions": 5,
+    "tickets": 10,
+    "elapsed_minutes": 120,
+    "review_rounds": 2
+  },
+  "budgets": {
+    "provided_by": "runner",
+    "enforces": [
+      "fix-cycles",
+      "ci-repair-attempts",
+      "elapsed-minutes",
+      "tickets"
+    ],
+    "on_exhaustion": "cap-reached"
+  },
+  "supervisors": {
+    "seats": [
+      {
+        "id": "seat-one",
+        "role": "supervisor",
+        "filled_by": "supervisor"
+      },
+      {
+        "id": "seat-two",
+        "role": "supervisor",
+        "filled_by": "reviewer-standards"
+      }
+    ],
+    "independence": "declared-independent",
+    "tie_breaker_allowed": false,
+    "may_implement": false,
+    "on_missing_seat": "block-and-escalate"
+  },
+  "ci_repair": {
+    "may_weaken_checks": false,
+    "attempts": 3,
+    "product_code_changes": "re-enter-normal-evidence-path"
+  },
+  "escalation_policy": {
+    "stop_writes": true,
+    "stop_shipping": true,
+    "permitted_readonly": [
+      "reading the repository at the recorded revision",
+      "reading artifacts already written by this run"
+    ],
+    "return_control_to": "runner"
+  },
+  "cancellation": {
+    "cancellable_by": [
+      "human",
+      "runner"
+    ],
+    "on_cancel": "preserve-artifacts"
+  },
+  "approvals": [
+    {
+      "artifact_hash": "sha256:51ee41dc80a81df2072ac2a1e5d9f7321edb18bb315a624c916c4edbe5991aaf",
+      "by": "human",
+      "authority": "explicit",
+      "at": "2026-09-19T09:00:00Z",
+      "note": "Approved before the run opened; the charter is fixed for its whole duration."
+    }
+  ]
+}

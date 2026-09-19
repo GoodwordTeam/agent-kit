@@ -1,0 +1,151 @@
+{
+  "schema": "decision",
+  "schema_version": 1,
+  "id": "example-decision-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "runner"
+  },
+  "inputs": [
+    {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "ruled",
+  "checkpoint": "finding-adjudication",
+  "question": "Is the partial read in the artifact loader accepted for a fix in this run, or deferred to its own piece of work?",
+  "options": [
+    {
+      "id": "fix-in-run",
+      "summary": "Accept the finding and fix it inside this run.",
+      "consequence": "One more fix cycle is spent; the loader is correct at the shipped revision."
+    },
+    {
+      "id": "defer",
+      "summary": "Defer the finding to its own ticket.",
+      "consequence": "This run ships with a loader that reads one directory."
+    }
+  ],
+  "evidence": [
+    {
+      "ref": "projects/example-project/runs/example-run-1/finding.json",
+      "kind": "artifact",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "ref": "projects/example-project/runs/example-run-1/dossier.json",
+      "kind": "artifact",
+      "hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "required_evidence": [
+    "projects/example-project/runs/example-run-1/finding.json",
+    "projects/example-project/runs/example-run-1/dossier.json"
+  ],
+  "affected_artifacts": [
+    {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "id": "example-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "charter": {
+    "hash": "sha256:b95c76edd38f95ae5b0efc83323dde4af5978bb7b79094a6aa63e5c39b29a760",
+    "rule": "charter:checkpoints/finding-adjudication",
+    "grant": {
+      "charter_hash": "sha256:51ee41dc80a81df2072ac2a1e5d9f7321edb18bb315a624c916c4edbe5991aaf",
+      "covers": "finding-adjudication",
+      "decision": "example-decision-1"
+    }
+  },
+  "seats": [
+    {
+      "id": "seat-one",
+      "filled_by": "supervisor",
+      "independent": true,
+      "may_implement": false
+    },
+    {
+      "id": "seat-two",
+      "filled_by": "reviewer-standards",
+      "independent": true,
+      "may_implement": false
+    }
+  ],
+  "judgments": [
+    {
+      "seat": "seat-one",
+      "by": "supervisor",
+      "choice": "fix-in-run",
+      "rationale": "The remedy is bounded and the suite already covers the loader, so the fix costs less than carrying the finding.",
+      "unresolved_assumptions": [],
+      "escalate": false,
+      "at": "2026-09-19T09:00:00Z",
+      "saw_other_judgment": false
+    },
+    {
+      "seat": "seat-two",
+      "by": "reviewer-standards",
+      "choice": "fix-in-run",
+      "rationale": "Shipping a loader that silently drops documents would leave the standards lane unable to cite anything about them.",
+      "unresolved_assumptions": [
+        "Whether any consumer outside this repository relies on the current behaviour."
+      ],
+      "escalate": false,
+      "at": "2026-09-19T09:00:00Z",
+      "saw_other_judgment": false
+    }
+  ],
+  "agreement": true,
+  "authority_check": {
+    "deterministic": true,
+    "charter_permits": true,
+    "required_evidence_present": true,
+    "seats_independent": true,
+    "checkpoint_in_charter": true,
+    "both_judgments_returned": true,
+    "result": "pass"
+  },
+  "ruling": {
+    "outcome": "decided",
+    "chosen_option": "fix-in-run",
+    "at": "2026-09-19T09:00:00Z",
+    "recorded_by": "policy",
+    "note": "Recorded by the policy check; the matching judgments are a fact about the seating and not the authority."
+  },
+  "grants_issued": [
+    {
+      "charter_hash": "sha256:51ee41dc80a81df2072ac2a1e5d9f7321edb18bb315a624c916c4edbe5991aaf",
+      "covers": "adjudicate-finding",
+      "decision": "example-decision-1"
+    }
+  ],
+  "result": {
+    "operation": "decision.adjudicate",
+    "status": "complete",
+    "next_permitted_action": "Dispatch the accepted finding to the fixer named on its ticket.",
+    "outputs": [
+      {
+        "id": "example-decision-1",
+        "schema": "decision",
+        "hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  }
+}

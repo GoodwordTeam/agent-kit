@@ -1,0 +1,144 @@
+{
+  "schema": "finding",
+  "schema_version": 1,
+  "id": "example-finding-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "code-review/security",
+    "skill": "super-review",
+    "operation": "review.full"
+  },
+  "inputs": [
+    {
+      "id": "example-dossier-1",
+      "schema": "dossier",
+      "hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "resolved",
+  "title": "The artifact loader returns only the first configured directory",
+  "detail": "Every caller treats the returned set as complete, so a document in any later directory is never validated. Whether an unvalidated document can reach a trusted path was not established from the evidence to hand, which is why this is anchored at 50 rather than higher.",
+  "lane": "code-review/security",
+  "fingerprint": {
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "inputs": {
+      "rule": "loader-returns-a-partial-set",
+      "symbol_or_path": "src/loader/artifacts.ts#loadArtifacts",
+      "evidence_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  },
+  "severity": "P2",
+  "presentation_label": "Important",
+  "confidence_anchor": 50,
+  "spec_quality": "patch",
+  "difficulty": "mechanical",
+  "autofix_class": "gated_auto",
+  "evidence": [
+    {
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/artifacts.ts",
+        "symbol": "loadArtifacts",
+        "line_range": {
+          "start": 24,
+          "end": 51
+        }
+      },
+      "observation": "The loop body returns on its first iteration, so only the first configured directory is ever read. The motivating line was identified by its symbol rather than quoted, which is what the 50 anchor records."
+    },
+    {
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/config/defaults.ts",
+        "symbol": "ARTIFACT_DIRS"
+      },
+      "observation": "Only one directory is configured by default, so on a default configuration the partial read is not observable.",
+      "supports": "counter-evidence"
+    }
+  ],
+  "conflicting_evidence": [
+    {
+      "ref": "projects/example-project/reviews/example-review-1",
+      "kind": "artifact",
+      "note": "An earlier pass read the same code and did not raise it."
+    }
+  ],
+  "suggested_fix": {
+    "summary": "Accumulate across the configured directories instead of returning inside the loop.",
+    "affected": [
+      "src/loader/artifacts.ts"
+    ]
+  },
+  "verification": [
+    {
+      "check": "A document in a non-first configured directory is returned by the loader.",
+      "kind": "command",
+      "supports": [
+        "AC-1"
+      ]
+    }
+  ],
+  "authorization_ref": {
+    "kind": "decision",
+    "decision": {
+      "id": "example-decision-1",
+      "schema": "decision",
+      "hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  },
+  "adjudication": {
+    "by": "supervisor",
+    "outcome": "accepted",
+    "rationale": "The anchor is low because the reachability of an unvalidated document was not established, not because the partial read is in doubt. The partial read is confirmed, so the concern is accepted and fixed rather than filtered on its anchor.",
+    "at": "2026-09-19T09:00:00Z",
+    "evidence": [
+      {
+        "ref": "projects/example-project/runs/example-run-1/dossier.json",
+        "kind": "artifact"
+      }
+    ]
+  },
+  "dispatch": {
+    "kind": "fixer",
+    "ticket": {
+      "id": "example-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "at": "2026-09-19T09:00:00Z"
+  },
+  "closure_receipt": {
+    "verification": {
+      "id": "example-verification-1",
+      "schema": "verification",
+      "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    "closed_by": "code-review/testing",
+    "independent": true,
+    "at": "2026-09-19T09:00:00Z",
+    "revision": {
+      "repo": "example-org/example-service",
+      "revision": "1111111111111111111111111111111111111111"
+    }
+  },
+  "review": {
+    "id": "example-review-1",
+    "schema": "review",
+    "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+  },
+  "first_seen": {
+    "repo": "example-org/example-service",
+    "revision": "0000000000000000000000000000000000000000"
+  }
+}

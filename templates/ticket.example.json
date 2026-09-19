@@ -1,0 +1,103 @@
+{
+  "schema": "ticket",
+  "schema_version": 1,
+  "id": "example-ticket-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "supervisor",
+    "skill": "super-bound",
+    "operation": "bound.ticket"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "0000000000000000000000000000000000000000"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "approved",
+  "type": "implementation",
+  "title": "Load example artifacts from every configured artifact directory",
+  "work_source": {
+    "kind": "finding",
+    "ref": {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "revision": "0000000000000000000000000000000000000000"
+    }
+  },
+  "goal": "The artifact loader reads every directory it is configured with, so a document outside the first one is validated rather than skipped.",
+  "non_goals": [
+    "Changing which directories are configured.",
+    "Changing any schema."
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "text": "A document in a non-first configured directory is returned by the loader."
+    },
+    {
+      "id": "AC-2",
+      "text": "A directory that does not exist is skipped without an error."
+    }
+  ],
+  "prerequisites": [
+    {
+      "kind": "decision",
+      "ref": "example-decision-1",
+      "satisfied": true
+    }
+  ],
+  "allowed_changes": {
+    "files": [
+      "src/loader/**"
+    ],
+    "symbols": [
+      "loadArtifacts"
+    ]
+  },
+  "read_dependencies": [
+    "src/config/**",
+    "tests/loader/**"
+  ],
+  "verification": [
+    {
+      "id": "loader-suite",
+      "check": "Run the loader unit suite.",
+      "kind": "command",
+      "supports": [
+        "AC-1",
+        "AC-2"
+      ]
+    }
+  ],
+  "stop_conditions": [
+    "The fix requires changing a schema: stop and raise a decision instead.",
+    "The second fix cycle ends without a green receipt: stop and return blocked."
+  ],
+  "kb_refs": [
+    {
+      "ref": "projects/example-project/decisions/artifact-directories",
+      "kind": "kb-fact",
+      "note": "Records why more than one artifact directory is configured."
+    }
+  ],
+  "integration_owner": "implementer",
+  "write_ownership": {
+    "paths": [
+      "src/loader/**"
+    ],
+    "generated_artifacts": [],
+    "migration_sequence": null,
+    "interfaces": [
+      {
+        "name": "loadArtifacts",
+        "role": "changes"
+      }
+    ]
+  }
+}

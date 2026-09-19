@@ -1,0 +1,92 @@
+{
+  "schema": "lesson",
+  "schema_version": 1,
+  "id": "example-lesson-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "compound",
+    "operation": "compound.capture"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "published",
+  "title": "A loop that returns inside its body reads one input and reports a whole set",
+  "statement": "When a loader iterates a configured list and returns from inside the loop, every caller receives a partial set that is shaped exactly like a complete one; check the return position before trusting a set's completeness.",
+  "trigger": {
+    "kind": "surprising-review-result",
+    "occurrence": {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "summary": "An earlier pass read the same function and did not raise it, because a partial set and a complete set are the same shape.",
+    "at": "2026-09-19T09:00:00Z"
+  },
+  "evidence": [
+    {
+      "ref": "projects/example-project/runs/example-run-1/finding.json",
+      "kind": "artifact",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "ref": "projects/example-project/runs/example-run-1/verification.json",
+      "kind": "receipt",
+      "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    }
+  ],
+  "applies_to": {
+    "domains": [
+      "artifact loading",
+      "code review"
+    ],
+    "paths": [
+      "src/loader/**"
+    ],
+    "packs": [
+      "pack-test"
+    ],
+    "skills": [
+      "super-review"
+    ]
+  },
+  "guidance": [
+    "Where a function returns a collection built from a configured list, read the return position before reading the loop body.",
+    "A set that is never compared against its configured inputs cannot be observed to be short."
+  ],
+  "counter_examples": [
+    "A loop that returns on the first match is correct when the contract is first-match; the lesson is about set-returning functions."
+  ],
+  "publication": {
+    "authorization": {
+      "kind": "delegated-grant",
+      "grant": {
+        "charter_hash": "sha256:51ee41dc80a81df2072ac2a1e5d9f7321edb18bb315a624c916c4edbe5991aaf",
+        "covers": "publish-lesson",
+        "decision": "example-decision-1"
+      }
+    },
+    "kb_ref": "example-org/example-knowledgebase/projects/example-project/lessons/partial-sets-look-complete",
+    "published_at": "2026-09-19T09:00:00Z"
+  },
+  "skill_changes": [
+    {
+      "skill": "super-review",
+      "state": "rolled-back",
+      "change_ref": {
+        "id": "example-skill-change-1",
+        "schema": "ticket",
+        "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "at": "2026-09-19T09:00:00Z"
+    }
+  ]
+}

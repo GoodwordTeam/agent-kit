@@ -1,0 +1,148 @@
+{
+  "schema": "project",
+  "schema_version": 1,
+  "id": "example-project-record",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": null,
+  "created_by": {
+    "role": "human"
+  },
+  "inputs": [],
+  "source_revision": null,
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "active",
+  "identity": {
+    "id": "example-project",
+    "name": "Example Service",
+    "repos": [
+      {
+        "repo": "example-org/example-service",
+        "role": "application",
+        "default_branch": "main",
+        "kb_locator": "kb/project.json"
+      },
+      {
+        "repo": "example-org/example-knowledgebase",
+        "role": "knowledgebase",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "kb": {
+    "ownership": "central",
+    "root": "example-org/example-knowledgebase",
+    "project_path": "projects/example-project",
+    "directories": {
+      "decisions": "projects/example-project/decisions",
+      "reviews": "projects/example-project/reviews",
+      "runs": "projects/example-project/runs"
+    },
+    "paired_pr": {
+      "required": true,
+      "coordinator": "kb-merge-coordinator",
+      "atomic": false
+    },
+    "adapter_operations": [
+      "readContext",
+      "recordDecision",
+      "publishArtifact",
+      "linkPullRequests",
+      "proposeLesson"
+    ]
+  },
+  "standards": [
+    {
+      "id": "authoring-contract",
+      "path": "AUTHORING.md",
+      "applies_to": [
+        "skills/**",
+        "templates/**"
+      ],
+      "lane": "code-review/project-standards"
+    }
+  ],
+  "limits": {
+    "fix_cycles": 2,
+    "consensus_rounds": 3,
+    "scout_turns": 4,
+    "ultraqa_cycles": 5,
+    "same_failure_occurrences": 3,
+    "ci_repair_attempts": 3,
+    "review_lanes_max": 8
+  },
+  "guidance": {
+    "pr_size": {
+      "target_changed_lines": 100,
+      "enforcement": "advisory"
+    },
+    "test_pyramid": {
+      "unit_percent": 80,
+      "integration_percent": 15,
+      "end_to_end_percent": 5,
+      "enforcement": "advisory"
+    },
+    "exceptions": [
+      {
+        "guidance": "pr_size",
+        "reason": "A schema change and the documents that conform to it land together; splitting them would ship a schema no document satisfies.",
+        "recorded_at": "2026-09-19T09:00:00Z",
+        "scope": "schemas/ and templates/"
+      }
+    ]
+  },
+  "mandatory_constraints": [
+    {
+      "id": "closure-needs-a-receipt",
+      "requirement": "A finding reaches resolved only with a verification receipt written by someone other than its author.",
+      "evidence_required": [
+        "a verification artifact bound to the reviewed revision"
+      ],
+      "blocks": "ship"
+    }
+  ],
+  "tracker_policy": {
+    "system_of_record": {
+      "system": "example-tracker",
+      "url": "https://tracker.example.invalid/example-project",
+      "id_pattern": "^EX-[0-9]+$"
+    },
+    "mirrors": [
+      {
+        "system": "example-forge-issues",
+        "role": "projection",
+        "url": "https://forge.example.invalid/example-org/example-service/issues"
+      }
+    ],
+    "policy": "Every state change is written to the tracker first; the forge issue is refreshed from it and is never edited directly."
+  },
+  "profiles": [
+    "core",
+    "autonomy"
+  ],
+  "packs": [
+    "pack-test",
+    "pack-secure"
+  ],
+  "environments": [
+    {
+      "id": "example-ci",
+      "description": "Container image the example service runs its suite in.",
+      "isolated": true,
+      "secrets_policy": "test-only",
+      "toolchain": [
+        {
+          "name": "bun",
+          "version": "1.3.14"
+        }
+      ]
+    }
+  ],
+  "documentation_policy": {
+    "required_on_ship": true,
+    "allow_no_new_decision": true,
+    "indexing_required": true
+  }
+}

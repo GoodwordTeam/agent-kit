@@ -1,0 +1,241 @@
+{
+  "schema": "review",
+  "schema_version": 1,
+  "id": "example-review-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "super-review",
+    "operation": "review.delta"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "complete",
+  "mode": "delta",
+  "comparison_base": {
+    "repo": "example-org/example-service",
+    "revision": "0000000000000000000000000000000000000000"
+  },
+  "reviewed_head": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "last_head_verified": {
+    "repo": "example-org/example-service",
+    "revision": "0000000000000000000000000000000000000000"
+  },
+  "snapshot": {
+    "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "immutable": true,
+    "reviewers_may_edit_source": false,
+    "includes": [
+      "diff",
+      "tests",
+      "prior-findings",
+      "verification-receipts"
+    ],
+    "excludes": [
+      "implementer-narrative",
+      "other-reviewer-judgments"
+    ]
+  },
+  "authorship": {
+    "implementer": "implementer",
+    "spec_approver": "reviewer-spec",
+    "tickets": [
+      {
+        "id": "example-ticket-1",
+        "schema": "ticket",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "role": "code-review/correctness",
+      "required": true,
+      "tier": "always-on",
+      "state": "covered",
+      "seat": {
+        "filled_by": "code-review/correctness",
+        "independent_of_author": true,
+        "context_isolated": true
+      },
+      "verdict": "approve",
+      "evidence": [
+        {
+          "ref": "projects/example-project/runs/example-run-1/verification.json",
+          "kind": "receipt"
+        }
+      ]
+    },
+    {
+      "role": "code-review/security",
+      "required": true,
+      "tier": "always-on",
+      "state": "covered",
+      "seat": {
+        "filled_by": "code-review/security",
+        "independent_of_author": true,
+        "context_isolated": true
+      },
+      "verdict": "approve",
+      "findings": [
+        {
+          "id": "example-finding-1",
+          "schema": "finding",
+          "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ]
+    },
+    {
+      "role": "code-review/frontend-races",
+      "required": false,
+      "tier": "stack-conditional",
+      "state": "skipped",
+      "reason": "The change touches no browser code, so the lane's activation conditions were not met.",
+      "verdict": "no-opinion"
+    }
+  ],
+  "packs_attached": [
+    {
+      "pack": "pack-test",
+      "matched_rules": [
+        "changed-paths-include-tests"
+      ],
+      "rationale": "The fix changes a loader that the suite covers directly, so the test pack's constraints apply to this pass.",
+      "evidence": [
+        {
+          "ref": "src/loader/artifacts.ts",
+          "kind": "code"
+        }
+      ],
+      "attached_at": "2026-09-19T09:00:00Z",
+      "attached_by": {
+        "role": "orchestrator",
+        "skill": "super-review"
+      },
+      "target": {
+        "id": "example-review-1",
+        "schema": "review",
+        "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+      },
+      "classifier_used": false,
+      "rejected": [
+        {
+          "pack": "pack-frontend",
+          "why": "No browser code is in the affected surface."
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "new_findings": [
+    {
+      "finding": {
+        "id": "example-finding-1",
+        "schema": "finding",
+        "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "novelty_evidence": [
+        {
+          "ref": "projects/example-project/runs/example-run-1/dossier.json",
+          "kind": "artifact",
+          "note": "The second configured directory was added in this change; before it the partial read had no observable effect."
+        }
+      ],
+      "in_untouched_caller": false
+    }
+  ],
+  "delta_scope": {
+    "boundary": "affected-behavior",
+    "affected_behavior": [
+      "Which artifact directories the loader reads.",
+      "What every caller of the loader receives."
+    ],
+    "touched_dependencies": [
+      "src/config/defaults.ts"
+    ],
+    "affected_surface": [
+      {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/artifacts.ts",
+        "symbol": "loadArtifacts"
+      }
+    ],
+    "excluded": [
+      "The report formatter, whose behaviour does not change with the size of the returned set."
+    ]
+  },
+  "packet": {
+    "prior_review": {
+      "id": "example-review-0",
+      "schema": "review",
+      "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "original_findings": [
+      {
+        "id": "example-finding-1",
+        "schema": "finding",
+        "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ],
+    "fix_diff": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "input_hashes": [
+      "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    ],
+    "dispositions": [
+      {
+        "finding": {
+          "id": "example-finding-1",
+          "schema": "finding",
+          "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "disposition": "resolved",
+        "evidence": [
+          {
+            "ref": "projects/example-project/runs/example-run-1/verification.json",
+            "kind": "receipt"
+          }
+        ]
+      }
+    ],
+    "verification_receipts": [
+      {
+        "id": "example-verification-1",
+        "schema": "verification",
+        "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+      }
+    ]
+  },
+  "continuity": {
+    "mode": "replacement-with-packet",
+    "prior_findings_packet": {
+      "id": "example-packet-1",
+      "schema": "review",
+      "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "independent_of_author": true
+  },
+  "fix_cycles": {
+    "allowed": 2,
+    "used": 1,
+    "exhausted_action": "blocked"
+  },
+  "verdict": "approved"
+}
