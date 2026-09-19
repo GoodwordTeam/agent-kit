@@ -10,7 +10,8 @@ start them.
 
 A **public entrypoint** is started by a human. On a host with a slash-command surface, only the
 slash command counts as the human act. A **phase operation** is the same phase logic reached by a
-delegated controller, and only when the runner validates a grant that covers it. The two are one
+delegated controller, and only when the runner validates a grant that covers it (ruling
+`entrypoint-phase-operation-split`). The two are one
 pipeline with two doors: a delegated run executes the same protocol a human-started run does, so
 there is no second, looser path through the lifecycle.
 

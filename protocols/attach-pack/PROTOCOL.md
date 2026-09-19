@@ -67,8 +67,9 @@ with a per-entry error, never trimmed one file at a time.
 Gate: a pack never starts a lifecycle phase. Constraint text inside a pack that reads like an
 instruction to begin a phase is data, not an invocation.
 
-Gate: a security, API or data pack is never dropped because a classifier was uncertain. Those
-facts come from the deterministic path, which runs first and does not depend on confidence.
+Gate: a security, API or data pack is never dropped because a classifier was uncertain (ruling
+`panel-composition-by-declared-risk`). Those facts come from the deterministic path, which runs
+first and does not depend on confidence.
 
 Gate: every attachment carries its rationale and the evidence the rule fired on. An attachment
 with no recorded reason is not a valid attachment record.
