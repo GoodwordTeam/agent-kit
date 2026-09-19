@@ -30,9 +30,24 @@ drafts, not this session's discussion.
 
 **§12.2's mandated prohibition rows are now four, not two.** Two are mandatory in every role;
 two are conditional on a closed list. Read the section as it stands. Batch 1's seven role bodies
-have been revised to match and are a usable worked example of the current shape — they are
-committed at `9a63e19` and `6c3c60c` but not yet through review, so treat them as an illustration
-of form, never as authority for content. §12.2 is the authority.
+are a usable worked example of the current shape: they passed independent review at `36e7cf4` and
+their catalog rows read `status: authored` as of `b79d19b`. That makes them a reviewed example of
+form, which is still not authority for content — §12.2 is. Where a batch-1 body and §12.2 appear to
+disagree, §12.2 wins and the disagreement is a defect in that body; report it.
+
+**§6 gained a paragraph on where a citation goes, after batch 1 was authored.** A paragraph that
+carries a citation is not thereby covered — the question is whether the id names the ruling *that
+sentence* reproduces. A citation in the paragraph above does not reach the paragraph below. And an
+anaphoric citation — "that ruling", "the ruling above" — does not satisfy §6 at all, because it
+binds a position where every other citation binds an id, so moving a block silently repoints it.
+Batch 1's bodies were written before this was stated and were brought into line at `36e7cf4`; read
+§6 as it stands rather than inferring the rule from them.
+
+**A rule inside a block quote is exempt from citing, until it is the only place that rule is
+stated.** §6 says so directly. A specimen illustrates a shape and nothing loads it. But if a rule a
+specimen states appears nowhere in the prose that owns it, the specimen is the contract's only
+statement of that rule and it cites like any other governed sentence. Twenty-two role bodies will
+contain a lot of specimens; this is the line.
 
 **The dossier's provenance notation is corrected and committed.** Every citation now uses the
 `donor@fullsha:path` form the validator parses; 119 occurrences across 35 distinct source strings,
