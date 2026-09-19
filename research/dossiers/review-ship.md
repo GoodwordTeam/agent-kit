@@ -17,7 +17,7 @@ being cited.
 | ADDY | `.donors/addyosmani_agent-skills` (S6) | `c004a74784a08295d52749b04cda634125b9a581` |
 
 Plan sources for this batch: §2.1 row `super-review`/`super-ship`
-(`.work/sources/engineering-skills-repo-plan.md#L86-91`), §2.3 row
+(`research/sources/engineering-skills-repo-plan.md#L86-91`), §2.3 row
 `receiving-review` (`#L113`), §2.5 rows `babysit-pr`/`ultraqa`/OMX two-lane
 review (`#L144-147,159`), §5.1 skill-contract example (literally
 `super-review`, `#L312-337`), §5.5 findings fields (`#L362-379`), §5.6
@@ -272,7 +272,7 @@ is describing this donor's mechanism nearly verbatim.
 
 ### 1.2 Delta closure (plan-original composition, §6.3)
 
-`.work/sources/engineering-skills-repo-plan.md#L418-429` (quoted in full,
+`research/sources/engineering-skills-repo-plan.md#L418-429` (quoted in full,
 this is the authoritative text for the `delta` entrypoint -- no donor ships
 this exact mechanism):
 
@@ -850,7 +850,7 @@ This is a plan-original integration rule; see §Gaps, item G1.
 ## 6. Gaps (capability required by this batch, no donor provides it)
 
 **G1 -- ultraqa mutation invalidates review evidence.**
-`.work/sources/engineering-skills-repo-plan.md#L145` states "any mutation
+`research/sources/engineering-skills-repo-plan.md#L145` states "any mutation
 invalidates affected review evidence" as ultraqa's boundary, but neither
 OMX's `ultraqa` (which only tracks its own cycle/failure state) nor CE's
 review pipeline (which tracks `input hashes` per plan §5.2/§6.3 but has no

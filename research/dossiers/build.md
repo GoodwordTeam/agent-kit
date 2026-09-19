@@ -3,8 +3,8 @@
 Items: `skills/super-scout` (M), `skills/super-build` (M, starts only on human go or a
 runner-validated delegation grant), `skills/super-verify` (M), `skills/diagnose` (M).
 
-Governing sources: plan = `.work/sources/engineering-skills-repo-plan.md` (cited `plan §x`);
-transcript = `.work/sources/grok-transcript.md` (cited `G:Lx-Ly`, 1-based). Citation format for
+Governing sources: plan = `research/sources/engineering-skills-repo-plan.md` (cited `plan §x`);
+transcript = `research/sources/grok-transcript.md` (cited `G:Lx-Ly`, 1-based). Citation format for
 donor content: `<donor-id>@<commit8>:<path>[#Lx-Ly]`. Every path below was verified to exist at
 the pinned commit with `git -C .donors/<dir> cat-file -e <commit>:<path>` in this session.
 
@@ -22,7 +22,7 @@ the pinned commit with `git -C .donors/<dir> cat-file -e <commit>:<path>` in thi
 `pocock`'s two-axis code review is also cited below for `super-build`'s per-ticket
 reviewer-spec/reviewer-standards split, from the pinned commit at
 `pocock@c55ee460:skills/engineering/code-review/SKILL.md` (verified in this session with
-`git cat-file -e`). `.work/sources/pocock-code-review-two-axis.SKILL.md` is a **near-identical but
+`git cat-file -e`). `research/sources/pocock-code-review-two-axis.SKILL.md` is a **near-identical but
 not byte-identical** copy of this same skill (confirmed by direct diff in this session: different
 MD5, 89 vs. 87 lines) — same mechanism throughout (two independent parallel sub-agents, the same
 "Why two axes" argument, the same Fowler smell baseline and its two governing rules), but a slightly

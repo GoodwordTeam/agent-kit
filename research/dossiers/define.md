@@ -6,7 +6,7 @@ Batch items: `skills/super-align` (U), `skills/super-bound` (U), `skills/wayfind
 
 All donor commits were verified present with `git cat-file -e <commit>:<path>` at the pinned
 SHAs in the task header before citing them below. Plan section numbers are `plan §x`. Transcript
-locators are `G:Lx-Ly` (1-based lines of `.work/sources/grok-transcript.md`).
+locators are `G:Lx-Ly` (1-based lines of `research/sources/grok-transcript.md`).
 
 ---
 
