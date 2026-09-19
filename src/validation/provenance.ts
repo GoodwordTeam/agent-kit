@@ -37,7 +37,8 @@ export function parseGLocator(text: string): GLocator | null {
 
 export type LocatorReference =
   | { kind: "transcript"; start: number; end: number }
-  | { kind: "document"; document: "plan" | "arch"; section: string };
+  | { kind: "document"; document: "plan" | "arch"; section: string }
+  | { kind: "amalgam"; left: string; right: string };
 
 /**
  * `plan §7.1`, `arch §3`, `plan §9 (Milestone 7)`.
@@ -51,8 +52,30 @@ export type LocatorReference =
  */
 const DOCUMENT_REFERENCE = /^(plan|arch) §(\d+(?:\.\d+)*(?: \([^()]+\))?)$/;
 
+/**
+ * `amalgam roles/code-review/frontend-races + roles/doc-review/design-lens`.
+ *
+ * The locator for a capability that exists only because two donor-derived seats
+ * were placed in the same catalog: a boundary neither donor could state, because
+ * neither knows the other exists, and the transcript never specified, because it
+ * never enumerated seat pairs at this granularity. AGENTS.md opens by saying this
+ * repository *amalgamates* six donors; this is the origin that verb produces.
+ *
+ * Both endpoints are catalog destinations, so this locator is checkable in a way
+ * a transcript range is not: `G:L` gets an upper bound and nothing more, while an
+ * amalgam reference dangles loudly the moment either seat is renamed or dropped.
+ *
+ * It also has no bootstrapping problem. A commit SHA would be the obvious anchor
+ * and cannot be written, because the row lands in the same commit as the body it
+ * describes. Both seats here pre-date the row, so the locator names only things
+ * that already exist -- which is the reason to locate a boundary by its endpoints
+ * rather than by the act that drew it.
+ */
+const AMALGAM_REFERENCE = /^amalgam (\S+) \+ (\S+)$/;
+
 /** Render a reference the way the map writes it, so a message quotes the offending one. */
 export function formatLocatorReference(reference: LocatorReference): string {
+  if (reference.kind === "amalgam") return `amalgam ${reference.left} + ${reference.right}`;
   if (reference.kind === "document") return `${reference.document} §${reference.section}`;
   return reference.start === reference.end ? `G:L${reference.start}` : `G:L${reference.start}-${reference.end}`;
 }
@@ -84,6 +107,11 @@ export function parseLocatorField(text: string): LocatorReference[] | null {
     const transcript = parseGLocator(part);
     if (transcript !== null) {
       references.push({ kind: "transcript", start: transcript.start, end: transcript.end });
+      continue;
+    }
+    const amalgam = AMALGAM_REFERENCE.exec(part);
+    if (amalgam?.[1] !== undefined && amalgam[2] !== undefined) {
+      references.push({ kind: "amalgam", left: amalgam[1], right: amalgam[2] });
       continue;
     }
     const match = DOCUMENT_REFERENCE.exec(part);
@@ -626,17 +654,19 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
       else prior.push(row);
     }
 
-    if (row["origin"] === "conversation" && typeof row["source"] === "string" && row["source"].length > 0) {
+    const origin = row["origin"];
+    if ((origin === "conversation" || origin === "amalgam") && typeof row["source"] === "string" && row["source"].length > 0) {
       issues.push(
         error(
           "provenance.fabricated-source",
           CONVERSATION_MAP,
-          `'${id}' has origin: conversation but carries a donor source '${row["source"]}'. A capability absent upstream carries a locator, never a source path.`,
+          `'${id}' has origin: ${String(origin)} but carries a donor source '${row["source"]}'. A capability absent upstream carries a locator, never a source path.`,
         ),
       );
     }
 
     issues.push(...checkLocatorField(id, row, transcriptLines));
+    issues.push(...checkAmalgamOrigin(id, row, destination, owned));
   }
 
   for (const section of DIRECTORY_SECTIONS) {
@@ -673,17 +703,95 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
         continue;
       }
       if (!landed.some((r) => r["origin"] === "conversation")) {
+        // Named rather than assumed: with three origins in the map, "not conversation"
+        // no longer implies "donor", and a message that guesses wrong sends the reader
+        // to check something the row does not say.
+        const found = [...new Set(landed.map((r) => (typeof r["origin"] === "string" ? r["origin"] : "(absent)")))].sort();
         issues.push(
           error(
             "provenance.missing-conversation-origin",
             CONVERSATION_MAP,
-            `${section}/${entry.id} declares provenance_origin: conversation but every capability landing in ${dir} is recorded as origin: donor. One of the two is wrong about where the capability came from.`,
+            `${section}/${entry.id} declares provenance_origin: conversation but every capability landing in ${dir} is recorded as origin: ${found.join(", ")}. One of the two is wrong about where the capability came from.`,
           ),
         );
       }
     }
   }
 
+  return issues;
+}
+
+/**
+ * An `origin: amalgam` row against the seats it claims to sit between.
+ *
+ * Three things have to hold, and each corresponds to a way the row could be a
+ * placeholder wearing a locator's clothes. The origin and the locator form must
+ * agree, or `amalgam` becomes a label anything can carry. Both endpoints must be
+ * declared, or the boundary is drawn against something that does not exist. And
+ * the row must land on one of its own endpoints, because a boundary is owned by
+ * the seats it separates -- a third party describing someone else's boundary is
+ * how a rationale drifts out of reach of the thing it explains.
+ *
+ * Reciprocity is deliberately not required. Two of the first three rows are a
+ * matched pair recorded from both sides, and the third is a single row resolving
+ * a distinction that turned out not to be a counterpart family at all. Demanding
+ * a partner row would force the writer to invent one.
+ */
+function checkAmalgamOrigin(
+  id: string,
+  row: Record<string, unknown>,
+  destination: string | null,
+  owned: ReadonlySet<string>,
+): Issue[] {
+  const raw = row["locator"];
+  const references = typeof raw === "string" ? (parseLocatorField(raw) ?? []) : [];
+  const pairs = references.filter((reference) => reference.kind === "amalgam");
+  const isAmalgam = row["origin"] === "amalgam";
+
+  if (!isAmalgam) {
+    if (pairs.length === 0) return [];
+    return [
+      error(
+        "provenance.amalgam-origin-mismatch",
+        CONVERSATION_MAP,
+        `'${id}' carries an amalgam locator but origin: ${String(row["origin"])}. A boundary between two seats is not in either donor and is not in the transcript; the origin has to say so.`,
+      ),
+    ];
+  }
+
+  if (pairs.length === 0) {
+    return [
+      error(
+        "provenance.amalgam-origin-mismatch",
+        CONVERSATION_MAP,
+        `'${id}' has origin: amalgam but no 'amalgam <destination> + <destination>' reference in its locator. This origin exists to name the two seats whose pairing created the capability, and a row that names neither has recorded nothing.`,
+      ),
+    ];
+  }
+
+  const issues: Issue[] = [];
+  for (const pair of pairs) {
+    if (pair.kind !== "amalgam") continue;
+    for (const endpoint of [pair.left, pair.right]) {
+      if (owned.has(endpoint)) continue;
+      issues.push(
+        error(
+          "provenance.amalgam-endpoint-unknown",
+          CONVERSATION_MAP,
+          `'${id}' draws a boundary against '${endpoint}', which catalog.yaml declares no entry for. An amalgam locator is only as good as its endpoints: if a seat was renamed or dropped, the capability between them needs re-deciding, not repointing.`,
+        ),
+      );
+    }
+    if (destination !== null && pair.left !== destination && pair.right !== destination) {
+      issues.push(
+        error(
+          "provenance.amalgam-destination-outside-pair",
+          CONVERSATION_MAP,
+          `'${id}' lands in '${destination}' but sits between '${pair.left}' and '${pair.right}'. A boundary is recorded on a seat it separates, so the reader who opens that seat finds it.`,
+        ),
+      );
+    }
+  }
   return issues;
 }
 
@@ -700,7 +808,7 @@ function checkLocatorField(id: string, row: Record<string, unknown>, transcriptL
       error(
         "provenance.g-locator-invalid",
         CONVERSATION_MAP,
-        `'${id}' has locator '${raw}', which is not a ';'-separated list of G:L<start>[-<end>] transcript ranges and 'plan §<section>' or 'arch §<section>' document references.`,
+        `'${id}' has locator '${raw}', which is not a ';'-separated list of G:L<start>[-<end>] transcript ranges, 'plan §<section>' or 'arch §<section>' document references, and 'amalgam <destination> + <destination>' seat pairs.`,
       ),
     ];
   }

@@ -514,3 +514,89 @@ describe("conversation-map destinations", () => {
     expect(issue?.message).toContain("dropped");
   });
 });
+
+describe("amalgam provenance: a boundary the catalog created", () => {
+  /** A map holding one amalgam row, so each test varies exactly one field. */
+  function mapWith(fields: string): string {
+    return `schema_version: 1
+capabilities:
+  - id: invented-capability
+    disposition: retained
+    destination: skills/invented
+    origin: conversation
+    locator: G:L1672-1676
+  - id: seat-boundary
+${fields}
+`;
+  }
+
+  function amalgamIssues(fields: string) {
+    const ctx = ctxFor({
+      "provenance/conversation-map.yaml": mapWith(fields),
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    });
+    return checkProvenance(ctx).filter((i) => i.rule.startsWith("provenance.amalgam") || i.rule === "provenance.fabricated-source");
+  }
+
+  const WELL_FORMED = `    disposition: retained
+    destination: skills/adapted
+    origin: amalgam
+    locator: amalgam skills/adapted + skills/invented`;
+
+  test("the locator grammar parses a seat pair", () => {
+    expect(parseLocatorField("amalgam skills/adapted + skills/invented")).toEqual([
+      { kind: "amalgam", left: "skills/adapted", right: "skills/invented" },
+    ]);
+  });
+
+  test("a pair can sit beside a transcript range and a plan section", () => {
+    expect(parseLocatorField("G:L10-12; amalgam skills/adapted + skills/invented; plan §2.1")).toHaveLength(3);
+  });
+
+  test("a half-written pair is not a locator", () => {
+    expect(parseLocatorField("amalgam skills/adapted")).toBeNull();
+    expect(parseLocatorField("amalgam skills/adapted +")).toBeNull();
+  });
+
+  test("a well-formed amalgam row passes", () => {
+    expect(amalgamIssues(WELL_FORMED)).toEqual([]);
+  });
+
+  test("origin: amalgam with no pair in the locator is an error", () => {
+    const issue = amalgamIssues(`    disposition: retained
+    destination: skills/adapted
+    origin: amalgam
+    locator: G:L1672-1676`).find((i) => i.rule === "provenance.amalgam-origin-mismatch");
+    expect(issue?.message).toContain("has recorded nothing");
+  });
+
+  test("a pair under any other origin is an error, so the label cannot drift", () => {
+    const issue = amalgamIssues(`    disposition: retained
+    destination: skills/adapted
+    origin: conversation
+    locator: amalgam skills/adapted + skills/invented`).find((i) => i.rule === "provenance.amalgam-origin-mismatch");
+    expect(issue?.message).toContain("origin: conversation");
+  });
+
+  test("an endpoint the catalog does not declare is an error naming it", () => {
+    const issue = amalgamIssues(`    disposition: retained
+    destination: skills/adapted
+    origin: amalgam
+    locator: amalgam skills/adapted + skills/ghost`).find((i) => i.rule === "provenance.amalgam-endpoint-unknown");
+    expect(issue?.message).toContain("skills/ghost");
+  });
+
+  test("a row landing outside its own pair is an error", () => {
+    const issue = amalgamIssues(`    disposition: retained
+    destination: skills/invented
+    origin: amalgam
+    locator: amalgam skills/adapted + skills/adapted`).find((i) => i.rule === "provenance.amalgam-destination-outside-pair");
+    expect(issue?.message).toContain("skills/invented");
+  });
+
+  test("an amalgam row carrying a donor source is the same defect as a fabricated one", () => {
+    const issue = amalgamIssues(`${WELL_FORMED}
+    source: donor-one@abc1234:skills/brainstorm/SKILL.md`).find((i) => i.rule === "provenance.fabricated-source");
+    expect(issue?.message).toContain("origin: amalgam");
+  });
+});

@@ -29,10 +29,11 @@
 # a design change that has to argue with the row, not a fix that closes a hole.
 #
 # Field notes
-#   locator         Where the capability is *specified* -- a transcript range, a plan section, or
-#                   both. Never where its text came from: no row in this file carries a donor
-#                   path, and `origin: donor` constrains the adaptations row rather than this
-#                   field. The two answer different questions and neither substitutes.
+#   locator         Where the capability is *specified* -- a transcript range, a plan section, a
+#                   seat pair, or several. Never where its text came from: no row in this file
+#                   carries a donor path, and `origin: donor` constrains the adaptations row
+#                   rather than this field. The two answer different questions and neither
+#                   substitutes.
 #   origin          donor        = at least one pinned donor in provenance/upstream.lock.yaml
 #                                 implements this; the adapted file's row lives in
 #                                 provenance/adaptations.d/.
@@ -41,6 +42,21 @@
 #                                 a source path. Never fabricate a donor path (plan §1.4).
 #                   Where a dossier distinguished "plan §8"-original from transcript-original,
 #                   both fold into `conversation` and the `note` preserves which one it was.
+#                   amalgam      = neither. The capability exists only because two donor-derived
+#                                 seats were placed in the same catalog: a boundary no donor
+#                                 could state, because neither knows the other exists, and the
+#                                 transcript never specified, because it never enumerated seat
+#                                 pairs this finely. AGENTS.md opens by saying this repository
+#                                 *amalgamates* six donors; this is the origin that verb makes.
+#                                 Locator is `amalgam <destination> + <destination>`, naming both
+#                                 seats. Not a general "authored here" bucket -- see below.
+#   Why `amalgam` is narrow, since the temptation is to widen it. Its endpoints are what make it
+#   a locator rather than a shrug: both seats are declared, so the reference dangles the moment
+#   either is renamed or dropped, which is more than `G:L` can say for itself. A general
+#   "designed here" value would have no such anchor, and would become the place rows go when
+#   nobody can say where a capability came from. A capability grounded in nothing is not a
+#   spelling problem; it is an open question about why it is in the package, and it belongs in
+#   CONTRACT-DEFECTS.md rather than in a locator column. `locator: null` is not a resting state.
 #   acceptance_test The concrete behavior that proves the capability landed. Numbered release
 #                   scenarios refer to plan §10's list of 24.
 #   note            Present only where a reader would otherwise draw the wrong conclusion.
@@ -1405,3 +1421,55 @@ capabilities:
     acceptance_test: >-
       Budgets come from the runner and the catalog enforces only the cap it was handed; no file
       states a price, a quota or an effort level.
+
+  # =========================================================================
+  # Boundaries the amalgamation created (origin: amalgam)
+  # =========================================================================
+  # Seat-pair boundaries that exist because this catalog seats two donors together. Filed by
+  # batch2-reviewer against review-personas.yaml as three rows carrying `locator: null`; the
+  # writer was right to refuse a fabricated locator and right that the fragment key they used
+  # is dropped by the merge. The null was the symptom of a missing category, not a missing
+  # value.
+
+  - id: frontend-races-vs-design-lens-boundary
+    capability: Which seat owns an in-flight-request concern — a race in a diff belongs to frontend-races, a missing decision in a document belongs to design-lens
+    disposition: retained
+    destination: roles/code-review/frontend-races
+    locator: amalgam roles/code-review/frontend-races + roles/doc-review/design-lens
+    origin: amalgam
+    acceptance_test: >-
+      Both ROLE.md bodies state the boundary in the same terms and each names the other seat, so
+      a reader arriving at either one finds the rule without needing the other open.
+    note: >-
+      The near-miss is one sentence read twice. "The plan does not say what happens while the
+      request is in flight" is a missing decision in a document; "the in-flight request has no
+      cancellation" is a race in a diff. The two donors sit on different panels and neither
+      names the other, so neither could have drawn this line.
+
+  - id: design-lens-vs-frontend-races-boundary
+    capability: The same boundary stated from the document-review side, so the rule is present on whichever seat the reader opened
+    disposition: retained
+    destination: roles/doc-review/design-lens
+    locator: amalgam roles/doc-review/design-lens + roles/code-review/frontend-races
+    origin: amalgam
+    acceptance_test: >-
+      Removing either body's statement of the boundary leaves the other intact and still correct;
+      the pair is recorded twice on purpose, not duplicated by accident.
+    note: >-
+      Recorded on both paths because a reader arrives from whichever file they have open. Two
+      rows rather than one for the same reason.
+
+  - id: feasibility-vs-plan-review-architect-distinction
+    capability: Feasibility and plan-review/architect are not a counterpart family — internal coherence against a frozen snapshot is a different question from external survivability against the codebase the document lands in
+    disposition: retained
+    destination: roles/doc-review/feasibility
+    locator: amalgam roles/doc-review/feasibility + roles/plan-review/architect
+    origin: amalgam
+    acceptance_test: >-
+      Neither seat's body defers to the other and neither is described as the other's document or
+      code counterpart; the two are seated independently.
+    note: >-
+      Examined and resolved as not a counterpart family, which is why this row has no partner on
+      the architect side: the finding is that the pairing does not exist. No donor states the
+      distinction — the seats come from different donors and this package is the first artifact
+      to seat them together.
