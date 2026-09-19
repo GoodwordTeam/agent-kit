@@ -28,27 +28,34 @@ drafts, not this session's discussion.
 
 ## Facts about this batch you cannot get from those files
 
-**§12.2 changed after the dossier was written.** Its mandated prohibition rows were split
-following a strain report from batch 1's writer. Read the section as it stands; do not pattern
-match against batch 1's committed role bodies, which predate the split and are being revised.
-The dossier is unaffected — it cites the contract by name rather than restating it.
+**§12.2's mandated prohibition rows are now four, not two.** Two are mandatory in every role;
+two are conditional on a closed list. Read the section as it stands. Batch 1's seven role bodies
+have been revised to match and are a usable worked example of the current shape — but they are
+not yet committed and not yet through review, so treat them as an illustration of form, never as
+authority for content. §12.2 is the authority.
 
-**Provenance notation is being corrected in the dossier, not by you.** Its citations used donor
-aliases and abbreviated commits that do not resolve against `provenance/upstream.lock.yaml`.
-`personas` is fixing the notation; the underlying donor paths were spot-checked at the pin and
-are correct. Work from the corrected dossier. If you find a source string that does not resolve,
-that is a dossier defect — report it, and do not repair it by guessing the expansion.
+**The dossier's provenance notation is corrected and committed.** Every citation now uses the
+`donor@fullsha:path` form the validator parses; 119 occurrences across 35 distinct source strings,
+none unresolved. Work from it as it stands. If you still find a source string that does not
+resolve, that is a dossier defect — report it and do not repair it by guessing the expansion.
 
-**Twelve Pocock citations have no resolved category yet.** They point at
-`research/sources/pocock-code-review-two-axis.SKILL.md`, a recovered in-repo copy that differs
-from the pinned upstream file in 58 of its ~88 lines. It is a different artifact, so the pin is
-not its source even though a plausible-looking path exists there. `provmap` is ruling on how a
-vendored in-repo source is recorded. Where the dossier flags one of these, leave the provenance
-slot empty and list it in your handback. Do not invent a spelling, and do not cite the pin.
+**The twelve Pocock citations resolve at the pin. Cite them as they stand.** An earlier version
+of this brief told you to leave those provenance slots empty and not cite the pin, on the grounds
+that the recovered in-repo copy differs from the pinned upstream file in 58 of ~88 lines. That
+figure counted punctuation and reflow. Normalized, the two artifacts differ substantively in three
+places, none of which any of the twelve citations depends on; two line ranges carried the recovered
+file's numbering and have been re-pointed. `provmap` and `personas` established this independently
+of each other. Following the earlier instruction would have stripped twelve valid provenance rows,
+which is why it is corrected here rather than left for you to discover.
 
-**One writer authors all twenty-two.** That is deliberate: the seats' boundaries against each
-other are the hard part of this batch, and they cannot be drawn consistently by writers who
-cannot see each other's files.
+**No open provenance category blocks this batch.** The question of how a vendored in-repo source is
+recorded is decided-but-unimplemented, and it has no users: the one row that would have needed it
+resolved without it. If you reach a citation that needs a category that does not exist, you will
+get a loud `provenance.malformed-source` failure rather than silent acceptance — stop and report it.
+
+**One writer authors all twenty-two.** That is deliberate: the seats' boundaries against each other
+are the hard part of this batch, and they cannot be drawn consistently by writers who cannot see
+each other's files.
 
 ## The two failure modes I expect, named so you can report them rather than absorb them
 
