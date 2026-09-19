@@ -410,6 +410,7 @@ conflicts:
     binds:
       skills: [super-review, receiving-review]
       roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
+      protocols: [review-delta]
       schemas: [review]
       policies: [review, authority-defaults]
       adapters: [runner-contract]
