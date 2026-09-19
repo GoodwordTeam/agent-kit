@@ -752,7 +752,14 @@ moved. A quotation that never resolved fails the same rule at the commit that fi
 the section the entry names is still somewhere in this file, so a file-wide search passes it — while
 the entry now points at a section that does not contain what it quotes, which is the defect rather
 than an escape from it. The scope is stated rather than implied because implying it was not enough:
-this rule was written and then implemented file-wide by the same hand, inside one day.
+this rule was written and then implemented file-wide by the same hand, inside one day. An entry that
+names no section the check can resolve fails this rule rather than falling outside it: a checker
+that widens to the whole file when it cannot find the scope restores the loose behaviour exactly
+where the entry gave it least to work with, which is `required-lane-failure-is-unavailable`'s last
+sentence applied to a checker rather than a lane. Failing closed is not the same as matching
+strictly, and the two are easy to confuse here: a citation may carry a gloss its heading does not,
+so resolve on the section number and ignore the rest of the reference. An implementation that
+compares the whole rendered citation manufactures the unresolvable case it then has to fail.
 
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
