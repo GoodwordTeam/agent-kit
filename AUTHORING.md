@@ -751,6 +751,18 @@ incorrect owns telling the writers working against it. This is the previous two 
 reviewer instead of the writer: a review measured against a moved baseline is a check known to be
 wrong, and a reviewer is never at fault for having read the revision it was given.
 
+**Stating that duty is not enough, and this section is its own evidence.** It asks whoever lands a
+change to assess their own diff, which is where it fails: a change described in good faith as a
+reword also moved a character inside a verbatim-mandated quotation, under a live review, and the
+materiality note that accompanied it did not mention the string. So the reviewer's recorded revision
+is machine-readable, and `ak validate` fails when a file the review covers has moved past that
+revision with no notice recorded against the newer one.
+
+**The gate is silent movement, not movement.** Movement during a review is legitimate and happened
+repeatedly while this section was being written; the notice is what makes it safe. A check that
+failed on movement alone would make the duty unperformable, and an unperformable gate gets turned
+off.
+
 **A handback lists every donor file the writer cited that its dossier did not name.** Following a
 dossier's citation into the pinned clone and finding adjacent material is expected: it is how a
 dossier's coverage limits get discovered, and it is not an exception to justify. The list exists
@@ -845,7 +857,7 @@ mean for the shape they govern.
 
 ### 12.1 Protocols
 
-`protocols/<id>/PROTOCOL.md`, one directory per catalog entry, seven of them.
+`protocols/<id>/PROTOCOL.md`, one directory per catalog entry.
 
 Shared phase logic invoked **by skills**. A protocol is what a skill's phase operation delegates to,
 which is exactly why it is not an entrypoint: it has no human trigger of its own.
@@ -893,7 +905,7 @@ not one:
 | Heading | What goes in it |
 |---|---|
 | `## What this seat judges` | The one question this seat answers. One sentence |
-| `## Not this seat` | The adjacent seats **and non-seat steps** this one would be mistaken for, and what belongs to them. Three or four *sibling seats*, not fourteen, plus unbudgeted non-seat and cross-layer entries — below |
+| `## Not this seat` | The adjacent seats **and non-seat steps** this one would be mistaken for, and what belongs to them. Three or four *sibling seats*, not the whole panel, plus unbudgeted non-seat and cross-layer entries — below |
 | `## What it must be given` | What must be true of the seat's input before it may judge at all. An obligation on the caller — below |
 | `## Evidence it must cite` | What the seat must point at for a finding to be admissible |
 | `## Never` | The seat's prohibitions. Four rows are governed: two mandatory, two conditional — below |
@@ -1102,16 +1114,18 @@ condition is a closed list rather than the writer's judgment.
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
-   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+2. **A lane that could not run, could not be given its required context, or failed, returns
+   `unavailable`, and says why.** That is a result, not an absence. A required lane that is
+   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled
+   by the author, the implementer, another seat or the synthesis step (ruling
    `required-lane-failure-is-unavailable`).
 
 **Conditional, required exactly where the condition holds:**
 
-3. **Authorship.** Every seat carries *"never edits: it judges and returns."* The two that
-   produce an artifact — `implementer` and `plan-review/planner` — carry the converse instead,
-   naming what the seat writes and stating that it never writes a finding, a receipt, a review record
-   or a ticket, and never closes or approves what it produced.
+3. **Never edits: it judges and returns.** Carried by every seat except the two that produce an
+   artifact. `implementer` and `plan-review/planner` carry the converse instead, naming what the
+   seat writes and stating that it never writes a finding, a receipt, a review record or a ticket,
+   and never closes or approves what it produced.
 4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and
    `code-review/project-standards` (the catalog's only `tier: standards-gate`). They carry *"cites an
    actual project rule or returns empty; an absent standard is never an invented preference."* This
