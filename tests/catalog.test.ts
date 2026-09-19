@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { loadCatalog } from "../src/catalog/load.ts";
-import { DIRECTORY_SECTIONS, entryDir, preferredBodyFile, entryFilePath } from "../src/catalog/layout.ts";
+import { DIRECTORY_SECTIONS, MANDATORY_BODY_SECTIONS, entryDir, preferredBodyFile, entryFilePath } from "../src/catalog/layout.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const MINIMAL = `schema_version: 1
@@ -133,6 +133,20 @@ describe("catalog loading", () => {
 describe("catalog layout", () => {
   test("directory-backed sections are the five with both-direction completeness", () => {
     expect([...DIRECTORY_SECTIONS]).toEqual(["skills", "packs", "protocols", "roles", "references"]);
+  });
+
+  test("the sections whose body file name is mandatory, including the ones left out", () => {
+    // Membership in this list is what makes `catalog.unexpected-body-name` an
+    // error rather than a warning, and bodies.test.ts covers four of the five
+    // directory sections by that consequence: promote `references` and its
+    // "stays a warning" test fails, demote `protocols` or `roles` and theirs do.
+    //
+    // `packs` is the gap. It has no body-name test of its own, so adding it
+    // here flips a severity for an entire section and the suite stays green --
+    // measured. That is what this assertion is for. It guards the sections that
+    // are absent, which is the half no behavioural test can reach, and it is
+    // deliberately not a second copy of the three assertions that already pass.
+    expect([...MANDATORY_BODY_SECTIONS]).toEqual(["skills", "protocols", "roles"]);
   });
 
   test("entryDir joins the section root and the id, including nested role ids", () => {

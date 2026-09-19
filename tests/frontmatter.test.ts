@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { checkFrontmatter, AGENT_SKILLS_KEYS, HOST_GENERATED_KEYS } from "../src/validation/frontmatter.ts";
-import { checkBudget, SKILL_LINE_WARN, SKILL_LINE_FAIL } from "../src/validation/budget.ts";
+import { BUDGETED, checkBudget, SKILL_LINE_WARN, SKILL_LINE_FAIL } from "../src/validation/budget.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -89,6 +89,21 @@ describe("instruction budget", () => {
   test("the limits are AUTHORING.md's: warn over 150, fail over 300", () => {
     expect(SKILL_LINE_WARN).toBe(150);
     expect(SKILL_LINE_FAIL).toBe(300);
+  });
+
+  test("the sections the budget governs are exactly the three AUTHORING.md names", () => {
+    // §12.5: "`BUDGETED` measures skills, protocols and roles, and a reference
+    // pack is deliberately absent from it." That sentence is a claim about this
+    // value, and it is load-bearing -- §12.5 spends the following paragraph
+    // explaining why a reference pack is exempt from §1's numbers.
+    //
+    // The three sections named are each covered behaviourally below and in
+    // bodies.test.ts, so dropping one already fails something. Adding a fourth
+    // does not: appending a `references` row to BUDGETED makes §12.5's sentence
+    // false, and with this pin removed the suite stays green. Measured, not
+    // assumed. This assertion is the only thing standing between that edit and
+    // a passage that no longer describes the code.
+    expect(BUDGETED.map((b) => b.section)).toEqual(["skills", "protocols", "roles"]);
   });
 
   test("a short skill body produces nothing", () => {

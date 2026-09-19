@@ -19,7 +19,7 @@ export const SKILL_LINE_FAIL = 300;
  * unmeasured cap invites exactly that -- a writer reasoning about a limit the
  * tool is silent on cannot tell a real overage from an imagined one.
  */
-const BUDGETED: ReadonlyArray<{ section: DirectorySection; over: string; cap: string }> = [
+export const BUDGETED: ReadonlyArray<{ section: DirectorySection; over: string; cap: string }> = [
   { section: "skills", over: "budget.skill-over-target", cap: "budget.skill-over-cap" },
   { section: "protocols", over: "budget.body-over-target", cap: "budget.body-over-cap" },
   { section: "roles", over: "budget.body-over-target", cap: "budget.body-over-cap" },

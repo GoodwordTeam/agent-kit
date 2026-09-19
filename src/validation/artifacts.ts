@@ -203,25 +203,30 @@ function checkFinding(artifact: LoadedArtifact): Issue[] {
           : null;
   if (closer === null) return out;
 
+  // Deliberately narrowed to one half of the schema tag
+  // `finding.closer-is-not-the-author-of-the-change`: the closer is not the
+  // author of the *finding*. The other half -- not the author of the fix --
+  // used to be implemented here against `fix_author` and `fix.author`, two
+  // keys finding.schema.json declares nowhere, so it could never fire on a
+  // conforming document while reading exactly like a check that could.
+  //
+  // It is relocated, not dropped. A finding records a defect and its closure;
+  // the patch's authorship belongs with the patch, and giving the finding a
+  // fix-author field would add one that is empty until some other process
+  // backfills it -- an always-empty field is how a check comes to read green
+  // because nothing populates it, which is the bug this narrowing exists to
+  // stop repeating. The `apply-findings` protocol owns the eligibility gate
+  // and already selects who applies a fix (policies/review.yaml), so it holds
+  // both identities at the moment the separation can be enforced.
   const author = record(value["created_by"])?.["role"];
-  // The other half of `finding.closer-is-not-the-author-of-the-change`, and it
-  // is not reachable today: no field in finding.schema.json names who wrote the
-  // fix, so a conforming finding carries neither of these keys and this arm
-  // cannot fire. Left in place because the rulemap declares the obligation --
-  // deleting it would drop the requirement silently -- but it is a known gap,
-  // not a working check, until the schema declares a fix-author field.
-  const fixAuthor = typeof value["fix_author"] === "string" ? value["fix_author"] : record(value["fix"])?.["author"];
-
-  for (const [label, who] of [["its own author", author], ["the fix author", fixAuthor]] as const) {
-    if (typeof who === "string" && who === closer) {
-      out.push(
-        error(
-          "finding.self-closed",
-          artifact.file,
-          `closure_receipt names '${closer}' as the closer, which is ${label}. An author may never close their own finding; closure needs an independent verifier.`,
-        ),
-      );
-    }
+  if (typeof author === "string" && author === closer) {
+    out.push(
+      error(
+        "finding.self-closed",
+        artifact.file,
+        `closure_receipt names '${closer}' as the closer, which is the finding's own author. An author may never close their own finding; closure needs an independent verifier.`,
+      ),
+    );
   }
 
   return out;

@@ -71,6 +71,14 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
   // finding.schema.json
   "finding.fingerprint-stable-across-line-moves": ["finding.fingerprint-stable-across-line-moves"],
   "finding.presentation-label-never-substitutes-for-severity": ["finding.presentation-label-never-substitutes-for-severity"],
+  // Narrowed on purpose, and the narrowing is the record. `finding.self-closed`
+  // enforces one half of this tag: the closer is not the author of the finding.
+  // The other half -- not the author of the *change* -- was implemented against
+  // `fix_author` and `fix.author`, which finding.schema.json declares nowhere,
+  // so it never fired on a conforming document. It is held by the
+  // `apply-findings` protocol instead of by a field on the finding, because a
+  // finding would carry that field empty until something else backfilled it.
+  // Not pending and not unimplemented: relocated. See src/validation/artifacts.ts.
   "finding.closer-is-not-the-author-of-the-change": ["finding.self-closed"],
   "finding.synthesis-may-only-worsen-a-grade": ["finding.synthesis-may-only-worsen-a-grade"],
   "finding.low-confidence-security-is-adjudicated-not-filtered": ["finding.low-confidence-security-is-adjudicated-not-filtered"],

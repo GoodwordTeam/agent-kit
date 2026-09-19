@@ -181,13 +181,13 @@ describe("no author closes their own finding", () => {
     expect(issue?.severity).toBe("error");
   });
 
-  test("a closure receipt signed by the fix author is an error", () => {
-    // This passes on a shape no conforming finding can have. `fix_author` is
-    // declared nowhere in finding.schema.json, so the arm it exercises cannot
-    // fire on a real document; the obligation the rulemap states under
-    // `finding.closer-is-not-the-author-of-the-change` is only half enforced.
-    // Kept so the code path stays covered, but it is not evidence the other
-    // half works -- see the comment on fixAuthor in src/validation/artifacts.ts.
+  test("a fix author who is not the finding's author does not close it here", () => {
+    // The scope boundary, kept as a test because the old behaviour looked like
+    // coverage. `fix_author` is declared nowhere in finding.schema.json, and
+    // the arm that read it could not fire on a conforming document. Separating
+    // the fix author from the closer is real, and it is enforced by the
+    // `apply-findings` protocol, which knows who applied a patch; this check
+    // answers the narrower question the finding can actually answer.
     const ctx = ctxFor({
       "templates/f.json": JSON.stringify(
         envelope("finding", {
@@ -198,7 +198,7 @@ describe("no author closes their own finding", () => {
         }),
       ),
     });
-    expect(checkArtifacts(ctx).some((i) => i.rule === "finding.self-closed")).toBe(true);
+    expect(checkArtifacts(ctx).some((i) => i.rule === "finding.self-closed")).toBe(false);
   });
 
   test("an independent closure receipt passes", () => {

@@ -288,11 +288,16 @@ describe("only independent verification evidence closes a finding", () => {
   });
 
   test("a receipt that does not claim independence does not close a finding", () => {
-    // The strongest form of 'the fixer's own claim' this schema can see. Whether
-    // the named closer is in fact the author of the change is a cross-document
-    // comparison, held by the `finding.closer-is-not-the-author-of-the-change`
-    // validator rule rather than by any shape here; this case is the half that
-    // is structural, and it is not evidence about the other half.
+    // The strongest form of 'the fixer's own claim' this schema can see.
+    // Whether the named closer is in fact the author of the change is a
+    // cross-document comparison and no shape here decides it. This deferral
+    // used to name the `finding.closer-is-not-the-author-of-the-change`
+    // validator rule, which was wrong twice over: that rule could not fire at
+    // all, and the half it was reaching for is not the validator's. The closer
+    // versus the finding's author is checked below; the closer versus the
+    // author of the fix belongs to the `apply-findings` protocol, which is the
+    // only place both identities exist. This case is the structural half and
+    // is not evidence about either.
     expect(reason({ ...RESOLVED, closure_receipt: { ...RECEIPT, independent: false } })).toMatch(/independent/);
     const { independent, ...withoutClaim } = RECEIPT;
     expect(reason({ ...RESOLVED, closure_receipt: withoutClaim })).toMatch(/independent/);
