@@ -262,8 +262,8 @@ only thing standing between a U skill and an unrequested start.
 ### 4.2 Fields with no prose mirror
 
 The §4.1 table is about **agreement, not completeness**. `skill.yaml` must satisfy
-`schemas/skill.schema.json` in full — nineteen required fields — and four of them have no prose
-mirror above, which is exactly why each would otherwise be invented differently in every batch.
+`schemas/skill.schema.json` in full, and the fields below are the required ones with no prose mirror
+above, which is exactly why each would otherwise be invented differently in every batch.
 
 **`id`** — equals the skill's directory name and its `catalog.yaml` entry id. With the frontmatter
 `name` from §4, that is one string in four places. There is no separate naming step.
@@ -569,6 +569,16 @@ The same holds for a count or a range measured over this repository. "Eleven of 
 and nothing recomputes it. State what the figure was evidence for and let a reader who needs the
 number count it. Where a measured figure has to be quoted, it carries the revision it was measured
 at, so a later reader can tell whether it still holds.
+
+A reference into another document **by position** is the third form of the same defect. "Section 5",
+a line number, "the table above" — each survives the target being renumbered or rewritten, still
+parses, and points somewhere else. The test is whether the position can move without the reference
+moving with it. Inside one file it cannot: renumbering a section and repointing what cites it are
+the same edit in the same diff, which is why the cross-references in this file are by number and are
+safe. Into a pinned source it cannot either — material in `research/sources/` is cited at the pin
+(§5), so a locator there is exactly as stable as the pin is. Across a live document boundary it can,
+because the renumbering and the repointing belong to different files, different owners and different
+commits, and nothing couples them. Name the section there. Say what it is called, not where it sits.
 
 ---
 
@@ -927,8 +937,8 @@ Three kinds of confusion belong in this heading, and the budget above governs **
    `plan-review/critic`, `plan-review/planner` naming `implementer`. Neither a sibling nor a twin:
    a seat whose output could be mistaken for this one's across a stage boundary. **Not budgeted, and
    each must name the confusion it prevents.** That sentence is the entry's whole justification, and
-   without it this kind has no natural limit — there are twenty-eight other seats and any of them can
-   be argued adjacent to any other.
+   without it this kind has no natural limit — every other seat in the package is a candidate, and
+   any of them can be argued adjacent to any other.
 
 **Kind 1 means same-panel, and the three-or-four cap counts only those.** A seat in another panel is
 kind 3 or kind 4 and is never charged against it.
@@ -1123,7 +1133,7 @@ leave out.
 ### 12.3 Loose doctrine files
 
 `protocols/invocation-authority.md` is a **file, not a directory**, and has **no catalog entry**. The
-catalog's seven protocols do not include it, and that is correct: the plan's tree places it exactly
+catalog's protocol entries do not include it, and that is correct: the plan's tree places it exactly
 there (`research/sources/engineering-skills-repo-plan.md:220`).
 
 This is safe rather than an oversight. `ak validate`'s directory-without-entry check lists
