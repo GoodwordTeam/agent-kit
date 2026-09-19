@@ -28,10 +28,10 @@ that depends on another package's hooks, skills or session state (ruling
 `SKILL.md` whose workflow cannot be executed with nothing but this package's own files is a
 validation failure, not a design.
 
-That ruling also governs packaging, which this section does not: the full catalog ships and
-profiles select what installs, so a skill is never trimmed, gated or duplicated to suit a profile.
-Read it before adding an entrypoint — "no duplicate donor lifecycles, no second run-everything
-entrypoint" is the same ruling, and §7 enforces it.
+`full-catalog-opt-in-profiles` also governs packaging, which this section does not: the full catalog
+ships and profiles select what installs, so a skill is never trimmed, gated or duplicated to suit a
+profile. Read it before adding an entrypoint — "no duplicate donor lifecycles, no second
+run-everything entrypoint" is that ruling quoted directly, and §7 enforces it.
 
 What belongs in the body: the trigger, the boundary, the ordered workflow, the gates, the stop
 conditions. What belongs in `references/`: catalogs, rubrics, long tables, worked examples, format
@@ -394,6 +394,21 @@ This is mandatory because those are the exact sentences a writer would otherwise
 rulings exist because two donors, or a donor and the plan, said different things; a skill that states
 one side without the citation looks settled and is not.
 
+**A citation is most likely to go missing at the moment it is most needed.** Restoring a clause the
+contract dropped means reaching for the ruling, and the clearest way to restore it is in the ruling's
+own words — which produces a verbatim reproduction that reads as settled prose and feels like nothing
+was restated at all. Exactness is what makes it a defect rather than what excuses it. Three
+corollaries bind a writer. A paragraph that carries a citation is not thereby covered: the question
+is whether the id names the ruling *this sentence* reproduces, not whether some ruling is named
+nearby. A citation in the paragraph above does not reach the paragraph below — cite at the point of
+use, even when it repeats an id stated a few lines earlier. And an anaphoric citation does not
+satisfy this rule at all: "that ruling", "the ruling above", "as decided earlier" each bind a
+*position* in the file where everything else here binds an id, so inserting a paragraph, splitting a
+section or reordering two blocks silently repoints them with nothing failing. The consumer settles
+it. A body loaded through progressive disclosure arrives at one passage without the ones above it,
+so a rule whose attribution sits seven lines up reaches the agent as a rule with no attribution —
+the state this section exists to prevent.
+
 ---
 
 ## 7. Prohibitions
@@ -415,9 +430,11 @@ and `AGENTS.md` name those four tokens deliberately, so the rule can be stated; 
 to skill bodies.)
 
 **No second lifecycle entrypoint.** There is one `autopilot` and one lifecycle. A skill may not
-introduce a "run everything", "do the whole thing" or "full loop" entrypoint beside it, and may not
-reach a forbidden U-to-U call through a wrapper. Where a host cannot validate a grant, the skill
-stops for explicit invocation (`AGENTS.md`, "The invocation law").
+introduce a "run everything", "do the whole thing" or "full loop" entrypoint beside it (ruling
+`full-catalog-opt-in-profiles`), and may not reach a forbidden U-to-U call through a wrapper. Where a
+host cannot validate a grant, the skill stops for explicit invocation rather than reproducing the
+forbidden command's effect through a side door (ruling `entrypoint-phase-operation-split`;
+`AGENTS.md`, "The invocation law").
 
 **No repository-local project documentation.** Project-derived artifacts are KB-owned — decisions,
 requirements, plans, tickets, reviews, lessons and sanitized run receipts — and this package owns
@@ -427,12 +444,13 @@ repository fails release scenario 21, whatever the donor did. `docs/decisions/00
 may use; convert every donor "write a file in the repo" instruction into a KB adapter call
 (`adapters/knowledgebase/CONTRACT.md`). `ak validate` scans skill bodies for the retired targets.
 
-Two clauses of that ruling are easy to lose and both bind a writer. **Directory names under the
-knowledgebase root are configurable; the central ownership is not** — so a body names the operation
-it calls and never hardcodes a knowledgebase path, which would re-create the local tree one level
-further out. And **a completed ship is not permission to rewrite project knowledge**: a skill that
-finishes its work does not thereby acquire a write it did not have, and a body that has a step
-revising project knowledge after shipping is describing an authority no skill holds.
+Two clauses of `central-kb-owns-project-artifacts` are easy to lose and both bind a writer, and both
+are stated below in the ruling's own words. **Directory names under the knowledgebase root are
+configurable; the central ownership is not** — so a body names the operation it calls and never
+hardcodes a knowledgebase path, which would re-create the local tree one level further out. And **a
+completed ship is not permission to rewrite project knowledge**: a skill that finishes its work does
+not thereby acquire a write it did not have, and a body that has a step revising project knowledge
+after shipping is describing an authority no skill holds.
 
 ---
 
@@ -604,13 +622,13 @@ attached** — a decision that is recorded, not a loop that quietly ends. An ope
 report is a normal, expected outcome; a stub committed to make a report look clean is a fabricated
 completion and is treated as one.
 
-**Repeated failure is a signal about the plan, not an invitation to a third loop.** A batch that
-fails twice is evidence about the brief, not about the writer's output, and this contract gives that
-evidence somewhere to go: the replan branch is a contract defect (above), filed with the two cycles
-as its record. A writer that reads the cycle limit as a verdict on its own work will report and stop
-where it should report and escalate. Where the replan lands on a materially changed baseline, that is
-a new review scope with its own first pass rather than a third delta loop (ruling
-`delta-baseline-reset-not-third-loop`).
+**Repeated failure is a signal about the plan, not an invitation to a third loop** (ruling
+`two-fix-cycles-then-stop`). A batch that fails twice is evidence about the brief, not about the
+writer's output, and this contract gives that evidence somewhere to go: the replan branch is a
+contract defect (above), filed with the two cycles as its record. A writer that reads the cycle
+limit as a verdict on its own work will report and stop where it should report and escalate. Where
+the replan lands on a materially changed baseline, that is a new review scope with its own first
+pass rather than a third delta loop (ruling `delta-baseline-reset-not-third-loop`).
 
 **Authoring and review are separate passes.** A writer never approves its own output, and never
 merges a reviewer's fix and a fresh revision into one indistinguishable edit.
