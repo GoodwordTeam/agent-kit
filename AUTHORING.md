@@ -718,6 +718,27 @@ amending the contract, or recording that the instruction is right and the writer
 close the entry. Neither is the writer's to decide, and a writer that filed one is not waiting on
 its own judgment.
 
+**The retirement rule has no detector, and it has already failed.** The commit that resolved the
+reference-pack entry wrote §12.5, which answered it, and left the entry standing; the entry then
+stood blocking a batch on a gap that no longer existed, and cost nothing only because that batch had
+not been dispatched. Nothing failed, because nothing was looking — a resolved entry and an open one
+are the same bytes. The obvious check, a commit message that rules on an entry the commit does not
+delete, would have been silent here: that commit's message never mentioned the entry. This was not a
+writer declining to retire one. It was a writer who did not notice there was anything to retire.
+
+**So the check is on the entry, not on the commit.** Every entry quotes the instruction it is filed
+against, and a quotation is a fingerprint of the text it was taken from. **An open entry's quoted
+instruction must still resolve in the section it cites**, compared with whitespace collapsed so that
+rewrapping a paragraph is not a change. When one stops resolving, the entry and this contract
+disagree about what this contract says: either the defect was fixed and the entry owes retirement,
+or the section moved for another reason and the entry now misdescribes the contract. Both need a
+ruling and neither is the writer's. **Repointing the quotation at the new text is not among the
+options** — it is the same act that made the entry stale, and it destroys the evidence that anything
+moved. A quotation that never resolved fails the same rule at the commit that files it.
+
+This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
+and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
+
 **A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
 ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
 that complies with a broken gate by weakening its own output has done nothing wrong; it followed the
@@ -1194,11 +1215,16 @@ the clauses the ruling exists to pin down; the obvious half of a rule was never 
 When a sentence would be awkward at full width, cite the ruling and defer to it rather than shipping
 a narrower version of it.
 
-### 12.4 Before handing a protocol or a role back
+### 12.4 Before handing a body back
 
-- The body file is `PROTOCOL.md` or `ROLE.md`. Only `skills` mandates its body filename; for these
-  sections a different `.md` name validates with the warning `catalog.unexpected-body-name` — a
-  warning to fix, not an allowance to use.
+Every §12 shape whose catalog entry has a body file routes here. Where a shape skips a bullet, its
+own section says which (§12.5).
+
+- The body file is the one your section names. Whether that name is mandated or merely preferred is
+  `MANDATORY_BODY_SECTIONS` (`src/catalog/layout.ts`), and the difference is the severity of
+  `catalog.unexpected-body-name`: for a mandated section a differently named body is an **error**
+  and the directory does not validate; elsewhere the same rule reports a warning. A warning here
+  means unenforced, not optional.
 - No frontmatter. No `*.yaml` sidecar.
 - For a role: the two conditional `## Never` rows are the right ones for this seat (§12.2). The
   heading set can be complete and the rows still wrong — row 3 takes its authorship form from
@@ -1270,9 +1296,9 @@ Before handing one back, §12.4's checklist applies with its two role-specific b
 with the body-file bullet read as follows: `REFERENCE.md` is currently *preferred* rather than
 mandated (`MANDATORY_BODY_SECTIONS`, `src/catalog/layout.ts`), because that list takes its
 membership from the shapes §12 gave one body file. This section gives a reference pack one body
-file, so the promotion is now available to whoever owns the validator; until it lands, a differently
-named body raises `catalog.unexpected-body-name` as a warning rather than an error. Use
-`REFERENCE.md`.
+file, so that list is behind this contract rather than disagreeing with it. While it is behind,
+`catalog.unexpected-body-name` reports a warning here rather than an error, which §12.4 says is not
+the same as optional. Use `REFERENCE.md`.
 
 **Domain packs are the fifth shape and this contract does not govern them yet.** `catalog.yaml`
 declares its `packs` entries at batch 6, every one `status: contract` with no directory on disk.
