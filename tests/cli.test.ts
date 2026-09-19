@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
@@ -114,6 +114,89 @@ describe("ak validate", () => {
     const io = capture();
     runCli(["validate"], { cwd: cleanTree(), io: io.io });
     expect(io.stdout()).toMatch(/0 error/);
+  });
+
+  /**
+   * The summary has to say whether the checks ran, not only what they found.
+   *
+   * `.donors/` is gitignored, so a machine that has not cloned it skips
+   * donor-path-at-pin verification -- the check the provenance story rests on --
+   * and before the skipped term the resulting summary was indistinguishable from
+   * a verified one. An instrument that returns the same answer under both
+   * hypotheses is not evidence.
+   *
+   * Severity cannot carry this. A warning claims a finding and invites being
+   * silenced; the skipped term counts the absence of a look, so it has nothing
+   * to silence.
+   */
+  const SKIPPING_TREE = {
+    "catalog.yaml": CATALOG,
+    "skills/triage/SKILL.md": SKILL,
+    "provenance/upstream.lock.yaml":
+      "schema_version: 1\ndonors:\n  - id: donor-one\n    repo: example/one\n    path: .donors/donor_one\n    commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n    license: MIT\n",
+    "provenance/adaptations.d/batch-1.yaml":
+      "adaptations:\n  - path: skills/triage/SKILL.md\n    source: donor-one@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x.md\n",
+  };
+
+  /** A tree with the generated adaptations file in place, so the only finding left is the skip. */
+  function builtTree(tree: Record<string, string>): string {
+    const root = makeTree(tree);
+    runCli(["build"], { cwd: root, io: capture().io });
+    return root;
+  }
+
+  /**
+   * A tree where nothing is skipped, which takes the real schemas: without
+   * `schemas/catalog.schema.json` even `cleanTree()` leaves catalog.yaml
+   * unchecked against its own contract. That most fixtures in this file validate
+   * without schema conformance running at all is a fact the term surfaced, and
+   * the reason it is worth having.
+   */
+  function verifiedTree(): string {
+    const dir = join(import.meta.dir, "..", "schemas");
+    const schemas: Record<string, string> = {};
+    for (const name of readdirSync(dir)) {
+      if (name.endsWith(".schema.json")) schemas[`schemas/${name}`] = readFileSync(join(dir, name), "utf8");
+    }
+    return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, ...schemas });
+  }
+
+  function summaryOf(root: string): string {
+    const io = capture();
+    runCli(["validate"], { cwd: root, io: io.io });
+    return io.out[io.out.length - 1] ?? "";
+  }
+
+  test("the summary names a check that could not run", () => {
+    const summary = summaryOf(builtTree(SKIPPING_TREE));
+    expect(summary).toMatch(/\d+ checks? skipped: /);
+    expect(summary).toContain("donor paths at pin");
+  });
+
+  test("a run with nothing skipped says so rather than staying silent", () => {
+    // The zero is printed for the same reason the other three counts are. Were the
+    // clause omitted when empty, its absence would carry the claim, and a reader who
+    // does not know the convention could not tell a silent clause from a silent check.
+    expect(summaryOf(verifiedTree())).toContain("0 checks skipped");
+  });
+
+  test("the two summaries differ, which is the whole point of the term", () => {
+    expect(summaryOf(builtTree(SKIPPING_TREE))).not.toBe(summaryOf(verifiedTree()));
+  });
+
+  test("a skipped check is not a failure: the run still exits 0", () => {
+    const io = capture();
+    expect(runCli(["validate"], { cwd: builtTree(SKIPPING_TREE), io: io.io })).toBe(0);
+  });
+
+  test("--json carries the skipped checks beside ok, not only inside the issues", () => {
+    // `ok: true` with no donor clones is the same value as `ok: true` having verified
+    // every row, so a consumer gating on `ok` alone cannot see the difference either.
+    const io = capture();
+    runCli(["validate", "--json"], { cwd: builtTree(SKIPPING_TREE), io: io.io });
+    const parsed = JSON.parse(io.stdout()) as { ok: boolean; skipped: string[] };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.skipped).toContain("donor paths at pin");
   });
 });
 

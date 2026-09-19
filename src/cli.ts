@@ -13,7 +13,7 @@ import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.
 import { ADAPTATIONS_FILE, checkAdaptationsSync } from "./validation/provenance.ts";
 import type { CheckContext } from "./validation/context.ts";
 import { runValidation } from "./validation/run.ts";
-import { formatIssue, hasErrors, sortIssues, type Issue } from "./validation/types.ts";
+import { formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
 
 export interface CliIo {
   out: (line: string) => void;
@@ -75,8 +75,16 @@ function report(io: CliIo, issues: readonly Issue[], label: string): number {
   for (const issue of sorted) io.out(formatIssue(issue));
   const counts = { error: 0, warning: 0, note: 0 };
   for (const issue of sorted) counts[issue.severity] += 1;
+
+  // The skipped term is printed at zero like the other three, and that is the
+  // point: "0 checks skipped" is the only thing that distinguishes a verified run
+  // from one where the instrument was missing. Were the clause omitted when empty,
+  // its absence would carry the claim, and a reader who does not know the
+  // convention cannot tell a silent clause from a silent check.
+  const missed = skippedChecks(sorted);
+  const names = missed.length === 0 ? "" : `: ${missed.join(", ")}`;
   io.out(
-    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}`,
+    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${missed.length} check${missed.length === 1 ? "" : "s"} skipped${names}`,
   );
   return hasErrors(sorted) ? 1 : 0;
 }
@@ -98,7 +106,10 @@ function buildOptions(parsed: Parsed): BuildOptions {
 function validate(parsed: Parsed, options: CliOptions): number {
   const result = runValidation(options.cwd, { build: buildOptions(parsed) });
   if (parsed.flags.get("json") === true) {
-    options.io.out(JSON.stringify({ ok: result.ok, issues: result.issues }, null, 2));
+    // `skipped` is beside `ok` and not only inside the issues, because `ok: true`
+    // on a machine with no donor clones is the same value as `ok: true` on one
+    // that verified every row. A consumer gating on `ok` alone cannot see that.
+    options.io.out(JSON.stringify({ ok: result.ok, skipped: skippedChecks(result.issues), issues: result.issues }, null, 2));
     return result.ok ? 0 : 1;
   }
   return report(options.io, result.issues, "ak validate");

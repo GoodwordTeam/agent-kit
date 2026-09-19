@@ -5,7 +5,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { DIRECTORY_SECTIONS, entryDir } from "../catalog/layout.ts";
 import { isDir, listFiles, readTextIfPresent } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
-import { error, note, warning, type Issue } from "./types.ts";
+import { error, note, skipped, warning, type Issue } from "./types.ts";
 
 const TRANSCRIPT = "research/sources/grok-transcript.md";
 const LOCK = "provenance/upstream.lock.yaml";
@@ -144,7 +144,7 @@ function loadDonors(root: string): { donors: Map<string, Donor>; issues: Issue[]
   const issues: Issue[] = [];
   const doc = readYaml(root, LOCK);
   if (doc === null) {
-    issues.push(note("provenance.lock-unavailable", LOCK, "No upstream lock; donor pins could not be resolved."));
+    issues.push(note("provenance.lock-unavailable", LOCK, "No upstream lock; donor pins could not be resolved. Rows naming a donor it would have pinned are reported individually as provenance.unknown-donor, so an unverified row is an error here rather than a silence."));
     return { donors, issues };
   }
   if ("error" in doc) return { donors, issues: [doc.error] };
@@ -340,10 +340,11 @@ export function checkProvenance(ctx: CheckContext): Issue[] {
   const donorsPresent = isDir(join(root, ".donors"));
   if (!donorsPresent && rows.length > 0) {
     issues.push(
-      note(
+      skipped(
         "provenance.donors-unavailable",
         ".donors",
-        ".donors/ is absent (gitignored and reproducible from upstream.lock.yaml); donor-path-at-pin verification was skipped.",
+        "donor paths at pin",
+        `.donors/ is absent (gitignored and reproducible from upstream.lock.yaml). ${rows.length} donor row${rows.length === 1 ? "" : "s"} went unverified: no row's path was checked against the tree its pin names, so a row citing a path the pin does not contain reads exactly like one that checks out. Clone the donors and re-run before treating this run as provenance evidence.`,
       ),
     );
   }
@@ -419,13 +420,45 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
   const mapRows = mapDoc !== null && !("error" in mapDoc) ? listOf(mapDoc.value, ["capabilities", "entries", "mechanisms"]) : [];
   if (mapDoc !== null && "error" in mapDoc) issues.push(mapDoc.error);
   const mapAvailable = mapDoc !== null;
+
+  /**
+   * Both of the next two report a check that did not run, and both are a skip only
+   * when something existed for it to run on. The criterion is the subject, not the
+   * absent file: an entry declaring conversation origin goes unchecked without the
+   * map, and a locator goes unrange-checked without the transcript, but a tree with
+   * neither has nothing unexamined and a skip term there is noise that teaches a
+   * reader to stop reading the term.
+   */
+  const conversationEntries = DIRECTORY_SECTIONS.flatMap((section) =>
+    catalog.bySection(section).filter((entry) => entry.status === "authored" && entry.provenanceOrigin === "conversation"),
+  ).length;
   if (!mapAvailable) {
-    issues.push(note("provenance.conversation-map-unavailable", CONVERSATION_MAP, "No conversation map; conversation-origin entries could not be checked."));
+    const message = `No conversation map; conversation-origin entries could not be checked.`;
+    issues.push(
+      conversationEntries > 0
+        ? skipped(
+            "provenance.conversation-map-unavailable",
+            CONVERSATION_MAP,
+            "conversation origins",
+            `${message} ${conversationEntries} authored entr${conversationEntries === 1 ? "y declares" : "ies declare"} provenance_origin: conversation and nothing confirmed the capability is recorded.`,
+          )
+        : note("provenance.conversation-map-unavailable", CONVERSATION_MAP, `${message} No authored entry declares it, so nothing went unexamined.`),
+    );
   }
 
   const transcriptLines = transcriptLineCount(root);
   if (transcriptLines === null) {
-    issues.push(note("provenance.transcript-unavailable", TRANSCRIPT, "Transcript absent; G:L locator ranges could not be checked."));
+    const message = "Transcript absent; G:L locator ranges could not be checked.";
+    issues.push(
+      mapRows.length > 0
+        ? skipped(
+            "provenance.transcript-unavailable",
+            TRANSCRIPT,
+            "G:L locator ranges",
+            `${message} ${mapRows.length} capability row${mapRows.length === 1 ? "" : "s"} parsed; a range past the end of the transcript reads the same as one inside it.`,
+          )
+        : note("provenance.transcript-unavailable", TRANSCRIPT, `${message} The map has no rows, so no range went unchecked.`),
+    );
   }
 
   // A destination may name any declared entry, file-backed sections included:

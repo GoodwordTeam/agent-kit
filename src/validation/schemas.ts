@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 
 import { listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
-import { error, note, type Issue } from "./types.ts";
+import { error, note, skipped, type Issue } from "./types.ts";
 
 type AjvInstance = InstanceType<typeof Ajv2020>;
 
@@ -197,9 +197,10 @@ export function checkSchemas(ctx: CheckContext, precompiled?: SchemaSet): Issue[
       if (!unavailable.has(target.schemaId)) {
         unavailable.add(target.schemaId);
         issues.push(
-          note(
+          skipped(
             "schemas.validator-unavailable",
             `schemas/${target.schemaId}.schema.json`,
+            "schema conformance",
             `No compiled validator for '${target.schemaId}'; documents that need it were not checked.`,
           ),
         );
