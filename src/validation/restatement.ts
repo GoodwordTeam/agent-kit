@@ -42,22 +42,31 @@ import { note, warning, type Issue } from "./types.ts";
  * short enough that someone reads every row, which is the only mode in which a
  * candidate generator is worth anything.
  *
- * Calibrated on the pinned corpus (see `checkRestatements`) against the whole
- * tree, every row read and classified rather than sampled:
+ * Calibrated at `e15be71` on the pinned corpus (see `checkRestatements`)
+ * against the whole tree, every row read and classified rather than sampled.
+ * The revision is part of the measurement: the tree moves, and a figure
+ * without one cannot be checked later.
  *
  * - `>= 0.65`: 3 rows, all three genuine. Tempting, and rejected -- three
  *   points is not a calibration, and it drops the most interesting row below.
- * - `>= 0.55`: 8 rows. Four restate a ruling and attribute none
- *   (`AGENTS.md:55`, `AGENTS.md:136`, `AUTHORING.md:607`, `tdd:79`); one
- *   states two clauses of a ruling cited in the block above it, which the
- *   scope decision reports deliberately; three are false --  a donor-mapping
- *   table row, README's bulleted digest of the rulings, and a field list that
- *   shares a ruling's nouns.
+ * - `>= 0.55`: 8 rows, 5 genuine -- `AGENTS.md:55`, `AGENTS.md:136`,
+ *   `AUTHORING.md:431`, `AUTHORING.md:607`, `tdd:79`. The 3 false are a
+ *   donor-mapping table row, README's bulleted digest of the rulings, and a
+ *   field list that shares a ruling's nouns.
  * - `>= 0.40`: 40 rows. The class that arrives in bulk is the field list.
  *
- * So half to five-eighths of what this emits at 0.55 is worth acting on. That
- * is the figure to quote, and it replaces the much better one measured on a
- * handful of files, which never covered a corpus this size.
+ * So five of eight at 0.55 are worth acting on. That figure replaces the much
+ * better one measured on a handful of files, which never covered a corpus this
+ * size.
+ *
+ * `AUTHORING.md:431` was first classified false here, on the reasoning that it
+ * reaches a citation seven lines up through the words "that ruling" and a
+ * reader can see what it means. Two others reached the same reading and then
+ * the same correction, so it is worth stating why it is wrong: 6 requires the
+ * citation "inline at the sentence it governs", and says why -- the inline
+ * citation is what the executing agent sees at the moment it would otherwise
+ * improvise. An agent that loads one paragraph never sees the line above it.
+ * Reading the file the way a human scrolls it is the wrong test.
  *
  * `AUTHORING.md:607` is why the threshold is not 0.65: it cites
  * `delta-baseline-reset-not-third-loop` and restates `two-fix-cycles-then-stop`
@@ -214,13 +223,26 @@ function scannedFiles(root: string): string[] {
  * both cite it, which a scope reaching one block back would have told the
  * second gate it did not have to.
  *
- * The cost is real and accepted: a paragraph opening "That ruling also governs
- * ..." is reported even though a reader can see what it refers to. Whether an
- * anaphoric back-reference discharges the obligation is a question for the
- * contract, and a checker that answered it by being lenient would be deciding
- * it silently. It is also the point of the check: a body that cites a
- * ruling in one section and restates it uncited in another is the shape the
- * tree actually had, and a file-wide test clears exactly that.
+ * A paragraph opening "That ruling also governs ..." is therefore reported
+ * although a reader scrolling the file can see what it refers to. That is not
+ * a cost being accepted, which is how this comment first put it; §6 requires
+ * the citation "inline at the sentence it governs" and gives the reason -- the
+ * inline citation is what the executing agent sees at the moment it would
+ * otherwise improvise. An agent that loads one paragraph through progressive
+ * disclosure never sees the line above it, so a back-reference discharges the
+ * obligation for the human and not for the reader the rule exists to serve.
+ *
+ * Note which direction that leaves the scope in. §6 asks for the sentence;
+ * this clears a claim when the ruling appears anywhere in its paragraph. The
+ * check is the more lenient of the two by design -- a lexical instrument
+ * should miss rather than accuse -- so a report here is a claim the contract
+ * would also flag, never the reverse.
+ *
+ * Widening to the enclosing section was proposed and is refused, because it
+ * clears the strongest true positive in the tree: `AUTHORING.md` 10 spans
+ * 517-644, `:601` cites `two-fix-cycles-then-stop`, and `:607` reproduces that
+ * ruling's third sentence verbatim while citing a different one. Section scope
+ * finds the id six lines up and calls the restatement attributed.
  *
  * In YAML it is the file. §6 gives YAML a different citation form -- a `ruling:`
  * or `rulings:` key -- and that key attaches at a mapping level rather than
@@ -342,7 +364,7 @@ export function checkRestatements(ctx: CheckContext, threshold: number = RESTATE
     note(
       "rulings.restatement-scan-coverage",
       RULINGS_FILE,
-      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration about half the rows at this threshold were worth acting on, so a report is a candidate to read, not a defect to fix; the commonest false one is a list that shares a ruling's field names. Recall is worse than precision and is not quoted here: a claim that restates a ruling in none of its words scores zero, and of the three uncited restatements found by hand in this repo this scan finds two, scoring the third at zero. A clean run is therefore evidence about this instrument, not about the tree.`,
+      `Measured ${windowCount} sentence window(s) across ${files.length} file(s) against ${rulings.length} ruling(s) at cosine >= ${threshold}. This is a lexical instrument and neither of its error rates is small. On the last full calibration five of the eight rows at this threshold were worth acting on, so a report is a candidate to read, not a defect to fix; the commonest false one is a list that shares a ruling's field names. Recall is worse than precision and is not quoted here: a claim that restates a ruling in none of its words scores zero, and of the three uncited restatements found by hand in this repo this scan finds two, scoring the third at zero. A clean run is therefore evidence about this instrument, not about the tree.`,
     ),
   );
 

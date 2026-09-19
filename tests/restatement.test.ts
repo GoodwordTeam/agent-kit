@@ -176,6 +176,26 @@ describe("a window restating a ruling without attributing it (AUTHORING 6)", () 
     expect(hits(checkRestatements(ctxFor({ "protocols/loose.md": doc }))).length).toBe(1);
   });
 
+  test("a citation earlier in the same section does not clear the claim", () => {
+    // Widening the scope from the block to the enclosing section was proposed
+    // twice and refused twice, so it is pinned here rather than argued again.
+    // The live case it breaks: `AUTHORING.md` 10 spans 517-644, `:601` cites
+    // `two-fix-cycles-then-stop`, and `:607` reproduces that ruling's third
+    // sentence verbatim while citing a different one. Section scope finds the
+    // id six lines up and calls the restatement attributed.
+    const doc = [
+      "# Doctrine",
+      "",
+      "## The section",
+      "",
+      "At most two attempts, then stop (ruling `required-lane-failure-is-unavailable`).",
+      "",
+      "A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "protocols/loose.md": doc }))).length).toBe(1);
+  });
+
   test("the candidates are ranked and more than one is offered, because siblings invert", () => {
     const doc = `# Doctrine\n\nA required lane that cannot be filled under the declared constraints is unavailable, and a supervisor never takes the implementer seat in the same cycle.\n`;
     const issue = hits(checkRestatements(ctxFor({ "protocols/loose.md": doc })))[0];
