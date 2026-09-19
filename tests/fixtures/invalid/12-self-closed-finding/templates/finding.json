@@ -1,0 +1,14 @@
+{
+  "schema": "finding",
+  "id": "f-2",
+  "status": "resolved",
+  "severity": "P2",
+  "spec_quality": "patch",
+  "difficulty": "mechanical",
+  "autofix_class": "manual",
+  "created_by": { "role": "reviewer" },
+  "closure_receipt": {
+    "by": "reviewer",
+    "evidence": "the suite passes on the fix branch"
+  }
+}

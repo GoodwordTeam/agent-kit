@@ -19,26 +19,41 @@ function bodyFiles(root: string, dir: string): string[] {
   return listFiles(join(root, dir)).filter((n) => n.endsWith(".md"));
 }
 
-/** Directory ids actually present under a section root, including one level of nesting. */
-function presentDirIds(root: string, section: DirectorySection, declared: ReadonlySet<string>): string[] {
+/**
+ * Directory ids actually present under a section root, plus the containers that
+ * are still waiting for the batch that fills them.
+ *
+ * A container (e.g. `roles/code-review`) holds seats, not a body of its own:
+ * AUTHORING.md §12.2 nests role ids one level, so `code-review/security` is the
+ * id and `roles/code-review/` is only the path it lives under. A directory is a
+ * container when its name is a proper prefix of one or more declared ids, and
+ * its children are checked in its place. An empty one is a batch that has not
+ * run yet, which is the same category as `catalog.entry-not-authored` — a note.
+ * A directory that is neither an entry nor a prefix of one is still an error.
+ */
+function presentDirIds(
+  root: string,
+  section: DirectorySection,
+  declared: ReadonlySet<string>,
+): { ids: string[]; emptyContainers: string[] } {
   const sectionRoot = join(root, section);
-  const out: string[] = [];
+  const ids: string[] = [];
+  const emptyContainers: string[] = [];
   for (const top of listDirs(sectionRoot)) {
     if (declared.has(top)) {
-      out.push(top);
+      ids.push(top);
       continue;
     }
-    const nested = listDirs(join(sectionRoot, top));
-    const nestedIds = nested.map((n) => `${top}/${n}`);
-    const anyNestedDeclared = nestedIds.some((id) => declared.has(id));
-    if (nested.length > 0 && anyNestedDeclared) {
-      // `top` is a group directory (e.g. roles/code-review); judge its children.
-      out.push(...nestedIds);
+    const isContainer = bodyFiles(root, `${section}/${top}`).length === 0 && [...declared].some((id) => id.startsWith(`${top}/`));
+    if (isContainer) {
+      const children = listDirs(join(sectionRoot, top));
+      if (children.length === 0) emptyContainers.push(top);
+      ids.push(...children.map((n) => `${top}/${n}`));
       continue;
     }
-    out.push(top);
+    ids.push(top);
   }
-  return out;
+  return { ids, emptyContainers };
 }
 
 /**
@@ -81,13 +96,14 @@ export function checkCompleteness(ctx: CheckContext): Issue[] {
       const mandatory = MANDATORY_BODY_SECTIONS.includes(section);
 
       if (!hasPreferred) {
-        if (present.length === 0 || mandatory) {
+        if (present.length === 0) {
           issues.push(
             error("catalog.entry-missing-body", dir, `${dir}/ exists but has no ${preferred}.`),
           );
         } else {
+          const report = mandatory ? error : warning;
           issues.push(
-            warning(
+            report(
               "catalog.unexpected-body-name",
               `${dir}/${present[0]}`,
               `${dir}/ has no ${preferred}; found ${present.join(", ")}. The canonical body file name for ${section} is ${preferred}.`,
@@ -105,7 +121,17 @@ export function checkCompleteness(ctx: CheckContext): Issue[] {
       }
     }
 
-    for (const id of presentDirIds(root, section, declared)) {
+    const onDisk = presentDirIds(root, section, declared);
+    for (const container of onDisk.emptyContainers) {
+      issues.push(
+        note(
+          "catalog.container-without-entries",
+          `${section}/${container}`,
+          `${section}/${container}/ groups the declared ids beneath it and has none on disk yet. Nothing is missing until one of them is authored.`,
+        ),
+      );
+    }
+    for (const id of onDisk.ids) {
       if (declared.has(id)) continue;
       issues.push(
         error(

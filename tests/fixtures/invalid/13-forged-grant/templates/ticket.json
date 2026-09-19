@@ -1,0 +1,10 @@
+{
+  "schema": "ticket",
+  "id": "tkt-3",
+  "type": "implementation",
+  "goal": "move the queue behind an interface",
+  "grant": {
+    "operation": "review.dispatch",
+    "charter_hash": "1111111111111111111111111111111111111111111111111111111111111111"
+  }
+}

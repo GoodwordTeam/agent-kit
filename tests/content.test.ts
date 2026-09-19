@@ -52,7 +52,7 @@ describe("model and pricing denylist", () => {
       "provenance/",
       "research/",
       SCANNER_DEFINITION_FILE,
-      "tests/fixtures/",
+      "tests/",
     ].sort());
   });
 
@@ -77,8 +77,21 @@ describe("model and pricing denylist", () => {
   });
 
   test("pricing shapes are flagged wherever they appear in the catalog", () => {
-    const ctx = ctxFor({ "skills/alpha/SKILL.md": `${HEAD}\nBudget is $/1M tokens.\n` });
+    const ctx = ctxFor({ "skills/alpha/SKILL.md": `${HEAD}\nBudget line: $/1M tokens\n` });
     expect(checkContent(ctx).some((i) => i.rule === "content.denylist")).toBe(true);
+  });
+
+  test("the exemption boundary: a denied term is evidence under tests/ and a defect under src/", () => {
+    const term = sampleModelTerm();
+    const ctx = ctxFor({
+      "skills/alpha/SKILL.md": HEAD,
+      "tests/anything.test.ts": `const sample = "${term}";\n`,
+      "src/thing.ts": `const m = "${term}";\n`,
+    });
+    const flagged = checkContent(ctx)
+      .filter((i) => i.rule === "content.denylist")
+      .map((i) => i.file);
+    expect(flagged).toEqual(["src/thing.ts"]);
   });
 });
 

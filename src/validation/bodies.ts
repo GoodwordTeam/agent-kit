@@ -1,0 +1,515 @@
+/**
+ * Protocol and role body shapes (AUTHORING.md §12).
+ *
+ * §1-§11 describe a `SKILL.md`. Two further body shapes exist, and they are not
+ * skills: a protocol is shared phase logic a skill delegates to, a role is a
+ * prompt the runner fills a seat with. Neither is an entrypoint, so neither
+ * carries host frontmatter and neither has an execution contract of its own —
+ * the catalog entry plus the prose is the contract, which is why a
+ * `protocol.yaml` or `role.yaml` on disk is an error rather than an extra.
+ *
+ * The section lists are the enforceable half of §12. A missing heading is a
+ * missing decision; a forbidden heading means the writer described the wrong
+ * thing, so every rejection names what to write instead.
+ */
+
+import { join } from "node:path";
+
+import { entryDir, preferredBodyFile, type DirectorySection } from "../catalog/layout.ts";
+import { exists, isDir, readTextIfPresent } from "../util/fs.ts";
+import { parseFrontmatter } from "../util/frontmatter.ts";
+import type { CheckContext } from "./context.ts";
+import { error, type Issue } from "./types.ts";
+
+/** §3's ten headings with `## Authority` replaced by `## Invoked by` (§12.1). */
+export const PROTOCOL_SECTIONS: ReadonlyArray<string> = [
+  "## When to use",
+  "## Not for",
+  "## Invoked by",
+  "## Inputs",
+  "## Workflow",
+  "## Hard gates",
+  "## Outputs",
+  "## Side effects",
+  "## Stop conditions",
+  "## Limits",
+];
+
+/** §12.2's role-specific set, in order. `## Rationalizations this seat makes` comes last. */
+export const ROLE_SECTIONS: ReadonlyArray<string> = [
+  "## What this seat judges",
+  "## Not this seat",
+  "## What it must be given",
+  "## Evidence it must cite",
+  "## Never",
+  "## What it returns",
+  "## When it has nothing to say",
+  "## Rationalizations this seat makes",
+];
+
+/** Each rejection carries §12's reason, because the heading is a symptom of the wrong model. */
+export const PROTOCOL_FORBIDDEN: Readonly<Record<string, string>> = {
+  "## Authority":
+    "A protocol holds no authority of its own and never widens the authority it was called with. Write `## Invoked by` instead, naming the skills and phase operations that may call it (ruling `entrypoint-phase-operation-split`).",
+};
+
+export const ROLE_FORBIDDEN: Readonly<Record<string, string>> = {
+  "## Authority":
+    "The runner seats a role; a role never self-authorizes, and whether a seat is filled at all is decided by declared risk (ruling `panel-composition-by-declared-risk`).",
+  "## Workflow": "A prompt is not a procedure. Procedure belongs to the protocol that convenes the panel.",
+  "## Hard gates":
+    "A gate stops a workflow and a seat has no workflow to stop. You are describing the protocol that seats this role, not the seat.",
+  "## Inputs":
+    "A seat states what it must be *given*, which is a contract on its caller; a protocol lists the inputs it consumes. Write `## What it must be given` instead — the difference is who is bound.",
+  "## Side effects":
+    "A role has none — it judges and returns. Declaring one means work that belongs in a skill or a protocol has been put in a seat.",
+  "## Limits": "Folded into `## Never`.",
+};
+
+export const ROLE_FORBIDDEN_SECTIONS: ReadonlyArray<string> = Object.keys(ROLE_FORBIDDEN);
+
+/** §3.1's three columns, spelled exactly. */
+export const ANTI_RATIONALIZATION_HEADER = "| The thought | Why it is wrong | Do this instead |";
+const ANTI_RATIONALIZATION_COLUMNS = ["The thought", "Why it is wrong", "Do this instead"];
+
+/**
+ * A `## Never` row §12.2 governs.
+ *
+ * `clauses` are the row's distinguishing wording, matched against the row with
+ * whitespace collapsed and markdown emphasis stripped. Matching a clause rather
+ * than the whole sentence is what keeps a reflowed line break from producing a
+ * false error; requiring the citation and the clause in the *same* row is what
+ * keeps a section that merely mentions both from passing.
+ */
+export interface GovernedNeverRow {
+  /** The ruling the row must cite, or null where §12.2 states the rule itself. */
+  readonly ruling: string | null;
+  /** Every clause must appear in the row. */
+  readonly clauses: ReadonlyArray<string>;
+  /** Named in the failure message, so the writer is told which row is missing. */
+  readonly description: string;
+}
+
+/**
+ * The two rows mandatory in all twenty-nine seats.
+ *
+ * These were previously welded to the two conditional rows below, and each weld
+ * carried a seat-specific half the cited ruling does not state. Writers
+ * satisfied the verbatim check and absorbed the mismatch in appended per-seat
+ * sentences — load-bearing prose that nothing could check. Splitting them turns
+ * that prose into set equality.
+ */
+export const UNIVERSAL_NEVER_ROWS: ReadonlyArray<GovernedNeverRow> = [
+  {
+    ruling: "closure-requires-independent-verification",
+    clauses: ["independent verification closes a finding"],
+    description: "Only independent verification closes a finding: reading a patch is the author's confidence, not a receipt.",
+  },
+  {
+    ruling: "required-lane-failure-is-unavailable",
+    clauses: ["lane that could not run", "unavailable"],
+    description: "A lane that could not run returns `unavailable` — a result, not an absence, and never backfilled.",
+  },
+];
+
+/** Kept for the callers that only need the citations. */
+export const MANDATORY_NEVER_RULINGS: ReadonlyArray<string> = UNIVERSAL_NEVER_ROWS.map((row) => row.ruling).filter(
+  (ruling): ruling is string => ruling !== null,
+);
+
+/** What twenty-seven seats say: they judge, and judging is all they do. */
+export const AUTHORSHIP_PLAIN_ROW: GovernedNeverRow = {
+  ruling: null,
+  clauses: ["never edits", "judges and returns"],
+  description: 'the plain authorship row, "never edits: it judges and returns"',
+};
+
+/**
+ * What the two producing seats say instead: they name what they write, and then
+ * rule out the outputs that would let them mark their own work.
+ */
+export const AUTHORSHIP_CONVERSE_ROW: GovernedNeverRow = {
+  ruling: null,
+  clauses: ["a finding, a receipt, a review record or a ticket", "never closes or approves what it produced"],
+  description: "the converse authorship row, naming what this seat writes and ruling out a finding, a receipt, a review record or a ticket",
+};
+
+/**
+ * The seats that produce an artifact rather than a judgment.
+ *
+ * A closed list from §12.2, held here rather than read off the bodies on
+ * purpose: a check that learned which seats produce by reading the seats and
+ * then verified the seats against what it learned could never fail.
+ */
+export const PRODUCING_SEATS: ReadonlyArray<string> = ["implementer", "plan-review/planner"];
+
+/**
+ * Standards grounding, carried by the two seats that judge against a project
+ * standard. §12.2 states it directly, so it cites no ruling and none is
+ * required — `policies` is still ruling on whether a row should exist.
+ */
+export const STANDARDS_GROUNDING_ROW: GovernedNeverRow = {
+  ruling: null,
+  clauses: ["cites an actual project rule or returns empty", "never an invented preference"],
+  description: "the standards-grounding row, \"cites an actual project rule or returns empty; an absent standard is never an invented preference\"",
+};
+
+/** The seat §12.2 names, because it carries no tier of its own to derive from. */
+export const NAMED_STANDARDS_SEATS: ReadonlyArray<string> = ["reviewer-standards"];
+
+/** Every other standards seat comes from the catalog, so a batch-2 seat picks the row up by declaring it. */
+export const STANDARDS_GATE_TIER = "standards-gate";
+
+/** The sidecar that must not exist, by section. */
+const FORBIDDEN_SIDECAR: Readonly<Record<string, string>> = {
+  protocols: "protocol.yaml",
+  roles: "role.yaml",
+};
+
+interface Section {
+  readonly heading: string;
+  readonly line: number;
+  readonly text: string;
+}
+
+/** Split a markdown body into its `##` sections, in file order. */
+export function splitSections(text: string): Section[] {
+  const lines = text.split("\n");
+  const out: Section[] = [];
+  let current: { heading: string; line: number; body: string[] } | null = null;
+  let fenced = false;
+  for (const [i, raw] of lines.entries()) {
+    const line = raw ?? "";
+    if (/^\s*```/.test(line)) fenced = !fenced;
+    if (!fenced && /^## /.test(line)) {
+      if (current !== null) out.push({ heading: current.heading, line: current.line, text: current.body.join("\n") });
+      current = { heading: line.trimEnd(), line: i + 1, body: [] };
+      continue;
+    }
+    current?.body.push(line);
+  }
+  if (current !== null) out.push({ heading: current.heading, line: current.line, text: current.body.join("\n") });
+  return out;
+}
+
+function hasAntiRationalizationTable(text: string): boolean {
+  for (const line of text.split("\n")) {
+    if (!line.trim().startsWith("|")) continue;
+    const cells = line
+      .split("|")
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
+    if (cells.length === 3 && cells.every((c, i) => c.toLowerCase() === (ANTI_RATIONALIZATION_COLUMNS[i] as string).toLowerCase())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** A markdown ruling citation: the word `ruling` followed by the bare id in backticks (§6). */
+export function citedRulings(text: string): string[] {
+  const out: string[] = [];
+  const pattern = /\bruling\s+`([a-z0-9][a-z0-9-]*)`/g;
+  for (const match of text.matchAll(pattern)) if (match[1] !== undefined) out.push(match[1]);
+  return out;
+}
+
+/**
+ * The rows of a `## Never` section, each with its wrapping undone.
+ *
+ * A row is a list item — `1.`, `-` or `*` — and everything indented under it.
+ * Emphasis and backticks are stripped and whitespace collapsed so a clause
+ * matches wherever the author happened to break the line.
+ */
+export function neverRows(text: string): string[] {
+  const rows: string[] = [];
+  let current: string[] | null = null;
+  let fenced = false;
+  for (const raw of text.split("\n")) {
+    const line = raw ?? "";
+    if (/^\s*```/.test(line)) fenced = !fenced;
+    if (!fenced && /^\s*(?:\d+\.|[-*])\s+/.test(line)) {
+      if (current !== null) rows.push(current.join(" "));
+      current = [line.replace(/^\s*(?:\d+\.|[-*])\s+/, "")];
+      continue;
+    }
+    if (current !== null) current.push(line);
+  }
+  if (current !== null) rows.push(current.join(" "));
+  return rows.map(normalizeRow).filter((row) => row.length > 0);
+}
+
+function normalizeRow(text: string): string {
+  return text
+    .replace(/[`*_]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/** A row satisfies a governed row when it carries the citation, if any, and every clause. */
+function rowMatches(row: string, governed: GovernedNeverRow): boolean {
+  if (governed.ruling !== null && !row.includes(`ruling ${governed.ruling}`)) return false;
+  return governed.clauses.every((clause) => row.includes(normalizeRow(clause)));
+}
+
+function carries(rows: ReadonlyArray<string>, governed: GovernedNeverRow): boolean {
+  return rows.some((row) => rowMatches(row, governed));
+}
+
+function checkSections(
+  file: string,
+  sections: ReadonlyArray<Section>,
+  required: ReadonlyArray<string>,
+  forbidden: Readonly<Record<string, string>>,
+  /** §3's insertion law, which §12.1 inherits for protocols and §12.2 does not impose on roles. */
+  noInsertions: boolean,
+): Issue[] {
+  const issues: Issue[] = [];
+  const present = new Map(sections.map((s) => [s.heading, s]));
+
+  for (const heading of required) {
+    if (present.has(heading)) continue;
+    issues.push(error("body.missing-section", file, `missing required section ${heading}.`));
+  }
+
+  for (const [heading, reason] of Object.entries(forbidden)) {
+    const found = present.get(heading);
+    if (found === undefined) continue;
+    issues.push(error("body.forbidden-section", file, `${heading} does not belong here. ${reason}`, found.line));
+  }
+
+  // §3: extra `##` sections may follow the last required heading; none may be
+  // inserted between them. A protocol inherits that law with §3's ten headings.
+  // A role does not: §12.2 fixes the required set and puts
+  // `## Rationalizations this seat makes` last, and says nothing against a seat
+  // adding a section of its own in between — the authored seats use one.
+  const lastRequired = sections.map((s) => s.heading).reduce((last, h, i) => (required.includes(h) ? i : last), -1);
+  for (const [i, section] of noInsertions ? sections.entries() : []) {
+    if (i >= lastRequired || required.includes(section.heading) || section.heading in forbidden) continue;
+    issues.push(
+      error(
+        "body.section-inserted",
+        file,
+        `${section.heading} is inserted between required sections. Extra sections may follow the last required heading, never interrupt them.`,
+        section.line,
+      ),
+    );
+  }
+
+  // Order is checked over the required headings that are actually present, so a
+  // missing heading is reported once as missing rather than again as misplaced.
+  const expected = required.filter((h) => present.has(h));
+  const actual = sections.filter((s) => expected.includes(s.heading)).map((s) => s.heading);
+  for (const [i, heading] of actual.entries()) {
+    if (expected[i] === heading) continue;
+    const at = present.get(heading);
+    issues.push(
+      error(
+        "body.sections-out-of-order",
+        file,
+        `${heading} appears out of order; the required order is ${expected.join(", ")}.`,
+        at?.line,
+      ),
+    );
+    break;
+  }
+
+  return issues;
+}
+
+function checkOneBody(
+  ctx: CheckContext,
+  section: DirectorySection,
+  id: string,
+  standardsSeats: ReadonlySet<string>,
+): Issue[] {
+  const dir = entryDir(section, id);
+  if (!isDir(join(ctx.root, dir))) return [];
+
+  const issues: Issue[] = [];
+
+  const sidecar = FORBIDDEN_SIDECAR[section];
+  if (sidecar !== undefined && exists(join(ctx.root, dir, sidecar))) {
+    issues.push(
+      error(
+        "body.sidecar-forbidden",
+        `${dir}/${sidecar}`,
+        `a ${section === "protocols" ? "protocol" : "role"} has no execution contract of its own; the catalog entry plus the prose is the contract (AUTHORING.md §12). Delete ${sidecar}.`,
+      ),
+    );
+  }
+
+  if (section === "roles" && id.split("/").length > 2) {
+    issues.push(
+      error(
+        "body.role-nesting-too-deep",
+        `${dir}/${preferredBodyFile(section)}`,
+        `role id ${id} nests ${id.split("/").length - 1} levels; §12.2 allows at most one (a panel directory and its seats).`,
+      ),
+    );
+  }
+
+  const file = `${dir}/${preferredBodyFile(section)}`;
+  const text = readTextIfPresent(join(ctx.root, file));
+  if (text === null) return issues; // completeness owns "this body does not exist".
+
+  const front = parseFrontmatter(text);
+  if (front.present) {
+    issues.push(
+      error(
+        "body.frontmatter-forbidden",
+        file,
+        `neither a protocol nor a role carries frontmatter: it is not an entrypoint, and the packager emits none (policies/invocation.yaml, statement protocols-and-roles-are-not-entrypoints).`,
+        1,
+      ),
+    );
+  }
+
+  const sections = splitSections(front.present ? front.body : text);
+  if (section === "protocols") {
+    issues.push(...checkSections(file, sections, PROTOCOL_SECTIONS, PROTOCOL_FORBIDDEN, true));
+    const gates = sections.find((s) => s.heading === "## Hard gates");
+    if (gates !== undefined && !hasAntiRationalizationTable(gates.text)) {
+      issues.push(
+        error(
+          "body.missing-anti-rationalization-table",
+          file,
+          `## Hard gates carries no anti-rationalization table. §3.1 requires the three columns ${ANTI_RATIONALIZATION_HEADER} with no prose around them.`,
+          gates.line,
+        ),
+      );
+    }
+    return issues;
+  }
+
+  issues.push(...checkSections(file, sections, ROLE_SECTIONS, ROLE_FORBIDDEN, false));
+  const rationalizations = sections.find((s) => s.heading === "## Rationalizations this seat makes");
+  if (rationalizations !== undefined && !hasAntiRationalizationTable(rationalizations.text)) {
+    issues.push(
+      error(
+        "body.missing-anti-rationalization-table",
+        file,
+        `## Rationalizations this seat makes carries no table. §12.2 requires §3.1's three columns ${ANTI_RATIONALIZATION_HEADER} unchanged.`,
+        rationalizations.line,
+      ),
+    );
+  }
+
+  const never = sections.find((s) => s.heading === "## Never");
+  // A body with no `## Never` is already reported as a missing section; there is
+  // nothing to say about its rows on top of that.
+  if (never !== undefined) issues.push(...checkNeverRows(file, id, never.text, never.line, standardsSeats));
+
+  return issues;
+}
+
+/**
+ * The four governed `## Never` rows: two universal, two conditional on a closed
+ * list of seats.
+ *
+ * Both conditionals are checked as **set equality** rather than presence. The
+ * direction that matters is the second one: a seat that produces an artifact
+ * while carrying the row saying it never edits is the defect the split exists
+ * to catch, and a presence check would pass it.
+ */
+function checkNeverRows(
+  file: string,
+  id: string,
+  text: string,
+  line: number,
+  standardsSeats: ReadonlySet<string>,
+): Issue[] {
+  const issues: Issue[] = [];
+  const rows = neverRows(text);
+
+  for (const governed of UNIVERSAL_NEVER_ROWS) {
+    if (carries(rows, governed)) continue;
+    issues.push(
+      error(
+        "role.missing-universal-never-row",
+        file,
+        `${id} does not carry the universal ## Never row citing ruling \`${String(governed.ruling)}\`: ${governed.description} §12.2 mandates both in all twenty-nine seats, and the row must carry the citation and the clause together.`,
+        line,
+      ),
+    );
+  }
+
+  const produces = PRODUCING_SEATS.includes(id);
+  const required = produces ? AUTHORSHIP_CONVERSE_ROW : AUTHORSHIP_PLAIN_ROW;
+  const excluded = produces ? AUTHORSHIP_PLAIN_ROW : AUTHORSHIP_CONVERSE_ROW;
+  const producingSeats = PRODUCING_SEATS.join(" and ");
+
+  if (!carries(rows, required)) {
+    issues.push(
+      error(
+        "role.authorship-row-mismatch",
+        file,
+        `${id} does not carry ${required.description}. ${produces ? `${producingSeats} produce an artifact, so they carry that form` : `Every seat but ${producingSeats} judges without producing, so it carries that form`} (§12.2).`,
+        line,
+      ),
+    );
+  }
+  if (carries(rows, excluded)) {
+    issues.push(
+      error(
+        "role.authorship-row-mismatch",
+        file,
+        `${id} carries ${excluded.description}, which belongs to ${produces ? "the twenty-seven seats that only judge" : `${producingSeats} alone`}. ${produces ? `${id} writes an artifact; a seat that produces must not also claim it never edits.` : `${id} produces nothing, so the plain form is the one it carries.`}`,
+        line,
+      ),
+    );
+  }
+
+  const groundsInStandards = standardsSeats.has(id);
+  const hasStandardsRow = carries(rows, STANDARDS_GROUNDING_ROW);
+  if (groundsInStandards && !hasStandardsRow) {
+    issues.push(
+      error(
+        "role.standards-row-mismatch",
+        file,
+        `${id} judges against a project standard but does not carry ${STANDARDS_GROUNDING_ROW.description}. §12.2 states this row directly, so it cites no ruling.`,
+        line,
+      ),
+    );
+  }
+  if (!groundsInStandards && hasStandardsRow) {
+    issues.push(
+      error(
+        "role.standards-row-mismatch",
+        file,
+        `${id} carries ${STANDARDS_GROUNDING_ROW.description}, which belongs to the seats that judge against a project standard: ${[...standardsSeats].sort().join(", ")}. This seat has its own grounding rule to write in its own terms.`,
+        line,
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * The seats that judge against a project standard.
+ *
+ * `reviewer-standards` is named by §12.2 because it carries no tier; every other
+ * one is read from the catalog's `tier: standards-gate`, so a batch-2 seat that
+ * acquires the tier picks the row up without this file changing. Neither source
+ * is the corpus being checked.
+ */
+function standardsSeatIds(ctx: CheckContext): Set<string> {
+  const seats = new Set<string>(NAMED_STANDARDS_SEATS);
+  for (const entry of ctx.catalog.bySection("roles")) {
+    if (entry.raw["tier"] === STANDARDS_GATE_TIER) seats.add(entry.id);
+  }
+  return seats;
+}
+
+export function checkBodyShapes(ctx: CheckContext): Issue[] {
+  const issues: Issue[] = [];
+  const standardsSeats = standardsSeatIds(ctx);
+  for (const section of ["protocols", "roles"] as const) {
+    for (const entry of ctx.catalog.bySection(section)) {
+      issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats));
+    }
+  }
+  return issues;
+}

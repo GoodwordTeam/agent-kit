@@ -139,8 +139,13 @@ describe("scanner term definitions", () => {
   });
 
   test("pricing and ladder shapes are matched, prose about them is not", () => {
+    // Written as literals on purpose. The probe round-trip above already proves
+    // each pattern matches its own probe; what these lines add is that the
+    // patterns fire on the real-world shapes an author would actually type, and
+    // that the paired negatives do not. tests/ is exempt from the scan for
+    // exactly this (see DENYLIST_EXEMPT_PREFIXES).
     expect(matchTerms("cost is $/1M tokens", DENY_TERMS).length).toBeGreaterThan(0);
-    expect(matchTerms("billed per 1M tokens", DENY_TERMS).length).toBeGreaterThan(0);
+    expect(matchTerms("priced per 1M tokens", DENY_TERMS).length).toBeGreaterThan(0);
     expect(matchTerms("reasoning_effort: high", DENY_TERMS).length).toBeGreaterThan(0);
     expect(matchTerms("model_tier: 2", DENY_TERMS).length).toBeGreaterThan(0);
     expect(matchTerms("No effort ladder or escalation tier appears in this catalog.", DENY_TERMS)).toEqual([]);

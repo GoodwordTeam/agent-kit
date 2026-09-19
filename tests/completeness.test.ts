@@ -75,6 +75,27 @@ describe("catalog completeness", () => {
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);
   });
 
+  test("an empty group directory is a batch that has not run yet, reported as a note", () => {
+    const { issues } = run({
+      "catalog.yaml": catalogYaml("roles:\n  - id: code-review/security\n    status: contract\n"),
+      "roles/code-review/.keep": "",
+    });
+    expect(issues.some((i) => i.severity === "error")).toBe(false);
+    const issue = issues.find((i) => i.rule === "catalog.container-without-entries");
+    expect(issue?.severity).toBe("note");
+    expect(issue?.file).toBe("roles/code-review");
+  });
+
+  test("a directory that is neither an entry nor a prefix of one stays an error", () => {
+    const { issues } = run({
+      "catalog.yaml": catalogYaml("roles:\n  - id: code-review/security\n    status: contract\n"),
+      "roles/stray/.keep": "",
+    });
+    const issue = issues.find((i) => i.rule === "catalog.directory-without-entry");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("roles/stray");
+  });
+
   test("a nested directory whose id is not declared is an error", () => {
     const { issues } = run({
       "catalog.yaml": catalogYaml("roles:\n  - id: code-review/security\n    status: authored\n"),

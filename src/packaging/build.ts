@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { readTextIfPresent, walkFiles } from "../util/fs.ts";
 import type { CheckContext } from "../validation/context.ts";
 import { error, type Issue } from "../validation/types.ts";
+import { ADAPTATIONS_FILE, loadAdaptationFragments, renderAdaptations } from "../validation/provenance.ts";
 import { HOST_IDS, type HostId } from "./hosts.ts";
 import { planBundle, type BundlePlan, type PlanOptions } from "./plan.ts";
 
@@ -63,4 +64,23 @@ export function checkBundles(ctx: CheckContext, options: BuildOptions): Issue[] 
   }
 
   return issues;
+}
+
+/**
+ * Render provenance/adaptations.yaml from its fragments.
+ *
+ * This is a source-tree artifact rather than a bundle file: NOTICE, README,
+ * AGENTS.md and catalog.yaml all point at the path, so it is generated and
+ * committed. It is written before the bundles and independently of them, so a
+ * tree whose skills are not yet authored still gets a correct attribution file.
+ * Conflicting fragments stop the write: half a merge is worse than none.
+ */
+export function writeAdaptations(ctx: CheckContext): Issue[] {
+  const { rows, issues } = loadAdaptationFragments(ctx.root);
+  if (issues.some((i) => i.severity === "error")) return issues.filter((i) => i.severity === "error");
+
+  const target = join(ctx.root, ADAPTATIONS_FILE);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, renderAdaptations(rows));
+  return [];
 }

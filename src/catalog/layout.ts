@@ -26,8 +26,16 @@ const PREFERRED_BODY: Record<DirectorySection, string> = {
   references: "REFERENCE.md",
 };
 
-/** Sections whose canonical body file name is mandated rather than preferred. */
-export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills"];
+/**
+ * Sections whose canonical body file name is mandated rather than preferred.
+ *
+ * `skills` because the host loader reads `SKILL.md` by name; `protocols` and
+ * `roles` because AUTHORING.md §12 gives each one body file and nothing else
+ * distinguishes a body from the long material behind it (§12.1's
+ * `protocols/<id>/references/`). A differently named body in these trees is an
+ * error, not a warning: the packager would ship the directory without its body.
+ */
+export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills", "protocols", "roles"];
 
 export function entryDir(section: DirectorySection, id: string): string {
   return `${section}/${id}`;

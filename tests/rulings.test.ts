@@ -1,0 +1,289 @@
+import { describe, expect, test } from "bun:test";
+
+import { loadCatalog } from "../src/catalog/load.ts";
+import type { Section } from "../src/catalog/layout.ts";
+import { RULINGS_FILE, checkRulings, citedRulingsInYaml, loadRulings } from "../src/validation/rulings.ts";
+import { citedRulings } from "../src/validation/bodies.ts";
+import { makeTree } from "./helpers/tree.ts";
+
+const CATALOG_HEAD = `schema_version: 1
+package:
+  id: ak
+  name: agent-kit
+  version: 0.1.0
+  namespace: "/ak:"
+  default_profile: core
+`;
+
+const SKILL_BODY = (text: string) => `---\nname: alpha\ndescription: d\n---\n\n# Alpha\n\n${text}\n`;
+
+function rulings(rows: string): string {
+  return `schema_version: 1\npolicy: resolved-conflicts\nrows: ${rows.split("- id:").length - 1}\n\nconflicts:\n${rows}`;
+}
+
+const ROW = (id: string, binds = "", scenario = 3) =>
+  `  - id: ${id}\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n${binds}    scenario: ${scenario}\n    coverage: direct\n`;
+
+function ctxFor(files: Record<string, string>) {
+  const root = makeTree({ "catalog.yaml": CATALOG_HEAD, ...files });
+  const { catalog } = loadCatalog(root);
+  if (catalog === null) throw new Error("fixture has no catalog");
+  return { root, catalog };
+}
+
+const errors = (issues: ReturnType<typeof checkRulings>) => issues.filter((i) => i.severity === "error");
+
+describe("citation extraction", () => {
+  test("the markdown form is the word ruling plus a backticked bare id", () => {
+    expect(citedRulings("closes a finding (ruling `closure-requires-independent-verification`).")).toEqual([
+      "closure-requires-independent-verification",
+    ]);
+  });
+
+  test("a backticked id with no preceding `ruling` word is not a citation", () => {
+    expect(citedRulings("see `closure-requires-independent-verification` somewhere")).toEqual([]);
+  });
+
+  test("the yaml forms are ruling: <id> and rulings: [<id>, <id>]", () => {
+    expect(citedRulingsInYaml("ruling: one-thing\n").sort()).toEqual(["one-thing"]);
+    expect(citedRulingsInYaml("rulings: [one-thing, two-thing]\n").sort()).toEqual(["one-thing", "two-thing"]);
+    expect(citedRulingsInYaml("provenance:\n  resolved_conflicts: [one-thing]\n")).toEqual(["one-thing"]);
+  });
+
+  test("a ruling: key whose value is a mapping is not a citation", () => {
+    expect(citedRulingsInYaml("ruling:\n  outcome: decided\n")).toEqual([]);
+  });
+});
+
+describe("the policy file is the authority for ids", () => {
+  test("an absent policy file is a note; nothing resolves and nothing is flagged", () => {
+    const ctx = ctxFor({ "skills/alpha/SKILL.md": SKILL_BODY("cites ruling `whatever-it-is`.") });
+    const issues = checkRulings(ctx);
+    expect(errors(issues)).toEqual([]);
+    expect(issues.find((i) => i.rule === "rulings.policy-unavailable")?.severity).toBe("note");
+  });
+
+  test("a citation to an id the policy does not define is an error naming the id and the file", () => {
+    const ctx = ctxFor({
+      [RULINGS_FILE]: rulings(ROW("real-ruling")),
+      "skills/alpha/SKILL.md": SKILL_BODY("this is settled (ruling `invented-ruling`)."),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.unknown-citation");
+    expect(issue?.file).toBe("skills/alpha/SKILL.md");
+    expect(issue?.message).toContain("invented-ruling");
+    expect(issue?.line).toBeGreaterThan(0);
+  });
+
+  test("a citation that resolves passes", () => {
+    const ctx = ctxFor({
+      [RULINGS_FILE]: rulings(ROW("real-ruling")),
+      "skills/alpha/SKILL.md": SKILL_BODY("this is settled (ruling `real-ruling`)."),
+    });
+    expect(errors(checkRulings(ctx))).toEqual([]);
+  });
+
+  test("a dangling ruling: in a profile is an error too", () => {
+    const ctx = ctxFor({
+      [RULINGS_FILE]: rulings(ROW("real-ruling")),
+      "profiles/core.yaml": "id: core\nruling: ghost-ruling\n",
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.unknown-citation");
+    expect(issue?.file).toBe("profiles/core.yaml");
+    expect(issue?.message).toContain("ghost-ruling");
+  });
+
+  test("the declared row count must equal the number of conflicts", () => {
+    const ctx = ctxFor({ [RULINGS_FILE]: `schema_version: 1\nrows: 18\n\nconflicts:\n${ROW("only-one")}` });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.row-count-mismatch");
+    expect(issue?.message).toContain("18");
+    expect(issue?.message).toContain("1");
+  });
+
+  test("a policy file with no rows: key is not a count failure", () => {
+    const ctx = ctxFor({ [RULINGS_FILE]: `schema_version: 1\n\nconflicts:\n${ROW("only-one")}` });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.row-count-mismatch")).toEqual([]);
+  });
+
+  test("a repeated id is an error: the ids are what every body cites", () => {
+    const ctx = ctxFor({ [RULINGS_FILE]: rulings(ROW("same-id") + ROW("same-id")) });
+    expect(errors(checkRulings(ctx)).some((i) => i.rule === "rulings.duplicate-id")).toBe(true);
+  });
+
+  test("a scenario outside the numbered release scenarios is an error", () => {
+    const ctx = ctxFor({ [RULINGS_FILE]: rulings(ROW("a-row", "", 99)) });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.unknown-scenario");
+    expect(issue?.message).toContain("99");
+  });
+
+  test("a row with no overrides block is complete, not incomplete", () => {
+    const ctx = ctxFor({ [RULINGS_FILE]: rulings(ROW("reconciled-row")) });
+    const { rows } = loadRulings(ctx.root);
+    expect(rows.map((r) => r.id)).toEqual(["reconciled-row"]);
+    expect(checkRulings(ctx).filter((i) => i.message.toLowerCase().includes("override"))).toEqual([]);
+  });
+});
+
+describe("binds is the machine-checkable inverse", () => {
+  const BINDS = "    binds:\n      skills: [alpha]\n";
+  const DECLARES_ALPHA = `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\n`;
+
+  test("an entry a ruling binds whose body cites nothing is an error naming both", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("binding-ruling", BINDS)),
+      "skills/alpha/SKILL.md": SKILL_BODY("no citation here."),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.binding-not-cited");
+    expect(issue?.file).toBe("skills/alpha/SKILL.md");
+    expect(issue?.message).toContain("binding-ruling");
+  });
+
+  test("the same entry citing the ruling passes", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("binding-ruling", BINDS)),
+      "skills/alpha/SKILL.md": SKILL_BODY("settled (ruling `binding-ruling`)."),
+    });
+    expect(errors(checkRulings(ctx))).toEqual([]);
+  });
+
+  test("an entry that is not authored yet is not owed a citation", () => {
+    const ctx = ctxFor({ "catalog.yaml": DECLARES_ALPHA, [RULINGS_FILE]: rulings(ROW("binding-ruling", BINDS)) });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.binding-not-cited")).toEqual([]);
+  });
+
+  test("a schema is bound by prose it has no place to carry, so it is a warning", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}schemas:\n  - id: finding\n    status: authored\n`,
+      [RULINGS_FILE]: rulings(ROW("binding-ruling", "    binds:\n      schemas: [finding]\n")),
+      "schemas/finding.schema.json": '{"$id":"finding.schema.json","type":"object"}',
+    });
+    const issue = checkRulings(ctx).find((i) => i.rule === "rulings.binding-not-cited");
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.file).toBe("schemas/finding.schema.json");
+  });
+
+  test("a binds group naming an id the catalog does not declare is an error", () => {
+    const ctx = ctxFor({ [RULINGS_FILE]: rulings(ROW("binding-ruling", "    binds:\n      skills: [ghost]\n")) });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.binds-unknown-entry");
+    expect(issue?.message).toContain("ghost");
+  });
+});
+
+describe("this repository's own rulings", () => {
+  const REPO = new URL("..", import.meta.url).pathname;
+
+  test("every id cited anywhere in this tree resolves, and rows matches the conflict count", () => {
+    const { catalog } = loadCatalog(REPO);
+    expect(catalog).not.toBeNull();
+    if (catalog === null) return;
+    const issues = checkRulings({ root: REPO, catalog });
+    expect(issues.filter((i) => i.rule === "rulings.unknown-citation")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.row-count-mismatch")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.duplicate-id")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.unknown-scenario")).toEqual([]);
+  });
+
+  test("every universal claim in this tree set-equals the section it claims", () => {
+    const { catalog } = loadCatalog(REPO);
+    expect(catalog).not.toBeNull();
+    if (catalog === null) return;
+    const issues = checkRulings({ root: REPO, catalog });
+    expect(issues.filter((i) => i.rule === "rulings.universal-binds-mismatch")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.malformed-universal")).toEqual([]);
+    expect(issues.filter((i) => i.rule === "rulings.unknown-universal-kind")).toEqual([]);
+
+    // The claim is only worth checking if something claims it: a tree where every
+    // `universal` key had been dropped would pass the three assertions above.
+    const { rows } = loadRulings(REPO);
+    const universal = rows.filter((r) => r.universal.length > 0);
+    expect(universal.length).toBeGreaterThan(0);
+    for (const row of universal) {
+      for (const kind of row.universal) {
+        expect(row.binds[kind]?.length).toBe(catalog.bySection(kind as Section).length);
+      }
+    }
+  });
+});
+
+describe("universal is a claim binds has to keep", () => {
+  const DECLARES_THREE = `${CATALOG_HEAD}roles:\n  - id: alpha\n    status: authored\n  - id: beta\n    status: authored\n  - id: review/gamma\n    status: authored\n`;
+
+  const block = (binds: string, universal: string) => `    binds:\n${binds}    universal: ${universal}\n`;
+
+  test("a universal kind whose binds group set-equals that catalog section passes", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[roles]"))),
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule.startsWith("rulings.universal"))).toEqual([]);
+  });
+
+  test("a role the catalog declares and the universal group omits is an error naming it", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta]\n", "[roles]"))),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.universal-binds-mismatch");
+    expect(issue?.file).toBe(RULINGS_FILE);
+    expect(issue?.message).toContain("governs-every-seat");
+    expect(issue?.message).toContain("review/gamma");
+    expect(issue?.message).toContain("missing");
+  });
+
+  test("an id in the universal group that the section does not declare is named as extra", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma, ghost]\n", "[roles]"))),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.universal-binds-mismatch");
+    expect(issue?.message).toContain("extra");
+    expect(issue?.message).toContain("ghost");
+  });
+
+  test("a universal kind with no binds group at all is the whole section missing, not a pass", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", "    universal: [roles]\n")),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.universal-binds-mismatch");
+    expect(issue?.message).toContain("alpha");
+    expect(issue?.message).toContain("beta");
+    expect(issue?.message).toContain("review/gamma");
+  });
+
+  test("a bare string binds nothing silently, so the wrong shape is an error rather than a skip", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "roles"))),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.malformed-universal");
+    expect(issue?.message).toContain("governs-every-seat");
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.universal-binds-mismatch")).toEqual([]);
+  });
+
+  test("a universal kind that is not a catalog section is an error", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[rolez]"))),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.unknown-universal-kind");
+    expect(issue?.message).toContain("rolez");
+  });
+
+  test("a row with no universal key is not checked for set equality", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-one-seat", "    binds:\n      roles: [alpha]\n")),
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule.startsWith("rulings.universal"))).toEqual([]);
+  });
+
+  test("universal survives the load so another reader sees the claim, not just the census", () => {
+    const root = makeTree({
+      "catalog.yaml": DECLARES_THREE,
+      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[roles]"))),
+    });
+    expect(loadRulings(root).rows[0]?.universal).toEqual(["roles"]);
+  });
+});

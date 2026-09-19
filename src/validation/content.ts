@@ -13,14 +13,22 @@ import type { CheckContext } from "./context.ts";
 import { error, type Issue } from "./types.ts";
 
 /**
- * Denylist scope: everything tracked except the two trees that quote the design
+ * Denylist scope: everything tracked except the trees that quote the design
  * sources verbatim by design, the scanner's own term definitions, and the
- * deliberately-invalid validator fixtures.
+ * scanner's own evidence.
+ *
+ * `tests/` is exempt for the same reason `src/denylist.ts` is, and it is a
+ * boundary rather than a convenience: the denylist exists to keep model routing
+ * out of shipped catalog content, and nothing under `tests/` is ever packaged
+ * into `dist/`. A test that proves a pricing or ladder pattern fires has to
+ * write that shape out literally; deriving it from the term's own probe would
+ * only assert that the scanner agrees with itself. The rest of `src/` stays in
+ * scope, so the tool cannot exempt the code it ships.
  */
 export const DENYLIST_EXEMPT_PREFIXES: ReadonlyArray<string> = [
   "provenance/",
   "research/",
-  "tests/fixtures/",
+  "tests/",
   SCANNER_DEFINITION_FILE,
 ];
 

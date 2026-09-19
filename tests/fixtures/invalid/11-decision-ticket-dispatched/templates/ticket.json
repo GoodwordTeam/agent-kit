@@ -1,0 +1,11 @@
+{
+  "schema": "ticket",
+  "id": "tkt-2",
+  "type": "decision",
+  "question": "Which module owns the queue?",
+  "write_ownership": {
+    "paths": ["src/queue"],
+    "generated_artifacts": [],
+    "interfaces": []
+  }
+}

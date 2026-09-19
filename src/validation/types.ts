@@ -35,13 +35,18 @@ export function formatIssue(issue: Issue): string {
   return `${issue.severity.toUpperCase().padEnd(7)} ${issue.rule.padEnd(38)} ${where}  ${issue.message}`;
 }
 
+/**
+ * File first, so an author sees every issue with their file together; severity
+ * is carried in each line's prefix rather than in the ordering.
+ */
 export function sortIssues(issues: ReadonlyArray<Issue>): Issue[] {
   const rank: Record<Severity, number> = { error: 0, warning: 1, note: 2 };
   return [...issues].sort(
     (a, b) =>
-      rank[a.severity] - rank[b.severity] ||
       a.file.localeCompare(b.file) ||
       (a.line ?? 0) - (b.line ?? 0) ||
-      a.rule.localeCompare(b.rule),
+      rank[a.severity] - rank[b.severity] ||
+      a.rule.localeCompare(b.rule) ||
+      a.message.localeCompare(b.message),
   );
 }

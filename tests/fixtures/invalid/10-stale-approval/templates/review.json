@@ -1,0 +1,11 @@
+{
+  "schema": "review",
+  "id": "rev-1",
+  "subject": "tkt-1",
+  "approvals": [
+    {
+      "by": "maintainer",
+      "artifact_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
