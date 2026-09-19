@@ -1312,13 +1312,14 @@ block **can** name it, so §6's citation rule is machine-checkable here and §12
 transfer. Check your pack's id against the `binds` groups before deciding a ruling is irrelevant to
 you — the same obligation a protocol or role body carries.
 
-Before handing one back, §12.4's checklist applies with its two role-specific bullets skipped, and
-with the body-file bullet read as follows: `REFERENCE.md` is currently *preferred* rather than
-mandated (`MANDATORY_BODY_SECTIONS`, `src/catalog/layout.ts`), because that list takes its
-membership from the shapes §12 gave one body file. This section gives a reference pack one body
-file, so that list is behind this contract rather than disagreeing with it. While it is behind,
-`catalog.unexpected-body-name` reports a warning here rather than an error, which §12.4 says is not
-the same as optional. Use `REFERENCE.md`.
+Before handing one back, §12.4's checklist applies with its two role-specific bullets skipped. The
+body file is `REFERENCE.md`, and §12.4's body-file bullet governs what a differently named one
+costs. `MANDATORY_BODY_SECTIONS` (`src/catalog/layout.ts`) takes its membership from the shapes §12
+gives one body file, which is the criterion to reason from rather than the list to read: this
+section gives a reference pack one, and §12's domain packs have none. Do not restate the membership
+here. A contract sentence that tracks where a validator has got to is a sentence that goes stale the
+day it catches up, and §12.4 is written so that the severity follows from the criterion without
+either file naming the other's contents.
 
 **Domain packs are the fifth shape and this contract does not govern them yet.** `catalog.yaml`
 declares its `packs` entries at batch 6, every one `status: contract` with no directory on disk.
