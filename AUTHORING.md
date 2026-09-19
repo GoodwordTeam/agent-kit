@@ -395,6 +395,30 @@ There are two citation shapes, and `ak validate` resolves both against the ids i
 | A markdown body — `SKILL.md`, a `references/` file, an adapter contract | The word `ruling` followed by the bare id in backticks, inline at the sentence it governs |
 | A YAML file — `skill.yaml`, a policy, a profile | The key `ruling: <bare-id>`, or `rulings: [<id>, <id>]` for several |
 
+**In YAML the unit a `ruling:` key covers is the mapping it belongs to, plus everything nested
+beneath that mapping.** Not the file, not the block a reader's eye groups it with, and never a
+sibling. The items under `seat_separation.rules` in `policies/authority-defaults.yaml` are the clean
+shape: a `ruling:` sitting beside `id:` and `rule:` covers that item and its descendants and stops
+there.
+
+The sibling case is what decides whether the rule has been understood. In `policies/review.yaml`,
+`synthesis.low_confidence_security` carries `ruling: low-confidence-security-adjudicated`, and its
+sibling `synthesis.may_not` contains *"drop a low-confidence security finding; it is adjudicated,
+never filtered"* — the same rule, restated, further up the same block. A sibling is not a
+descendant, so that entry is uncited, and proximity does not cure it. This is the anaphora defect in
+another notation: nothing repoints when the block moves, but adding a sixth child silently changes
+what a reader believes is covered.
+
+**Hoisting the key to the parent is not the fix, where the parent has children the ruling does not
+govern.** `synthesis` also holds `autofix_class_emission`, which cites a different ruling; a
+`ruling:` on `synthesis` would scope one ruling over material it does not reach, crediting an
+authority with a rule it does not state. That is this section's defect arrived at by widening rather
+than by omitting, and it is worse than the uncited entry, because it resolves. Hoist only where the
+entire subtree is governed by the one ruling — that permission is what makes this a scope rule and
+not a prohibition. Otherwise cite at the point of use, and where the point of use is a scalar list
+item that has no key to carry the citation, converting it to a mapping is a schema question for the
+file's owner and `ak validate`, never a reason to cite somewhere easier.
+
 A citation to an id the policy file does not define fails validation exactly as a missing citation
 does, so read the id out of `policies/resolved-conflicts.yaml` rather than reconstructing it from the
 tension it settles. **The ids are stable**: renaming one is a breaking change to every body that
@@ -1054,8 +1078,8 @@ condition is a closed list rather than the writer's judgment.
 
 **Conditional, required exactly where the condition holds:**
 
-3. **Authorship.** Every seat carries *"never edits: it judges and returns"* except the two that
-   produce an artifact. `implementer` and `plan-review/planner` carry the converse instead,
+3. **Authorship.** Every seat carries *"never edits: it judges and returns."* The two that
+   produce an artifact — `implementer` and `plan-review/planner` — carry the converse instead,
    naming what the seat writes and stating that it never writes a finding, a receipt, a review record
    or a ticket, and never closes or approves what it produced.
 4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and
