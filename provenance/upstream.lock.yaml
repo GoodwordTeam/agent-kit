@@ -107,8 +107,10 @@ donors:
 #   real row exercises it, none of this is built: an unexercised parser branch
 #   looks supported and is not.
 #
-# AUTHORING.md section 5 carries the operative rule for writers. This block
-# carries the evidence, so that neither has to be re-derived.
+# AUTHORING.md's "Provenance law" section carries the operative rule for writers;
+# this block carries the evidence, so that neither has to be re-derived. The
+# section is named rather than numbered because a number binds a position and
+# renumbering would silently repoint this.
 # ---------------------------------------------------------------------------
 local_sources:
   - id: pocock-two-axis-backup
