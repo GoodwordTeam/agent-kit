@@ -44,8 +44,9 @@ stricter position than the quote's model-invoked class, not a loophole in it.
 
 ### How the law is satisfied where skills legitimately need each other
 
-`super-ship` needs `compound`; `autopilot` needs gated phases. Both are U skills calling U skills,
-which the law forbids. The resolution (arch §7.1, §11) is **not** an exception — it is a split:
+`super-ship` needs `compound`; `autopilot` needs gated phases. Both are U skills calling U
+skills, which the law forbids. The resolution (ruling `entrypoint-phase-operation-split`) is
+**not** an exception — it is a split:
 
 | Layer | Who may start it | Example |
 |---|---|---|
@@ -146,7 +147,7 @@ per project and carried in the project record. **Neither is validated or enforce
 is grounds for a finding on its own** — that clause is the whole point, and it is the one a reader
 supplies wrongly if it is left out. Real constraints are set per project, and exceptions are
 **recorded** rather than forcing artificial file splits or meaningless tests (ruling
-`numeric-heuristics-are-guidance`; arch §3, §11).
+`numeric-heuristics-are-guidance`).
 
 ## Before you commit
 
