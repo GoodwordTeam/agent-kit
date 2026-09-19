@@ -761,6 +761,20 @@ strictly, and the two are easy to confuse here: a citation may carry a gloss its
 so resolve on the section number and ignore the rest of the reference. An implementation that
 compares the whole rendered citation manufactures the unresolvable case it then has to fail.
 
+**Nothing in `src/` runs this check.** *An open entry's quoted instruction must still resolve in the
+section it cites* is a specification, not a description of anything that executes. `ak validate`
+seats no check that reads this file, and the only mention of it under `src/` is a comment in
+`src/validation/restatement.ts`. An entry whose quotation never resolved can be filed, validated and
+merged in silence. The mechanical detail in this rule — whitespace collapsed, scoped to the cited
+section, failing closed on a citation it cannot resolve — is exactly why this has to be said rather
+than left to be found: a rule specified precisely enough to implement reads as a rule something
+already implements, and it was read that way by someone who went looking for the code. The validator
+does report the underlying gap — the §12.3 warning that this file has no `catalog.yaml` entry, so no
+ruling's `binds` block names it and no `binds`-derived check reaches it — and that warning has been
+sitting in a count nobody connected to this rule. Until a detector exists the comparison is made by
+hand by whoever rules on the entry, and nothing obliges them to make it. This paragraph is written
+to be deleted.
+
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
 
