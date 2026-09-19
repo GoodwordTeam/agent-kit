@@ -605,10 +605,10 @@ not one:
 | Heading | What goes in it |
 |---|---|
 | `## What this seat judges` | The one question this seat answers. One sentence |
-| `## Not this seat` | The adjacent seats this one would be mistaken for, and what belongs to them. Three or four, not fourteen — below |
+| `## Not this seat` | The adjacent seats this one would be mistaken for, and what belongs to them. Three or four, not fourteen, plus a required cross-layer entry — below |
 | `## What it must be given` | What must be true of the seat's input before it may judge at all. An obligation on the caller — below |
 | `## Evidence it must cite` | What the seat must point at for a finding to be admissible |
-| `## Never` | The seat's prohibitions. Two rows are mandatory — below |
+| `## Never` | The seat's prohibitions. Four rows are governed: two mandatory, two conditional — below |
 | `## What it returns` | The finding shape, and the explicit empty return |
 | `## When it has nothing to say` | The conditions under which empty is the correct answer |
 | `## Rationalizations this seat makes` | The excuses this seat will make, and where each one sends it instead. §3.1's three columns — below |
@@ -646,6 +646,44 @@ enumerating the other fourteen is quadratic and unmaintainable, and it degrades 
 the boundaries matter most. A seat that cannot name its neighbours in three or four does not have a
 sharp enough question, which is a finding about that seat rather than about this heading.
 
+Three kinds of confusion belong in this heading, and the budget above governs only the first two.
+
+1. **Sibling seats on the same panel.** The adjacency rule above. Budgeted.
+2. **Non-seat steps** — synthesis, dispatch. These are not seats, and "the verdict belongs to
+   synthesis" is a `## Not this seat` entry even though synthesis is not a seat. A writer reading
+   *adjacent seats* strictly would leave out the step a seat's output is most often mistaken for.
+   Budgeted.
+3. **Same-named seats at another layer.** A different error from the other two: not a blurred
+   boundary but a reader who has the wrong file open. **Required, and not budgeted.**
+
+A seat whose name matches or nearly matches a seat in another panel names that counterpart in
+`## Not this seat` and states what distinguishes the layers. This entry does not count against the
+three-or-four budget, because it answers a different question from the rest of the section. Make it
+compete and the writer trades a genuine sibling boundary for it, which is the budget doing the wrong
+work.
+
+A seat cannot be trusted to notice its own twin — the twin sits in a panel this writer may not be
+authoring. So resolve the counterparts against `catalog.yaml` rather than from memory. The families
+that exist today:
+
+| Seat | Counterpart at another layer |
+|---|---|
+| `code-review/security` | `doc-review/security-lens` |
+| `reviewer-standards` | `code-review/project-standards` |
+| `code-review/adversarial` | `doc-review/adversarial-document`, `plan-review/critic` |
+| `doc-review/adversarial-document` | `code-review/adversarial`, `plan-review/critic` |
+| `plan-review/critic` | `code-review/adversarial`, `doc-review/adversarial-document` |
+
+The adversarial family is three seats, not a pair: each of the three names the other two. The
+standards pair needs the most care, because those two seats carry conditional `## Never` row 4 in
+identical words — two seats judging against a project standard at different layers, with the same
+prohibition text, are the most confusable pair in the catalog rather than the least.
+
+Resolve the counterpart in `catalog.yaml` before describing it. A seat that a parallel panel *ought*
+to contain is not a counterpart, and describing its concurrency model or verdict vocabulary invents
+unfalsifiable detail about a seat that does not exist — worse than no entry, for a reader who opened
+the file precisely to tell two seats apart.
+
 `## What it must be given` is the one heading that **states an obligation on the caller** rather than
 on the seat. `## Never` binds the seat's behavior; this binds whoever seats the role. Hold that
 distinction and the section stays small; lose it and it absorbs material belonging to four
@@ -669,14 +707,46 @@ From `roles/reviewer-spec/ROLE.md`:
 The test that sorts them: the first binds the **caller** — hand this over or the seat cannot start.
 The second binds the **seat** — point at this or the finding is inadmissible.
 
-Two `## Never` rows are mandatory in every role, because these are the two that erode first:
+Four `## Never` rows are governed. Two are mandatory in every role. Two are conditional, and the
+condition is a closed list rather than the writer's judgment.
 
-1. **A role never edits.** It judges and returns. Reading a patch is the author's confidence, not a
-   receipt; only independent verification closes a finding (ruling
+**Mandatory, verbatim in all twenty-nine:**
+
+1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
+   not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A standards seat cites an actual project rule or returns empty.** An absent standard is an empty
-   return, never an invented preference — and a required lane that could not run is unavailable, not
-   passing (ruling `required-lane-failure-is-unavailable`).
+2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
+   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+   `required-lane-failure-is-unavailable`).
+
+**Conditional, required exactly where the condition holds:**
+
+3. **Authorship.** Twenty-seven seats carry *"never edits: it judges and returns."* The two that
+   produce an artifact — `implementer` and `plan-review/planner` — carry the converse instead,
+   naming what the seat writes and stating that it never writes a finding, a receipt, a review record
+   or a ticket, and never closes or approves what it produced.
+4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and
+   `code-review/project-standards` (the catalog's only `tier: standards-gate`). They carry *"cites an
+   actual project rule or returns empty; an absent standard is never an invented preference."* This
+   row is **not** an instance of ruling `required-lane-failure-is-unavailable` and does not cite it.
+   No ruling states it; §12.2 does.
+
+Beyond those four, **each seat writes its own grounding rule as its own row**: what it may not assert
+without being able to point at something, in its own terms — the spec source, the charter, the frozen
+snapshot, a cited source, the proposed driver, its own self-check. That is the seat's prohibition,
+never an appendix to a sentence addressed to a different seat.
+
+Two rules govern how mandated rows are written, because ignoring either produced the defect above.
+
+**A mandated row cites a ruling only for what that ruling's text actually says.** Read the row in
+`policies/resolved-conflicts.yaml` before citing it. A clause you cannot find there is contract prose:
+write it without a citation, and then check whether it belongs in a conditional row instead — a
+clause that does not generalize is usually a clause that was never universal.
+
+**Mandate only what is verbatim-identical in all twenty-nine.** Everything else is guidance, and
+guidance produces rows in the seat's own words. A universal row that needs a bespoke per-seat
+instantiation is the welded form returning: the invariant part gets enforced, and the part that must
+vary is load-bearing and unchecked.
 
 `## Rationalizations this seat makes` comes last, after `## When it has nothing to say`, and carries
 §3.1's table unchanged: the same three columns, `The thought | Why it is wrong | Do this instead`, no
@@ -714,6 +784,13 @@ list, no frontmatter and no sidecar. It is prose, and §8 governs it.
   sections a different `.md` name validates with the warning `catalog.unexpected-body-name` — a
   warning to fix, not an allowance to use.
 - No frontmatter. No `*.yaml` sidecar.
+- For a role: the two conditional `## Never` rows are the right ones for this seat (§12.2). The
+  heading set can be complete and the rows still wrong — row 3 takes its authorship form from
+  whether this seat produces an artifact, and row 4 belongs only to the two standards seats. A seat
+  carrying a row written for a different seat is a defect, not a harmless extra prohibition.
+- For a role with a same-named counterpart at another layer: `## Not this seat` names it and says
+  what separates the layers (§12.2). Resolve the counterpart in `catalog.yaml` — this is the entry a
+  writer authoring one panel is least able to check from memory.
 - Every ruling whose `binds` block in `policies/resolved-conflicts.yaml` names this protocol or role
   is cited in the body. That block is the machine-checkable inverse of §6: it tells you before you
   write which rulings you owe a citation.
