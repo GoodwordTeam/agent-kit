@@ -21,7 +21,7 @@
       "$ref": "common.schema.json#/$defs/revision_ref"
     },
     "last_head_verified": {
-      "description": "The head the previous delta pass verified. Required in delta mode; keeping it distinct from 'reviewed_head' is what makes a stale closure check detectable (plan 5.2, 6.3).",
+      "description": "The head the previous delta pass verified. Required in delta mode; keeping it distinct from 'comparison_base' and 'reviewed_head' is what stops the three being conflated and what makes a stale closure check detectable (plan 5.2, 6.3, ruling `delta-baseline-reset-not-third-loop`).",
       "$ref": "common.schema.json#/$defs/revision_ref"
     },
     "snapshot": {
@@ -156,13 +156,14 @@
           }
         },
         "verification_receipts": {
+          "description": "The receipts the previous pass closed findings on, carried forward as evidence rather than as a conclusion. Each is bound to its own revision and to 'fix_diff': a changed patch does not inherit a stale receipt, and a description of a green run was never one (plan 5.6, ruling `closure-requires-independent-verification`).",
           "type": "array",
           "items": { "$ref": "common.schema.json#/$defs/artifact_ref" }
         }
       }
     },
     "continuity": {
-      "description": "Plan 6.4. 'Fresh reviewer' means independent of the author, not ignorant of prior findings. Either the same seat continues with its earlier finding context, or a replacement receives the durable prior-review packet; either way the seat sees the old finding and the new revision. Closure checks are not reset to amnesia.",
+      "description": "Plan 6.4. 'Fresh reviewer' means independent of the author, never ignorant of prior findings (ruling `reviewer-continuity-not-amnesia`, release scenario 9). Either the same seat continues with its earlier finding context, or a replacement receives the durable prior-review packet; either way the seat sees the old finding, its fingerprint and its evidence, and the new revision. Independence from the author is mandatory; amnesia is not, and closure checks are not reset to zero.",
       "type": "object",
       "additionalProperties": false,
       "required": ["mode"],
@@ -203,7 +204,7 @@
       "items": { "$ref": "common.schema.json#/$defs/artifact_ref" }
     },
     "baseline_reset": {
-      "description": "Plan 6.3. When architecture, requirements, the comparison base or the affected surface changes materially, the affected approvals are invalidated and a new baseline is deliberately established. That is a new review scope, not an unbounded third delta loop.",
+      "description": "Plan 6.3. When architecture, requirements, the comparison base or the affected surface changes materially, the affected approvals are invalidated and a new baseline is deliberately established. That is a new review scope with its own first pass, not an unbounded third delta loop (ruling `delta-baseline-reset-not-third-loop`, release scenario 10).",
       "type": "object",
       "additionalProperties": false,
       "required": ["reason", "invalidated_approvals", "new_scope"],
@@ -225,7 +226,7 @@
   "allOf": [
     { "$ref": "common.schema.json#/$defs/envelope" },
     {
-      "description": "A required lane in the 'unavailable' state blocks an unqualified approval. The review is incomplete, and an incomplete review is never an approval and never falls back to the author reviewing their own change (plan 6.1, release scenario 4).",
+      "description": "A required lane in the 'unavailable' state blocks an unqualified approval. A lane that could not run, could not be given its required context, or failed returns 'unavailable', which is a result and not an absence: it is never downgraded to an empty result and never backfilled by the author, the implementer, another seat or the synthesis step. The review names the lane and why, and stays resumable (plan 6.1, release scenario 4, ruling `required-lane-failure-is-unavailable`).",
       "if": {
         "required": ["lanes"],
         "properties": {
@@ -350,7 +351,7 @@
       ]
     },
     "seat": {
-      "description": "Who filled the lane. 'independent_of_author' is pinned true: a seat the author could fill is not a review, and there is no self-review fallback when a seat cannot be filled (plan 6.1, 6.4, release scenario 4). Independence is a structural property of the seating, declared and enforced by the runner.",
+      "description": "Who filled the lane. 'independent_of_author' is pinned true: a seat the author could fill is not a review, and there is no self-review fallback when a seat cannot be filled (plan 6.1, 6.4, release scenario 4). Read from the closure side it is the same constraint: an author may never close their own finding (ruling `closure-requires-independent-verification`). Independence is a structural property of the seating, declared and enforced by the runner.",
       "type": "object",
       "additionalProperties": false,
       "required": ["filled_by", "independent_of_author"],

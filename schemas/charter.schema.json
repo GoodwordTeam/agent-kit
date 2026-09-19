@@ -70,7 +70,7 @@
       "items": { "$ref": "common.schema.json#/$defs/capability" }
     },
     "default_grants": {
-      "description": "Plan 7.2 defaults: answer bounded alignment questions, approve eligible spec and ticket artifacts, start approved implementation tickets, adjudicate eligible findings, commit, push, open a PR, reply to and resolve PR threads, repair CI within its bounds, and publish a supported lesson when granted. The item type is common#/$defs/grantable_action, so a sensitive action cannot appear in this list at all.",
+      "description": "Plan 7.2 defaults: answer bounded alignment questions, approve eligible spec and ticket artifacts, start approved implementation tickets, adjudicate eligible findings, commit, push, open a PR, reply to and resolve PR threads, repair CI within its bounds, and publish a supported lesson when granted. The item type is common#/$defs/grantable_action, so a sensitive action cannot appear in this list at all: `never granted by default` is unrepresentable here rather than merely disallowed (ruling `sensitive-actions-need-approved-charter-entry`).",
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "common.schema.json#/$defs/grantable_action" }
@@ -82,7 +82,7 @@
       "items": { "$ref": "common.schema.json#/$defs/sensitive_action" }
     },
     "sensitive_grants": {
-      "description": "The only route to a sensitive action, and deliberately a narrow one (plan 7.2). Every entry carries an explicit human approval bound to this charter's hash; more autonomy requires the human to approve a more specific capability up front, never the supervisor pair enlarging its own authority.",
+      "description": "The only route to a sensitive action, and deliberately a narrow one (plan 7.2, ruling `sensitive-actions-need-approved-charter-entry`, release scenario 5). Every entry names the action, states exactly what is permitted, and carries an explicit human approval bound to this charter's hash, with any expiry or single-use bound. More autonomy is a more specific capability a human approved up front, never the supervisor pair enlarging its own authority mid-run.",
       "type": "array",
       "items": {
         "type": "object",
@@ -114,7 +114,7 @@
       "x-validator-rule": "charter.sensitive-grant-requires-explicit-human-approval-bound-to-this-hash"
     },
     "checkpoints": {
-      "description": "The exact checkpoint categories the supervisor pair may decide (plan 7.2, 7.3). A checkpoint absent from this list is not theirs to decide, and reaching it escalates.",
+      "description": "The exact checkpoint categories the supervisor pair may decide (plan 7.2, 7.3). A checkpoint absent from this list is not theirs to decide, and reaching it escalates. The deterministic authority check reads this list, which is how the charter and the evidence carry the permission rather than the pair's agreement (ruling `supervisor-agreement-is-not-authority`).",
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "common.schema.json#/$defs/checkpoint_category" }
@@ -153,7 +153,7 @@
       }
     },
     "supervisors": {
-      "description": "Plan 7.3. Exactly two seats, declared independent, neither of which implements. Independence is a structural constraint on the seating that the runner enforces; it is never a property of who or what fills a seat. There is no third seat: 'maxItems' is 2 and 'tie_breaker_allowed' is pinned false, because adding a tie-breaker to avoid asking the human is exactly what plan 7.3 forbids (release scenarios 16 and 17).",
+      "description": "Plan 7.3. Exactly two seats, declared independent, neither of which implements. Independence is a structural constraint on the seating that the runner enforces; it is never a property of who or what fills a seat. There is no third seat: 'maxItems' is 2 and 'tie_breaker_allowed' is pinned false, because adding a tie-breaker to avoid asking the human is exactly what plan 7.3 forbids — a tie goes to the human (ruling `supervisor-agreement-is-not-authority`, release scenario 16). 'may_implement' is pinned false because the pair never implements and never approves a patch it produced (ruling `missing-supervisor-never-implementer`, release scenario 17).",
       "type": "object",
       "additionalProperties": false,
       "required": ["seats", "independence", "tie_breaker_allowed", "may_implement"],
@@ -177,7 +177,7 @@
         "tie_breaker_allowed": { "const": false },
         "may_implement": { "const": false },
         "on_missing_seat": {
-          "description": "A missing supervisor blocks the checkpoint. It is never backfilled by the implementer (release scenario 17).",
+          "description": "A seat that cannot be filled independently is unavailable, and unavailability blocks the checkpoint. It is never backfilled by the implementer, the author, the spec approver or a seat already sitting on the panel (ruling `missing-supervisor-never-implementer`, release scenario 17).",
           "const": "block-and-escalate"
         }
       },

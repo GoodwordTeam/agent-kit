@@ -123,7 +123,7 @@
       }
     },
     "guidance": {
-      "description": "Plan 3 and plan 11. Advisory starting points, never universal hard limits. 'enforcement' is pinned to 'advisory' in both blocks, so no configuration can promote either heuristic into a gate; exceeding a target is recorded in 'exceptions' rather than answered with an artificial file split or a meaningless test.",
+      "description": "Plan 3 and plan 11. Advisory starting points, never universal hard limits (ruling `numeric-heuristics-are-guidance`: both are configurable per project, carried here, and neither is validated, enforced, or grounds for a finding on its own). 'enforcement' is pinned to 'advisory' in both blocks, so no configuration can promote either heuristic into a gate; exceeding a target is recorded in 'exceptions' rather than answered with an artificial file split or a meaningless test.",
       "type": "object",
       "additionalProperties": false,
       "required": ["pr_size", "test_pyramid", "exceptions"],

@@ -13,7 +13,7 @@
     "type": { "enum": ["decision", "implementation"] },
     "title": { "$ref": "common.schema.json#/$defs/nonempty_string" },
     "work_source": {
-      "description": "The approved work this ticket derives from.",
+      "description": "The approved work this ticket derives from. A bug with a reproduction enters through diagnosis rather than directly: only a diagnosed result is a work source for the build lane, and a packet that already carried a verified bounded patch is never re-implemented from here (ruling `diagnose-patch-or-packet-never-both`). The referenced artifact is a separate document, so the never-both half is a check across the two rather than a shape this one can carry.",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind", "ref"],
@@ -132,7 +132,7 @@
         "question": { "$ref": "common.schema.json#/$defs/nonempty_string" },
         "subtype": { "enum": ["grilling", "prototype", "research", "task"] },
         "mode": {
-          "description": "hitl tickets resolve only through a live exchange with a human.",
+          "description": "hitl tickets resolve only through a live exchange with a human. A prototype whose question is about human experience is an 'hitl' ticket: the evaluator is named in advance, and an unattended run stops and escalates rather than substituting an automated verdict for the experience the prototype exists to produce. A prototype answering a technical question may be 'afk' with automated acceptance criteria (ruling `prototype-human-experience-needs-human`, release scenario 4).",
           "enum": ["hitl", "afk"]
         },
         "answer": {
@@ -146,6 +146,7 @@
   "allOf": [
     { "$ref": "common.schema.json#/$defs/envelope" },
     {
+      "description": "Release scenario 11: a decision ticket resolves a question and can never be executed as implementation work, so it carries no write scope, and an implementation ticket carries no decision. The implementation branch is also the work-packet shape: acceptance criteria, named verification bound to those criteria, a bounded write scope and an integration owner are all required, so a hand-off is specified enough to be implemented once rather than guessed at by a second implementer (ruling `diagnose-patch-or-packet-never-both`, release scenario 6).",
       "if": { "properties": { "type": { "const": "decision" } } },
       "then": {
         "required": ["decision"],

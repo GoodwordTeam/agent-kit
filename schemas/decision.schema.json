@@ -30,7 +30,7 @@
       "items": { "$ref": "common.schema.json#/$defs/evidence_ref" }
     },
     "required_evidence": {
-      "description": "What this checkpoint category needs before it can be decided at all. Fail closed when required evidence is absent (AGENTS.md).",
+      "description": "What this checkpoint category needs before it can be decided at all. Fail closed when required evidence is absent (AGENTS.md). Where the evaluator named in advance is a human — a prototype whose question is about human experience is the case plan 11 names — that human's judgment is required evidence: absent, 'required_evidence_present' is false, the authority check fails, and the checkpoint blocks with one escalation rather than an automated verdict standing in for the experience the prototype exists to produce (ruling `prototype-human-experience-needs-human`, release scenario 4). Which questions are about human experience is not decidable from this document; naming the evaluator in advance is what makes it checkable.",
       "type": "array",
       "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
     },
@@ -52,7 +52,7 @@
       }
     },
     "seats": {
-      "description": "Exactly two supervisor seats, declared independent. Independence is a structural constraint on the seating that the runner enforces; it is never a property of who or what fills a seat. Neither seat may be the implementer or the approver of the work under decision (plan 7.3).",
+      "description": "Exactly two supervisor seats, declared independent. Independence is a structural constraint on the seating that the runner enforces; it is never a property of who or what fills a seat. Neither seat may be the implementer or the approver of the work under decision (plan 7.3). A seat that cannot be filled independently is unavailable and blocks the checkpoint; it is never backfilled by the implementer, the author, the spec approver or a seat already on the panel (ruling `missing-supervisor-never-implementer`, release scenario 17).",
       "type": "array",
       "minItems": 2,
       "maxItems": 2,
@@ -102,12 +102,12 @@
       "x-validator-rule": "decision.judgment-choice-names-a-declared-option"
     },
     "agreement": {
-      "description": "Whether the two judgments chose the same option. Recorded as a fact and never as a source of authority: agreement supports a decision only when the authority check below also passes (plan 7.3, release scenario 16).",
+      "description": "Whether the two judgments chose the same option. Recorded as a fact and never as a source of authority: agreement is necessary and never sufficient, and it supports a decision only when the authority check below also passes (plan 7.3, release scenario 16, ruling `supervisor-agreement-is-not-authority`). Confidence is off the authority path entirely; the charter and the evidence carry it.",
       "type": "boolean",
       "x-validator-rule": "decision.agreement-matches-the-recorded-judgments"
     },
     "authority_check": {
-      "description": "The deterministic policy check (plan 7.3). It is performed by policy against artifact evidence, not by a judgment, and every component is recorded so a failure names itself. Confidence alone cannot grant authority; absent required evidence fails closed.",
+      "description": "The deterministic policy check (plan 7.3). It is performed by policy against artifact evidence, not by a judgment, and every component is recorded so a failure names itself. Confidence alone cannot grant authority; absent required evidence fails closed. 'charter_permits' and 'checkpoint_in_charter' are what make a sensitive action decidable at all: the charter entry a human approved up front, naming the action and its scope, is the permission, and the pair may never enlarge its own authority mid-run (ruling `sensitive-actions-need-approved-charter-entry`, release scenario 5).",
       "type": "object",
       "additionalProperties": false,
       "required": ["deterministic", "charter_permits", "required_evidence_present", "seats_independent", "checkpoint_in_charter", "result"],
@@ -153,7 +153,10 @@
           "anyOf": [{ "$ref": "common.schema.json#/$defs/kebab_id" }, { "type": "null" }]
         },
         "at": { "$ref": "common.schema.json#/$defs/timestamp" },
-        "recorded_by": { "enum": ["policy", "runner"] },
+        "recorded_by": {
+          "description": "Who recorded the outcome. The enum admits only the policy check and the runner: accepting a decision record is not an authority a skill has (ruling `central-kb-owns-project-artifacts`, docs/decisions/0001-kb-document-vocabulary.md). The decision is project-derived material the central knowledgebase owns; this artifact carries the ruling, and no skill makes a repository-local documentation tree its home instead.",
+          "enum": ["policy", "runner"]
+        },
         "note": { "type": "string" }
       }
     },

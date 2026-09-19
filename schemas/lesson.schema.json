@@ -103,7 +103,7 @@
       "x-validator-rule": "lesson.duplicate-of-an-existing-lesson-is-refused"
     },
     "publication": {
-      "description": "Plan 7.1 and 8. Publishing to the KB is authorized separately from capturing: either a human asked for it, or a charter grant covers KB publication. A completed ship is not itself permission.",
+      "description": "Plan 7.1 and 8. Publishing to the KB is authorized separately from capturing: either a human asked for it, or a charter grant covers KB publication. A completed ship is not itself permission, and it is not permission to rewrite project knowledge (ruling `central-kb-owns-project-artifacts`). The central knowledgebase owns this artifact: `kb_ref` is deliberately a free locator rather than common#/$defs/repo_path, so a published lesson cannot name an application-local documentation tree as its home. Directory names under the knowledgebase root are configurable; the central ownership is not.",
       "type": "object",
       "additionalProperties": false,
       "required": ["authorization"],

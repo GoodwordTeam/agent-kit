@@ -126,7 +126,7 @@
     },
     "ticket": { "$ref": "common.schema.json#/$defs/artifact_ref" },
     "finding": {
-      "description": "Set when the receipt exists to close a finding. Closure still requires the receipt to be independent of the author (plan 5.5).",
+      "description": "Set when the receipt exists to close a finding. Closure is a property of this evidence plus a policy rule saying the evidence suffices for that finding, never of a reviewer's confidence or a classifier's output, and the closer is never the author of the change (plan 5.5, ruling `closure-requires-independent-verification`, release scenario 3). A changed patch does not inherit this receipt: 'source_revision' binds it and 'invalidation' records when it stops applying.",
       "$ref": "common.schema.json#/$defs/artifact_ref"
     },
     "reason": {
@@ -134,7 +134,7 @@
       "$ref": "common.schema.json#/$defs/nonempty_string"
     },
     "invalidation": {
-      "description": "Recorded when this receipt stops describing the current state: the code changed, the environment changed, or a QA mutation invalidated it (plan 8, release scenarios 10 and 19). The receipt is not rewritten; it is marked and superseded by a new one at the new revision.",
+      "description": "Recorded when this receipt stops describing the current state: the code changed, the environment changed, or a QA mutation invalidated it (plan 8, release scenarios 10 and 19). The receipt is not rewritten; it is marked and superseded by a new one at the new revision. 'base-changed' is the verification half of a deliberate baseline reset: when architecture, requirements, the comparison base or the affected surface moves materially, the receipts bound to the old base are invalidated along with the approvals they supported and re-earned in the new scope's own first pass, rather than carried into an unbounded third delta loop (ruling `delta-baseline-reset-not-third-loop`).",
       "type": "object",
       "additionalProperties": false,
       "required": ["reason", "at"],
@@ -147,7 +147,7 @@
       "x-validator-rule": "verification.receipt-stale-when-revision-differs-from-head"
     },
     "notes": {
-      "description": "Narrative only, and explicitly not evidence. An agent's description of green tests is not a receipt; the exit status and the digest are (plan 5.6, release scenario 10). No policy may read this field.",
+      "description": "Narrative only, and explicitly not evidence. An agent's description of a green run is not a receipt: a receipt carries the command or probe, its exit status, the output digest, the revision and the environment identity, which is what the required members and the branches below pin down (plan 5.6, release scenario 10, ruling `closure-requires-independent-verification`). No policy may read this field.",
       "type": "string",
       "x-validator-rule": "verification.prose-never-substitutes-for-exit-status-and-digest"
     },

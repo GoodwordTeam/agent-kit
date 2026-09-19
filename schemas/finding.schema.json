@@ -18,7 +18,7 @@
       "$ref": "common.schema.json#/$defs/role_id"
     },
     "fingerprint": {
-      "description": "Identity candidate across fixes (plan 5.5). 'inputs' is closed and has no line-number member: rule or cause, the symbol or path, and a digest of the evidence are the only things identity may depend on. A finding whose line moved keeps its fingerprint; a genuinely different cause at the same line gets a different one (release scenario 9).",
+      "description": "Identity candidate across fixes (plan 5.5). 'inputs' is closed and has no line-number member: rule or cause, the symbol or path, and a digest of the evidence are the only things identity may depend on. A finding whose line moved keeps its fingerprint; a genuinely different cause at the same line gets a different one (release scenario 9). The fingerprint plus the evidence digest is also what a continuing seat retains and what a replacement seat receives in its prior-finding packet, so a later closure pass sees the old finding rather than starting from zero (ruling `reviewer-continuity-not-amnesia`).",
       "type": "object",
       "additionalProperties": false,
       "required": ["value", "inputs"],
@@ -62,7 +62,7 @@
       "enum": ["mechanical", "local-judgment", "cross-cutting", null]
     },
     "autofix_class": {
-      "description": "What may happen without a human: 'safe_auto' applies unattended, 'gated_auto' applies under an authorization, 'manual' needs a person to write the change, 'advisory' is information only.",
+      "description": "What may happen without a human: 'safe_auto' applies unattended, 'gated_auto' applies under an authorization, 'manual' needs a person to write the change, 'advisory' is information only. These four are the canonical vocabulary of plan 5.5 and this schema is their authority; each donor's enum is a proper subset and neither cuts this one (ruling `safe-auto-restricted-per-seat`). The enum is deliberately not narrowed per lane: the restriction is on emission by a seat, never on the vocabulary, so which seats may emit 'safe_auto' is a review-policy property of the seat and not a shape this document can carry. A synthesis or intake step that receives 'safe_auto' from a peer lane remaps it to 'gated_auto'; it never drops the finding, because discarding a finding for its action class loses a real finding on a property that is not about whether the finding is true.",
       "enum": ["safe_auto", "gated_auto", "manual", "advisory"]
     },
     "evidence": {
@@ -152,7 +152,7 @@
       }
     },
     "dispatch": {
-      "description": "Where the finding was sent. A 'smell' may be sharpened, diagnosed or escalated, never handed to a fixer (release scenario 6, plan 2.5 apply-findings).",
+      "description": "Where the finding was sent, and to exactly one place: 'kind' is single-valued, so a finding is sharpened, diagnosed, escalated or handed to a fixer, never two of those at once and never re-implemented after a packet already carried the work (ruling `diagnose-patch-or-packet-never-both`). A 'smell' may be sharpened, diagnosed or escalated, never handed to a fixer; a hand-off has to be specified enough to be implemented once rather than guessed at by a second implementer (release scenario 6, plan 2.5 apply-findings).",
       "type": "object",
       "additionalProperties": false,
       "required": ["kind"],
@@ -163,7 +163,7 @@
       }
     },
     "closure_receipt": {
-      "description": "Independent evidence supporting resolution (plan 5.5). 'independent' is pinned true and the closer is recorded, because an author closing its own finding is one of the invalid transitions the validator must refuse (plan 9, milestone 2).",
+      "description": "Independent evidence supporting resolution (plan 5.5). Only independent verification evidence, plus a policy rule saying that evidence is sufficient for this finding, closes it; reviewer confidence and classifier output stay advisory and are recorded as such (ruling `closure-requires-independent-verification`, release scenario 3). 'independent' is pinned true and the closer is recorded, because an author closing its own finding is one of the invalid transitions the validator must refuse (plan 9, milestone 2). 'revision' binds the receipt, so a changed patch does not inherit it.",
       "type": "object",
       "additionalProperties": false,
       "required": ["verification", "closed_by", "independent", "at"],
@@ -190,6 +190,7 @@
           "$ref": "common.schema.json#/$defs/artifact_ref"
         },
         "changes": {
+          "description": "Each grading change, with the direction the validator enforces. Reviewer agreement is not evidence: synthesis may not raise a nit's severity because several seats happened to agree on it, so a severity change cites what it found, never a count of agreeing seats (ruling `low-confidence-security-adjudicated`).",
           "type": "array",
           "minItems": 1,
           "items": {
@@ -237,7 +238,7 @@
       }
     },
     {
-      "description": "An automatically appliable finding is a fully specified one. 'safe_auto' requires a 'patch' and a mechanical difficulty; nothing weaker may run unattended (plan 5.5, plan 2.5 apply-findings).",
+      "description": "An automatically appliable finding is a fully specified one. 'safe_auto' requires a 'patch', a mechanical difficulty and a suggested fix; nothing weaker may run unattended (plan 5.5, plan 2.5 apply-findings). This is the structural gate a seat that does routinely emit 'safe_auto' still has to clear; it is the floor, and the per-seat restriction sits on top of it (ruling `safe-auto-restricted-per-seat`).",
       "if": { "properties": { "autofix_class": { "const": "safe_auto" } }, "required": ["autofix_class"] },
       "then": {
         "required": ["suggested_fix"],
@@ -268,7 +269,7 @@
       "then": { "required": ["novelty_evidence"] }
     },
     {
-      "description": "A low-confidence security concern remains visible and gets adjudicated; it is never silently discarded by a generic filtering threshold (plan 6.1, release scenario 3).",
+      "description": "A low-confidence security concern remains visible and gets adjudicated at the finding adjudication checkpoint; it is never silently discarded by a generic filtering threshold, and the security or adversarial seat is never skipped because a classifier was uncertain about the artifact (plan 6.1, release scenario 3, ruling `low-confidence-security-adjudicated`). Confidence is an evidence anchor recorded on the finding, not a gate in front of it.",
       "if": {
         "properties": {
           "lane": { "const": "code-review/security" },
