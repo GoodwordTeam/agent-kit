@@ -252,7 +252,7 @@
       }
     },
     {
-      "description": "'gated_auto' may apply only under a recorded authorization (plan 5.5).",
+      "description": "'gated_auto' applies under an authorization, and the half of that a shape can carry is this: a class that gates the application of a change requires the change to exist, so a suggested fix is required (plan 5.5). The authorization is deliberately not required here. It does not exist when the class is assigned, because a seat grades a finding before anyone has approved anything, and requiring it would contradict the rule that a synthesis or intake step remaps an inbound 'safe_auto' to 'gated_auto' and keeps the finding (ruling `safe-auto-restricted-per-seat`) — that remap would produce a document this schema rejects unless the step invented an authorization it has no authority to issue. The authority is recorded where it is exercised instead: the disposition branch below requires it to accept, defer, reject or resolve, and the fixer-dispatch branch requires it to hand the work to an implementer. 'suggested_fix' states the same boundary from the other side — a proposed remedy is not authorization.",
       "if": { "properties": { "autofix_class": { "const": "gated_auto" } }, "required": ["autofix_class"] },
       "then": { "required": ["suggested_fix"] }
     },
