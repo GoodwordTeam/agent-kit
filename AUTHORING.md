@@ -480,6 +480,19 @@ something. **Amend the contract before the batch starts**; never carry the diffe
 writer that finds this contract underspecified reports the strain and stops, rather than silently
 reconciling two instructions — and a writer is never at fault for having followed this file.
 
+**A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
+ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
+that complies with a broken gate by weakening its own output has done nothing wrong; it followed the
+only authority it had. The failure belongs to whoever knew the gate was wrong and left the writer
+working against it.
+
+**A writer that can only satisfy a check by removing verified information reports that instead of
+complying.** Weakening an artifact to make a check pass is the same failure as weakening a check to
+make an artifact pass: the direction differs, the lost property does not. A donor path the validator
+resolves against the pin is a *record*; the same path moved into a field nothing parses is only a
+*claim*. State the conflict in the batch report and leave the artifact intact — the instinct runs the
+other way, because complying with a gate feels like discipline.
+
 **A reviewer follows** that does not see the writer's narrative — only the produced files, the
 dossier, and this contract. It cannot be told "I checked that already"; it re-derives.
 
