@@ -637,6 +637,17 @@ explains how to fetch its input has started writing a protocol.
 It pairs with `## When it has nothing to say`, and that pairing is what earns it a heading: a seat
 whose input no longer binds **returns nothing rather than judging a stale artifact**.
 
+It also sits next to `## Evidence it must cite`, and the same artifact routinely belongs under both.
+From `roles/reviewer-spec/ROLE.md`:
+
+| Heading | The row |
+|---|---|
+| `## What it must be given` | The prior-finding packet: each finding's id, `fingerprint`, the disposition and evidence recorded when it was raised |
+| `## Evidence it must cite` | The finding id and `fingerprint` it is continuing, and the revision it is now checked against |
+
+The test that sorts them: the first binds the **caller** — hand this over or the seat cannot start.
+The second binds the **seat** — point at this or the finding is inadmissible.
+
 Two `## Never` rows are mandatory in every role, because these are the two that erode first:
 
 1. **A role never edits.** It judges and returns. Reading a patch is the author's confidence, not a
