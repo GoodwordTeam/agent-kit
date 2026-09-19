@@ -42,24 +42,42 @@ function policyYaml(): string {
   return lines.join("\n");
 }
 
+/** Format decides citation scope, so a YAML case has to stay YAML. */
+function pathFor(item: (typeof LABELLED)[number]): string {
+  return item.format === "yaml" ? `policies/${item.id}.yaml` : `protocols/${item.id}/PROTOCOL.md`;
+}
+
 /** Every case in its own body, so one case cannot cite or shadow another. */
 function scanAll(): Map<string, number> {
   const files: Record<string, string> = {
     "catalog.yaml": CATALOG_HEAD,
     "policies/resolved-conflicts.yaml": policyYaml(),
   };
-  for (const item of LABELLED) files[`protocols/${item.id}/PROTOCOL.md`] = `${item.text}\n`;
+  for (const item of LABELLED) files[pathFor(item)] = `${item.text}\n`;
   const root = makeTree(files);
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
 
+  const issues = checkRestatements({ root, catalog }, 0.02).filter((i) => i.rule === "rulings.uncited-restatement");
+
+  // The score of a case is the best window in the block its anchor sits in --
+  // the same unit the capture used. Taking the best in the whole file would
+  // score a neighbouring paragraph for a case captured whole, which is what a
+  // YAML case has to be.
   const scored = new Map<string, number>();
-  for (const issue of checkRestatements({ root, catalog }, 0.02)) {
-    if (issue.rule !== "rulings.uncited-restatement") continue;
-    const id = /^protocols\/([^/]+)\//.exec(issue.file)?.[1];
-    const score = Number(/\((\d\.\d+)\)/.exec(issue.message)?.[1] ?? 0);
-    if (id === undefined) continue;
-    if ((scored.get(id) ?? 0) < score) scored.set(id, score);
+  for (const item of LABELLED) {
+    const path = pathFor(item);
+    const lines = `${item.text}\n`.split("\n");
+    const at = lines.findIndex((line) => line.includes(item.anchor));
+    if (at < 0) throw new Error(`anchor missing from captured text: ${item.id}`);
+    let lo = at;
+    let hi = at;
+    while (lo > 0 && (lines[lo - 1] ?? "").trim() !== "") lo--;
+    while (hi < lines.length - 1 && (lines[hi + 1] ?? "").trim() !== "") hi++;
+    const best = issues
+      .filter((i) => i.file === path && (i.line ?? 0) >= lo + 1 && (i.line ?? 0) <= hi + 1)
+      .map((i) => Number(/\((\d\.\d+)\)/.exec(i.message)?.[1] ?? 0));
+    scored.set(item.id, Math.max(0, ...best));
   }
   return scored;
 }
@@ -75,6 +93,22 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       expect(scores.get(item.id) ?? 0).toBeGreaterThanOrEqual(RESTATEMENT_THRESHOLD);
     });
   }
+
+  for (const item of LABELLED.filter((c) => c.score < RESTATEMENT_THRESHOLD)) {
+    test(`${item.id} stays rejected: ${item.why.slice(0, 55)}...`, () => {
+      // The guard in the other direction. Every case found by reading the
+      // report is above the line by construction, so a change that dragged
+      // rejections up across it would leave no trace in a set built only from
+      // what the check already emits.
+      expect(scores.get(item.id) ?? 0).toBeLessThan(RESTATEMENT_THRESHOLD);
+    });
+  }
+
+  test("the set holds cases on both sides of the threshold", () => {
+    // A corpus of accepted cases only measures nothing about the threshold.
+    expect(LABELLED.some((c) => c.score >= RESTATEMENT_THRESHOLD)).toBe(true);
+    expect(LABELLED.some((c) => c.score < RESTATEMENT_THRESHOLD)).toBe(true);
+  });
 
   test("every case scores what it scored when it was labelled", () => {
     // Tolerance, not equality: an edit to a ruling legitimately moves these,

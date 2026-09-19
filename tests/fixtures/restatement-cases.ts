@@ -30,6 +30,10 @@ export interface LabelledCase {
   readonly origin: string;
   /** The block verbatim at e15be71. This, not the file, is the fixture. */
   readonly text: string;
+  /** A line of the case inside the captured text. Its block is the scored unit. */
+  readonly anchor: string;
+  /** Citation scope follows the format: the block in markdown, the file in YAML. */
+  readonly format: "markdown" | "yaml";
   readonly ruling: string;
   readonly label: "defect" | "not-a-defect" | "undecided";
   /** Why it carries that label. A verdict without reasoning propagates errors. */
@@ -43,6 +47,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "agents-invocation-law",
     origin: "AGENTS.md:55 at e15be71",
     text: "A human invokes the entrypoint. A controller invokes the phase operation. Where a host cannot\nvalidate a grant, the skill **stops for explicit invocation** rather than reproducing a forbidden\ncommand's effect through a side door.",
+    format: "markdown",
+    anchor: "A human invokes the entrypoint. A controller invokes the phase operation",
     ruling: "entrypoint-phase-operation-split",
     label: "defect",
     why: "Restates the invocation split in its own words and cites nothing. The section's table above it names the layers but carries no ruling id.",
@@ -52,6 +58,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "agents-numeric-heuristics",
     origin: "AGENTS.md:136 at e15be71",
     text: "The ~100-line PR target and the 80/15/5 test pyramid are configurable starting points (arch §3, §11).\nReal constraints are set per project, and exceptions are **recorded** rather than forcing artificial\nfile splits or meaningless tests.",
+    format: "markdown",
+    anchor: "configurable starting points (arch",
     ruling: "numeric-heuristics-are-guidance",
     label: "defect",
     why: "Near-verbatim on the ruling's substance, and cites the architecture note instead of the ruling. A citation to a non-ruling source does not discharge 6.",
@@ -61,6 +69,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "authoring-kb-two-clauses",
     origin: "AUTHORING.md:430 at e15be71",
     text: "Two clauses of that ruling are easy to lose and both bind a writer. **Directory names under the\nknowledgebase root are configurable; the central ownership is not** — so a body names the operation\nit calls and never hardcodes a knowledgebase path, which would re-create the local tree one level\nfurther out. And **a completed ship is not permission to rewrite project knowledge**: a skill that\nfinishes its work does not thereby acquire a write it did not have, and a body that has a step\nrevising project knowledge after shipping is describing an authority no skill holds.",
+    format: "markdown",
+    anchor: "Two clauses of that ruling are easy to lose",
     ruling: "central-kb-owns-project-artifacts",
     label: "defect",
     why: "States two clauses of the ruling and reaches its citation only through the words 'that ruling', across a blank line, in the paragraph above. 6 requires the citation inline at the sentence it governs, because an agent loading one paragraph never sees the line above it. Three agents first called this a false positive; it is not.",
@@ -70,6 +80,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "authoring-repeated-failure",
     origin: "AUTHORING.md:607 at e15be71",
     text: "**Repeated failure is a signal about the plan, not an invitation to a third loop.** A batch that\nfails twice is evidence about the brief, not about the writer's output, and this contract gives that\nevidence somewhere to go: the replan branch is a contract defect (above), filed with the two cycles\nas its record. A writer that reads the cycle limit as a verdict on its own work will report and stop\nwhere it should report and escalate. Where the replan lands on a materially changed baseline, that is\na new review scope with its own first pass rather than a third delta loop (ruling\n`delta-baseline-reset-not-third-loop`).",
+    format: "markdown",
+    anchor: "Repeated failure is a signal about the plan",
     ruling: "two-fix-cycles-then-stop",
     label: "defect",
     why: "Reproduces the ruling's third sentence verbatim while citing a different ruling at the end of the same paragraph. The strongest instance in the corpus, and the one a section-wide or file-wide citation scope would clear.",
@@ -79,6 +91,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "tdd-receipt-not-narrative",
     origin: "protocols/tdd/PROTOCOL.md:79 at e15be71",
     text: "Gate: an agent's description of a green run is not a receipt. A receipt carries the command or\nprobe, exit status, output digest, revision and environment identity.",
+    format: "markdown",
+    anchor: "an agent's description of a green run is not a receipt",
     ruling: "closure-requires-independent-verification",
     label: "defect",
     why: "The second of two consecutive Gate paragraphs stating different clauses of one ruling. The first cites it; this one did not. N independent clauses generate N citation obligations.",
@@ -88,6 +102,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "agents-donor-mapping-row",
     origin: "AGENTS.md:76 at e15be71",
     text: "| Design-brief concept | What this repo does instead |\n|---|---|\n| Tier choice / confidence scoring before a spawn | Deterministic policy checks against artifact evidence |\n| Named-model implementer seating | An `implementer` role; the runner binds who fills it |\n| \"Cross-family on purpose\" supervisor pairing | Two `supervisor` seats declared **independent**; independence is a runner-enforced constraint |\n| \"Fail closed on low confidence\" | \"Fail closed when required evidence is absent\" |\n| \"Do not put <model> on security\" | The security seat may not be filled by the implementer or the spec approver |\n| In-skill cost/token caps | Budgets passed in by the runner; the repo enforces only the cap it was handed |",
+    format: "markdown",
+    anchor: "The security seat may not be filled by the implementer",
     ruling: "missing-supervisor-never-implementer",
     label: "not-a-defect",
     why: "A cell in a donor-concept mapping table, not a doctrinal claim in a body. It also states a different rule than the candidate it matched -- the wrong-sibling failure the report warns about. A fence- and table-aware extractor would drop it.",
@@ -97,6 +113,8 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "readme-ruling-digest",
     origin: "README.md:104 at e15be71",
     text: "- **Artifacts are revision-bound.** Approvals bind to a content hash, never a filename. A changed plan\n  does not inherit the old plan's approval; a changed patch does not inherit stale receipts.\n- **Findings are P0–P3.** Critical/Important/Nit/FYI are presentation labels, not a replacement.\n  Synthesis may only *worsen* a grade. Low-confidence security findings are adjudicated, never\n  silently filtered.\n- **Only independent verification closes a finding.** Reviewer or classifier confidence is advisory.\n- **Delta review is bounded by affected behavior, not changed lines.** A serious newly discovered\n  issue in an untouched caller stays reportable.\n- **\"Fresh reviewer\" means independent of the author**, not amnesiac between cycles.\n- **Two fix cycles, then stop.** Anything still open is reported, not looped.\n- **Numeric heuristics are guidance.** The ~100-line PR target and 80/15/5 pyramid are configurable,\n  not gates.",
+    format: "markdown",
+    anchor: "Delta review is bounded by affected behavior",
     ruling: "delta-scope-affected-behavior",
     label: "undecided",
     why: "A bullet in README's digest of the rulings, which restates all of them by construction. Whether a root digest owes inline citations is a contract question nobody has ruled on. Classified undecided rather than false so the number it contributes is not silently claimed either way.",
@@ -106,9 +124,33 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     id: "review-delta-field-list",
     origin: "protocols/review-delta/PROTOCOL.md:41 at e15be71",
     text: "- Persisted from pass 1: the finding list, the input hashes, the dispositions and the evidence.\n- Added for the delta: the latest fix diff, the touched dependencies, and the\n  `schemas/verification.schema.json` receipts bound to the new head.\n- The snapshot: `comparison_base`, `reviewed_head` and `last_head_verified`, recorded so the\n  three are never conflated.\n- For each finding, the prior-finding packet — `finding_id`, `fingerprint`, `severity`,\n  `evidence`, `disposition`, `input_hashes`, `source_revision`. A continuing seat may retain its\n  earlier context; a replacement receives this packet. Either way the seat sees the old finding\n  and the new revision (ruling `reviewer-continuity-not-amnesia`).",
+    format: "markdown",
+    anchor: "comparison_base`, `reviewed_head` and `last_head_verified`",
     ruling: "delta-baseline-reset-not-third-loop",
     label: "not-a-defect",
     why: "A list of the field names a ruling happens to mention. The documented bulk false-positive class: an enumeration scores like a restatement. Not filterable by comma density without blinding the check to every ruling that itself enumerates.",
     score: 0.60,
+  },
+  {
+    id: "product-prototype-rationale",
+    origin: "profiles/product.yaml:69 at e15be71",
+    text: "# profiles/product.yaml — product judgment, kept out of ordinary implementation contexts.\n#\n# Authority: plan §2.3 (retained standalone supporting skills), §6.5 (product lens and premise\n# review), §11 (opt-in profiles).\n#\n# Machine-read by `ak validate` against the `profiles:` field in catalog.yaml.\n#\n# A profile is a capability and scope set. It names no model, provider, cost or routing rule.\n\nschema_version: 1\nprofile: product\ndefault: false\nrequires: [core]\n\nwhy_it_exists: >-\n  Four skills that decide what is worth building rather than how to build it. They are separated\n  from core because a recommendation is not authorization, and because in a repository with no\n  standing product anchors they have nothing to ground a judgment on. A team that has those\n  anchors gets real value; a team that does not gets confident opinions, which is worse than\n  silence.\n\nincludes:\n  skills:\n    count: 4\n    entries: [ideate, pov, strategy, product-pulse]\n    notes:\n      ideate: Generate options, then critique them. No implicit commitment or scope expansion.\n      pov: >-\n        Project-grounded recommendation with optional independent opinions. Read-only. Dissent\n        and insufficient-evidence results survive to the output; a recommendation authorizes\n        nothing.\n      strategy: >-\n        Works from standing product goals and strategic constraints. No automatic feature\n        expansion.\n      product-pulse: >-\n        Inspects changes and signals against existing product anchors. A report, not permission\n        to change the roadmap.\n\n  packs: []\n  protocols: []\n  roles: []\n  references: []\n  rationale_for_empty: >-\n    The product lens these skills need is already installed with core: `doc-review/product-lens`\n    and `doc-review/adversarial-document` ship in core because `doc-review` does. This profile\n    adds entrypoints, not judgment machinery.\n\n  capabilities:\n    required: [repository-read, artifact-write]\n    optional: [kb-read, network-fetch, human-channel]\n\nprerequisites:\n  - >-\n    A project record with standing goals, anchors or constraints. Without one, `pov` returns an\n    insufficient-grounding result and `strategy` and `product-pulse` have no baseline to compare\n    against. That is the correct behavior, not a failure, but it makes the install pointless.\n\ndeliberately_excludes:\n  - id: authorization\n    why: >-\n      None of these skills approves, plans or implements anything. A chosen option becomes work\n      through super-align and super-bound, with a human approving the direction.\n  - id: reopening-settled-decisions\n    why: >-\n      A rejected product option is not silently reopened. Reopening requires new evidence, named\n      and bound to a revision (release scenario 12).\n  - id: prototype\n    why: >-\n      `prototype` is a core primitive, not a product skill. A product question that only an\n      artifact can settle reaches for it there — and stays blocked without a human when the\n      question is about human experience.\n  - id: bakeoff\n    why: >-\n      Competing bounded experiments in separate workspaces are repository maintenance work, not\n      product judgment. It ships in maintainer.\n\nrulings: [prototype-human-experience-needs-human, full-catalog-opt-in-profiles]",
+    format: "yaml",
+    anchor: "`prototype` is a core primitive",
+    ruling: "missing-supervisor-never-implementer",
+    label: "not-a-defect",
+    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: as a block alone it scores 0.50 and reports, and in its file it scores 0.20 and does not. That gap is the file-scope rule working, and it is the reason a YAML case cannot be captured as a paragraph. Also the only case here well below threshold, so without it nothing guards a change that drags rejections up across the line.",
+    score: 0.20,
+  },
+  {
+    id: "apply-findings-snapshot-bullet",
+    origin: "protocols/apply-findings/PROTOCOL.md:46 at e15be71",
+    text: "- Findings under `schemas/finding.schema.json` with `status: accepted`, each carrying\n  `spec_quality`, `difficulty`, `autofix_class`, `evidence` and `authorization_ref`. A finding\n  arriving from a peer lane with `autofix_class: safe_auto` is remapped to `gated_auto` on intake\n  and never dropped — the action class is not a claim about whether the finding is true (ruling\n  `safe-auto-restricted-per-seat`).\n- The prior-finding packet when this is not the first cycle: `finding_id`, `fingerprint`,\n  `severity`, `evidence`, `disposition`, `input_hashes`, `source_revision`\n  (`policies/review.yaml` `continuity`). The seat that closes a finding sees the old finding and\n  the new revision; independence is from the author, never amnesia (ruling\n  `reviewer-continuity-not-amnesia`).\n- The snapshot: comparison base, reviewed head and input hashes.\n- The verification command and environment the receipts will bind to.",
+    format: "markdown",
+    anchor: "The snapshot: comparison base, reviewed head and input hashes",
+    ruling: "supervisor-agreement-is-not-authority",
+    label: "not-a-defect",
+    why: "A bullet naming snapshot fields, inside a block listing the packet a seat receives. The documented field-name class, and the nearest rejection in the set at 0.49 -- so it is the case that moves first if the threshold is lowered. Reported once as the third known true instance; it is not. The genuine one sits a few lines below and scores zero.",
+    score: 0.49,
   },
 ];
