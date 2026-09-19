@@ -170,6 +170,99 @@ describe("binds is the machine-checkable inverse", () => {
   });
 });
 
+describe("the plural citation form is refused in markdown (AUTHORING 6)", () => {
+  const DECLARES_ALPHA = `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\n`;
+
+  test("a plural citation in a markdown body is an error naming the ids and the singular form", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("first-ruling") + ROW("second-ruling")),
+      "skills/alpha/SKILL.md": SKILL_BODY("This is settled (rulings `first-ruling`, `second-ruling`)."),
+    });
+    const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.plural-citation-in-markdown");
+    expect(issue?.file).toBe("skills/alpha/SKILL.md");
+    expect(issue?.message).toContain("first-ruling");
+    // Both ids, not just the first: the repair is one singular clause per id written.
+    expect(issue?.message).toContain("ruling `first-ruling`");
+    expect(issue?.message).toContain("ruling `second-ruling`");
+    expect(issue?.line).toBeGreaterThan(0);
+  });
+
+  test("the plural form reads as zero citations, which is why it cannot be left to the forward check", () => {
+    // The singular parser sees nothing here, so without this rule a body citing
+    // an id that does not exist would pass: the citation is invisible, not wrong.
+    expect(citedRulings("settled (rulings `first-ruling`, `invented-ruling`).")).toEqual([]);
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("first-ruling")),
+      "skills/alpha/SKILL.md": SKILL_BODY("settled (rulings `first-ruling`, `invented-ruling`)."),
+    });
+    expect(errors(checkRulings(ctx)).some((i) => i.rule === "rulings.plural-citation-in-markdown")).toBe(true);
+  });
+
+  test("the singular form passes", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("first-ruling")),
+      "skills/alpha/SKILL.md": SKILL_BODY("This is settled (ruling `first-ruling`)."),
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.plural-citation-in-markdown")).toEqual([]);
+  });
+
+  test("a plural rulings: key in a YAML file is the shape 6 permits and is not flagged", () => {
+    const ctx = ctxFor({
+      [RULINGS_FILE]: rulings(ROW("first-ruling") + ROW("second-ruling")),
+      "profiles/core.yaml": "id: core\nrulings: [first-ruling, second-ruling]\n",
+    });
+    expect(errors(checkRulings(ctx))).toEqual([]);
+  });
+
+  test("a fenced yaml block inside a markdown body is showing YAML, not citing in markdown", () => {
+    const fenced = ["Write it as:", "", "```yaml", "rulings: [first-ruling, second-ruling]", "```", ""].join("\n");
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("first-ruling") + ROW("second-ruling")),
+      "skills/alpha/SKILL.md": SKILL_BODY(fenced),
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.plural-citation-in-markdown")).toEqual([]);
+  });
+
+  test("a rulings: key in a markdown body's own frontmatter is YAML too", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("first-ruling")),
+      "skills/alpha/SKILL.md": `---\nname: alpha\ndescription: d\nrulings: [first-ruling]\n---\n\n# Alpha\n\nProse.\n`,
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.plural-citation-in-markdown")).toEqual([]);
+  });
+
+  test("AUTHORING 6's own table documents the YAML form inline and must not flag itself", () => {
+    const row = "| A YAML file | The key `ruling: <bare-id>`, or `rulings: [<id>, <id>]` for several |";
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("first-ruling")),
+      "AUTHORING.md": `# Authoring\n\n| Where | Form |\n|---|---|\n${row}\n`,
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.plural-citation-in-markdown")).toEqual([]);
+  });
+});
+
+describe("a binds citation is satisfied by the id, not by its citation shape", () => {
+  const DECLARES_ALPHA = `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\n`;
+  const BINDS = "    binds:\n      skills: [alpha]\n";
+
+  test("a body citing its bound ruling in the plural form is not reported as uncited", () => {
+    // The forward check tests for the id, not for `ruling <id>`, so a citation
+    // shape it cannot parse never points the author at the wrong defect.
+    const ctx = ctxFor({
+      "catalog.yaml": DECLARES_ALPHA,
+      [RULINGS_FILE]: rulings(ROW("binding-ruling", BINDS)),
+      "skills/alpha/SKILL.md": SKILL_BODY("settled (rulings `binding-ruling`, `other-thing`)."),
+    });
+    expect(errors(checkRulings(ctx)).filter((i) => i.rule === "rulings.binding-not-cited")).toEqual([]);
+  });
+});
+
 describe("this repository's own rulings", () => {
   const REPO = new URL("..", import.meta.url).pathname;
 

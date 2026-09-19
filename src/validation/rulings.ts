@@ -211,6 +211,54 @@ function lineOf(text: string, needle: string): number | undefined {
   return undefined;
 }
 
+/**
+ * §6's plural `rulings: [...]` is a YAML shape. A markdown body takes the
+ * singular word and one bare id.
+ *
+ * This is refused rather than parsed, and the distinction is the whole point.
+ * `citedRulings` looks for ``ruling `<id>` `` and "rulings `" does not match it,
+ * so a plural citation in markdown does not read as a malformed citation -- it
+ * reads as **no citation at all**. The body cites two rulings to a human and
+ * zero to every tool, the forward check then reports the file as uncited, and
+ * the author looks at a file that visibly cites the ruling and concludes the
+ * checker is broken. Widening `citedRulings` to accept the plural would fix the
+ * blindness by making an illegal shape legal; refusing it fixes the blindness
+ * and keeps §6.
+ *
+ * Fenced blocks and frontmatter are skipped: both are YAML, where the plural is
+ * the correct form, and AUTHORING.md §6 has to be able to print the YAML shape
+ * in prose without flagging itself.
+ */
+function pluralCitations(text: string): { line: number; ids: string[]; text: string }[] {
+  const out: { line: number; ids: string[]; text: string }[] = [];
+  const lines = text.split("\n");
+  let fenced = false;
+  let frontmatter = lines[0]?.trim() === "---";
+
+  for (const [i, raw] of lines.entries()) {
+    const line = raw ?? "";
+    if (frontmatter) {
+      if (i > 0 && line.trim() === "---") frontmatter = false;
+      continue;
+    }
+    if (/^\s*(?:```|~~~)/.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (fenced) continue;
+
+    // Capture the whole run of ids after the plural word, not just the first:
+    // the repair a writer needs is one singular clause per id they wrote.
+    const runs = [...line.matchAll(/\brulings\s+((?:`[a-z0-9][a-z0-9-]*`(?:\s*(?:,|and|&)\s*)?)+)/g)];
+    const cited = runs.flatMap((m) => [...(m[1] ?? "").matchAll(/`([a-z0-9][a-z0-9-]*)`/g)].map((one) => one[1] ?? ""));
+    const key = /^\s*rulings:/.test(line);
+    if (cited.length === 0 && !key) continue;
+    out.push({ line: i + 1, ids: cited, text: line.trim() });
+  }
+
+  return out;
+}
+
 function checkCitations(ctx: CheckContext, known: ReadonlySet<string>): Issue[] {
   const issues: Issue[] = [];
   const { root } = ctx;
@@ -222,6 +270,22 @@ function checkCitations(ctx: CheckContext, known: ReadonlySet<string>): Issue[] 
   for (const file of [...markdown].sort()) {
     const text = readTextIfPresent(join(root, file));
     if (text === null) continue;
+
+    for (const hit of pluralCitations(text)) {
+      const singular =
+        hit.ids.length > 0
+          ? `Write one per clause: ${hit.ids.map((id) => `ruling \`${id}\``).join(", then ")}.`
+          : "Write the singular `ruling` plus one bare id per clause.";
+      issues.push(
+        error(
+          "rulings.plural-citation-in-markdown",
+          file,
+          `uses §6's plural \`rulings\` form in a markdown body: "${hit.text.slice(0, 90)}". The plural is the YAML shape; a markdown body takes the singular word and one bare id. Every tool built on §6 reads this as zero citations rather than as a malformed one. ${singular}`,
+          hit.line,
+        ),
+      );
+    }
+
     const reported = new Set<string>();
     for (const id of citedRulings(text)) {
       if (known.has(id) || reported.has(id)) continue;
