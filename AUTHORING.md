@@ -823,11 +823,11 @@ Long material goes behind `protocols/<id>/references/` on §1's rule.
 
 ### 12.2 Roles
 
-`roles/<path>/ROLE.md`, twenty-nine of them. `<path>` nests at most one level — the four core roles
-sit at `roles/<id>/`, the three panels at `roles/code-review/<seat>/`, `roles/doc-review/<seat>/` and
-`roles/plan-review/<seat>/`. The catalog ids already carry the slash, so the id and the path are one
-string: `code-review/security` is both. There is no separate path-naming step, and no
-`role.schema.json` for the same reason there is no protocol schema.
+`roles/<path>/ROLE.md`, one per catalog entry. `<path>` nests at most one level — the four core
+roles sit at `roles/<id>/`, the three panels at `roles/code-review/<seat>/`,
+`roles/doc-review/<seat>/` and `roles/plan-review/<seat>/`. The catalog ids already carry the slash,
+so the id and the path are one string: `code-review/security` is both. There is no separate
+path-naming step, and no `role.schema.json` for the same reason there is no protocol schema.
 
 A role is **a prompt the runner fills a seat with**. It is not an agent, not a skill, and not a
 procedure. It states what the seat judges, the evidence it must cite, what it may never do, and what
@@ -953,7 +953,7 @@ that exist today:
 | `doc-review/scope-guardian` | `code-review/maintainability` |
 
 **This table is not complete, and a seat's absence from it is not a finding that it has no
-counterpart.** Eleven seats of twenty-nine are named here. Some counterparts are only visible while
+counterpart.** Not every seat is named here. Some counterparts are only visible while
 the seats are being written, so completeness is a handback obligation rather than a property this
 table can claim — see below. What the table does guarantee is that what it *does* declare is
 consistent in both directions.
@@ -1043,7 +1043,7 @@ The second binds the **seat** — point at this or the finding is inadmissible.
 Four `## Never` rows are governed. Two are mandatory in every role. Two are conditional, and the
 condition is a closed list rather than the writer's judgment.
 
-**Mandatory, verbatim in all twenty-nine:**
+**Mandatory, verbatim in every role body:**
 
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
@@ -1054,8 +1054,8 @@ condition is a closed list rather than the writer's judgment.
 
 **Conditional, required exactly where the condition holds:**
 
-3. **Authorship.** Twenty-seven seats carry *"never edits: it judges and returns."* The two that
-   produce an artifact — `implementer` and `plan-review/planner` — carry the converse instead,
+3. **Authorship.** Every seat carries *"never edits: it judges and returns"* except the two that
+   produce an artifact. `implementer` and `plan-review/planner` carry the converse instead,
    naming what the seat writes and stating that it never writes a finding, a receipt, a review record
    or a ticket, and never closes or approves what it produced.
 4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and
@@ -1076,7 +1076,7 @@ Two rules govern how mandated rows are written, because ignoring either produced
 write it without a citation, and then check whether it belongs in a conditional row instead — a
 clause that does not generalize is usually a clause that was never universal.
 
-**Mandate only what is verbatim-identical in all twenty-nine.** Everything else is guidance, and
+**Mandate only what is verbatim-identical in every role body.** Everything else is guidance, and
 guidance produces rows in the seat's own words. A universal row that needs a bespoke per-seat
 instantiation is the welded form returning: the invariant part gets enforced, and the part that must
 vary is load-bearing and unchecked.
