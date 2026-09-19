@@ -540,6 +540,12 @@ someone edits the code, which is constant and silent, and nothing in `ak validat
 Naming the symbol does not prevent drift either; it makes drift findable, because a reader who greps
 the name reaches the definition, where an enumeration leaves them believing they already know it.
 
+The same holds for a count or a range measured over this repository. "Eleven of twenty-nine roles",
+"bodies run 75–110 lines" — each was true when measured, each moves on a schedule nobody watches,
+and nothing recomputes it. State what the figure was evidence for and let a reader who needs the
+number count it. Where a measured figure has to be quoted, it carries the revision it was measured
+at, so a later reader can tell whether it still holds.
+
 ---
 
 ## 9. Evals
@@ -852,12 +858,14 @@ target raises `budget.body-over-target`. §1 says what follows from that, includ
 target is not a defect and is never shortened to clear the number. Report an unusual length in the
 handback; do not re-derive §1's rule here.
 
-The 75–110 range below is **descriptive of the roles authored so far, not a bound.** A role at 118
-lines is not over anything. Eight headings is a lot for a file that runs 75–110 lines, and the two that grew the set from six
-earn their place the same way. A seat has two hardest failure modes: **judging something it should
-never have accepted**, and **talking itself past a prohibition**. Neither had a home, so the material
-leaked into whichever neighbouring section sat closest — a precondition stretched into
-`## Not this seat`, a stale-input constraint filed under `## Evidence it must cite`.
+The heading set below is **descriptive of what these bodies need, not a bound on their length.** A
+role longer than its neighbours is not over anything: §1's target and cap are the only lengths that
+bind, and §1 says what to do about them. Eight headings is a lot for a body this size, and the two
+that grew the set from six earn their place the same way. A seat has two hardest failure modes:
+**judging something it should never have accepted**, and **talking itself past a prohibition**.
+Neither had a home, so the material leaked into whichever neighbouring section sat closest — a
+precondition stretched into `## Not this seat`, a stale-input constraint filed under `## Evidence it
+must cite`.
 
 Dropped, and why — a writer reaching for one of these is describing the wrong thing:
 
