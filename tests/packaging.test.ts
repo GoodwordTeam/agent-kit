@@ -252,6 +252,31 @@ describe("ak build and --check", () => {
     expect(checkBundles(ctx, {}).some((i) => i.rule === "packaging.dist-missing")).toBe(true);
   });
 
+  test("a missing skill body is one problem, not one per bundle that wanted it", () => {
+    // planBundle runs once per host, so every fact it reports about the source
+    // tree used to be emitted once per host. A missing SKILL.md is not a fact
+    // about either bundle: it cannot be fixed per target and does not differ
+    // per target, so two byte-identical rows read as a bug in the reporter and
+    // double the error count everyone glances at as a progress number.
+    const ctx = ctxFor({}, ["skills/beta/SKILL.md"]);
+    const missing = checkBundles(ctx, {}).filter((i) => i.rule === "packaging.skill-body-missing");
+    expect(missing.length).toBe(1);
+    expect(missing[0]?.file).toBe("skills/beta/SKILL.md");
+  });
+
+  test("a per-target problem is still reported per target", () => {
+    // The other half, and the reason this is a dedup rather than a blanket
+    // collapse: dist-missing names the bundle in its file column, so its rows
+    // are genuinely different diagnostics about different artifacts and both
+    // must survive.
+    const ctx = ctxFor();
+    const files = checkBundles(ctx, {})
+      .filter((i) => i.rule === "packaging.dist-missing")
+      .map((i) => i.file);
+    expect(files.length).toBeGreaterThan(1);
+    expect(new Set(files).size).toBe(files.length);
+  });
+
   test("--check reports an extra file left behind in dist/", () => {
     const ctx = ctxFor();
     writeBundles(ctx, {});

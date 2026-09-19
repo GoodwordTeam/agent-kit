@@ -20,6 +20,33 @@ function distDir(host: HostId): string {
   return `dist/${host}`;
 }
 
+/**
+ * `planBundle` runs once per host, and most of what it reports is a fact about
+ * the source tree rather than about a bundle: a skill with no SKILL.md, an
+ * unparseable skill.yaml, a profile naming a skill the catalog does not declare.
+ * Each comes back byte-identical from every plan, and a problem that cannot be
+ * fixed per target and does not differ per target is one problem -- reporting it
+ * once per host doubles the error count that everyone reads as a progress
+ * number, and leaves two identical rows that read as a bug in the reporter.
+ *
+ * Collapsing on the whole diagnostic rather than on the rule is what makes this
+ * safe: every genuinely per-target finding names its bundle or its adapter in
+ * the file column -- `dist/<host>/...` for dist-missing, dist-stale and
+ * dist-extra, `adapters/<host>/...` for an unknown restriction -- so no two of
+ * them are ever identical and none is merged away.
+ */
+function collapseDuplicates(issues: ReadonlyArray<Issue>): Issue[] {
+  const seen = new Set<string>();
+  const out: Issue[] = [];
+  for (const issue of issues) {
+    const key = [issue.severity, issue.rule, issue.file, issue.line ?? "", issue.skipped ?? "", issue.message].join("\u0000");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(issue);
+  }
+  return out;
+}
+
 export function writeBundles(ctx: CheckContext, options: BuildOptions): Issue[] {
   const issues: Issue[] = [];
 
@@ -34,7 +61,7 @@ export function writeBundles(ctx: CheckContext, options: BuildOptions): Issue[] 
     }
   }
 
-  return issues;
+  return collapseDuplicates(issues);
 }
 
 /** Verify dist/ matches what a build would emit. Writes nothing. */
@@ -63,7 +90,7 @@ export function checkBundles(ctx: CheckContext, options: BuildOptions): Issue[] 
     }
   }
 
-  return issues;
+  return collapseDuplicates(issues);
 }
 
 /**
