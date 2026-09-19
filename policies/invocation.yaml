@@ -210,7 +210,7 @@ operations:
       - a review run opened by `review.full` (or an explicit super-review invocation) is open
       - the persisted finding list, input hashes and dispositions are available
     hard_gates:
-      - scope is bounded by affected behavior, not changed lines
+      - scope is bounded by affected behavior, not changed lines (ruling `delta-scope-affected-behavior`)
       - at most two fix cycles; the third stops (policies/limits.yaml `fix_cycles`)
     side_effects: [artifact-write]
     on_unvalidatable_grant: stop-for-explicit-invocation
@@ -353,6 +353,14 @@ no_operation_exposed:
   rule: >-
     These user-invoked skills expose no phase operation. No controller, grant or charter entry
     can start them. A controller that needs their effect stops and names the slash command.
+  note: >-
+    This list covers user-invoked skills only, and is complete for them. The eleven skills in
+    `entrypoints.model_invoked` are absent by construction rather than by omission: a controller
+    already invokes a model-invoked skill directly, which is what the M mode means, so there is
+    no forbidden edge for an operation to open and nothing to withhold. A phase operation exists
+    only where a human entrypoint would otherwise be the only way in. Read together, the two
+    lists account for every skill in catalog.yaml: 22 user-invoked, of which these 13 expose no
+    operation and the rest do, plus 11 model-invoked that need none.
   skills:
     - autopilot
     - compound-refresh

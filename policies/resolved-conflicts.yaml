@@ -14,6 +14,55 @@
 # AUTHORING.md makes citing a ruling mandatory wherever a skill touches one. These ids are
 # stable: renaming one is a breaking change to every body that cites it.
 #
+# Deciding what a ruling binds
+#
+# `binds` names the entries whose own behavior this ruling constrains — not every entry that
+# mentions it, and not only the seats that execute it. The test:
+#
+#     Would this entry be written differently if the row had been decided the other way?
+#
+# If yes, bind it. If the entry only refers to the rule while its own behavior is unchanged,
+# leave it out. "States the rule" versus "executes the rule" is the wrong axis: review-delta
+# does both, and an entry that narrated the rule without acting on it would still fail the
+# test. What earns the bind is being a decision point — a gate, an envelope, a seat that must
+# obey. A faithful pointer to where the rule is decided is not itself a decision point:
+# authority-defaults' invariant naming `invocation/no_side_door` delegates rather than decides,
+# and is correctly unbound.
+#
+# Worked examples, the refusals included, since those are the harder direction:
+#
+#   bound      entrypoint-phase-operation-split binds all seven protocols. Not widening the
+#              authority you were called with is a property of *being* a protocol, so every one
+#              of them would be written differently.
+#   bound      required-lane-failure-is-unavailable binds review-delta alone of the protocols.
+#              It is where a required lane's `unavailable` becomes `blocked`. apply-findings
+#              seats no lanes, so nothing about it changes either way.
+#   not bound  central-kb-owns-project-artifacts binds six protocols, not worktree-ownership,
+#              which writes nothing to the knowledgebase. Proximity is not governance.
+#   not bound  numeric-heuristics-are-guidance does not bind review-delta or roles/implementer.
+#              A per-lane output cap and a status line are not the PR-size target or the
+#              80/15/5 pyramid the row governs, and binding them would soften
+#              two-fix-cycles-then-stop, which adapters/runner-contract/CONTRACT.md:142 calls
+#              "not negotiable by budget".
+#
+# Two failure modes this prevents, both of which look like tidying: adding a citation to a body
+# to silence the forward check, and widening a `binds` group to silence the inverse. If a ruling
+# does not govern an entry, remove the binding and say so — that is a smaller, truer file. A
+# group that grows to cover every file mentioning the words is a mention index, and a mention
+# index cannot fail.
+#
+# Neither failure mode is historical. The comfortable reading is that uncited restatements are
+# artifacts of bodies written before their ruling id existed, and that the class closes once the
+# ids are minted. It does not. The `review.delta` scope gate in policies/invocation.yaml was
+# written with the id already in hand and still landed uncited, and it was found by scanning,
+# not by review. Run the test on your own new rows, not only on inherited ones.
+#
+# The same obligation done right: adapters/runner-contract/CONTRACT.md:143 names the fix-cycle
+# limit and cites `two-fix-cycles-then-stop` inline — in a contract, where restating it would
+# have been easier. Restating instead of citing is how a body silently narrows a ruling: the
+# half that survives is the half a reader would have supplied unprompted, and the half that
+# drops is the one nobody reconstructs.
+#
 # Row shape
 #   id         stable kebab-case identifier, cited verbatim from skill bodies
 #   tension    what the sources actually disagreed about
@@ -22,7 +71,8 @@
 #              conversation where the architecture doc wins, or a donor where this repository
 #              takes a different position. `source` names which.
 #              Absence means the sources were reconciled, not that one lost.
-#   binds      the catalog.yaml entry ids this ruling governs, grouped by kind
+#   binds      the catalog.yaml entry ids this ruling governs, grouped by kind. Decide
+#              membership with the test above, not by searching for mentions.
 #   universal  the kinds this ruling governs *entirely*, as a claim rather than a census.
 #              A kind listed here asserts "every entry of this kind, including ones not yet
 #              written". `binds` still enumerates them, so the forward check keeps working
@@ -128,7 +178,7 @@ conflicts:
       skills: [super-review]
       protocols: [review-delta]
       roles: [code-review/api-contract, code-review/security, code-review/data-migration, reviewer-spec, reviewer-standards]
-      policies: [review]
+      policies: [review, invocation]
     scenario: 8
     coverage: direct
     source:
