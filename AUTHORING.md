@@ -586,13 +586,16 @@ exemption for it: the lockfile records ranges carried from a recovered copy into
 that landed on real text saying something else, and concludes *"Both resolve. Both would have been
 wrong."* An in-repo locator binds nothing, because nothing binds that file's content to the number.
 The provenance map's `G:L` form is a declared citation spelling with a validator behind it and is
-not in question; what is in question is the belief that it is *structurally* safe. It is safe by
-convention — those files are not being edited — and a convention is something this contract can
-state and cannot enforce. Until content is bound to locator, a locator into a live in-repo file is
-the unsafe case, and a section that has a name is cited by it. Across a live document boundary it
-can, because the renumbering and the repointing belong to different files, different owners and
-different commits, and nothing couples them. Name the section there. Say what it is called, not
-where it sits.
+not in question; what is in question is the belief that it is *structurally* safe. It is safe
+because nothing has edited those files since the commit that imported them, and
+`git log -- research/sources/` is that claim's check: one command, runnable by someone who was not
+here, and visibly false the day it stops holding. A convention stated without its falsifier is
+indistinguishable from a guarantee within a few months, because nothing ever contradicts it. Nothing
+enforces this one; the check is what keeps it verifiable anyway. Until content is bound to locator,
+a locator into a live in-repo file is the unsafe case, and a section that has a name is cited by it.
+Across a live document boundary it can, because the renumbering and the repointing belong to
+different files, different owners and different commits, and nothing couples them. Name the section
+there. Say what it is called, not where it sits.
 
 ---
 
@@ -698,6 +701,15 @@ An entry records three things, and the middle one is what makes it actionable wi
    keyed `target:` is skipped by the parser" is the report; "§5 seems wrong" is not.
 3. **What the correct behavior appears to be**, or that the writer cannot tell.
 
+**An entry is committed when it is filed, in its own commit**, and is never carried into the batch
+commit. A writer here does not commit, so whoever commits for the batch commits the entry as soon as
+it is filed and before the work it blocks. Until that happens the entry exists only in a working
+tree, and two of this file's properties are false there: the commit that resolves it cannot delete
+what is not in `HEAD`, and `git log -- CONTRACT-DEFECTS.md` does not index it. That loses the
+demonstration in exactly the case that proves the mechanism works — a writer who reported a defect
+and got a contract fix rather than a workaround. A standalone commit touching one root file is more
+visible in a log than a line inside a batch commit, not less.
+
 **An entry is retired by deleting it**, in the commit that resolves it, with the ruling in that
 commit's message. An entry is never marked resolved and left in place: a resolved entry reads
 exactly like an open one to anything scanning this file, and the blocking clause below cannot tell
@@ -738,6 +750,14 @@ moved. A quotation that never resolved fails the same rule at the commit that fi
 
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
+
+**What it does not catch.** It sees a defect resolved by editing the section the entry quotes. It is
+blind to one resolved from outside this contract — a new origin category in the provenance map, a
+validator rule changed — because the quoted instruction still resolves and nothing in this file
+moved. That has already happened: an entry filed against §5 was answered by a category added
+elsewhere, with §5 untouched and the check silent. Resolution from outside leaves no fingerprint
+here, so no state check on this file can find it, and the blocking clause and a person are what
+close it. The check is not a reason to leave an entry alone.
 
 **A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
 ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
@@ -951,8 +971,8 @@ bind, and §1 says what to do about them. Eight headings is a lot for a body thi
 that grew the set from six earn their place the same way. A seat has two hardest failure modes:
 **judging something it should never have accepted**, and **talking itself past a prohibition**.
 Neither had a home, so the material leaked into whichever neighbouring section sat closest — a
-precondition stretched into `## Not this seat`, a stale-input constraint filed under `## Evidence it
-must cite`.
+precondition stretched into `## Not this seat`, a stale-input constraint filed under
+`## Evidence it must cite`.
 
 Dropped, and why — a writer reaching for one of these is describing the wrong thing:
 
@@ -1083,10 +1103,10 @@ Batch 2's handback reports every pair it found, including the ones already decla
 candidate it resolved. That report is what makes the census auditable — without it, a seat with no
 counterpart bullet is silent about whether it has no counterpart or whether nobody looked.
 
-The adversarial family is three seats, not a pair: each of the three names the other two. The
-standards pair needs the most care, because those two seats carry conditional `## Never` row 4 in
-identical words — two seats judging against a project standard at different layers, with the same
-prohibition text, are the most confusable pair in the catalog rather than the least.
+Each seat in the adversarial family names every other, not just one counterpart. The standards pair
+needs the most care, because those two seats carry conditional `## Never` row 4 in identical words —
+two seats judging against a project standard at different layers, with the same prohibition text,
+are the most confusable pair in the catalog rather than the least.
 
 Resolve the counterpart in `catalog.yaml` before describing it. A seat that a parallel panel *ought*
 to contain is not a counterpart, and describing its concurrency model or verdict vocabulary invents
