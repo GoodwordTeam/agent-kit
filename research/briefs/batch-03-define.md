@@ -1,12 +1,14 @@
 # Batch 3 brief — define
 
-Four skill bodies: `super-align` (U), `super-bound` (U), `wayfind` (U), `doc-review` (M).
+Four skill bodies — `super-align` (U), `super-bound` (U), `wayfind` (U), `doc-review` (M) — and
+two reference packs, `references/codebase-design` and `references/domain-modeling`.
 
-**The two reference packs are not in this batch.** `references/codebase-design` and
-`references/domain-modeling` are held on an open `CONTRACT-DEFECTS.md` entry — §12 enumerates three
-body shapes and a reference pack is none of them, so nothing in the contract governs one. Do not
-author them, and do not treat the dossier's §5 and §6 as commissioned. They will be dispatched
-separately once the contract owner rules.
+**The two reference packs are in this batch after all.** `references/codebase-design` and
+`references/domain-modeling` were held on an open `CONTRACT-DEFECTS.md` entry, because §12 governed
+three body shapes and a reference pack was none of them. That is resolved. §12.5 now governs the
+shape; the ruling is in `f04a4d0` and the entry was retired at `9232ee9`. Author both packs, and
+treat the dossier's `references/codebase-design` and `references/domain-modeling` sections as
+commissioned.
 
 ## What governs this batch
 
@@ -24,7 +26,7 @@ seven files. The writer was not at fault. Briefs restate nothing for that reason
 | | |
 |---|---|
 | Dossier | `research/dossiers/define.md` |
-| Catalog | the four `skills:` entries with `batch: 3` |
+| Catalog | the four `skills:` entries and the two `references:` entries with `batch: 3` |
 | Contract | `AUTHORING.md` |
 | Schemas | `schemas/` |
 | Rulings | `policies/resolved-conflicts.yaml` |
@@ -43,6 +45,31 @@ here are the wrong shape. Batch 2's brief could point at batch 1 as a reviewed e
 this one cannot, and that difference is the single most important line in this brief. Where a
 protocol or a role suggests a shape, ignore it and read §3.
 
+**You are also the first writer to author a reference pack.** §12.5 was written after the sections
+around it, in response to the defect that held these two packs, and **nothing has been authored
+against it** — it has no worked example for the same reason §3 has none. Read it rather than
+reasoning from the packs' neighbours: a reference pack takes no frontmatter and no `*.yaml`
+sidecar, §9's eval obligation does not reach it, §1's numbers do not apply to it, and its handback
+is §12.4's checklist with the two role-specific bullets skipped — not §11's. §12.5 states each of
+those directly, so none of it is this brief's word against the contract's.
+
+**§12.5 says there is no required section list, and that sentence is the one most likely to be
+undone by this batch specifically.** It also forbids inferring a heading set from a sibling pack,
+and it was written expecting the sibling to arrive in a later batch, authored by someone else. It
+does not: you author both. So the trap is inside your own handback — writing `codebase-design`,
+then giving `domain-modeling` the same headings because they are now the house style, manufactures
+in one batch exactly the convention §12.5 declined to create, and it will read as consistency to a
+reviewer. Organise each pack for the skills in its `loaded_by`, and if the two land on the same
+shape, let that be because the material did, and say so in the handback.
+
+**`codebase-design` has a consumer you are not writing.** Its `loaded_by` is `[super-align,
+improve-architecture]`, and `improve-architecture` is batch 9 and does not exist. A pack written as
+super-align's appendix will have to be rewritten when its second consumer arrives. `domain-modeling`
+does not have this problem — both its consumers, `super-align` and `super-bound`, are yours. Write
+`codebase-design` from the dossier's material and check it against super-align, rather than deriving
+it from super-align and checking it against the dossier; those two orders produce different packs
+and only the first survives batch 9.
+
 **Eval cases ship with this batch.** The plan's batch table lists this batch as skills and
 references and never mentions cases; that is a silence in the table, not permission. §9 requires
 three kinds and §11's handback requires them to exist. I probed the gate against a clean extract of
@@ -54,7 +81,8 @@ was probed too, because a gate nothing can satisfy would be a different finding 
 you to satisfy it: three declared cases with three matching `evals/<skill-id>/<case-id>/case.yaml`
 files clears every eval error, leaving only the informational note that the corpus does not yet
 cover all twenty-four release scenarios — which is a Phase 5 criterion across the catalog, not
-something this batch can or should close. `evals/` does not exist yet; you are creating it. Dossier §10 already designs the behaviors per skill, including the
+something this batch can or should close. `evals/` does not exist yet; you are creating it.
+The dossier's "Eval design" section already designs the behaviors per skill, including the
 non-trigger neighbours and the pressure cases — work from it.
 
 **Two of your four skills are U, which makes the invocation law load-bearing for the first time.**
@@ -81,8 +109,9 @@ that judges rather than acts, or one that has `## Not this seat` where §3 wants
 
 **Eval cases written to pass.** An adversarial case that supplies a reason the skill would obviously
 reject is a positive case wearing a different `kind`. §9 asks whether the gate holds under pressure,
-so the case has to supply pressure a reasonable agent might yield to — dossier §10.1's entries are
-built that way, and *"whatever you think is best"* as an attempted approval is the model to follow.
+so the case has to supply pressure a reasonable agent might yield to — the dossier's entries under
+"Behaviors worth testing, per skill" are built that way, and *"whatever you think is best"* as an
+attempted approval is the model to follow.
 If you cannot construct real pressure against one of your gates, that is a finding about the gate.
 
 **A hard gate whose anti-rationalization rows are invented.** §3.1 governs the table and the dossier
