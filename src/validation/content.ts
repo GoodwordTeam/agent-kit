@@ -24,6 +24,18 @@ import { error, type Issue } from "./types.ts";
  * write that shape out literally; deriving it from the term's own probe would
  * only assert that the scanner agrees with itself. The rest of `src/` stays in
  * scope, so the tool cannot exempt the code it ships.
+ *
+ * `research/` is different from the other three and the difference is worth
+ * stating, because the entry reads like a boundary someone drew and it is not
+ * one: `research` is absent from SCAN_DIRS, so nothing under it is ever offered
+ * to the scanner and this prefix suppresses nothing today. It is kept as a
+ * fail-safe rather than deleted. Measured on this repository, scanning that
+ * tree would raise 651 hits under `research/sources/` and 129 under
+ * `research/dossiers/` -- donor text and the dossiers that record the very
+ * `model:` fields they exclude, all quoted on purpose -- so the tree has to
+ * stay out of scope as a whole, and narrowing this to `research/sources/` to
+ * match the prose in AUTHORING.md would be reconciling the two by breaking the
+ * side that is right.
  */
 export const DENYLIST_EXEMPT_PREFIXES: ReadonlyArray<string> = [
   "provenance/",

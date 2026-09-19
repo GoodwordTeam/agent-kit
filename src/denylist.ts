@@ -64,10 +64,16 @@ export const DENY_TERMS: ReadonlyArray<ScanTerm> = [
     reason: "Provider model families are stripped from this catalog.",
   },
   {
+    // The amount is optional so the bare shape still matches, but it is the
+    // reason this rule exists: a pricing table writes `$3/1M in, $15/1M out`,
+    // never `$/1M`. The pattern used to permit only whitespace between `$` and
+    // `/`, which made it match its own probe and no realistic occurrence. The
+    // probe is a priced rate now, because a probe written from the pattern
+    // rather than from the artifact only confirms the regex agrees with itself.
     id: "pricing-per-million-slash",
     kind: "pricing",
-    pattern: shape("\\$\\s*/\\s*1M"),
-    probe: "$/1M",
+    pattern: shape("\\$\\s*[0-9.,]*\\s*/\\s*1M"),
+    probe: "$3/1M",
     reason: "Pricing tables are out of scope (plan §2.6, AGENTS.md).",
   },
   {
@@ -98,6 +104,20 @@ export const DENY_TERMS: ReadonlyArray<ScanTerm> = [
     kind: "ladder",
     pattern: shape("\\bmodel[_ -]?tier\\b"),
     probe: "model_tier: 2",
+    reason: "Model tiers are replaced by roles the runner binds (AGENTS.md).",
+  },
+  {
+    // The `model` prefix above is the qualified form; a routing ladder in YAML
+    // writes the bare key, and `tier: high` was silent while the sibling
+    // `effort: high` was caught. Enumerating the ladder values keeps the bare
+    // noun legal, which matters here: policies/review.yaml declares twenty-odd
+    // persona tiers -- always-on, conditional, stack-conditional -- and none of
+    // them is a routing tier. Measured repository-wide, this matches no
+    // existing line.
+    id: "ladder-tier-assignment",
+    kind: "ladder",
+    pattern: shape("\\btier\\s*[:=]\\s*(minimal|low|medium|high|max|maximum|[0-9]+)\\b"),
+    probe: "tier: high",
     reason: "Model tiers are replaced by roles the runner binds (AGENTS.md).",
   },
   {

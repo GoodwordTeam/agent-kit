@@ -81,6 +81,53 @@ describe("model and pricing denylist", () => {
     expect(checkContent(ctx).some((i) => i.rule === "content.denylist")).toBe(true);
   });
 
+  test.each(["$3/1M", "$3.00/1M", "$15/1M output", "$0.25 / 1M tokens"])(
+    "a rate written the way a pricing table writes it is flagged: %s",
+    (price) => {
+      // The rule permitted only whitespace between `$` and `/`, so it matched
+      // its own probe and nothing else. No pricing table writes `$/1M`; a real
+      // one carries the number that makes it a price, and every form here was
+      // silent. A probe written from the pattern rather than from the artifact
+      // confirms only that the regex agrees with itself, so the probe for this
+      // term is now a priced rate too.
+      const ctx = ctxFor({ "skills/alpha/SKILL.md": `${HEAD}\nBudget line: ${price}\n` });
+      expect(checkContent(ctx).some((i) => i.rule === "content.denylist")).toBe(true);
+    },
+  );
+
+  test("a routing tier written as configuration is flagged", () => {
+    // `model_tier` was covered and a bare `tier:` was not, while the sibling
+    // effort rule needs no qualifier -- so `effort: high` was caught and
+    // `tier: high` was not. A routing ladder in YAML writes the bare key.
+    const ctx = ctxFor({ "skills/alpha/SKILL.md": `${HEAD}\ntier: high\n` });
+    expect(checkContent(ctx).some((i) => i.rule === "content.denylist")).toBe(true);
+  });
+
+  test("the review persona tiers this repo declares are not routing tiers", () => {
+    // policies/review.yaml carries twenty-odd `tier:` keys whose values are
+    // always-on, conditional, stack-conditional, standards-gate. The rule
+    // enumerates ladder values on purpose so those stay legal: measured across
+    // the whole repository, the assignment form matches zero existing lines.
+    const ctx = ctxFor({
+      "skills/alpha/SKILL.md": HEAD,
+      "policies/review.yaml":
+        "personas:\n  - id: a\n    tier: always-on\n  - id: b\n    tier: conditional\n  - id: c\n    tier: stack-conditional\n",
+    });
+    expect(checkContent(ctx).filter((i) => i.rule === "content.denylist")).toEqual([]);
+  });
+
+  test("research/ is out of scan scope, so its exemption is defensive rather than a boundary", () => {
+    // Measured on this repository: if research/ were scanned it would raise 651
+    // hits under research/sources/ and 129 under research/dossiers/, every one
+    // of them donor text quoted on purpose. The entry cannot suppress anything
+    // today because nothing under research/ is offered to the scanner. It is
+    // kept so that adding research/ to SCAN_DIRS fails safe rather than raising
+    // 780 errors, and this pins the relationship so the entry is not misread as
+    // a boundary someone drew.
+    expect(contentScanRoots()).not.toContain("research");
+    expect(DENYLIST_EXEMPT_PREFIXES).toContain("research/");
+  });
+
   test("the exemption boundary: a denied term is evidence under tests/ and a defect under src/", () => {
     const term = sampleModelTerm();
     const ctx = ctxFor({
