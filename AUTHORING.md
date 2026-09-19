@@ -271,14 +271,22 @@ describes what changed), or `origin: conversation` with `conversation_locators[]
 **Per adapted file**, as a row of the merged adaptations record. Batches write their rows as
 fragments under `provenance/adaptations.d/`; `ak validate` reads the merged
 `provenance/adaptations.yaml` view, which is the name every other document in this repository uses.
-A row has the form:
+A row is keyed **`path:`**, with one `source:` and a `rationale:`:
 
 ```yaml
-- target: skills/super-review/SKILL.md
+- path: skills/super-review/SKILL.md
   source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/SKILL.md
-  origin: donor
   rationale: Panel composition and severity taxonomy adapted; artifact root replaced by KB calls.
 ```
+
+**The key is `path:`, and getting it wrong is silent.** `loadAdaptationFragments`
+(`src/validation/provenance.ts`) reads `path`; a row keyed anything else is skipped without an error
+and the adapted file ends up with no provenance at all, in a fragment that validates clean. A row
+with `path:` and no `source:` at least fails loudly, as `provenance.malformed-source`. Write one row
+per `(path, source)` pair: a file adapted from several donor files carries several rows, and one
+fragment owns each path — a second fragment claiming it raises `provenance.conflicting-adaptation`.
+No other key is read. Anything extra is copied verbatim into the generated merge, so it appears in
+the record without ever having been checked.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
@@ -286,15 +294,15 @@ The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 git -C .donors/EveryInc_compound-engineering-plugin cat-file -e 05c42da:skills/ce-code-review/SKILL.md
 ```
 
-A capability no donor implements takes `origin: conversation` and a `G:L` locator into
-`research/sources/grok-transcript.md` instead of a source path:
-
-```yaml
-- target: skills/super-review/references/readiness-gate.md
-  origin: conversation
-  locator: G:L1680-1766
-  rationale: Composition of the two-lane readiness profile over the panel verdict; no donor states it.
-```
+**A capability no donor implements carries no adaptations row.** The adaptations record is for
+adapted files, and there is nothing to attribute. Record it the way the validator checks it instead:
+the `catalog.yaml` entry declares `provenance_origin: conversation`, and
+`provenance/conversation-map.yaml` carries the capability with that entry's directory as its
+`destination` and a `G:L` locator into `research/sources/grok-transcript.md`. `ak validate` holds the
+two together — a `conversation` entry whose capability the map does not land in that directory, or
+lands there as `origin: donor`, is reported, because one of the two is then wrong about where the
+capability came from. Inventing an `origin:` or `locator:` key on an adaptations row does not
+substitute: nothing reads it.
 
 **Never fabricate a source path because a document named a skill.** A donor file that was renamed,
 moved or never existed is `origin: conversation`, not a guess at where it used to be.
@@ -496,6 +504,15 @@ other way, because complying with a gate feels like discipline.
 **A reviewer follows** that does not see the writer's narrative — only the produced files, the
 dossier, and this contract. It cannot be told "I checked that already"; it re-derives.
 
+**A reviewer reads the working tree and records the revision it read.** A review pinned to a revision
+that has since moved is judging a batch against a contract the batch never saw, and it will report
+requirements that did not exist when the work was done. So the reviewer states the revision in its
+report, and **the contract does not move under a review in progress without the reviewer being
+told.** Whoever lands a change during a review owns telling them, the same way whoever rules a gate
+incorrect owns telling the writers working against it. This is the previous two rules pointed at the
+reviewer instead of the writer: a review measured against a moved baseline is a check known to be
+wrong, and a reviewer is never at fault for having read the revision it was given.
+
 **A handback lists every donor file the writer cited that its dossier did not name.** Following a
 dossier's citation into the pinned clone and finding adjacent material is expected: it is how a
 dossier's coverage limits get discovered, and it is not an exception to justify. The list exists
@@ -515,6 +532,13 @@ fix — it was written before any panel larger than three seats had been authore
 still restate each other's boundaries under it, the panel needs **one central boundary table that the
 roles reference**, rather than each role carrying its own copy. Escalate there; do not widen the
 heading and do not let the seats enumerate each other.
+
+**Measure that trigger on sibling-seat entries only.** The trigger is roles restating *each other's*
+boundaries, which is kind 1 in §12.2 and nothing else. A role's non-seat and cross-layer entries are
+unbudgeted, and pooling all three kinds into one bullet count turns a compliant role into an apparent
+breach. Batch 1's seven roles each name two or three sibling seats — well inside the bound, not at
+its edge — so the batch-1 evidence does not reach this trigger. A structural change of this size is
+made on the kind-1 count or not at all.
 
 ---
 
@@ -605,7 +629,7 @@ not one:
 | Heading | What goes in it |
 |---|---|
 | `## What this seat judges` | The one question this seat answers. One sentence |
-| `## Not this seat` | The adjacent seats this one would be mistaken for, and what belongs to them. Three or four, not fourteen, plus a required cross-layer entry — below |
+| `## Not this seat` | The adjacent seats **and non-seat steps** this one would be mistaken for, and what belongs to them. Three or four *sibling seats*, not fourteen, plus unbudgeted non-seat and cross-layer entries — below |
 | `## What it must be given` | What must be true of the seat's input before it may judge at all. An obligation on the caller — below |
 | `## Evidence it must cite` | What the seat must point at for a finding to be admissible |
 | `## Never` | The seat's prohibitions. Four rows are governed: two mandatory, two conditional — below |
@@ -646,15 +670,25 @@ enumerating the other fourteen is quadratic and unmaintainable, and it degrades 
 the boundaries matter most. A seat that cannot name its neighbours in three or four does not have a
 sharp enough question, which is a finding about that seat rather than about this heading.
 
-Three kinds of confusion belong in this heading, and the budget above governs only the first two.
+Three kinds of confusion belong in this heading, and the budget above governs **only the first**.
 
-1. **Sibling seats on the same panel.** The adjacency rule above. Budgeted.
-2. **Non-seat steps** — synthesis, dispatch. These are not seats, and "the verdict belongs to
-   synthesis" is a `## Not this seat` entry even though synthesis is not a seat. A writer reading
-   *adjacent seats* strictly would leave out the step a seat's output is most often mistaken for.
-   Budgeted.
+1. **Sibling seats on the same panel.** The adjacency rule above. **Budgeted — and the three-or-four
+   count is over sibling seats, nothing else.**
+2. **Non-seat steps** — synthesis, dispatch, the closure decision, the authority check, the author of
+   the rule the seat applies. These are not seats, and "the verdict belongs to synthesis" is a
+   `## Not this seat` entry even though synthesis is not a seat. A writer reading *adjacent seats*
+   strictly would leave out the step a seat's output is most often mistaken for. **Not budgeted.**
 3. **Same-named seats at another layer.** A different error from the other two: not a blurred
    boundary but a reader who has the wrong file open. **Required, and not budgeted.**
+
+Kinds 2 and 3 are exempt for the same reason, and it is the reason the budget exists at all. Fifteen
+seats each enumerating the other fourteen is quadratic — but **only kind 1 is quadratic.** The
+non-seat boundaries are a small fixed set, the same size for a three-seat panel as for a fifteen-seat
+one, and the cross-layer entry answers a different question from the whole section. Charging a writer
+for either penalises precisely the entries this heading most needs.
+
+**So count sibling seats when you check the cap.** A reviewer counting total bullets is measuring a
+list that does two jobs and will read a compliant role as over budget.
 
 A seat whose name matches or nearly matches a seat in another panel names that counterpart in
 `## Not this seat` and states what distinguishes the layers. This entry does not count against the
@@ -794,6 +828,11 @@ list, no frontmatter and no sidecar. It is prose, and §8 governs it.
 - Every ruling whose `binds` block in `policies/resolved-conflicts.yaml` names this protocol or role
   is cited in the body. That block is the machine-checkable inverse of §6: it tells you before you
   write which rulings you owe a citation.
+- Adaptation rows are written as a fragment under `provenance/adaptations.d/<batch>.yaml`, keyed
+  `path:` (§5). **The merged `provenance/adaptations.yaml` is generated output and is not the
+  writer's to produce or update** — `ak build` writes it and `ak build --check` holds it in sync in
+  the gate. A `provenance.adaptations-out-of-sync` failure against a correct fragment is a build that
+  has not been run, not a defect in the batch: report it and leave the fragment alone.
 - Every donor file cited that the dossier did not name is listed in the handback (§10).
 - Authoring a body makes that entry's `status: contract` stale and raises
   `catalog.status-behind-body`. **`catalog.yaml` is owned outside this batch — report the entries you
