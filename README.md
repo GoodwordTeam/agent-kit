@@ -1,0 +1,137 @@
+# agent-kit
+
+One engineering lifecycle, amalgamated from six MIT-licensed donors into a single installable
+catalog — rather than four plugins competing over activation descriptions.
+
+**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 4 reference packs · 14 schemas**,
+with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
+bundles.
+
+> Status: pre-release. See `catalog.yaml` for per-entry `status` (`contract` → `authored`).
+
+## Install
+
+```bash
+claude plugin marketplace add ~/Documents/agent-kit
+claude plugin install ak@agent-kit     # restart required
+```
+
+Skills then appear under `/ak:`. `profiles/core.yaml` is the recommended install — the full catalog is
+real startup cost even with progressive disclosure.
+
+## The spine: seven super skills
+
+The lifecycle is seven skills, not twenty. Each has one job, one required output, and one boundary.
+
+| Skill | Job | Boundary |
+|---|---|---|
+| `super-align` | Grill the request, establish shared vocabulary, get design approval | Hard gate: no implementation files before a human approves |
+| `super-bound` | Requirements, plan, dependency DAG, ownership, acceptance criteria | Decision tickets are not implementation tickets |
+| `super-scout` | Bounded read-only exploration into a revision-bound evidence dossier | Reports coverage limits and unknowns — **never an architectural verdict** |
+| `super-build` | Execute an approved ticket under TDD in an owned worktree | No self-approval, no silent scope expansion |
+| `super-verify` | Acceptance-to-evidence matrix with command, exit status, revision | An agent's description of green tests is not a receipt |
+| `super-review` | Specialist panel (full) or two-axis delta on a fix | Reviewers cannot edit |
+| `super-ship` | Release checks and PR preparation | Merge and deploy are separate capabilities |
+
+Plus `autopilot`: a human-started supervisor pair exercising explicitly delegated checkpoint authority
+over those same skills. It implements nothing itself.
+
+## Catalog
+
+Every entry is declared in `catalog.yaml`. The validator fails on an entry with no directory and on a
+directory with no entry.
+
+### Skills (33)
+
+| Group | Members |
+|---|---|
+| **Lifecycle** (7) | `super-align` U · `super-bound` U · `super-scout` M · `super-build` M · `super-verify` M · `super-review` U/M · `super-ship` U |
+| **Supervisor** (1) | `autopilot` U |
+| **Standalone** (19) | `compound` U · `compound-refresh` U · `ideate` U · `pov` U · `bakeoff` U · `doc-review` M · `receiving-review` U · `diagnose` M · `improve-architecture` U · `doubt-driven` U · `simplify` M · `research` M · `source-driven` M · `deprecate` U · `explain` U · `triage` U · `strategy` U · `product-pulse` U · `writing-skills` U |
+| **Primitives** (4) | `prototype` M · `handoff` M · `wait-what` M · `wayfind` U |
+| **Operational** (2) | `babysit-pr` U · `ultraqa` U |
+
+**U** = user-invoked; only a human starts it. **M** = model-invoked. See the invocation law in
+`AGENTS.md`.
+
+### Packs (8)
+
+Attached by **artifact and semantics, not file extension alone**, with the selection rationale
+recorded. They add constraints and review lenses; they never start a lifecycle phase.
+
+`pack-api` · `pack-delete` · `pack-test` · `pack-secure` · `pack-frontend` · `pack-data` ·
+`pack-perf` · `pack-deps`
+
+### Protocols (7)
+
+Shared phase logic, invoked by skills rather than by humans:
+
+`phase-operations` · `consensus-plan-gate` · `tdd` · `apply-findings` · `review-delta` ·
+`worktree-ownership` · `attach-pack`
+
+### Roles (29)
+
+4 core (`supervisor`, `implementer`, `reviewer-spec`, `reviewer-standards`) · 15 code-review ·
+7 doc-review · 3 plan-review (`planner`, `architect`, `critic`).
+
+### References (4)
+
+`codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality`. Loaded on demand,
+never exposed as slash commands.
+
+## What makes it self-checking
+
+```bash
+bun test                  # units + invalid-case fixtures that must fail
+bun run ak validate       # the gate every batch passes
+bun run ak build --check  # dist/ in sync with source
+bun run ak attach <path>  # show which packs attach, and why
+```
+
+`ak validate` enforces catalog completeness, JSON Schema conformance, frontmatter rules, the
+invocation graph, link closure in both source and bundle, provenance for every adapted file, and a
+content denylist (model names, pricing, effort ladders, placeholders) outside `provenance/` and
+`research/sources/`.
+
+## Contracts worth knowing before you read a skill
+
+- **Artifacts are revision-bound.** Approvals bind to a content hash, never a filename. A changed plan
+  does not inherit the old plan's approval; a changed patch does not inherit stale receipts.
+- **Findings are P0–P3.** Critical/Important/Nit/FYI are presentation labels, not a replacement.
+  Synthesis may only *worsen* a grade. Low-confidence security findings are adjudicated, never
+  silently filtered.
+- **Only independent verification closes a finding.** Reviewer or classifier confidence is advisory.
+- **Delta review is bounded by affected behavior, not changed lines.** A serious newly discovered
+  issue in an untouched caller stays reportable.
+- **"Fresh reviewer" means independent of the author**, not amnesiac between cycles.
+- **Two fix cycles, then stop.** Anything still open is reported, not looped.
+- **Numeric heuristics are guidance.** The ~100-line PR target and 80/15/5 pyramid are configurable,
+  not gates.
+
+## Provenance
+
+Six donors, all MIT, pinned to exact commits in `provenance/upstream.lock.yaml` (pinned 2026-09-18):
+`EveryInc/compound-engineering-plugin`, `obra/superpowers`, `mattpocock/skills`,
+`addyosmani/agent-skills`, `Yeachan-Heo/oh-my-claudecode`, `Yeachan-Heo/oh-my-codex`.
+
+Every adapted file records its `donor@commit:path` in `provenance/adaptations.yaml`, and that path is
+verified to exist at the pin. Capabilities that came from the design conversation rather than a donor
+are marked `origin: conversation` with a line locator — never a fabricated source path. Upstream drift
+becomes a reviewable proposal, never an automatic re-sync.
+
+Attribution: `NOTICE`. Full license texts: `provenance/licenses/`.
+
+## Repository documents
+
+| File | Role |
+|---|---|
+| `AGENTS.md` | Maintainer guide and the invocation law |
+| `AUTHORING.md` | The contract every skill body obeys |
+| `catalog.yaml` | Single source of truth; drives validation and packaging |
+| `policies/resolved-conflicts.yaml` | Where the sources disagreed, and how it was settled |
+| `docs/decisions/` | ADRs |
+| `research/` | Design sources and ~7,000 lines of citation-verified donor dossiers |
+
+## License
+
+MIT — see `LICENSE`. Adapted material remains under its donors' MIT terms; see `NOTICE`.

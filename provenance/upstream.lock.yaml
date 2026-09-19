@@ -1,0 +1,69 @@
+# Pinned upstream donors. Clones live in .donors/<id>/ (gitignored, full clones).
+# Re-sync is a reviewable proposal, never automatic (plan §1.4).
+schema_version: 1
+pinned_at: "2026-09-18"
+donors:
+  - id: compound-engineering
+    repo: EveryInc/compound-engineering-plugin
+    url: https://github.com/EveryInc/compound-engineering-plugin
+    path: .donors/EveryInc_compound-engineering-plugin
+    commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+    commit_date: "2026-09-18T16:31:43-07:00"
+    license: MIT
+    copyright: "Copyright (c) 2025 Every"
+    license_file: provenance/licenses/EveryInc_compound-engineering-plugin.LICENSE
+  - id: superpowers
+    repo: obra/superpowers
+    url: https://github.com/obra/superpowers
+    path: .donors/obra_superpowers
+    commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+    commit_date: "2026-08-12T09:53:21-07:00"
+    license: MIT
+    copyright: "Copyright (c) 2025 Jesse Vincent"
+    license_file: provenance/licenses/obra_superpowers.LICENSE
+  - id: pocock
+    repo: mattpocock/skills
+    url: https://github.com/mattpocock/skills
+    path: .donors/mattpocock_skills
+    commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+    commit_date: "2026-09-18T11:12:29+01:00"
+    license: MIT
+    copyright: "Copyright (c) 2026 Matt Pocock"
+    license_file: provenance/licenses/mattpocock_skills.LICENSE
+  - id: addy
+    repo: addyosmani/agent-skills
+    url: https://github.com/addyosmani/agent-skills
+    path: .donors/addyosmani_agent-skills
+    commit: c004a74784a08295d52749b04cda634125b9a581
+    commit_date: "2026-09-17T20:32:15-07:00"
+    license: MIT
+    copyright: "Copyright (c) 2025 Addy Osmani"
+    license_file: provenance/licenses/addyosmani_agent-skills.LICENSE
+  - id: omc
+    repo: Yeachan-Heo/oh-my-claudecode
+    url: https://github.com/Yeachan-Heo/oh-my-claudecode
+    path: .donors/Yeachan-Heo_oh-my-claudecode
+    commit: 5281b19e0d64f8e6dc6767f2130299a88af2dc71
+    commit_date: "2026-09-11T21:10:36+09:00"
+    license: MIT
+    copyright: "Copyright (c) 2025 Yeachan Heo"
+    license_file: provenance/licenses/Yeachan-Heo_oh-my-claudecode.LICENSE
+  - id: omx
+    repo: Yeachan-Heo/oh-my-codex
+    url: https://github.com/Yeachan-Heo/oh-my-codex
+    path: .donors/Yeachan-Heo_oh-my-codex
+    commit: cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7
+    commit_date: "2026-09-11T15:00:29+09:00"
+    license: MIT
+    copyright: "Copyright (c) 2026 Yeachan-Heo"
+    license_file: provenance/licenses/Yeachan-Heo_oh-my-codex.LICENSE
+local_sources:
+  - id: pocock-two-axis-backup
+    description: Original Pocock Standards/Spec two-axis code-review SKILL.md, preserved before OMX overwrote the local copy.
+    original_path: ~/.omx/backups/setup/2026-07-15T23-45-31.075Z/.codex/skills/code-review/SKILL.md
+    working_copy: research/sources/pocock-code-review-two-axis.SKILL.md
+    license: MIT
+    copyright: "Copyright (c) 2026 Matt Pocock"
+  - id: conversation
+    description: Design transcript (Grok) that specified the catalog. Cited as G:L<start>-<end>.
+    working_copy: research/sources/grok-transcript.md

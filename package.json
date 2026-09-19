@@ -1,0 +1,24 @@
+{
+  "name": "agent-kit",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One engineering lifecycle amalgamated from six MIT donors: seven super skills, packs, protocols and roles, installable as a Claude Code plugin under /ak:.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "ak": "./src/cli.ts"
+  },
+  "scripts": {
+    "ak": "bun run src/cli.ts",
+    "validate": "bun run src/cli.ts validate",
+    "build": "bun run src/cli.ts build",
+    "attach": "bun run src/cli.ts attach",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.5.1"
+  }
+}
