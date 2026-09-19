@@ -42,9 +42,12 @@ Nothing else is authority. In particular:
 ## Ordinary workers cannot manufacture a grant
 
 An implementer, a reviewer or any other seated role cannot start a gated phase, approve its own
-work, or promote itself to a class it was not dispatched as. Agreement between two seats is not a
-grant, and neither is confidence. Where a seat believes it needs authority it does not hold, the
-correct output is an escalation, not an action.
+work, or promote itself to a class it was not dispatched as. Agreement between two seats is
+necessary and not sufficient: the deterministic authority check runs independently and must also
+pass — required evidence present and still bound to its hashes, and the charter listing this
+checkpoint and this action (ruling `supervisor-agreement-is-not-authority`). Confidence is not a
+grant either. Where a seat believes it needs authority it does not hold, the correct output is an
+escalation, not an action.
 
 ## Where a grant cannot be validated, stop
 
@@ -86,8 +89,12 @@ Two seats declared independent are independent because the runner attests it: di
 identifiers bound to the run, no shared context between them for the same decision, and none of
 the excluded lineages (`adapters/runner-contract/CONTRACT.md` §3). Independence is never
 expressed as, satisfied by, or checked against which system fills the seat. A seat that cannot be
-filled under those constraints is unavailable, and unavailability blocks; it is never backfilled
-by the author or the implementer.
+filled under those constraints is unavailable, and unavailability blocks the checkpoint: it is
+never backfilled by the implementer, the author, the spec approver or a seat already sitting on
+the panel (ruling `missing-supervisor-never-implementer`). A required lane that is unavailable
+blocks approval on the same terms, is never downgraded to an empty result, and is never
+backfilled by the author, the implementer, another seat or the synthesis step (ruling
+`required-lane-failure-is-unavailable`).
 
 ## Shipping is not permission to write knowledge
 

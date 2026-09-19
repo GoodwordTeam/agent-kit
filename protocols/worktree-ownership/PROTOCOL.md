@@ -27,9 +27,10 @@ shared checkout enters here first.
 
 ## Invoked by
 
-`super-build`, `diagnose` and `ultraqa`, and the `bound.run`, `qa.cycle` and `ci.repair` phase
-operations before they write. A protocol holds no authority of its own and never widens the
-authority it was called with (ruling `entrypoint-phase-operation-split`; protocol
+`super-build`, `diagnose` and `ultraqa`, and the `qa.cycle` and `ci.repair` phase operations
+before they write. `bound.run` is not an invoker: it writes artifacts and scratch, never the
+workspace, so it has nothing to isolate. A protocol holds no authority of its own and never
+widens the authority it was called with (ruling `entrypoint-phase-operation-split`; protocol
 `phase-operations`).
 
 ## Inputs

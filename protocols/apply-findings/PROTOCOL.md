@@ -24,10 +24,12 @@ findings. It runs after a disposition exists and before the delta pass that clos
 
 ## Invoked by
 
-`super-build`, `super-review`, `babysit-pr` and `receiving-review`, and the `review.full`,
-`review.delta` and `feedback.assess` phase operations. A protocol holds no authority of its own
-and never widens the authority it was called with (ruling `entrypoint-phase-operation-split`;
-protocol `phase-operations`).
+`super-build`, `super-review`, `babysit-pr` and `receiving-review`. No phase operation invokes
+this protocol. A review operation adjudicates a finding and the caller applies it under its own
+authorization, which is why `review.full` can hold reviewers to not editing source while this
+protocol writes the workspace: they are two authorities, not one widened. A protocol holds no
+authority of its own and never widens the authority it was called with (ruling
+`entrypoint-phase-operation-split`; protocol `phase-operations`).
 
 ## Inputs
 

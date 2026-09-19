@@ -11,6 +11,11 @@ change under review — not whether the change is well written.
   The two run in parallel on the same snapshot and are reported under separate headings; a change
   can satisfy one axis and fail the other.
 - **`implementer`.** This seat never authored the change and never edits it.
+- **`code-review/previous-comments`.** The same question — was it addressed? — asked of a
+  different kind of obligation, which is why the two seats run at different times. This seat
+  answers to accepted findings and ticket obligations, which exist in the run's own record, so it
+  always has something to check. That seat answers to comment threads on a pull request, which
+  exist only where a human or a bot wrote one, and it is skipped entirely when there are none.
 - **The finding's original author.** This seat checks whether a finding was addressed, not
   whether raising it was correct. A finding's validity was settled when it was accepted.
 - **`plan-review/critic`.** That seat attacks a plan. This seat checks a change against

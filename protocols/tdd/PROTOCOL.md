@@ -27,10 +27,11 @@ verification command and call it new evidence, and test vertical slices rather t
 
 ## Invoked by
 
-`super-build` and `diagnose`, and the `bound.run`, `qa.cycle` and `ci.repair` phase operations
-where they reach a behavior change. A protocol holds no authority of its own and never widens
-the authority it was called with (ruling `entrypoint-phase-operation-split`; protocol
-`phase-operations`).
+`super-build` and `diagnose`, and the `qa.cycle` and `ci.repair` phase operations where they
+reach a behavior change. `bound.run` is not an invoker: it names verification commands and does
+not run them, so it never reaches a behavior change. A protocol holds no authority of its own and
+never widens the authority it was called with (ruling `entrypoint-phase-operation-split`;
+protocol `phase-operations`).
 
 ## Inputs
 

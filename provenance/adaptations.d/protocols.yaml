@@ -11,11 +11,6 @@
 # One fragment owns each adapted path: a second fragment claiming any path below is a
 # merge hazard and raises provenance.conflicting-adaptation.
 #
-# Key name: `path:` + `source:`. AUTHORING.md §5 illustrates adaptation rows with
-# `target:`; a row keyed `target:` is skipped by the parser, and a row with `path:` and
-# no `source:` raises provenance.malformed-source. Flagged for the owner of §5 so the
-# two converge on one key.
-#
 # Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
 # below comes from research/dossiers/protocols.md, whose citations were verified against
 # the pinned working trees; none was re-derived or guessed.
@@ -26,13 +21,6 @@
 # Two files in this batch carry no `adaptations` row because catalog.yaml declares them
 # provenance_origin: conversation. They are under `conversation_origin:` at the bottom,
 # a key the fragment parser does not read.
-#
-# Recorded exception to the 150-line body target: protocols/review-delta/PROTOCOL.md is
-# 151 lines. The overage is two ruling ids totalling 78 characters, added to cite
-# required-lane-failure-is-unavailable and closure-requires-independent-verification at
-# the clauses they govern. A lossless reflow was attempted and saved nothing, so the only
-# remaining path was to cut a real clause. Recorded rather than forced, per ruling
-# numeric-heuristics-are-guidance.
 
 adaptations:
   - path: protocols/invocation-authority.md
