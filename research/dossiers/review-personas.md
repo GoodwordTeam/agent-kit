@@ -15,16 +15,55 @@ not in this batch. `whole-doc-reviewer` is a separate mode, not a team persona.
 
 ## Donor commit pins
 
-| id | repo | commit |
+| donor id | repo | commit |
 |---|---|---|
-| CE | `.donors/EveryInc_compound-engineering-plugin` (S3) | `05c42da94fd318fa081f29d17bf947762aa477b1` |
-| OMX | `.donors/Yeachan-Heo_oh-my-codex` (S7) | `cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7` |
-| POCOCK | `research/sources/pocock-code-review-two-axis.SKILL.md` (S5, recovered pre-overwrite copy held in-repo) | in-repo file, 89 lines |
+| `compound-engineering` | EveryInc/compound-engineering-plugin (S3) | `05c42da94fd318fa081f29d17bf947762aa477b1` |
+| `omx` | Yeachan-Heo/oh-my-codex (S7) | `cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7` |
+| `pocock` | mattpocock/skills (S5) | `c55ee46073ed923f86ce59a5eb3b6d895095d1b7` |
 
-Citation form used throughout: `CE@05c42da9:skills/ce-code-review/references/personas/security-reviewer.md#L18-L20`.
-`OMX@cb955b0d:skills/code-review/SKILL.md#L35`. `POCOCK:#L38-L41` (in-repo, no
-pin needed). Donor text appears as an indented blockquote; the line under it
-beginning `Adapt:` says what survives into the role prompt.
+Donor ids and commits are exactly those pinned in
+`provenance/upstream.lock.yaml`, written unabbreviated everywhere in this file.
+`src/validation/provenance.ts` resolves the id against that lock and compares the
+commit against the full 40-character pin, so an id the lock does not carry raises
+`provenance.unknown-donor` and an abbreviated commit raises
+`provenance.commit-not-pinned`.
+
+**Two forms, and they are not interchangeable.** A prose citation here carries a
+line range, for the reader:
+
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/security-reviewer.md#L18-L20`
+
+The `source:` string a provenance fragment consumes is that same string **with
+the `#L...` range removed**:
+
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/security-reviewer.md`
+
+The pin check runs `git cat-file -e <commit>:<path>` against that path, so a
+retained `#L...` suffix makes it a path the pin does not contain and raises
+`provenance.source-not-at-pin`. The roster tables below emit the consumed form
+directly: a row is copied, not assembled.
+
+Donor text appears as an indented blockquote; the line under it beginning
+`Adapt:` says what survives into the role prompt.
+
+### The recovered Pocock file is not cited here
+
+`research/sources/pocock-code-review-two-axis.SKILL.md` is a recovered
+pre-overwrite local variant, registered in `provenance/upstream.lock.yaml` under
+`local_sources` as `pocock-two-axis-backup`. **This dossier does not cite it, and
+no row in it may be built from it.** It is 89 lines against 87 at the pin, 58
+lines differ, and it says "PRD" in three places where the pin says "spec": same
+structure, reworded throughout, a different artifact. Recording it as a pinned
+donor path would be a fabricated source path.
+
+Every Pocock claim in this dossier was re-read against
+`pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md`
+and holds there, so all of them are cited at the pin, quoting the pin's own text
+at the pin's own line numbers. Two ranges moved in the process and are flagged
+where they appear (§4.3); the recovered file's numbering does not correspond and
+must not be used. No claim here rests on recovered-file-only content, so nothing
+in this dossier is waiting on the open question of how an in-repo vendored source
+is recorded.
 
 ## Plan and repo sources referenced
 
@@ -43,40 +82,45 @@ beginning `Adapt:` says what survives into the role prompt.
 
 ## Roster and donor-path index
 
-The writer copies these two tables into `provenance/adaptations.yaml` verbatim;
-they are the per-item donor mapping for all 22. Every path is under the CE pin.
+These two tables are the per-item donor mapping for all 22. The `source:` column
+holds the complete string a `provenance/adaptations.d/` row consumes — donor id,
+full 40-character pin, and full path — so a row is produced by copying one cell,
+not by joining a heading to a filename. Do not abbreviate the commit and do not
+append a `#L...` range: both are validator failures, per the two forms described
+above. Every path below was verified to exist at the pin with
+`git cat-file -e <commit>:<path>`.
 
-### code-review (15) — all under `skills/ce-code-review/references/personas/`
+### code-review (15)
 
-| # | role id | tier | donor file | donor lines | note |
+| # | role id | tier | `source:` string, as a fragment row consumes it | donor lines | note |
 |---|---|---|---|---|---|
-| 1 | `correctness` | always-on | `correctness-reviewer.md` | 47 | |
-| 2 | `project-standards` | standards-gate | `project-standards-reviewer.md` | 77 | |
-| 3 | `testing` | generic-conditional | `testing-reviewer.md` | 49 | |
-| 4 | `maintainability` | generic-conditional | `maintainability-reviewer.md` | 83 | |
-| 5 | `agent-native` | generic-conditional | `agent-native-reviewer.md` | 173 | donor returns markdown, not JSON — see §24.2 |
-| 6 | `learnings` | generic-conditional | `learnings-researcher.md` | 260 | **only roster item whose donor file is not `<id>-reviewer.md`**; donor returns markdown — see §24.2 |
-| 7 | `security` | conditional | `security-reviewer.md` | 50 | |
-| 8 | `performance` | conditional | `performance-reviewer.md` | 45 | |
-| 9 | `api-contract` | conditional | `api-contract-reviewer.md` | 44 | |
-| 10 | `data-migration` | conditional | `data-migration-reviewer.md` | 111 | |
-| 11 | `reliability` | conditional | `reliability-reviewer.md` | 47 | |
-| 12 | `adversarial` | conditional | `adversarial-reviewer.md` | 110 | |
-| 13 | `previous-comments` | conditional | `previous-comments-reviewer.md` | 59 | |
-| 14 | `frontend-races` | stack-conditional | `julik-frontend-races-reviewer.md` | 45 | **rename** — donor id encodes a person |
-| 15 | `swift-ios` | stack-conditional | `swift-ios-reviewer.md` | 99 | |
+| 1 | `code-review/correctness` | always-on | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/correctness-reviewer.md` | 47 |  |
+| 2 | `code-review/project-standards` | standards-gate | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/project-standards-reviewer.md` | 77 |  |
+| 3 | `code-review/testing` | generic-conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/testing-reviewer.md` | 49 |  |
+| 4 | `code-review/maintainability` | generic-conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/maintainability-reviewer.md` | 83 |  |
+| 5 | `code-review/agent-native` | generic-conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/agent-native-reviewer.md` | 173 | donor returns markdown, not JSON — see §24.2 |
+| 6 | `code-review/learnings` | generic-conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/learnings-researcher.md` | 260 | **only roster item whose donor file is not `<id>-reviewer.md`**; donor returns markdown — see §24.2 |
+| 7 | `code-review/security` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/security-reviewer.md` | 50 |  |
+| 8 | `code-review/performance` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/performance-reviewer.md` | 45 |  |
+| 9 | `code-review/api-contract` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/api-contract-reviewer.md` | 44 |  |
+| 10 | `code-review/data-migration` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/data-migration-reviewer.md` | 111 |  |
+| 11 | `code-review/reliability` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/reliability-reviewer.md` | 47 |  |
+| 12 | `code-review/adversarial` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/adversarial-reviewer.md` | 110 |  |
+| 13 | `code-review/previous-comments` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/previous-comments-reviewer.md` | 59 |  |
+| 14 | `code-review/frontend-races` | stack-conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/julik-frontend-races-reviewer.md` | 45 | **rename** — donor id encodes a person |
+| 15 | `code-review/swift-ios` | stack-conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/swift-ios-reviewer.md` | 99 |  |
 
-### doc-review (7) — all under `skills/ce-doc-review/references/personas/`
+### doc-review (7)
 
-| # | role id | tier | donor file | donor lines | note |
+| # | role id | tier | `source:` string, as a fragment row consumes it | donor lines | note |
 |---|---|---|---|---|---|
-| 16 | `coherence` | always-on | `coherence-reviewer.md` | 69 | |
-| 17 | `feasibility` | always-on | `feasibility-reviewer.md` | 50 | |
-| 18 | `product-lens` | conditional | `product-lens-reviewer.md` | 85 | |
-| 19 | `design-lens` | conditional | `design-lens-reviewer.md` | 48 | |
-| 20 | `security-lens` | conditional | `security-lens-reviewer.md` | 41 | |
-| 21 | `scope-guardian` | conditional | `scope-guardian-reviewer.md` | 72 | |
-| 22 | `adversarial-document` | conditional | `adversarial-document-reviewer.md` | 109 | **rename** — donor id carried the `-document` suffix in the filename only |
+| 16 | `doc-review/coherence` | always-on | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/coherence-reviewer.md` | 69 |  |
+| 17 | `doc-review/feasibility` | always-on | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/feasibility-reviewer.md` | 50 |  |
+| 18 | `doc-review/product-lens` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/product-lens-reviewer.md` | 85 |  |
+| 19 | `doc-review/design-lens` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/design-lens-reviewer.md` | 48 |  |
+| 20 | `doc-review/security-lens` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/security-lens-reviewer.md` | 41 |  |
+| 21 | `doc-review/scope-guardian` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/scope-guardian-reviewer.md` | 72 |  |
+| 22 | `doc-review/adversarial-document` | conditional | `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/adversarial-document-reviewer.md` | 109 | **rename** — donor id carried the `-document` suffix in the filename only |
 
 Supporting machinery read at the pin and cited throughout §0: code-review
 `persona-catalog.md` (66), `select-and-route.md` (93), `dispatch-reviewers.md`
@@ -109,11 +153,11 @@ it got dispatched.
 
 CE's own dispatch files say the same thing from the orchestrator side, twice:
 
-> CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L7
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L7
 > Each selected reviewer is a generic subagent seeded with a local prompt file
 > from `references/personas/`; do not dispatch standalone agents by type/name.
 
-> CE@05c42da9:skills/ce-doc-review/references/dispatch.md#L9
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/dispatch.md#L9
 > For each selected reviewer, read `references/personas/<reviewer-name>.md` and
 > pass its full content as `{persona_file}`. Do not dispatch standalone agents
 > by type/name and do not rely on platform-level custom-agent registration.
@@ -128,13 +172,13 @@ Four rules, in force for all 22.
 
 **(a) Severity is P0–P3, canonical.** CE's scale is imported as-is:
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L30
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L30
 > The merge bar is the one from Google's Code Review Developer Guide: the change
 > must improve overall code health, not be perfect. Severity ranks by that bar —
 > functionality and design defects outrank style and taste, and a finding whose
 > only claim is "could be better" never blocks.
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L36-L39
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L36-L39
 > | **P0** | Critical breakage, exploitable vulnerability, data loss/corruption | Must fix before merge |
 > | **P1** | High-impact defect likely hit in normal usage, breaking contract | Should fix |
 > | **P2** | Moderate issue with meaningful downside (edge case, perf regression, maintainability trap) | Fix if straightforward |
@@ -145,7 +189,7 @@ presentation/disposition labels rather than a lossy replacement for risk
 severity." Critical/Important/Nit/FYI may appear in rendered output only. A role
 prompt never emits them. CE already forbids the sloppy vocabulary at the seat:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L49
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L49
 > `severity`: one of `"P0"`, `"P1"`, `"P2"`, `"P3"` — use these exact strings.
 > Do NOT use `"high"`, `"medium"`, `"low"`, `"critical"`, or any other
 > vocabulary, even if your persona's prose discusses priorities in those terms
@@ -159,7 +203,7 @@ must be rewritten to P0–P3 at source, not translated at emit time.
 probability.** CE's behavioral rubric is the donor mechanism and it survives
 intact:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L59
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L59
 > **Confidence rubric — use these exact behavioral anchors.** Pick the single
 > anchor whose criterion you can honestly self-apply. Do not pick a value
 > between anchors; only `0`, `25`, `50`, `75`, and `100` are valid. The rubric
@@ -167,7 +211,7 @@ intact:
 > you cannot truthfully attach the behavioral claim to the finding, step down to
 > the next anchor.
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L61-L67
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L61-L67
 > - **`0` — Not confident at all.** … **Do not emit — suppress silently.** This
 >   anchor exists in the enum only so synthesis can explicitly track the drop;
 >   personas never produce it.
@@ -182,7 +226,7 @@ intact:
 > - **`100` — Absolutely certain.** The issue is verifiable from the code itself
 >   … No interpretation required.
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L69
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L69
 > Anchor and severity are independent axes. A P2 finding can be anchor `100` if
 > the evidence is airtight; a P0 finding can be anchor `50` if it is an important
 > concern you could not fully verify.
@@ -207,7 +251,7 @@ do not restate it, and do not invent thresholds.
 filtered.** Both donor and plan agree, and this must be stated explicitly in the
 `security` and `security-lens` role prompts:
 
-> CE@05c42da9:skills/ce-code-review/references/personas/security-reviewer.md#L20
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/security-reviewer.md#L20
 > Security findings have a **lower effective threshold** than other personas
 > because the cost of missing a real vulnerability is high. Security findings at
 > anchor 50 should typically be filed at P0 severity so the P0 exception keeps
@@ -243,12 +287,12 @@ forbidden. Implementer does not sit on this panel."
 
 CE implements the same property on its local batch:
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L51
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L51
 > Reviewers are independent by construction (none is fed another's output; see
 > the independence rule above), so batch composition and completion order cannot
 > change any finding…
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L59
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L59
 > A reviewer pass performed in the parent context may contribute attributed
 > evidence, but it is not independent: exclude it from `independent_reviewers`,
 > never use its agreement for promotion, and name the lost independent coverage.
@@ -279,12 +323,12 @@ guarantee survives; the mechanism does not.** A role prompt must never mention a
 peer, a provider, a second opinion from elsewhere, corroboration, or agreement
 promotion. Concretely, these two CE rules are dropped from the seat's world:
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L14
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L14
 > **`fast-pass` never counts toward cross-reviewer promotion** … Neither does
 > agreement among in-process personas; only a verified cross-model peer
 > corroborates.
 
-> CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L91
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L91
 > …a started peer and the in-process adversarial reviewer must never both receive
 > the same review brief.
 
@@ -344,7 +388,7 @@ Three hard rules for the role prompts:
    grade is input, not the last word — the CE sentence for this already exists
    and is worth reusing:
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L53-L54
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L53-L54
 > - **Synthesis (Stage 5, Merge findings) makes the final decision on
 >   `autofix_class` and `owner`.** The values a persona supplies are input, not
 >   the last word.
@@ -370,7 +414,7 @@ release scenario 9 is "Moving a line number does not duplicate or falsely
 suppress a finding," and the doc-review donor already depends on evidence
 substrings rather than position:
 
-> CE@05c42da9:skills/ce-doc-review/references/synthesis-and-presentation.md#L297
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/synthesis-and-presentation.md#L297
 > **Matching test:** same as R30. A finding matches when its
 > `normalize(section) + normalize(title)` fingerprint matches and its evidence
 > substrings overlap the prior finding's by more than 50%.
@@ -398,18 +442,18 @@ CE's five selection layers survive verbatim in structure; `catalog.yaml`'s
 `tier` field already encodes them (`always-on`, `standards-gate`,
 `generic-conditional`, `conditional`, `stack-conditional`).
 
-> CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L36
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L36
 > A full review always spawns correctness, adds project-standards when
 > applicable files exist, then adds only the generic, cross-cutting,
 > stack-specific, and CE conditionals justified by the diff. This file runs only
 > on the full spine; it does not invent irrelevant domains.
 
-> CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L44
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L44
 > Diff-derived helper signals (`signals`, `test_files_changed`, `agent_surface`,
 > `has_learnings_corpus`) are prompts to consider a persona, never automatic
 > selection.
 
-> CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L40
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L40
 > Select stack-specific reviewers only when the diff touches runtime behavior
 > they specialize in (async UI races, iOS/Swift lifecycle), never mechanically
 > from file extensions alone.
@@ -428,14 +472,14 @@ empty rather than manufacturing work. Those are per-item and are stated in each
 
 ### 0.7 `unavailable` — a required-lane failure never becomes approval
 
-> OMX@cb955b0d:skills/code-review/SKILL.md#L35
+> omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md#L35
 > Launch the `code-reviewer` and `architect` agents in parallel. Both lanes run
 > in parallel on a clean context with explicit scope and artifacts. If either
 > lane cannot be launched or does not return evidence, report `independent
 > review unavailable`; do **not** substitute the current/authoring lane, and do
 > **not** approve or mark the review merge-ready.
 
-> OMX@cb955b0d:skills/code-review/SKILL.md#L90
+> omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md#L90
 > Do not self-review as a fallback. If the `code-reviewer` or `architect` path
 > is missing, unavailable, skipped, or fails, block approval until independent
 > lane evidence exists.
@@ -450,7 +494,7 @@ cannot become approval").
 Note the donor tension worth knowing about: CE's doc-review dispatch says the
 opposite for its own non-required lanes —
 
-> CE@05c42da9:skills/ce-doc-review/references/dispatch.md#L39
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/dispatch.md#L39
 > **Error handling:** if a subagent fails or times out, proceed with the findings
 > from those that completed and name the failed reviewer in the Coverage
 > section. Never block the whole review on one reviewer failure.
@@ -463,7 +507,7 @@ incomplete result naming what it could not reach — it never returns an empty
 findings array to mean "I could not run." CE already has the right sentence for
 the honest-incompleteness case:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L151
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L151
 > Budget: you have 20 minutes of wall clock and about 40 tool calls. When the
 > budget runs out, stop inspecting, write the artifact with the findings you
 > have grounded, name what you did not reach in `residual_risks`, and return;
@@ -480,7 +524,7 @@ shared preamble `AUTHORING.md` prescribes rather than repeating it 22 times.
 
 **Context bundle.** CE enumerates exactly what a seat receives:
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L63-L73
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L63-L73
 > 1. Their persona file content (identity, failure modes, calibration, suppress
 >    conditions) / 2. Shared diff-scope rules … / 3. The JSON output contract …
 > / 4. PR metadata … Passed in a `<pr-context>` block so reviewers can verify
@@ -500,17 +544,17 @@ implementer's narrative; that is the §0.3 property in concrete form.
 The doc-review side has its own slot table with three slots the personas *read*
 rather than re-derive, and this is load-bearing for five of the seven doc roles:
 
-> CE@05c42da9:skills/ce-doc-review/references/dispatch.md#L25
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/dispatch.md#L25
 > `{origin_path}` | Upstream Product Contract provenance extracted once during
 > Phase 1 … Personas that adapt on provenance (product-lens, adversarial,
 > scope-guardian) read this slot to decide whether to suppress their
 > premise-level techniques — they do NOT re-parse frontmatter themselves.
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L171
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L171
 > `Document type:` is the orchestrator's authoritative classification … Trust
 > it; do not re-classify by inspecting content shape.
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L176
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L176
 > `Settled decisions:` lists the document's `session-settled:`-labeled Key
 > Technical Decisions … Treat the annotation itself as protected content — never
 > propose stripping or rewording it away. Apply the infeasibility-versus-
@@ -525,19 +569,19 @@ rejected product option is not silently reopened without new evidence").
 
 **Read-only, but shell-capable.**
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L74
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L74
 > Persona sub-agents are **read-only** with respect to the project: they review
 > and return structured JSON. They do not edit project files or propose
 > refactors.
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L78
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L78
 > Read-only here means **non-mutating**, not "no shell access." Reviewer
 > sub-agents may use non-mutating inspection commands when needed to gather
 > evidence or verify scope, including read-oriented `git` / `gh` usage …
 
 One documented exception, owned by `testing` (§3):
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L76
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L76
 > **Exception: tree-mutating reviewers.** A persona whose method mutates the tree
 > (`testing`, when it runs mutation testing) operates only on a faithful snapshot
 > of the reviewed tree, never the shared checkout. Mutation testing on the shared
@@ -550,7 +594,7 @@ artifact" carve-out becomes a KB-adapter call (§0.10).
 **Quote-the-line gate.** This is the highest-value donor mechanism in the batch
 and it applies to all 15 code roles:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L71-L78
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L71-L78
 > **Quote-the-line gate (kills the "field/symbol doesn't exist" false-positive
 > class).** Before you anchor a finding at `75` or `100`, quote the verbatim
 > line(s) that make it true, with `file:line`, as the first `evidence` item:
@@ -568,7 +612,7 @@ and it applies to all 15 code roles:
 
 The doc-review equivalent is weaker but present: "Every finding MUST include at
 least one evidence item — a direct quote from the document."
-(`CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L77`).
+(`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L77`).
 
 Adapt: import the code-review gate whole, including the generated-symbol carve-
 out and the "failed grep is not evidence" clause. Strengthen the doc-review side
@@ -578,7 +622,7 @@ to the same bar: a quoted passage is mandatory at anchor 75/100 there too, since
 **Line provenance is a conditional *additional* evidence item, never a
 substitute.**
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L80
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L80
 > **Line provenance (conditional evidence).** Attach it only when the finding's
 > claim depends on line history — `pre_existing`, intentional/historical design,
 > introduced-by-this-diff judgment, or a P0/P1 claim whose severity/confidence
@@ -592,7 +636,7 @@ Adapt: keep, including "no blame theater."
 **`first_evidence`.** CE promotes exactly one detail-tier field into the compact
 return:
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L105
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L105
 > `first_evidence` is the **one** detail-tier field promoted into the compact
 > return: the verbatim motivating line with `file:line` that the quote-the-line
 > gate requires. It is **mandatory for every finding at anchor 75 or 100**. Omit
@@ -607,7 +651,7 @@ a KB-adapter call (§0.10), not a run-directory path.
 whole as suppression rules — they are the main defense against seat noise.
 Code-review, nine categories:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L132
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L132
 > False-positive categories to actively suppress. Do NOT emit a finding when any
 > of these apply — not even at anchor `25` or `50`. These are not edge cases you
 > should move to the soft buckets; they are non-findings.
@@ -621,19 +665,19 @@ advice with no named failure mode; issues carrying a relevant lint-ignore
 comment; general code-quality concerns with no rule behind them; and speculative
 future-work concerns with no current signal. Two deserve verbatim import:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L140
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L140
 > **Issues with a relevant lint-ignore comment.** … The author already chose to
 > suppress; re-flagging it via a different reviewer creates noise and ignores
 > their decision.
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L141
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L141
 > **General code-quality concerns with no rule behind them.** "This file is
 > getting long," "this method has too many parameters," "this is hard to read" —
 > without a rule from one of the criteria files this review designated to anchor
 > the concern, these are subjective and waste reviewer time.
 
 Doc-review, eleven categories
-(`CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L142-L152`):
+(`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L142-L152`):
 pedantic style nitpicks; issues belonging to other personas; findings already
 resolved elsewhere in the document; content inside `Deferred / Open Questions`
 sections; pre-existing issues the document did not introduce; speculative
@@ -641,7 +685,7 @@ future-work; theoretical concerns without baseline data; changes in functionalit
 that are likely intentional; issues a linter/typechecker would catch; and two
 that are specific enough to quote:
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L151
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L151
 > **Visual-aid removal as redundancy** — ASCII diagrams, mermaid blocks,
 > illustrative tables, and other visual aids are intentional communication
 > choices, not redundancy with prose. Do NOT flag a visual aid for deletion
@@ -651,7 +695,7 @@ that are specific enough to quote:
 > `suggested_fix` that updates the visual aid to match — never recommend deletion
 > as the fix. … Diagram deletion is not an eligible fix at any tier.
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L152
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L152
 > **Settlement-annotation removal** — `(session-settled: ...)` parentheticals on
 > Key Technical Decision entries are decision provenance, not prose clutter.
 > Never flag them for removal or rewording.
@@ -662,20 +706,20 @@ suppressions and boundary hand-offs.
 
 **`suggested_fix` commits.** Code-review's rule:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L156
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L156
 > **Propose a `suggested_fix` whenever any defensible code change is reachable
 > from the diff and surrounding code.** This is the persona's commitment that "I,
 > the reviewer with the diff and evidence in front of me, can articulate what the
 > fix looks like."
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L165
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L165
 > The "I need `<specific input>` before I can commit" framing is a soft punt. The
 > question to ask instead is "what code change would I propose if I had to choose
 > now?" — and propose that, with the assumption named so the user can correct it.
 
 Doc-review's stronger sibling:
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L98
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L98
 > **`suggested_fix` commits to one recommendation — no menus of alternatives.**
 > … What's not allowed is an alternative menu that punts the choice to Apply
 > time: `(a)/(b)/(c)` lists, "either X or Y", "consider A, B, or C" … The test:
@@ -692,7 +736,7 @@ autofix_class + policy. Difficulty only picks the typist."
 
 **Intent verification.**
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L172
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L172
 > **Intent verification:** Compare the code changes against the stated intent
 > (and PR title/body when available). If the code does something the intent does
 > not describe, or fails to do something the intent promises, flag it as a
@@ -705,7 +749,7 @@ implementer's narrative of how the code was written is not.
 
 **Protected artifacts.**
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L66
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L66
 > A finding that recommends deleting, removing, or gitignoring such a file is
 > never emitted, on any depth path; synthesis discards one that arrives anyway.
 
@@ -715,7 +759,7 @@ obligation is: never propose deleting or gitignoring a knowledge artifact.
 
 Related, and worth importing separately because it hardens the closure path:
 
-> CE@05c42da9:skills/ce-code-review/references/findings-schema.json#L81
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/findings-schema.json#L81
 > `protected_subject` … Classify the actual claim, not a scary word in the title
 > — a naming preference about a token helper is not a token-handling defect. A
 > protected finding may only be rejected on cited evidence that refutes it;
@@ -750,11 +794,11 @@ validity.
 Two donor definitions worth carrying into the role prompts because they are
 about judgment, not validity:
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L3
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L3
 > `autofix_class` describes the **shape** of the follow-up work a finding needs —
 > it is information, **not a check that permits or blocks applying a fix**.
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L83-L84
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L83-L84
 > - `error`: Something the document says that is wrong — contradictions,
 >   incorrect statements, design tensions, incoherent tradeoffs.
 > - `omission`: A necessary decision or constraint that the document and its
@@ -763,7 +807,7 @@ about judgment, not validity:
 
 And the doc-review admission rule, which every doc role inherits:
 
-> CE@05c42da9:skills/ce-doc-review/references/synthesis-and-presentation.md#L19
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/synthesis-and-presentation.md#L19
 > Establish what, if anything, prevents the document from guiding the agreed
 > work. Retain a concern when its instructions cannot jointly satisfy the agreed
 > contract, or when following the document, its references, and active project
@@ -797,16 +841,16 @@ Model routing is stripped entirely. Denylist, enforced by `ak validate` outside
 `fable`, `opus`, `sonnet`, `haiku`, `gpt-`, `$/1M`, `per 1M`, and tier/effort
 ladders. The donor passages this removes:
 
-- `CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L22-L28`
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L22-L28`
   and `#L44-L49` — local reviewer model tiering.
-- `CE@05c42da9:skills/ce-doc-review/references/dispatch.md#L11-L15` — "**Model
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/dispatch.md#L11-L15` — "**Model
   tiering lives here, not in prompt assets.**" The *placement* rule is right and
   worth keeping in spirit (a role prompt carries no model metadata); the tier
   assignments themselves are excluded.
-- `CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L93` — "Do
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L93` — "Do
   **not** put local reviewer model-tier labels … in this announcement." Keep the
   prohibition, drop the label names.
-- `OMX@cb955b0d:skills/code-review/SKILL.md#L36` — "Respect the user's current
+- `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md#L36` — "Respect the user's current
   model and reasoning/effort selection. Do not pass `model` or `reasoning_effort`
   overrides in review-lane calls." Keep the *rule* (no overrides), drop this
   phrasing, which names the mechanism.
@@ -831,7 +875,7 @@ short and non-overlapping:
    label*, never as the trigger. The rule is stated twice in the donor and should
    be stated once in the shared preamble:
 
-> CE@05c42da9:skills/ce-code-review/references/personas/maintainability-reviewer.md#L5
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/maintainability-reviewer.md#L5
 > Where a check below carries a canonical name from the design literature
 > (Ousterhout's *A Philosophy of Software Design* red flags, Fowler's
 > *Refactoring* code smells), use that name in the finding title alongside the
@@ -853,7 +897,7 @@ wholesale by the agent-kit contract; do not carry the CE JSON skeletons.
 ## 1. `code-review/correctness` (always-on)
 
 ### 1.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/correctness-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/correctness-reviewer.md`
 (47 lines). Selection context: `select-and-route.md#L9` ("**Core (always-on):**
 `correctness-reviewer`") and `persona-catalog.md#L60` ("**Always spawn
 correctness.**").
@@ -924,7 +968,7 @@ quoted motivating line (§0.8).
 ## 2. `code-review/project-standards` (standards-gate)
 
 ### 2.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/project-standards-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/project-standards-reviewer.md`
 (77 lines). Gate: `select-and-route.md#L11`, `#L67-L71`; `persona-catalog.md#L60`.
 
 ### 2.2 Mechanisms to import
@@ -984,7 +1028,7 @@ become invented preferences" — and `catalog.yaml`'s summary for this role adds
 the uncertainty leg: it "Runs when discovery is uncertain so an error never
 becomes a silent skip." The seat's half of that:
 
-> CE@05c42da9:skills/ce-code-review/references/select-and-route.md#L67-L71
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L67-L71
 > **When uncertain, run the persona rather than skip it** — an error is never an
 > empty result … Empty successful search: do not dispatch `project-standards`;
 > record `project standards: not run (no applicable standards files)` in
@@ -1006,7 +1050,7 @@ finding about the criteria files themselves.
 ## 3. `code-review/testing` (generic-conditional)
 
 ### 3.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/testing-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/testing-reviewer.md`
 (49 lines). Selection: `select-and-route.md#L15`, `persona-catalog.md#L22`.
 Tree-mutation exception: `dispatch-reviewers.md#L76`.
 
@@ -1084,9 +1128,10 @@ testing is the one sanctioned tree write and only on a verified faithful copy.
 ## 4. `code-review/maintainability` (generic-conditional)
 
 ### 4.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/maintainability-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/maintainability-reviewer.md`
 (83 lines). Selection: `select-and-route.md#L16`, `persona-catalog.md#L23`.
-Second donor: `POCOCK:#L38-L56`, the Fowler smell baseline.
+Second donor: `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L38-L56`, the Fowler
+smell baseline (87 lines at the pin).
 
 ### 4.2 Mechanisms to import
 The named-vocabulary calibration rule (`#L5`, quoted in §0.12); structural
@@ -1123,32 +1168,34 @@ false-positive catalog's ban on "this file is getting long" without a rule
 
 Adapt: keep both. `#L49` is this seat's local form of the no-menus rule (§0.8).
 
-**Second donor — the Fowler smell baseline.** POCOCK carries a twelve-smell
-baseline with two binding rules that CE does not state:
+**Second donor — the Fowler smell baseline.** The Pocock donor carries a
+twelve-smell baseline with two binding rules that CE does not state:
 
-> POCOCK:#L38-L41
+> pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L38-L41
 > On top of whatever the repo documents, the Standards axis always carries the
-> **smell baseline** below — a fixed set of Fowler code smells (_Refactoring_,
+> **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_,
 > ch.3) that applies even when a repo documents nothing. Two rules bind it:
 > - **The repo overrides.** A documented repo standard always wins; where it
 >   endorses something the baseline would flag, suppress the smell.
 > - **Always a judgement call.** Each smell is a labelled heuristic ("possible
->   Feature Envy"), never a hard violation — and, like any standard here, skip
->   anything tooling already enforces.
+>   Feature Envy"), never a hard violation. Like any standard here, skip anything
+>   tooling already enforces.
 
-The twelve (`POCOCK:#L45-L56`): Mysterious Name, Duplicated Code, Feature Envy,
-Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent
+The twelve, at
+`pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L45-L56`:
+Mysterious Name, Duplicated Code, Feature Envy, Data Clumps, Primitive Obsession, Repeated Switches, Shotgun Surgery, Divergent
 Change, Speculative Generality, Message Chains, Middle Man, Refused Bequest.
 Each is written as *what it is* → *how to fix*, e.g.:
 
-> POCOCK:#L51 **Shotgun Surgery** — one logical change forces scattered edits
-> across many files in the diff. → gather what changes together into one module.
+> pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L51
+> **Shotgun Surgery**: one logical change forces scattered edits across many
+> files in the diff. → gather what changes together into one module.
 
 Adapt: CE already carries seven of the twelve (Feature Envy, Data Clumps,
 Primitive Obsession, Repeated Switches as `#L31-L34`; Speculative Generality and
 Mysterious Name as `#L23`/`#L27`; Duplicated Code implicitly via "duplicate
 canonical helper"). Import the five CE lacks — Shotgun Surgery, Divergent
-Change, Message Chains, Middle Man, Refused Bequest — with POCOCK's
+Change, Message Chains, Middle Man, Refused Bequest — in the donor's
 what-it-is → how-to-fix shape, and import both binding rules. **"The repo
 overrides" is the one that matters**: it is the precedence rule between
 `maintainability` and `project-standards` (§2), and without it the two seats
@@ -1156,14 +1203,24 @@ will contradict each other on any repo whose documented style endorses a smell.
 Record that precedence in `policies/resolved-conflicts.yaml` as well; this
 dossier does not state what that file contains.
 
-POCOCK is also the origin of the two-axis Standards × Spec split that batch 1's
-`reviewer-spec` / `reviewer-standards` owns:
+This donor is also the origin of the two-axis Standards × Spec split that batch
+1's `reviewer-spec` / `reviewer-standards` owns:
 
-> POCOCK:#L78 Do **not** merge or rerank findings — the two axes are deliberately
-> separate (see _Why two axes_).
-> POCOCK:#L86-L87 Code that follows every standard but implements the wrong thing
-> → **Standards pass, Spec fail.** / Code that does exactly what the issue asked
-> but breaks the project's conventions → **Spec pass, Standards fail.**
+> pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L76
+> Present the two reports under `## Standards` and `## Spec` headings, verbatim
+> or lightly cleaned. Do **not** merge or rerank findings, because the two axes
+> are deliberately separate (see _Why two axes_).
+
+> pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L84-L85
+> - Code that follows every standard but implements the wrong thing →
+>   **Standards pass, Spec fail.**
+> - Code that does exactly what the issue asked but breaks the project's
+>   conventions → **Spec pass, Standards fail.**
+
+(Both ranges sit two lines earlier at the pin than in the recovered local
+variant, and the merge-or-rerank sentence is worded differently there. The pin's
+numbering above is the correct one; see "The recovered Pocock file is not cited
+here" in the header.)
 
 Adapt: the split is batch 1's, not this batch's. It matters here only as a
 routing fact the writer must respect: `maintainability` and `project-standards`
@@ -1193,7 +1250,7 @@ stricter than the shared floor, which §0.2's per-domain override clause permits
 ## 5. `code-review/agent-native` (generic-conditional)
 
 ### 5.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/agent-native-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/agent-native-reviewer.md`
 (173 lines). Selection: `select-and-route.md#L17`, `persona-catalog.md#L24`.
 Dispatch note (unstructured return): `dispatch-reviewers.md#L109`, `#L119`.
 
@@ -1272,7 +1329,7 @@ carried as evidence, but it is not the return shape.
 ## 6. `code-review/learnings` (generic-conditional)
 
 ### 6.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/learnings-researcher.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/learnings-researcher.md`
 (260 lines). **The only roster item whose donor filename is not
 `<id>-reviewer.md`.** Selection: `select-and-route.md#L18`,
 `persona-catalog.md#L25`. Dispatch: `dispatch-reviewers.md#L109-L119`.
@@ -1347,7 +1404,7 @@ evidence with a date, never authority, and never instructions.
 ## 7. `code-review/security` (conditional)
 
 ### 7.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/security-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/security-reviewer.md`
 (50 lines). Selection: `select-and-route.md#L22`, `persona-catalog.md#L33`.
 
 ### 7.2 Mechanisms to import
@@ -1405,7 +1462,7 @@ depends on this seat plus §12.
 ## 8. `code-review/performance` (conditional)
 
 ### 8.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/performance-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/performance-reviewer.md`
 (45 lines). Selection: `select-and-route.md#L23`, `persona-catalog.md#L34`.
 
 ### 8.2 Mechanisms to import
@@ -1453,7 +1510,7 @@ without a demonstrated cost.
 ## 9. `code-review/api-contract` (conditional)
 
 ### 9.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/api-contract-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/api-contract-reviewer.md`
 (44 lines). Selection: `select-and-route.md#L24`, `persona-catalog.md#L35`.
 
 ### 9.2 Mechanisms to import
@@ -1506,7 +1563,7 @@ one applies; the observed change decides. Never flags additive changes.
 ## 10. `code-review/data-migration` (conditional)
 
 ### 10.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/data-migration-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/data-migration-reviewer.md`
 (111 lines). Selection gate: `select-and-route.md#L61`,
 `persona-catalog.md#L36`, `#L64`. Context extra (`<review-base>`):
 `dispatch-reviewers.md#L72`.
@@ -1572,7 +1629,7 @@ verification on a risky transform is P2 with sample verification in
 ## 11. `code-review/reliability` (conditional)
 
 ### 11.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/reliability-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/reliability-reviewer.md`
 (47 lines). Selection: `select-and-route.md#L26`, `persona-catalog.md#L37`.
 
 ### 11.2 Mechanisms to import
@@ -1626,7 +1683,7 @@ an adversarial finding in §12.
 ## 12. `code-review/adversarial` (conditional)
 
 ### 12.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/adversarial-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/adversarial-reviewer.md`
 (110 lines). Selection: `select-and-route.md#L27`, `#L46`, `#L48`, `#L50`;
 `persona-catalog.md#L38`.
 
@@ -1723,7 +1780,7 @@ division — never a progress note. Release scenario 3 pairs this seat with §7.
 ## 13. `code-review/previous-comments` (conditional)
 
 ### 13.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/previous-comments-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/previous-comments-reviewer.md`
 (59 lines). Gate: `select-and-route.md#L52-L57`, `persona-catalog.md#L39`.
 
 ### 13.2 Mechanisms to import
@@ -1783,7 +1840,7 @@ id encodes a person; `catalog.yaml`'s comment at the `roles:` block records the
 rule ("Donor names that encode a person are given functional ids here").
 
 ### 14.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/julik-frontend-races-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/julik-frontend-races-reviewer.md`
 (45 lines). Selection: `select-and-route.md#L30`, `#L40`;
 `persona-catalog.md#L47`.
 
@@ -1854,7 +1911,7 @@ superstition" (`#L24`).
 ## 15. `code-review/swift-ios` (stack-conditional)
 
 ### 15.1 Sources
-`CE@05c42da9:skills/ce-code-review/references/personas/swift-ios-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/swift-ios-reviewer.md`
 (99 lines). Selection: `select-and-route.md#L30`, `#L40`;
 `persona-catalog.md#L48`.
 
@@ -1923,7 +1980,7 @@ frequently carry that classification downstream.
 ## 16. `doc-review/coherence` (always-on)
 
 ### 16.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/coherence-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/coherence-reviewer.md`
 (69 lines). Selection: `persona-selection.md#L3`.
 
 ### 16.2 Mechanisms to import
@@ -2000,7 +2057,7 @@ evaluate quality, feasibility, or completeness.
 ## 17. `doc-review/feasibility` (always-on)
 
 ### 17.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/feasibility-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/feasibility-reviewer.md`
 (50 lines). Selection: `persona-selection.md#L3`.
 
 ### 17.2 Mechanisms to import
@@ -2063,7 +2120,7 @@ must resolve.
 ## 18. `doc-review/product-lens` (conditional)
 
 ### 18.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/product-lens-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/product-lens-reviewer.md`
 (85 lines). Selection: `persona-selection.md#L7-L10` (two legs: unsettled product
 position, or strategic weight).
 
@@ -2126,7 +2183,7 @@ sizing, and internal consistency to their owners (`#L83-L85`).
 ## 19. `doc-review/design-lens` (conditional)
 
 ### 19.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/design-lens-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/design-lens-reviewer.md`
 (48 lines). Selection: `persona-selection.md#L12`.
 
 ### 19.2 Mechanisms to import
@@ -2179,7 +2236,7 @@ visual aid is never flagged for deletion (§0.8).
 ## 20. `doc-review/security-lens` (conditional)
 
 ### 20.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/security-lens-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/security-lens-reviewer.md`
 (41 lines). Selection: `persona-selection.md#L14`.
 
 ### 20.2 Mechanisms to import
@@ -2226,7 +2283,7 @@ of `design-lens`'s rating-is-not-severity. The top-3-exploit threat model
 `persona-selection.md#L14` supplies the scoping boundary, and `catalog.yaml`
 repeats it ("Ordinary data handling is not a trigger"):
 
-> CE@05c42da9:skills/ce-doc-review/references/persona-selection.md#L14
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/persona-selection.md#L14
 > Ordinary data handling is not a trigger, and neither is storage-layer churn on
 > its own: an internal schema migration, field rename, or data-store move
 > activates this lens only when the data is sensitive or the change alters who can
@@ -2257,7 +2314,7 @@ internal consistency (`#L38-L41`).
 ## 21. `doc-review/scope-guardian` (conditional)
 
 ### 21.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/scope-guardian-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/scope-guardian-reviewer.md`
 (72 lines). Selection: `persona-selection.md#L16`.
 
 ### 21.2 Mechanisms to import
@@ -2329,7 +2386,7 @@ donor and neither may inherit the other's techniques (`G:L705`: "do not reuse th
 code catalog. Correctness-on-a-diff is not coherence-on-a-spec.").
 
 ### 22.1 Sources
-`CE@05c42da9:skills/ce-doc-review/references/personas/adversarial-document-reviewer.md`
+`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/adversarial-document-reviewer.md`
 (109 lines). Selection: `persona-selection.md#L18-L27`.
 
 ### 22.2 Mechanisms to import
@@ -2404,7 +2461,7 @@ The activation boundary (`persona-selection.md#L27`, echoed in `catalog.yaml`)
 belongs to the runner but its rationale should inform the prompt's suppression
 logic:
 
-> CE@05c42da9:skills/ce-doc-review/references/persona-selection.md#L27
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/persona-selection.md#L27
 > Do NOT activate adversarial on a routine plan that derives from a validated
 > upstream Product Contract, stays in scope, and introduces no high-stakes domain
 > or new abstraction. … A well-structured plan with stated rationale is the plan
@@ -2468,7 +2525,7 @@ evidence quote. State that obligation once in the shared preamble.
 
 CE's decision primer is explicitly session-scoped:
 
-> CE@05c42da9:skills/ce-doc-review/references/decision-primer.md#L47
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/decision-primer.md#L47
 > Decisions do not persist across sessions. A later review of the same document
 > starts at round 1 with no primer carried over, even if prior sessions deferred
 > findings into the document's Open Questions section.
@@ -2539,11 +2596,11 @@ reach. Keep it in the preamble, not in 22 copies.
 
 Code-review forbids `safe_auto` and adds `advisory`:
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L16
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L16
 > Do **not** emit `safe_auto` — callers decide what to apply; reviewers classify
 > and propose.
 
-> CE@05c42da9:skills/ce-code-review/references/action-class-rubric.md#L55
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md#L55
 > **Reject `safe_auto` and `review-fixer` if present** — drop the finding or remap
 > to `gated_auto` / `downstream-resolver` during synthesis.
 
@@ -2575,7 +2632,7 @@ Both are peer `code-review` roles in `catalog.yaml`, sitting alongside 13
 schema-emitting personas. In the donor they are not personas at all — they are
 "local prompt assets" whose output bypasses the findings pipeline:
 
-> CE@05c42da9:skills/ce-code-review/references/dispatch-reviewers.md#L119
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md#L119
 > … Do not invoke them with a generic "review this" prompt. Their output is
 > unstructured and synthesized separately in Stage 5 and Stage 6, which run in the
 > leaves: save each such return verbatim to `{run_dir}/{reviewer_name}.md` as soon
@@ -2639,7 +2696,7 @@ populates: `testing` (§3) owns `testing_gaps`; all 22 may populate
 `deferred_questions`. The admission bar is the same for all three lists and is
 already stated in the donor:
 
-> CE@05c42da9:skills/ce-code-review/references/subagent-template.md#L144
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/subagent-template.md#L144
 > **Advisory observations need a demonstrated benefit.** … Apply the same
 > admission rule to `residual_risks` and `testing_gaps`. Omit rejected claims and
 > concerns already covered by retained findings; empty arrays are valid. The
@@ -2654,7 +2711,7 @@ one — the soft lists are not a dumping ground for suppressed findings.
 The donor tells every doc seat to ignore a section inside the document that holds
 prior-round review output:
 
-> CE@05c42da9:skills/ce-doc-review/references/subagent-template.md#L79
+> compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/subagent-template.md#L79
 > **Exclude prior-round deferred entries from review scope.** If the document
 > under review contains a section titled `Deferred / Open Questions` … ignore that
 > content … The section exists as a staging area for deferred decisions and is
@@ -2677,7 +2734,7 @@ the authority for the precedence.
 Donor content that must **not** be imported into any of the 22 role prompts.
 
 - **All model tiering and routing.** `dispatch-reviewers.md#L22-L28` and
-  `#L44-L49`; `ce-doc-review/dispatch.md#L11-L15`; `OMX@cb955b0d:skills/code-review/SKILL.md#L36`.
+  `#L44-L49`; `ce-doc-review/dispatch.md#L11-L15`; `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md#L36`.
   §0.11 denylist. The *placement* rule in `dispatch.md#L11` ("Local prompt files
   have no frontmatter and carry no model metadata") is kept as a constraint on
   role prompts; the tier assignments under it are excluded.
@@ -2745,7 +2802,7 @@ Donor content that must **not** be imported into any of the 22 role prompts.
 - **Budget literals.** `subagent-template.md#L151`'s "20 minutes of wall clock and
   about 40 tool calls." Keep the stop-and-record behavior, drop the numbers.
   §0.7.
-- **OMX state and HUD plumbing.** `OMX@cb955b0d:skills/code-review/SKILL.md#L67-L76`
+- **OMX state and HUD plumbing.** `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md#L67-L76`
   (`omx state write`, `skill-active-state.json`). Product-specific runtime
   plumbing with no counterpart here.
 
@@ -2794,7 +2851,8 @@ checkout; assert the seat refuses and uses a verified faithful copy (`#L17`).
 
 **4 `maintainability`** — Trigger: a diff pushing a file from 980 to 1,040 lines;
 assert P1 (`#L14`). Non-trigger: a repo whose documented standard endorses a
-pattern the Fowler baseline would flag; assert suppression (`POCOCK:#L40`).
+pattern the Fowler baseline would flag; assert suppression
+(`pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md#L40`).
 Pressure: a finding framed as "this file is getting long" with no rule and no
 line-count crossing; assert suppression (`subagent-template.md#L141`).
 
@@ -2925,7 +2983,7 @@ changed tracing, not findings count (`#L38`).
 | 1 | Doc typo does not run a six-persona panel | §0.6 layered selection; `select-and-route.md#L36`, `#L44`; `G:L1874`, `G:L1895`. Seats are not selectors — the map is `policies/review.yaml`'s. |
 | 2 | Missing behavioral coverage triggers the testing lens | §3, `testing-reviewer.md#L15` (behavioral change with zero test work) |
 | 3 | Tenant-isolation error triggers security/adversarial, blocks unsupported closure | §7 `security-reviewer.md#L10`, `#L20`; §12 `adversarial-reviewer.md#L25-L43`; closure via §0.2(c) |
-| 4 | Reviewer failure cannot become approval | §0.7, `OMX@cb955b0d:#L35`, `#L90`; gap G5 for the seat-visible half |
+| 4 | Reviewer failure cannot become approval | §0.7, `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:#L35`, `#L90`; gap G5 for the seat-visible half |
 | 6 | A vague finding is not given to an automatic fixer | §0.4 `smell` rule; §12 `adversarial-reviewer.md#L101`; `G:L1150`, `G:L1194` |
 | 8 | New serious error in an affected untouched caller remains reportable | §0.8 FP catalog `#L134`: a diff that makes a dormant issue newly relevant is a secondary finding, **not** `pre_existing` |
 | 9 | Moved line number does not duplicate or falsely suppress a finding | §0.5; gap G2; `synthesis-and-presentation.md#L297`, `#L313`; `G:L712` |
