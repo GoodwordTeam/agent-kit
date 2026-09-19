@@ -1,0 +1,230 @@
+# Provenance fragment for the "protocols" batch: seven protocol bodies, one loose
+# doctrine file, and seven role bodies.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is
+# what loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a body
+# derives from is recorded with a machine-checkable donor@commit:path. That is what
+# NOTICE points a downstream consumer at, so an unverifiable source here would turn a
+# provenance record into a provenance claim.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation.
+#
+# Key name: `path:` + `source:`. AUTHORING.md §5 illustrates adaptation rows with
+# `target:`; a row keyed `target:` is skipped by the parser, and a row with `path:` and
+# no `source:` raises provenance.malformed-source. Flagged for the owner of §5 so the
+# two converge on one key.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below comes from research/dossiers/protocols.md, whose citations were verified against
+# the pinned working trees; none was re-derived or guessed.
+#
+# provenance/adaptations.yaml is generated from this directory by `ak build` and is not
+# written here.
+#
+# Two files in this batch carry no `adaptations` row because catalog.yaml declares them
+# provenance_origin: conversation. They are under `conversation_origin:` at the bottom,
+# a key the fragment parser does not read.
+
+adaptations:
+  - path: protocols/invocation-authority.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:docs/contracts/ralplan-consensus-gate.md
+    rationale: 'The retired-hard-gate lesson: local lifecycle evidence is advisory and never a
+      security boundary. Adapted into "a policy file is not an enforcement mechanism".'
+  - path: protocols/invocation-authority.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ralplan/SKILL.md
+    rationale: An advisory run never emits a host allow/block decision, never completes the host
+      consensus gate and never authorizes execution. Adapted into the boundary between an
+      exploratory run and an authorized one. Host-specific hook plumbing dropped.
+  - path: protocols/consensus-plan-gate/PROTOCOL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ralplan/SKILL.md
+    rationale: "Primary mechanism source: planner snapshot then architect then critic then
+      synthesis, the mandatory-sequential (never-parallel) rule, the five-round cap, and the
+      planning/execution boundary. Donor label vocabulary paraphrased, not quoted."
+  - path: protocols/consensus-plan-gate/PROTOCOL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/plan/SKILL.md
+    rationale: Same mechanics under the consensus flag; confirms the two donor skills describe one
+      gate. Interview/direct/review modes excluded as out of scope.
+  - path: protocols/consensus-plan-gate/PROTOCOL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ralplan/SKILL.md
+    rationale: "Supplies this protocol's authority boundary: an advisory consensus run must not be
+      confusable with an authorized plan-gate pass. Host tracker language excluded."
+  - path: protocols/tdd/PROTOCOL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/test-driven-development/SKILL.md
+    rationale: The iron law, the red-green-refactor cycle, the mandatory Verify-RED and Verify-GREEN
+      steps, and the rationalization table this protocol's Hard gates rows are drawn from.
+  - path: protocols/tdd/PROTOCOL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/tdd/SKILL.md
+    rationale: The seams concept and the rules of the loop.
+  - path: protocols/tdd/PROTOCOL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/tdd/tests.md
+    rationale: The three named test anti-patterns behind two Hard gates rows.
+  - path: protocols/tdd/PROTOCOL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/tdd/mocking.md
+    rationale: Mock only at boundaries; the mocking discipline section.
+  - path: protocols/tdd/PROTOCOL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+    rationale: Discover the stack first, the prove-it pattern for bug fixes, and the real > fake >
+      stub > mock preference order. Numeric pyramid ratios kept as guidance only, per ruling
+      numeric-heuristics-are-guidance.
+  - path: protocols/apply-findings/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md
+    rationale: "Severity and owner routing. Recorded conflict: plan §5.5's four-value autofix_class
+      (including safe_auto) stands and matches schemas/finding.schema.json, while this donor has
+      evolved to a three-value enum that rejects safe_auto. Adopted the plan's, recorded the
+      tension rather than silently taking either."
+  - path: protocols/apply-findings/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/finish-review.md
+    rationale: Stage 5c, when a finding may be acted on rather than reported.
+  - path: protocols/apply-findings/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/findings-schema.json
+    rationale: 'The suggested_fix soft-punt rule: a defensible minimal fix is expected whenever one
+      is reachable, and "I need X to commit" is the designed-against failure mode.'
+  - path: protocols/apply-findings/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-resolve-pr-feedback/SKILL.md
+    rationale: Default to fixing, with named evidence-gated diverts. Forge plumbing excluded.
+  - path: protocols/apply-findings/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-resolve-pr-feedback/references/evaluation-rubric.md
+    rationale: The four diverts, the two-part deliberate-design-choice guard, and the fixed shape of
+      the escalation object. GraphQL thread resolution and checklist ticking excluded.
+  - path: protocols/apply-findings/PROTOCOL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: "Rulings-not-stalls and the ledgered adjudication pattern. The donor's five-round fix
+      loop was deliberately NOT imported: policies/limits.yaml sets fix_cycles = 2 for this
+      protocol, and the donor's five rounds are a task-review loop at a different granularity."
+  - path: protocols/review-delta/PROTOCOL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: The two-axis mechanism and the fixed-snapshot discipline.
+  - path: protocols/review-delta/PROTOCOL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md
+    rationale: The two-lane fail-closed pattern and the merge cascade behind the verdict rules.
+      Lanes are bound to seats here; no lane is identified by anything but its seat.
+  - path: protocols/review-delta/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/finish-review.md
+    rationale: "Stage 5b: independent verification is not corroboration; the confirmed/rejected/
+      unresolved verdict shape; and the four-item evidence taxonomy required to clear a
+      protected-subject finding, without which it routes to unresolved."
+  - path: protocols/review-delta/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md
+    rationale: Severity scale and routing, shared with apply-findings.
+  - path: protocols/review-delta/PROTOCOL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/re-review-prompt.md
+    rationale: Per-finding ADDRESSED / NOT ADDRESSED with file:line evidence, the fix-diff-only
+      breakage check, and out-of-scope observations that are ledgered rather than looped.
+  - path: protocols/worktree-ownership/PROTOCOL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/using-git-worktrees/SKILL.md
+    rationale: Detect existing isolation by comparing resolved git dir against resolved common git
+      dir with a superproject guard; prefer the native worktree capability; verify the gitignore
+      entry; the rationalization rows behind this protocol's Hard gates table.
+  - path: protocols/worktree-ownership/PROTOCOL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/dispatching-parallel-agents/SKILL.md
+    rationale: What makes two workers actually concurrent, and the self-contained prompt shape that
+      keeps parallel workers from sharing assumptions.
+  - path: protocols/worktree-ownership/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-worktree/SKILL.md
+    rationale: The same detect/native/fallback mechanics in a second donor's words, plus the
+      new-work versus isolate-existing-ref split and the one-branch-one-worktree rule.
+  - path: protocols/attach-pack/PROTOCOL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/scripts/packs-resolve.py
+    rationale: "Pack resolution and loading only: resolving a declared pack source to a usable pack
+      root, selection by pack id, and warn-and-continue on an unavailable pack. The semantic
+      matching that decides WHICH pack is relevant has no donor source and is recorded under
+      conversation_origin_fragments below."
+  - path: roles/implementer/ROLE.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/implementer-prompt.md
+    rationale: "The seat itself: one approved ticket, no dispatching, the four self-review
+      categories and the closed status vocabulary DONE / DONE_WITH_CONCERNS / BLOCKED /
+      NEEDS_CONTEXT. The report-file mechanics are replaced by a KB adapter operation per
+      ADR-0001."
+  - path: roles/implementer/ROLE.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: "The surrounding task loop: a fresh implementer per ticket, TDD mandatory within it."
+  - path: roles/implementer/ROLE.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/incremental-implementation/SKILL.md
+    rationale: The noticed-but-not-touching pattern, this seat's scope-discipline mechanism.
+  - path: roles/reviewer-spec/ROLE.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/task-reviewer-prompt.md
+    rationale: "Spec-compliance half of the reviewer template: diff-as-a-fixed-artifact discipline,
+      never trusting the author's report, and the Missing / Extra / Misunderstood outcomes plus
+      an explicit \"cannot verify from the diff\"."
+  - path: roles/reviewer-spec/ROLE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: "The spec axis: the spec-source priority order, and the rule that the two axes are
+      never merged into one judgment. A donor path in that order is replaced by a KB readContext
+      call, per ADR-0001."
+  - path: roles/reviewer-standards/ROLE.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/task-reviewer-prompt.md
+    rationale: Code-quality half of the same reviewer template.
+  - path: roles/reviewer-standards/ROLE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: "The standards axis, and the larger contribution to this seat: project-declared
+      standards first, a fixed twelve-pattern baseline only where the project is silent, project
+      rules override the baseline, and some calls remain a judgment call after both are
+      consulted."
+  - path: roles/plan-review/planner/ROLE.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ralplan/SKILL.md
+    rationale: The planner's place in the gate and the structured summary it must produce. The
+      donor's own label vocabulary is paraphrased rather than reused.
+  - path: roles/plan-review/planner/ROLE.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/plan/SKILL.md
+    rationale: Same mechanics under the consensus flag.
+  - path: roles/plan-review/architect/ROLE.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ralplan/SKILL.md
+    rationale: The architect steelmans, and runs strictly before the critic. Explicitly NOT merged
+      with omx's same-named parallel-lane code-review architect, which judges a diff.
+  - path: roles/plan-review/critic/ROLE.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ralplan/SKILL.md
+    rationale: The critic kills or passes, never sees the architect's analysis, and is bounded by
+      the five-round cap that a repeated disagreement runs into.
+
+# Not read by the fragment parser. Recorded for the owner of
+# provenance/conversation-map.yaml; this batch does not write that file. Substance under
+# `conversation_origin_fragments` has no donor source but is carried by a file that also
+# has donor rows above.
+conversation_origin:
+  - id: phase-operations
+    path: protocols/phase-operations/PROTOCOL.md
+    locator: G:L1668-1676
+    rationale: The entrypoint / phase-operation split and the runner-validated grant that gates it
+      are a design resolution, not a donor mechanism. No donor implements a generic
+      grant-validation primitive.
+    related_patterns:
+      - compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/finish-review.md
+      - omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/plan/SKILL.md
+    related_patterns_note: Worked examples of phase-operation granularity and of separating a
+      handoff from a terminal exit. Reinforcing analogs, never this protocol's source.
+  - id: supervisor
+    path: roles/supervisor/ROLE.md
+    locator: G:L2038-2254
+    rationale: The whole supervisor-pair proxy-user checkpoint design. No donor implements a
+      two-independent-judgment checkpoint where the pair stands in for the human.
+    related_patterns:
+      - superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    related_patterns_note: Breaker adjudication (park or rule and continue, always ledgered) is
+      structurally related but is a fix-loop mechanism, not a proxy-user checkpoint. Reinforcing
+      analog only.
+conversation_origin_fragments:
+  - path: protocols/invocation-authority.md
+    locator: G:L1668-1676
+    rationale: The two-list shape of the invocation law. Named in the transcript as Pocock's
+      principle, but no single file in the pocock donor states a repo-wide invocation law; its
+      skills scope invocation class per skill.
+  - path: protocols/attach-pack/PROTOCOL.md
+    locator: G:L1768-1779
+    rationale: Semantic pack matching (deciding which pack is relevant from artifact and semantics
+      rather than file extension) as distinct from pack resolution and loading. The donor script
+      resolves a pack list that was already declared.
+  - path: protocols/worktree-ownership/PROTOCOL.md
+    locator: G:L1668-1676
+    rationale: Overlapping writers are serialized even with no dependency edge between them. The
+      worktree donors solve isolation and the dispatch donor solves prompt independence; neither
+      names the write-conflict-without-an-edge case. Anchored in the plan at §5.3 and §10
+      scenario 13; the G:L value here is the nearest transcript anchor for the surrounding
+      dispatch-authority discussion and is NOT a locator for this rule itself. Flagged rather
+      than invented.
+  - path: protocols/apply-findings/PROTOCOL.md
+    locator: G:L1083-1214
+    rationale: Carrying spec_quality and autofix_class as two co-equal axes on one finding. Neither
+      donor holds both axes on one object; the combination is this repository's synthesis of a
+      transcript proposal the donor had not adopted at its pin.

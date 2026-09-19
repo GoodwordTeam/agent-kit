@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
+import { ADAPTATIONS_FILE, ADAPTATIONS_FRAGMENT_DIR } from "../src/validation/provenance.ts";
 import { makeTree, DENY_MARKER, sampleModelTerm } from "./helpers/tree.ts";
 
 const CATALOG = `schema_version: 1
@@ -167,6 +168,69 @@ describe("ak build", () => {
     const io = capture();
     expect(runCli(["build", "--profile", "ghost"], { cwd: cleanTree(), io: io.io })).not.toBe(0);
     expect(io.stdout()).toContain("packaging.unknown-profile");
+  });
+
+  /**
+   * The generated adaptations file is committed, so the thing that keeps it
+   * honest is not the generator but `ak build --check` refusing a tree where it
+   * has drifted. `checkAdaptationsSync` is unit-tested; these assert the command
+   * actually runs it and exits non-zero, which is the wiring a refactor can drop
+   * without any unit test noticing.
+   */
+  describe("--check gates the committed adaptations record", () => {
+    const LOCK = "donors:\n  - id: donorx\n    path: .donors/donorx\n    commit: 0123456789abcdef0123456789abcdef01234567\n";
+    const SOURCE = "donorx@0123456789abcdef0123456789abcdef01234567:docs/guide.md";
+    const FRAGMENT = `adaptations:\n  - path: skills/triage/SKILL.md\n    source: ${SOURCE}\n`;
+
+    const adaptedTree = (extra: Record<string, string> = {}) =>
+      makeTree({
+        "catalog.yaml": CATALOG,
+        "skills/triage/SKILL.md": SKILL,
+        "provenance/upstream.lock.yaml": LOCK,
+        [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: FRAGMENT,
+        ...extra,
+      });
+
+    test("a fragment with no generated file fails, naming the path NOTICE points at", () => {
+      const io = capture();
+      expect(runCli(["build", "--check"], { cwd: adaptedTree(), io: io.io })).not.toBe(0);
+      expect(io.stdout()).toContain("provenance.adaptations-out-of-sync");
+      expect(io.stdout()).toContain(ADAPTATIONS_FILE);
+    });
+
+    test("a generated file edited away from its fragments fails", () => {
+      const root = adaptedTree();
+      runCli(["build"], { cwd: root, io: capture().io });
+      Bun.write(join(root, ADAPTATIONS_FILE), "adaptations: []\n");
+      const io = capture();
+      expect(runCli(["build", "--check"], { cwd: root, io: io.io })).not.toBe(0);
+      expect(io.stdout()).toContain("provenance.adaptations-out-of-sync");
+    });
+
+    test("a fragment added after the last build fails, which is the batch case", () => {
+      const root = adaptedTree();
+      runCli(["build"], { cwd: root, io: capture().io });
+      Bun.write(
+        join(root, `${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`),
+        `adaptations:\n  - path: references/guide/REFERENCE.md\n    source: ${SOURCE}\n`,
+      );
+      const io = capture();
+      expect(runCli(["build", "--check"], { cwd: root, io: io.io })).not.toBe(0);
+      expect(io.stdout()).toContain("provenance.adaptations-out-of-sync");
+    });
+
+    test("running the build clears the drift, so the gate is passable rather than permanent", () => {
+      const root = adaptedTree();
+      expect(runCli(["build"], { cwd: root, io: capture().io })).toBe(0);
+      expect(existsSync(join(root, ADAPTATIONS_FILE))).toBe(true);
+      expect(runCli(["build", "--check"], { cwd: root, io: capture().io })).toBe(0);
+    });
+
+    test("ak validate reports the same drift, so neither command is the only guard", () => {
+      const io = capture();
+      expect(runCli(["validate"], { cwd: adaptedTree(), io: io.io })).not.toBe(0);
+      expect(io.stdout()).toContain("provenance.adaptations-out-of-sync");
+    });
   });
 
   test("a content failure blocks the build rather than shipping it", () => {
