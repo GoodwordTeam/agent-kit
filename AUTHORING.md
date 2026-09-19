@@ -140,7 +140,9 @@ anti-rationalization table (§3.1).
 
 Every artifact this skill produces: id shape, schema reference, and where it goes. A skill that
 writes project-derived content names the knowledgebase operation it calls, never a repository path
-(ruling `central-kb-owns-project-artifacts`; plan §1.2, §8; release scenario 21 — §7).
+(ruling `central-kb-owns-project-artifacts`; plan, "Separate instructions, knowledge, and
+execution" and "Knowledgebase integration"; release scenario 21, "Invocation and autopilot
+authority").
 
 > Emits one `review` artifact (`schemas/review.schema.json`) and one finding ledger; both are
 > published through the KB adapter's `publishArtifact`, never to a path in the working repo.
@@ -523,8 +525,10 @@ forbidden command's effect through a side door (ruling `entrypoint-phase-operati
 
 **No repository-local project documentation.** Project-derived artifacts are KB-owned — decisions,
 requirements, plans, tickets, reviews, lessons and sanitized run receipts — and this package owns
-reusable instructions and templates only (ruling `central-kb-owns-project-artifacts`; plan §1.2, §8). A skill that writes `docs/`, `CONTEXT.md`, `plans/`, `.scratch/` or an ADR tree into the working
-repository fails release scenario 21, whatever the donor did. `docs/decisions/0001-kb-document-vocabulary.md`
+reusable instructions and templates only (ruling `central-kb-owns-project-artifacts`; plan,
+"Separate instructions, knowledge, and execution" and "Knowledgebase integration"). A skill that
+writes `docs/`, `CONTEXT.md`, `plans/`, `.scratch/` or an ADR tree into the working repository fails
+release scenario 21, whatever the donor did. `docs/decisions/0001-kb-document-vocabulary.md`
 (ADR-0001) names the central equivalent for each retired path and the nine document kinds a KB write
 may use; convert every donor "write a file in the repo" instruction into a KB adapter call
 (`adapters/knowledgebase/CONTRACT.md`). `ak validate` scans skill bodies for the retired targets.
@@ -575,10 +579,20 @@ a line number, "the table above" — each survives the target being renumbered o
 parses, and points somewhere else. The test is whether the position can move without the reference
 moving with it. Inside one file it cannot: renumbering a section and repointing what cites it are
 the same edit in the same diff, which is why the cross-references in this file are by number and are
-safe. Into a pinned source it cannot either — material in `research/sources/` is cited at the pin
-(§5), so a locator there is exactly as stable as the pin is. Across a live document boundary it can,
-because the renumbering and the repointing belong to different files, different owners and different
-commits, and nothing couples them. Name the section there. Say what it is called, not where it sits.
+safe. Into a **donor pin** it cannot: `donor@<sha>:path` names bytes and the sha fixes them. That is
+the only anchor in this package that does, and it is why §5 sends every claim it can to the pin.
+`research/sources/` is not a second one. §5 is the evidence against that reading rather than the
+exemption for it: the lockfile records ranges carried from a recovered copy into the pin's numbering
+that landed on real text saying something else, and concludes *"Both resolve. Both would have been
+wrong."* An in-repo locator binds nothing, because nothing binds that file's content to the number.
+The provenance map's `G:L` form is a declared citation spelling with a validator behind it and is
+not in question; what is in question is the belief that it is *structurally* safe. It is safe by
+convention — those files are not being edited — and a convention is something this contract can
+state and cannot enforce. Until content is bound to locator, a locator into a live in-repo file is
+the unsafe case, and a section that has a name is cited by it. Across a live document boundary it
+can, because the renumbering and the repointing belong to different files, different owners and
+different commits, and nothing couples them. Name the section there. Say what it is called, not
+where it sits.
 
 ---
 
@@ -640,9 +654,10 @@ wherever the pass criterion is observable; use `llm` for the judgment cases, wit
 `expected_outcome` that a reader could score by hand.
 
 Tag every case with the release scenario it exercises (`scenario-NN`). Across the whole catalog the
-case corpus must cover **all 24** release scenarios in plan §10; `ak validate` reports uncovered
-scenario numbers. A writer covers the scenarios its dossier assigns to its batch and reports any it
-cannot exercise, rather than tagging a case that does not actually test the scenario.
+case corpus must cover **all 24** release scenarios in the plan's "Evaluation and release gates";
+`ak validate` reports uncovered scenario numbers. A writer covers the scenarios its dossier assigns
+to its batch and reports any it cannot exercise, rather than tagging a case that does not actually
+test the scenario.
 
 ---
 
@@ -1139,7 +1154,7 @@ leave out.
 
 `protocols/invocation-authority.md` is a **file, not a directory**, and has **no catalog entry**. The
 catalog's protocol entries do not include it, and that is correct: the plan's tree places it exactly
-there (`research/sources/engineering-skills-repo-plan.md:220`).
+there, in the plan's repository tree (`research/sources/engineering-skills-repo-plan.md`).
 
 This is safe rather than an oversight. `ak validate`'s directory-without-entry check lists
 *directories* under each section root and never examines a loose `.md`
