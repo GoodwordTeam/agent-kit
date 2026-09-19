@@ -798,7 +798,7 @@ panel-wide preconditions restated per seat — a shared snapshot condition, a sh
 rule, a shared return vocabulary — which surface under `## When it has nothing to say` and are
 invisible to a bullet count on a different heading. This channel is the one that scales worst: a
 condition the panel's protocol already states, copied into every seat, is one copy per seat, and
-fifteen copies read as compliant the whole way. **A precondition the panel's protocol already carries
+each of them reads as compliant the whole way. **A precondition the panel's protocol already carries
 is cited, not restated** — the seat states its own return for that condition and points at the
 protocol for the condition itself. Where a seat must restate it to be usable standalone, that is the
 signal the protocol and the panel have drifted apart, and it escalates to the same central-table
@@ -868,10 +868,10 @@ classifies both as **protocols** — `catalog.yaml` is authoritative, no id is b
 `standards-review` and `spec-review` were likewise renamed or became roles. Take the section from the
 catalog, never from the quoted law.
 
-**There is deliberately no `protocol.schema.json`.** The fourteen schemas contain none, and none is
-missing. A protocol has no execution contract of its own because it is never invoked directly — it
-runs inside the contract of the skill that invoked it. Do not write a `protocol.yaml`. **The
-protocol's catalog entry plus its prose is the contract.**
+**There is deliberately no `protocol.schema.json`.** `schemas/` contains none, and none is missing.
+A protocol has no execution contract of its own because it is never invoked directly — it runs
+inside the contract of the skill that invoked it. Do not write a `protocol.yaml`. **The protocol's
+catalog entry plus its prose is the contract.**
 
 Required sections are §3's ten, with one substitution:
 
@@ -889,11 +889,11 @@ Long material goes behind `protocols/<id>/references/` on §1's rule.
 
 ### 12.2 Roles
 
-`roles/<path>/ROLE.md`, one per catalog entry. `<path>` nests at most one level — the four core
-roles sit at `roles/<id>/`, the three panels at `roles/code-review/<seat>/`,
-`roles/doc-review/<seat>/` and `roles/plan-review/<seat>/`. The catalog ids already carry the slash,
-so the id and the path are one string: `code-review/security` is both. There is no separate
-path-naming step, and no `role.schema.json` for the same reason there is no protocol schema.
+`roles/<path>/ROLE.md`, one per catalog entry. `<path>` nests at most one level — the core roles sit
+at `roles/<id>/`, the panels at `roles/code-review/<seat>/`, `roles/doc-review/<seat>/` and
+`roles/plan-review/<seat>/`. The catalog ids already carry the slash, so the id and the path are one
+string: `code-review/security` is both. There is no separate path-naming step, and no
+`role.schema.json` for the same reason there is no protocol schema.
 
 A role is **a prompt the runner fills a seat with**. It is not an agent, not a skill, and not a
 procedure. It states what the seat judges, the evidence it must cite, what it may never do, and what
@@ -950,10 +950,11 @@ Dropped, and why — a writer reaching for one of these is describing the wrong 
 - `## Limits` — folded into `## Never`.
 
 `## Not this seat` names only the **adjacent** seats — the ones whose findings would land in this
-seat's output if the boundary blurred. Three or four neighbours, not fourteen. Fifteen seats each
-enumerating the other fourteen is quadratic and unmaintainable, and it degrades worst exactly where
-the boundaries matter most. A seat that cannot name its neighbours in three or four does not have a
-sharp enough question, which is a finding about that seat rather than about this heading.
+seat's output if the boundary blurred. Three or four neighbours, not every other seat on the panel.
+A panel where each seat enumerates all the others is quadratic and unmaintainable, and it degrades
+worst exactly where the boundaries matter most. A seat that cannot name its neighbours in three or
+four does not have a sharp enough question, which is a finding about that seat rather than about
+this heading.
 
 Three kinds of confusion belong in this heading, and the budget above governs **only the first**.
 
@@ -985,11 +986,11 @@ material to cut is prose the contract does not require. This is what keeps the c
 written for: sibling enumeration is what grows quadratically with panel size, and cross-panel
 entries do not.
 
-Kinds 2 and 3 are exempt for the same reason, and it is the reason the budget exists at all. Fifteen
-seats each enumerating the other fourteen is quadratic — but **only kind 1 is quadratic.** The
-non-seat boundaries are a small fixed set, the same size for a three-seat panel as for a fifteen-seat
-one, and the cross-layer entry answers a different question from the whole section. Charging a writer
-for either penalises precisely the entries this heading most needs.
+Kinds 2 and 3 are exempt for the same reason, and it is the reason the budget exists at all. Every
+seat enumerating every other is quadratic — but **only kind 1 is quadratic.** The non-seat
+boundaries are a small fixed set, the same size for the smallest panel in this package as for the
+largest, and the cross-layer entry answers a different question from the whole section. Charging a
+writer for either penalises precisely the entries this heading most needs.
 
 **So count sibling seats when you check the cap.** A reviewer counting total bullets is measuring a
 list that does two jobs and will read a compliant role as over budget.
