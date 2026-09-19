@@ -230,6 +230,35 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     });
   }
 
+  test("a citation nested under a claim's sibling does not reach the claim", () => {
+    // The asymmetry ancestor scope encodes: a citation covers the mapping it
+    // is attached to and everything nested beneath it, never anything above
+    // it. Either direction of that rule collapses if it is wrong -- a key that
+    // attributed upward would let any leaf clear its parents, and file scope
+    // would be back under another name.
+    //
+    // `review-synthesis-may-not` is the only capture in the set that can test
+    // this on real text, because it carries both kinds of citation at once:
+    // `rulings:` on the `synthesis` mapping, which does reach the `may_not`
+    // sequence, and `ruling:` on the `low_confidence_security` sub-mapping
+    // beside it, which names the same ruling and must not reach it.
+    const item = LABELLED.find((c) => c.id === "review-synthesis-may-not");
+    if (item === undefined) throw new Error("the capture this test is about is missing from the corpus");
+
+    const withoutMappingKey = item.text
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("rulings:"))
+      .join("\n");
+    // The nested citation survives that cut. Without this the test could pass
+    // by having removed both keys, which would measure nothing.
+    expect(withoutMappingKey).toContain("    ruling: low-confidence-security-adjudicated");
+
+    // Scored identically to the capture with no citation of this ruling at
+    // all: the nested key contributes exactly nothing to the claim above it.
+    const measured = scanAll((c) => (c.id === item.id ? withoutMappingKey : c.text));
+    expect(measured.get(item.id)?.score ?? -1).toBe(item.scoreIfUncited ?? -1);
+  });
+
   for (const item of LABELLED.filter((c) => c.label === "not-a-defect")) {
     test(`${item.id} stays rejected: ${item.why.slice(0, 55)}...`, () => {
       // The guard in the other direction. Every case found by reading the
@@ -298,14 +327,20 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     // behavioural question is open and needs a case that clears 0.55 uncited,
     // which the set does not yet contain.
     //
-    // The set held two of these and now holds one, because narrowing YAML scope
-    // to the mapping made the other's citation inert. That is a real weakening
-    // of this guard and it is recorded rather than papered over: with a single
-    // case left, this loop can no longer tell a general rule from one file's
-    // shape. `policies/review.yaml` is the capture that would restore it, and
-    // the fixture header says so.
+    // The set held two of these, dropped to one when narrowing YAML scope made
+    // `invocation-lesson-publish-ship-clause`'s citation inert, and is back to
+    // two with `review-synthesis-may-not`. The weakening was recorded here
+    // rather than papered over, so the restoration is recorded the same way:
+    // one case cannot tell a general rule from one file's shape, and these two
+    // have different shapes -- a file-level `rulings:` key over a profile, and
+    // a mapping-level one over a bare sequence with a nested citation beside it.
+    //
+    // The second is also the only case in the set where scope crosses the
+    // shipping threshold: 0.64 uncited against `product-prototype-rationale`'s
+    // 0.50, so deleting one line in `policies/review.yaml` changes what
+    // `ak validate` reports, not merely what it scores.
     const suppressedCases = LABELLED.filter(suppressed);
-    expect(suppressedCases.length).toBeGreaterThanOrEqual(1);
+    expect(suppressedCases.length).toBeGreaterThan(1);
     for (const item of suppressedCases) {
       expect({ id: item.id, score: scores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, score: 0 });
       const hidden = item.scoreIfUncited;

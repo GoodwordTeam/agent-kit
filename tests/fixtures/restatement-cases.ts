@@ -11,14 +11,16 @@
 // the number out, which is what regeneration would have produced. Whoever
 // restores the generator should treat that one number as a thing to verify.
 //
-// Each case names its own revision in `origin`, and they come from four:
-// e15be71, a13ccc0, 78f8918 and 6c3c60c. That is safe only because the `ruling:`
-// texts are byte-identical across all four -- checked by loading each revision's
+// Each case names its own revision in `origin`, and they come from five:
+// e15be71, a13ccc0, 78f8918, 6c3c60c and edb7ecb. That is safe only because the
+// `ruling:` texts are byte-identical across all five -- checked by loading each revision's
 // policy file and comparing against RULINGS_AT_REVISION, not by reading a diff,
 // since e15be71 does change that file and the change is entirely `binds`,
 // `doctrine` and comments, which this scan never reads. A case captured where
 // the ruling texts had moved would need its own corpus, and mixing them
-// silently would reproduce neither.
+// silently would reproduce neither. edb7ecb was checked the same way and adds
+// nothing new to verify: no commit has touched `policies/resolved-conflicts.yaml`
+// since it, so all nineteen texts are still identical to the frozen list.
 //
 // The cases found by reading, before this check existed, are the recall gold
 // standard: five from 78f8918 and e15be71 that `36e7cf4` fixed, plus
@@ -27,13 +29,24 @@
 // instrument being measured, so they are the only cases in the set that can
 // support a recall number at all.
 //
-// What this set deliberately leaves out: `policies/review.yaml`, at 17KB. Under
-// file scope it exercised the same suppression path as the two cases carrying a
-// `scoreIfUncited`, and the only variable it added was distance between the
-// restatement and the citation, which file scope made irrelevant by
-// construction. Ancestor scope makes distance matter again -- a citation now
-// reaches only what nests beneath it -- so the omission is no longer free and
-// `review.yaml` is the obvious next capture.
+// `policies/review.yaml` was previously left out at 26,917 bytes, on the
+// argument that under file scope it exercised the same suppression path as the
+// cases already here and added only distance between restatement and citation,
+// which file scope made irrelevant by construction. Ancestor scope made
+// distance matter again, so the omission stopped being free, and it is now in
+// as `review-synthesis-may-not`.
+//
+// It came in at 2,306 bytes rather than 26,917, and the cut is licensed by
+// measurement rather than by preferring a smaller fixture. `policies` scored
+// the whole file, the `synthesis` mapping with and without its banner, and the
+// `may_not` bullets alone: 0.64 in all four. IDF is computed over the ruling
+// texts alone, so nothing outside the window can move a score, and the window
+// is interior to the mapping, so every sentence neighbouring it is inside the
+// capture. That is the general point, not a fact about this file -- under file
+// scope a partial capture was unsound because scope depended on the whole file,
+// and under ancestor scope the mapping *is* the scope, so the mapping is the
+// honest unit. The same change that created the need for this case made it
+// cheap.
 //
 // It was previously recorded here as the decisive case for narrowing YAML scope
 // from the file to the section. That was wrong, and the measurement that
@@ -279,7 +292,7 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     ruling: "prototype-human-experience-needs-human",
     label: "not-a-defect",
     reported: false,
-    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, because YAML citation scope is the file: in its own file no window names the ruling at all, and with the `rulings:` line removed the same claim scores 0.50. Zero here is the citation working rather than the instrument failing, which is why this case is stored with the file and not with the paragraph. What it does not show, and was previously written here as though it did: narrowing YAML scope from the file to the section would *not* make this fire, because 0.50 is under the 0.55 threshold and stays under it. The guard holds the mechanism -- the case is scored at the capture threshold, where the difference is visible -- and not a behavior change a user of `ak validate` could observe. Corrected from `missing-supervisor-never-implementer` at 0.20, which was an unrelated window in the same block and never the claim this case is about.",
+    why: "A profile rationale paraphrasing the prototype ruling, in a file whose `rulings:` key cites it. Captured whole, which was written here as \"because YAML citation scope is the file\" and is no longer the rule: scope is now the mapping a citation is attached to and what nests beneath it. The capture is still right and the reason is narrower -- this file's `rulings:` key sits at column zero, so the mapping it governs is the document, and cutting the file would cut the citation out of the case. In its own file no window names the ruling at all, and with the `rulings:` line removed the same claim scores 0.50. Zero here is the citation working rather than the instrument failing, which is why this case is stored with the file and not with the paragraph. What it does not show, and was previously written here as though it did: narrowing YAML scope from the file to the section would *not* make this fire, because 0.50 is under the 0.55 threshold and stays under it. The guard holds the mechanism -- the case is scored at the capture threshold, where the difference is visible -- and not a behavior change a user of `ak validate` could observe. Corrected from `missing-supervisor-never-implementer` at 0.20, which was an unrelated window in the same block and never the claim this case is about.",
     score: 0.0,
     scoreIfUncited: 0.5,
   },
@@ -307,5 +320,18 @@ export const LABELLED: ReadonlyArray<LabelledCase> = [
     why: "Gold standard, and the case that settled the YAML scope question rather than merely recording it. `lesson.publish`'s first hard gate carries the ruling's closing clause nearly verbatim and cites nothing; `e15be71` fixed it by adding `ruling: central-kb-owns-project-artifacts` to that operation, which is a human judging the citation missing. It used to be missed for two independent reasons: the sibling operation `lesson.capture` already carried that same citation and YAML scope was the whole file, so no window was emitted at all, and with that one line removed the claim scores 0.52, still under 0.55. Scope was narrowed to the mapping a citation is attached to and what nests beneath it, which is what `invocation.yaml`'s own shape always implied -- it cites per operation, so the unit a reader relies on is the operation. The sibling's key no longer reaches, the claim is scored, and one of the two reasons is gone. What remains is the threshold, so this case is now an ordinary member of the 0.30-to-0.52 band rather than the one case no tuning could touch. It stays a miss and recall stays two of eight. Its score and `scoreIfUncited` are now equal, which is the measurement showing the citation has become inert here: that equality, not the presence of the id in the text, is what distinguishes it from `product-prototype-rationale`, whose citation sits in its own mapping and still suppresses correctly. Stored as the two operations rather than the whole 17.6KB file, licensed by measurement rather than convenience: the excerpt reproduces the behaviour under both scope rules exactly.",
     score: 0.52,
     scoreIfUncited: 0.52,
+  },
+  {
+    id: "review-synthesis-may-not",
+    origin: "policies/review.yaml:330 at edb7ecb",
+    text: "# ---------------------------------------------------------------------------\n# Synthesis. Findings from independent seats are merged, never negotiated.\n# ---------------------------------------------------------------------------\nsynthesis:\n  may:\n    - deduplicate findings that share a fingerprint\n    - conservatively downgrade a finding's specification quality\n    - conservatively raise a finding's difficulty\n    - retain conflicting evidence from two seats as conflicting\n  may_not:\n    - make a ticket easier, more specified or more authorized than its originating seat said\n    - raise a nit's severity because several seats agreed on it\n    - drop a low-confidence security finding; it is adjudicated, never filtered\n    - change a lane result\n    - drop a finding because of its `autofix_class`; an inbound `safe_auto` is remapped, not discarded\n  # `may_not` is a sequence of scalars, which has nowhere to carry a citation, so the rulings\n  # its entries reproduce are named on this mapping. The sub-mappings below keep their own\n  # `ruling:` keys: those are the precise per-rule citations and this one does not replace them.\n  rulings: [low-confidence-security-adjudicated, safe-auto-restricted-per-seat]\n  severity:\n    canonical: [P0, P1, P2, P3]\n    note: Critical/Nit/FYI are presentation and disposition labels, not a replacement for severity.\n  low_confidence_security:\n    rule: >-\n      A low-confidence security concern stays visible and is adjudicated by the finding\n      adjudication checkpoint. A generic confidence threshold never discards it.\n    ruling: low-confidence-security-adjudicated\n    scenario: 3\n  autofix_class_emission:\n    rule: >-\n      The four-value `autofix_class` enum in schemas/finding.schema.json is canonical and is not\n      cut per panel. No code-review seat emits `safe_auto`: at review time a code edit has no\n      single mechanically correct answer, so the class is a proposal and applying it is the\n      caller's decision under its own authorization. `doc-review/coherence` is the one seat that\n      routinely emits it, for its own closed pattern list, and only where the schema's structural\n      gate already holds.\n    on_inbound_safe_auto: remap to `gated_auto` and keep the finding\n    ruling: safe-auto-restricted-per-seat\n    scenario: 6",
+    format: "yaml",
+    anchor: "raise a nit's severity because several seats agreed on it",
+    ruling: "low-confidence-security-adjudicated",
+    label: "not-a-defect",
+    reported: false,
+    why: "The second scope-suppressed case, and the reason the set needed one. `may_not` is a sequence of scalars with nowhere to hang a citation, so its entries are cited on the mapping above them; two of those entries reproduce this ruling, one of them -- the nit-severity clause -- almost word for word. Silent as captured and 0.64 with the citation removed, so unlike `product-prototype-rationale` at 0.50 this one is suppressed *across* the shipping threshold: delete that one line and `ak validate` reports it. That makes it the only case in the set where scope is the difference a user could observe, which is what the set was missing after the narrowing left `product-prototype-rationale` alone. It also guards the asymmetry directly: `low_confidence_security` is a sibling sub-mapping carrying `ruling: low-confidence-security-adjudicated` of its own, and with only that nested key present the parent's sequence still scores 0.64 and is reported -- measured, not reasoned. If a citation ever began attributing upward, this case goes silent with no other case in the set noticing. Captured as the mapping and its banner, 2,306 bytes rather than the file's 26,917, and the licence for that is measurement: `policies` scored the whole file, this mapping with and without its banner, and the bullets alone, and got 0.64 in all four. IDF is computed over the ruling texts alone, so nothing outside the window moves a score, and the window sits interior to the mapping, so every sentence neighbouring it is inside the capture. Under file scope a partial capture was unsound because scope depended on the whole file; ancestor scope makes the mapping the scope, so the mapping is the honest unit. `policies` measured all of this first and this entry reproduces it independently on the shipping build.",
+    score: 0.0,
+    scoreIfUncited: 0.64,
   },
 ];
