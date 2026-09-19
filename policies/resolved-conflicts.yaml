@@ -3,7 +3,8 @@
 # Authority: plan §11 (the ten resolved design conflicts) plus the two rulings where the
 # architecture document deliberately overrides the design conversation: §6.3 (delta boundary)
 # and §6.4 (reviewer continuity). Rows 11-18 carry the same shape for tensions §11 states in
-# prose elsewhere in the plan.
+# prose elsewhere in the plan. Row 19 is the first donor-versus-plan tension rather than an
+# internal one.
 #
 # Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
 # every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
@@ -17,9 +18,19 @@
 #   id         stable kebab-case identifier, cited verbatim from skill bodies
 #   tension    what the sources actually disagreed about
 #   ruling     what this repository does
-#   overrides  present only where the architecture doc deliberately overrules the conversation.
+#   overrides  present only where a source position is deliberately overruled: the design
+#              conversation where the architecture doc wins, or a donor where this repository
+#              takes a different position. `source` names which.
 #              Absence means the sources were reconciled, not that one lost.
 #   binds      the catalog.yaml entry ids this ruling governs, grouped by kind
+#   universal  the kinds this ruling governs *entirely*, as a claim rather than a census.
+#              A kind listed here asserts "every entry of this kind, including ones not yet
+#              written". `binds` still enumerates them, so the forward check keeps working
+#              today; the enumeration is the machine's copy of the claim, not the claim.
+#              `ak validate` should enforce the pair: for each kind in `universal`, the
+#              matching `binds` group set-equals that section in catalog.yaml. A role added
+#              in a later batch then fails validation until it is covered, rather than
+#              silently falling outside a ruling that governs it.
 #   scenario   the numbered release scenario from plan §10 that tests it
 #   coverage   `direct` when that scenario tests this ruling head-on, `indirect` when it
 #              exercises the same structure on a neighbouring case; `note` says which
@@ -30,7 +41,7 @@
 
 schema_version: 1
 policy: resolved-conflicts
-rows: 18
+rows: 19
 
 conflicts:
 
@@ -57,8 +68,10 @@ conflicts:
         entrypoint itself stays human-started.
     binds:
       skills: [super-ship, compound, autopilot, super-review, super-align, super-bound, wayfind, receiving-review, babysit-pr, ultraqa]
-      protocols: [phase-operations]
+      protocols: [phase-operations, consensus-plan-gate, tdd, apply-findings, review-delta, worktree-ownership, attach-pack]
       policies: [invocation]
+      profiles: [autonomy]
+      adapters: [runner-contract, knowledgebase]
     scenario: 23
     coverage: direct
     source:
@@ -86,6 +99,8 @@ conflicts:
       protocols: [review-delta, apply-findings]
       roles: [reviewer-spec, reviewer-standards, code-review/previous-comments]
       schemas: [review, finding]
+      policies: [review]
+      adapters: [runner-contract]
     scenario: 9
     coverage: direct
     source:
@@ -134,9 +149,10 @@ conflicts:
     binds:
       skills: [super-verify, super-review, diagnose, super-build]
       protocols: [apply-findings, review-delta, tdd]
-      roles: [implementer, reviewer-spec, reviewer-standards]
+      roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
       schemas: [finding, verification, review]
       policies: [review, authority-defaults]
+    universal: [roles]
     scenario: 3
     coverage: direct
     note: >-
@@ -163,6 +179,7 @@ conflicts:
         from anything a validator or a reviewer can gate on.
     binds:
       skills: [super-bound, super-build, super-review, simplify]
+      protocols: [tdd, attach-pack]
       packs: [pack-test]
       references: [engineering-principles]
       schemas: [project]
@@ -223,6 +240,7 @@ conflicts:
       skills: [babysit-pr, diagnose, super-verify, super-review]
       packs: [pack-test]
       policies: [invocation, authority-defaults, limits]
+      adapters: [runner-contract]
     scenario: 19
     coverage: direct
     source:
@@ -242,6 +260,8 @@ conflicts:
     binds:
       skills: [prototype, autopilot, pov, ideate]
       schemas: [decision, ticket]
+      policies: [authority-defaults]
+      profiles: [product]
     scenario: 4
     coverage: indirect
     note: >-
@@ -272,9 +292,12 @@ conflicts:
         destination moves to the configured knowledgebase root.
     binds:
       skills: [compound, compound-refresh, super-ship, handoff, writing-skills]
+      protocols: [phase-operations, consensus-plan-gate, tdd, apply-findings, review-delta, attach-pack]
       roles: [code-review/learnings]
       schemas: [lesson, decision]
       references: [prose-quality]
+      policies: [invocation, authority-defaults]
+      profiles: [maintainer]
       adapters: [knowledgebase]
     scenario: 21
     coverage: direct
@@ -323,6 +346,7 @@ conflicts:
       skills: [super-review, ultraqa, autopilot, babysit-pr]
       protocols: [review-delta, apply-findings]
       policies: [limits, review]
+      adapters: [runner-contract]
     scenario: 18
     coverage: direct
     source:
@@ -343,7 +367,7 @@ conflicts:
       skills: [super-review, super-verify]
       protocols: [review-delta]
       schemas: [review, verification]
-      policies: [limits]
+      policies: [limits, review]
     scenario: 10
     coverage: direct
     source:
@@ -385,9 +409,11 @@ conflicts:
       why, and stays resumable. Fail closed when required evidence is absent.
     binds:
       skills: [super-review, receiving-review]
-      roles: [reviewer-spec, reviewer-standards, code-review/project-standards]
+      roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
       schemas: [review]
       policies: [review, authority-defaults]
+      adapters: [runner-contract]
+    universal: [roles]
     scenario: 4
     coverage: direct
     source:
@@ -414,6 +440,51 @@ conflicts:
       plan: "§6.1, §5.5"
       locator: G:L667
 
+  - id: safe-auto-restricted-per-seat
+    tension: >-
+      Three positions on one required field. The code-review donor forbids `safe_auto`, rejects it
+      on arrival and downgrades a peer provider's `safe_auto` to `gated_auto`
+      (`skills/ce-code-review/references/action-class-rubric.md` L16 and L55,
+      `cross-model-review.md` L139). The doc-review donor from the same package *requires* it and
+      has no `advisory` at all, and its `coherence` seat owns six patterns that are explicitly
+      `safe_auto` at full confidence. The plan lists all four values as the vocabulary
+      (plan §5.5). A schema enum, a code-side prohibition and a doc-side requirement cannot be
+      read as one statement.
+    ruling: >-
+      The plan's four-value enum is canonical and `schemas/finding.schema.json` is its authority;
+      each donor enum is a proper subset and neither cuts it. The restriction is on *emission by a
+      seat*, never on the vocabulary. No code-review seat emits `safe_auto`: at review time a code
+      edit has no single mechanically correct answer, so classification is a proposal and applying
+      it is the caller's decision under its own authorization. `doc-review/coherence` is the one
+      seat that routinely emits it, for its own closed pattern list, and only where the schema's
+      structural gate already holds — `spec_quality: patch`, `difficulty: mechanical` and a
+      `suggested_fix`. A synthesis or intake step that receives `safe_auto` from a peer lane
+      remaps it to `gated_auto`; it never drops the finding. `advisory` is available to every seat.
+    overrides:
+      source: donor
+      locator: "compound-engineering:skills/ce-code-review/references/action-class-rubric.md#L55"
+      position: "Reject `safe_auto` if present — drop the finding or remap to `gated_auto`"
+      reason: >-
+        Remapping is kept and dropping is refused. Discarding a finding for its action class loses
+        a real finding on a property that is not about whether the finding is true, which is the
+        silent-loss failure `low-confidence-security-adjudicated` forbids one lane over.
+    binds:
+      skills: [super-review, doc-review, receiving-review, super-build]
+      protocols: [apply-findings]
+      roles: [code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, reviewer-spec, reviewer-standards, doc-review/coherence]
+      packs: [pack-secure, pack-perf]
+      schemas: [finding]
+      policies: [review]
+    scenario: 6
+    coverage: indirect
+    note: >-
+      Scenario 6 tests the `spec_quality` gate — a vague finding never reaches an automatic fixer,
+      which `finding.schema.json` encodes by forcing a `smell` to `manual` or `advisory`. It does
+      not exercise a well-specified `patch` from a code seat that is nonetheless not that seat's to
+      mark unattended, which is what this row decides.
+    source:
+      plan: "§5.5"
+
   - id: supervisor-agreement-is-not-authority
     tension: >-
       Two independent supervisors agreeing with high confidence is described as acting with the
@@ -437,6 +508,8 @@ conflicts:
       roles: [supervisor]
       schemas: [charter, decision]
       policies: [authority-defaults]
+      profiles: [autonomy]
+      adapters: [runner-contract]
     scenario: 16
     coverage: direct
     source:
@@ -458,6 +531,8 @@ conflicts:
       roles: [supervisor, implementer, code-review/security, code-review/adversarial]
       schemas: [decision, charter]
       policies: [authority-defaults]
+      profiles: [autonomy]
+      adapters: [runner-contract]
     scenario: 17
     coverage: direct
     source:
@@ -480,6 +555,8 @@ conflicts:
       packs: [pack-secure, pack-data, pack-deps, pack-api, pack-delete]
       schemas: [charter, decision]
       policies: [authority-defaults]
+      profiles: [autonomy, maintainer]
+      adapters: [runner-contract]
     scenario: 5
     coverage: direct
     source:

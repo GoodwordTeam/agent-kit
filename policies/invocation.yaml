@@ -160,7 +160,7 @@ operations:
     hard_gates:
       - a decision ticket is never emitted as executable work
       - approval binds to the artifact hash; a changed spec does not inherit the old approval
-    side_effects: [artifact-write, scratch-write]
+    side_effects: [artifact-write, scratch-write, kb-draft]
     on_unvalidatable_grant: stop-for-explicit-invocation
 
   - id: wayfind.map
@@ -327,7 +327,7 @@ operations:
       - a required product-code change leaves this operation and re-enters diagnose, a bounded
         patch, new verification and affected delta review
       - at most three attempts (policies/limits.yaml `ci_repair_attempts`)
-    side_effects: [workspace-write, local-commit, remote-push, process-exec, artifact-write]
+    side_effects: [workspace-write, branch-create, local-commit, remote-push, process-exec, artifact-write, scratch-write]
     on_unvalidatable_grant: stop-for-explicit-invocation
     ruling: ci-repair-restricts-purpose-not-permission
 
@@ -343,7 +343,7 @@ operations:
     hard_gates:
       - at most five cycles; stop at three occurrences of the same failure
       - any mutation of the workspace invalidates affected review evidence and is recorded as such
-    side_effects: [workspace-write, process-exec, artifact-write]
+    side_effects: [workspace-write, branch-create, process-exec, artifact-write, scratch-write]
     on_unvalidatable_grant: stop-for-explicit-invocation
 
 # ---------------------------------------------------------------------------

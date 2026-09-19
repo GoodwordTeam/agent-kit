@@ -193,6 +193,7 @@ synthesis:
     - raise a nit's severity because several seats agreed on it
     - drop a low-confidence security finding; it is adjudicated, never filtered
     - change a lane result
+    - drop a finding because of its `autofix_class`; an inbound `safe_auto` is remapped, not discarded
   severity:
     canonical: [P0, P1, P2, P3]
     note: Critical/Nit/FYI are presentation and disposition labels, not a replacement for severity.
@@ -202,6 +203,17 @@ synthesis:
       adjudication checkpoint. A generic confidence threshold never discards it.
     ruling: low-confidence-security-adjudicated
     scenario: 3
+  autofix_class_emission:
+    rule: >-
+      The four-value `autofix_class` enum in schemas/finding.schema.json is canonical and is not
+      cut per panel. No code-review seat emits `safe_auto`: at review time a code edit has no
+      single mechanically correct answer, so the class is a proposal and applying it is the
+      caller's decision under its own authorization. `doc-review/coherence` is the one seat that
+      routinely emits it, for its own closed pattern list, and only where the schema's structural
+      gate already holds.
+    on_inbound_safe_auto: remap to `gated_auto` and keep the finding
+    ruling: safe-auto-restricted-per-seat
+    scenario: 6
 
 # ---------------------------------------------------------------------------
 # Pass 2 — delta (plan §6.3, protocol `review-delta`).

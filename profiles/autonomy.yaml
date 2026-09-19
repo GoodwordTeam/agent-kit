@@ -98,4 +98,4 @@ deliberately_excludes:
   - id: implementing
     why: A supervisor never implements and never approves a patch it produced.
 
-rulings: [supervisor-agreement-is-not-authority, missing-supervisor-never-implementer, sensitive-actions-need-approved-charter-entry, entrypoint-phase-operation-split]
+rulings: [supervisor-agreement-is-not-authority, missing-supervisor-never-implementer, sensitive-actions-need-approved-charter-entry, entrypoint-phase-operation-split, full-catalog-opt-in-profiles]

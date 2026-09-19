@@ -253,7 +253,7 @@ seat_separation:
       A seat that cannot be filled independently is unavailable. It is never backfilled by the
       implementer, the author, the spec approver or another seat already sitting on the panel.
     effect: the checkpoint or lane blocks and the run escalates once
-    ruling: missing-supervisor-never-implementer
+    rulings: [missing-supervisor-never-implementer, required-lane-failure-is-unavailable]
     scenario: 17
 
 # ---------------------------------------------------------------------------
