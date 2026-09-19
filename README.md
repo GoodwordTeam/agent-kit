@@ -90,8 +90,9 @@ bun run ak attach <path>  # show which packs attach, and why
 
 `ak validate` enforces catalog completeness, JSON Schema conformance, frontmatter rules, the
 invocation graph, link closure in both source and bundle, provenance for every adapted file, and a
-content denylist (model names, pricing, effort ladders, placeholders) outside `provenance/` and
-`research/sources/`.
+content denylist (model names, pricing, effort ladders, placeholders). The trees it exempts are
+`DENYLIST_EXEMPT_PREFIXES` (`src/validation/content.ts`), and the invariant that decides that list
+is that nothing packaged into `dist/` is ever exempt.
 
 ## Contracts worth knowing before you read a skill
 

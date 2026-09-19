@@ -24,7 +24,7 @@ Non-negotiable. Written once, here, and enforced by `ak validate`'s invocation-g
 > - Domain packs auto-attach by artifact type. They never start a phase.
 
 Source: `G:L1672–1676`. The elision in the fourth bullet drops a model-routing illustration that the
-content denylist forbids outside `provenance/` and `research/sources/`; the unedited text is at
+content denylist forbids in this file; the unedited text is at
 `research/sources/grok-transcript.md:1675`. The *rule* is reproduced exactly.
 
 **The quote uses the design brief's vocabulary, not this package's.** It names capabilities, and this
