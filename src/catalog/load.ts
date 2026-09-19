@@ -173,5 +173,52 @@ export function loadCatalog(root: string): LoadResult {
     }
   }
 
+  issues.push(...idsInTwoAddressableSections(entries));
+
   return { catalog: new Catalog(packageInfo, entries, root_), issues };
+}
+
+/**
+ * The three sections an id can be reclassified between, and the reason the rule
+ * stops at three.
+ *
+ * `AGENTS.md` maps the invocation law's vocabulary onto this package: `tdd` and
+ * `attach-pack` became protocols "not skills", `standards-review` and
+ * `spec-review` became the roles `reviewer-standards` and `reviewer-spec`. The
+ * mapping table is defensible only because of the sentence that follows it --
+ * "No id is both a skill and a protocol, so this is reclassification, not a
+ * contradiction" -- and nothing verified that sentence.
+ *
+ * These three are addressable in the sense that matters: a body cites `tdd` and
+ * the reader has to land on exactly one artifact, and the U/M partition has to
+ * have exactly one answer for it. An id in two of them makes both undecidable.
+ *
+ * Deliberately not every section. The authored catalog declares `review` in
+ * both `schemas` and `policies` -- `schemas/review.schema.json` and
+ * `policies/review.yaml` -- which is correct and which a blanket uniqueness
+ * rule would report. Those are addressed by path, never by bare id.
+ */
+const ADDRESSABLE_SECTIONS = ["skills", "protocols", "roles"] as const;
+
+function idsInTwoAddressableSections(entries: ReadonlyArray<CatalogEntry>): Issue[] {
+  const sectionsById = new Map<string, string[]>();
+  for (const entry of entries) {
+    if (!(ADDRESSABLE_SECTIONS as ReadonlyArray<string>).includes(entry.section)) continue;
+    const seen = sectionsById.get(entry.id);
+    if (seen === undefined) sectionsById.set(entry.id, [entry.section]);
+    else if (!seen.includes(entry.section)) seen.push(entry.section);
+  }
+
+  const issues: Issue[] = [];
+  for (const [id, sections] of sectionsById) {
+    if (sections.length < 2) continue;
+    issues.push(
+      error(
+        "catalog.id-in-two-addressable-sections",
+        "catalog.yaml",
+        `Id '${id}' is declared in ${sections.join(" and ")}. A body citing '${id}' by name must reach exactly one artifact, and its invocation class must have one answer; declared twice it has neither. AGENTS.md's reclassification table holds only while no id is in two of these sections.`,
+      ),
+    );
+  }
+  return issues;
 }

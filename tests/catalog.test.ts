@@ -64,6 +64,47 @@ describe("catalog loading", () => {
     expect(issues.some((i) => i.rule === "catalog.duplicate-id" && i.message.includes("alpha"))).toBe(true);
   });
 
+  test("reports an id declared in two addressable sections", () => {
+    // AGENTS.md rests its whole reclassification argument on this holding:
+    // `tdd` and `attach-pack` are protocols "not skills", `standards-review`
+    // and `spec-review` became roles, and the invocation law's mapping table is
+    // only true because "no id is both a skill and a protocol". Nothing checked
+    // it. An id in two of these sections makes the table false and leaves the
+    // U/M partition undecidable for that id -- a body citing it by name no
+    // longer names one thing.
+    // Both reclassification directions the table actually uses are covered, so
+    // dropping either `protocols` or `roles` from the rule fails here rather
+    // than passing on the half that remains.
+    const both = MINIMAL.replace("protocols: []", "protocols:\n  - id: alpha\n    status: contract\n    summary: Also a protocol.").replace(
+      "roles: []",
+      "roles:\n  - id: beta\n    status: contract\n    summary: Also a role.",
+    );
+    const { issues } = loadCatalog(makeTree({ "catalog.yaml": both }));
+    const hits = issues.filter((i) => i.rule === "catalog.id-in-two-addressable-sections");
+    expect(hits.length).toBe(2);
+    expect(hits.every((i) => i.severity === "error")).toBe(true);
+    const alpha = hits.find((i) => i.message.includes("alpha"));
+    expect(alpha?.message).toContain("skills");
+    expect(alpha?.message).toContain("protocols");
+    const beta = hits.find((i) => i.message.includes("beta"));
+    expect(beta?.message).toContain("skills");
+    expect(beta?.message).toContain("roles");
+  });
+
+  test("does not report an id shared by two sections that address different things", () => {
+    // The rule has to stay narrow, and this is the case that keeps it narrow:
+    // the real catalog declares `review` as both a schema and a policy, which
+    // is `schemas/review.schema.json` and `policies/review.yaml` -- different
+    // kinds of artifact that no citation confuses. Only the three sections a
+    // skill id can be reclassified between are addressable in this sense.
+    const shared = MINIMAL.replace("schemas: []", "schemas:\n  - id: review\n    status: contract\n    summary: A schema.").replace(
+      "policies: []",
+      "policies:\n  - id: review\n    status: contract\n    summary: A policy.",
+    );
+    const { issues } = loadCatalog(makeTree({ "catalog.yaml": shared }));
+    expect(issues.filter((i) => i.rule === "catalog.id-in-two-addressable-sections")).toEqual([]);
+  });
+
   test("keeps per-entrypoint invocation for skills that declare entrypoints", () => {
     const withEntrypoints = MINIMAL.replace(
       "    summary: One.",
