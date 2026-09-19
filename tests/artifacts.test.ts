@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { checkArtifacts, loadArtifacts } from "../src/validation/artifacts.ts";
 import { artifactHash } from "../src/util/hash.ts";
@@ -161,7 +163,11 @@ describe("a decision ticket is never executable", () => {
 });
 
 describe("no author closes their own finding", () => {
-  test("a closure receipt signed by the finding's own author is an error", () => {
+  test("a self-closure inside an already malformed receipt is still caught", () => {
+    // `by` is not a spelling finding.schema.json permits, so this document is
+    // separately reported as schemas.document-invalid. It is covered here on
+    // purpose: a receipt that fails its schema is the case where a self-closure
+    // is most likely to be hand-written, and it should not also go unreported.
     const ctx = ctxFor({
       "templates/f.json": JSON.stringify(
         envelope("finding", {
@@ -176,13 +182,19 @@ describe("no author closes their own finding", () => {
   });
 
   test("a closure receipt signed by the fix author is an error", () => {
+    // This passes on a shape no conforming finding can have. `fix_author` is
+    // declared nowhere in finding.schema.json, so the arm it exercises cannot
+    // fire on a real document; the obligation the rulemap states under
+    // `finding.closer-is-not-the-author-of-the-change` is only half enforced.
+    // Kept so the code path stays covered, but it is not evidence the other
+    // half works -- see the comment on fixAuthor in src/validation/artifacts.ts.
     const ctx = ctxFor({
       "templates/f.json": JSON.stringify(
         envelope("finding", {
           status: "resolved",
           created_by: { role: "code-review/security" },
           fix_author: "implementer",
-          closure_receipt: { by: "implementer", ref: "receipt-1" },
+          closure_receipt: { closed_by: "implementer", ref: "receipt-1" },
         }),
       ),
     });
@@ -195,8 +207,7 @@ describe("no author closes their own finding", () => {
         envelope("finding", {
           status: "resolved",
           created_by: { role: "code-review/security" },
-          fix_author: "implementer",
-          closure_receipt: { by: "reviewer-spec", ref: "receipt-1" },
+          closure_receipt: { closed_by: "reviewer-spec", ref: "receipt-1" },
         }),
       ),
     });
@@ -208,6 +219,45 @@ describe("no author closes their own finding", () => {
       "templates/f.json": JSON.stringify(envelope("finding", { status: "resolved", created_by: { role: "code-review/security" } })),
     });
     expect(checkArtifacts(ctx).some((i) => i.rule === "finding.closed-without-receipt")).toBe(true);
+  });
+
+  test("a receipt spelled the way the shipped schema declares it is read", () => {
+    // The case this block was missing. Every other receipt here says `by`, and
+    // `schemas/finding.schema.json` forbids that spelling outright -- so the
+    // rule was only ever exercised against receipts no conforming finding can
+    // produce, and the one shape it will actually meet went unchecked.
+    const ctx = ctxFor({
+      "templates/f.json": JSON.stringify(
+        envelope("finding", {
+          status: "resolved",
+          created_by: { role: "code-review/security" },
+          closure_receipt: {
+            verification: { id: "verification-1", schema: "verification", hash: `sha256:${"f".repeat(64)}` },
+            closed_by: "code-review/security",
+            independent: true,
+            at: "2026-09-19T10:00:00Z",
+          },
+        }),
+      ),
+    });
+    const issue = checkArtifacts(ctx).find((i) => i.rule === "finding.self-closed");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("code-review/security");
+  });
+
+  test("the schema leaves the checker exactly one spelling to read", () => {
+    // Coupled to `schemas/finding.schema.json` on purpose, because the failure
+    // this guards is silent: `closure_receipt` sets additionalProperties: false,
+    // which makes every undeclared spelling unreachable rather than merely
+    // unusual. A checker reading only undeclared keys finds nothing, reports
+    // nothing, and passes its own tests. If the schema renames this key, this
+    // test fails and the checker has to be updated in the same commit.
+    const schema = JSON.parse(readFileSync(join(import.meta.dir, "..", "schemas", "finding.schema.json"), "utf8"));
+    const receipt = schema.properties.closure_receipt;
+    expect(receipt.additionalProperties).toBe(false);
+    expect(receipt.required).toContain("closed_by");
+    expect(Object.keys(receipt.properties)).not.toContain("by");
+    expect(Object.keys(receipt.properties)).not.toContain("verified_by");
   });
 });
 

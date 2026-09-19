@@ -185,10 +185,31 @@ function checkFinding(artifact: LoadedArtifact): Issue[] {
     return out;
   }
 
-  const closer = typeof receipt["by"] === "string" ? receipt["by"] : typeof receipt["verified_by"] === "string" ? receipt["verified_by"] : null;
+  // `closed_by` is what schemas/finding.schema.json declares and requires, and
+  // `closure_receipt` sets additionalProperties: false, so it is the only
+  // spelling a conforming receipt can carry. This read used to start at `by`
+  // and fall back to `verified_by` -- two keys that schema forbids -- so the
+  // closer came back null for every valid finding and the whole rule below
+  // returned early without reporting. The fallbacks are kept only to catch a
+  // self-closure inside an already schema-invalid document, which is reported
+  // separately as `schemas.document-invalid`; they are not the contract.
+  const closer =
+    typeof receipt["closed_by"] === "string"
+      ? receipt["closed_by"]
+      : typeof receipt["by"] === "string"
+        ? receipt["by"]
+        : typeof receipt["verified_by"] === "string"
+          ? receipt["verified_by"]
+          : null;
   if (closer === null) return out;
 
   const author = record(value["created_by"])?.["role"];
+  // The other half of `finding.closer-is-not-the-author-of-the-change`, and it
+  // is not reachable today: no field in finding.schema.json names who wrote the
+  // fix, so a conforming finding carries neither of these keys and this arm
+  // cannot fire. Left in place because the rulemap declares the obligation --
+  // deleting it would drop the requirement silently -- but it is a known gap,
+  // not a working check, until the schema declares a fix-author field.
   const fixAuthor = typeof value["fix_author"] === "string" ? value["fix_author"] : record(value["fix"])?.["author"];
 
   for (const [label, who] of [["its own author", author], ["the fix author", fixAuthor]] as const) {
@@ -197,7 +218,7 @@ function checkFinding(artifact: LoadedArtifact): Issue[] {
         error(
           "finding.self-closed",
           artifact.file,
-          `closure_receipt.by is '${closer}', which is ${label}. An author may never close their own finding; closure needs an independent verifier.`,
+          `closure_receipt names '${closer}' as the closer, which is ${label}. An author may never close their own finding; closure needs an independent verifier.`,
         ),
       );
     }

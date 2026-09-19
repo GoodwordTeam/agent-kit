@@ -8,7 +8,7 @@
   "autofix_class": "manual",
   "created_by": { "role": "reviewer" },
   "closure_receipt": {
-    "by": "reviewer",
+    "closed_by": "reviewer",
     "evidence": "the suite passes on the fix branch"
   }
 }
