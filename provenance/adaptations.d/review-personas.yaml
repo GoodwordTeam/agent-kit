@@ -10,14 +10,17 @@
 # merge hazard and raises provenance.conflicting-adaptation.
 #
 # Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
-# below is quoted from research/dossiers/review-personas.md §N.1 Sources; none was
-# re-derived or guessed, and no donor file outside that dossier was read.
+# below is quoted from the per-seat "Sources" subsection of
+# research/dossiers/review-personas.md; none was re-derived or guessed, and no donor file
+# outside that dossier was read. References to that dossier are by section name rather than by
+# number, because a number in this file and the heading it points at move in different commits.
 #
 # Two donor filenames do not match their seat id and the renames are deliberate:
 # julik-frontend-races-reviewer.md -> code-review/frontend-races drops the donor's
 # author prefix, which this package does not use for seat ids, and
 # learnings-researcher.md -> code-review/learnings is the one roster item whose donor
-# filename was never `<id>-reviewer.md` (dossier §6.1).
+# filename was never `<id>-reviewer.md`, recorded in that dossier's `code-review/learnings`
+# entry.
 #
 # Activation is NOT adapted. select-and-route.md, persona-catalog.md and
 # persona-selection.md decide which seats are filled; in this package that is the
@@ -28,9 +31,9 @@
 # written here.
 #
 # All twenty-two catalog entries declare provenance_origin: donor, so there is no
-# `conversation_origin:` block. Substance with no donor source that is carried by a file
-# which also has donor rows is under `conversation_origin_fragments:` at the bottom, a
-# key the fragment parser does not read.
+# `conversation_origin:` block. Design-originated capabilities carried by these bodies are
+# recorded in provenance/conversation-map.yaml by `destination:`; that file is not written
+# here.
 
 adaptations:
   - path: roles/code-review/correctness/ROLE.md
@@ -68,7 +71,8 @@ adaptations:
     rationale: "Agent-native parity: any action a user can take, an agent can also take. The
       two-pass shape (find user-facing actions, then organize by domain entity) is kept; the
       donor's unstructured markdown return and PASS / NEEDS WORK verdict are replaced by the
-      canonical finding, per dossier §24.2."
+      canonical finding, per that dossier's conflict \"`agent-native` and `learnings` return
+      unstructured markdown\"."
   - path: roles/code-review/learnings/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/learnings-researcher.md
     rationale: "Surfacing prior recorded learnings so institutional knowledge reaches the change,
@@ -127,7 +131,7 @@ adaptations:
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/coherence-reviewer.md
     rationale: "Internal consistency only: contradictions between passages, terminology drift, and
       ambiguity where two careful readers diverge. The donor's own document identifier scheme and
-      unified-requirements artifacts are excluded, per dossier §24."
+      unified-requirements artifacts are excluded, per that dossier's conflicts section."
   - path: roles/doc-review/feasibility/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/feasibility-reviewer.md
     rationale: Whether a proposed approach survives contact with the codebase it will land in —
@@ -158,33 +162,3 @@ adaptations:
     rationale: Falsification rather than evaluation — premise challenging, assumption surfacing,
       decision stress-testing, alternative blindness — the origin-conditional suppression of two of
       those techniques, and the structural anchor cap on premise findings.
-
-# Not read by the fragment parser. Recorded for the owner of
-# provenance/conversation-map.yaml; this batch does not write that file. Substance below
-# has no donor source but is carried by a file that also has donor rows above.
-#
-# Neither entry carries a `locator:`. Both are boundaries between two donor files that
-# never reference each other, drawn while authoring this batch rather than taken from
-# the conversation, so there is no transcript range to point at. AUTHORING.md forbids a
-# fabricated source path; a fabricated locator is the same defect in the other column,
-# and the protocols fragment's worked example flags an inexact locator rather than
-# inventing one. Flagged here for the same reason.
-conversation_origin_fragments:
-  - path: roles/code-review/frontend-races/ROLE.md
-    locator: null
-    rationale: The boundary against doc-review/design-lens, stated reciprocally in both bodies. The
-      two donors sit on different panels and neither names the other. The near-miss is the same
-      sentence read twice — "the plan does not say what happens while the request is in flight" is
-      a missing decision in a document, "the in-flight request has no cancellation" is a race in a
-      diff — and this package had to decide which seat owns it.
-  - path: roles/doc-review/design-lens/ROLE.md
-    locator: null
-    rationale: The reverse direction of the same boundary. Recorded on both paths because a reader
-      arrives from whichever file they have open.
-  - path: roles/doc-review/feasibility/ROLE.md
-    locator: null
-    rationale: The distinction against plan-review/architect, examined and resolved as not a
-      counterpart family. Internal coherence at its strongest form, built from a frozen plan
-      snapshot inside a round-capped gate, versus external survivability against the codebase the
-      document will land in. No donor states this; the two seats come from different donors and
-      this package is the first artifact to seat them together.

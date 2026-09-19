@@ -82,7 +82,7 @@ adaptations:
     rationale: Constructing concrete failure scenarios against the diff rather than checking it against known patterns, and the rule that a scenario not traceable to real lines is not admissible.
   - path: roles/code-review/agent-native/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/agent-native-reviewer.md
-    rationale: "Agent-native parity: any action a user can take, an agent can also take. The two-pass shape (find user-facing actions, then organize by domain entity) is kept; the donor's unstructured markdown return and PASS / NEEDS WORK verdict are replaced by the canonical finding, per dossier §24.2."
+    rationale: "Agent-native parity: any action a user can take, an agent can also take. The two-pass shape (find user-facing actions, then organize by domain entity) is kept; the donor's unstructured markdown return and PASS / NEEDS WORK verdict are replaced by the canonical finding, per that dossier's conflict \"`agent-native` and `learnings` return unstructured markdown\"."
   - path: roles/code-review/api-contract/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/api-contract-reviewer.md
     rationale: Breaking contract changes on request and response shapes, serialization, versioning and exported type signatures, and the existing-caller test that distinguishes a breaking change from an additive one.
@@ -136,7 +136,7 @@ adaptations:
     rationale: Falsification rather than evaluation — premise challenging, assumption surfacing, decision stress-testing, alternative blindness — the origin-conditional suppression of two of those techniques, and the structural anchor cap on premise findings.
   - path: roles/doc-review/coherence/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/coherence-reviewer.md
-    rationale: "Internal consistency only: contradictions between passages, terminology drift, and ambiguity where two careful readers diverge. The donor's own document identifier scheme and unified-requirements artifacts are excluded, per dossier §24."
+    rationale: "Internal consistency only: contradictions between passages, terminology drift, and ambiguity where two careful readers diverge. The donor's own document identifier scheme and unified-requirements artifacts are excluded, per that dossier's conflicts section."
   - path: roles/doc-review/design-lens/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/design-lens-reviewer.md
     rationale: Missing design decisions — information architecture, interaction and error states, user flows — found by dimensional rating rather than by taste, and the generic-output risk the donor names.
