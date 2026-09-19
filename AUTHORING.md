@@ -748,6 +748,12 @@ ruling and neither is the writer's. **Repointing the quotation at the new text i
 options** — it is the same act that made the entry stale, and it destroys the evidence that anything
 moved. A quotation that never resolved fails the same rule at the commit that files it.
 
+**The match is scoped to the cited section, not to the file.** A quotation that has migrated out of
+the section the entry names is still somewhere in this file, so a file-wide search passes it — while
+the entry now points at a section that does not contain what it quotes, which is the defect rather
+than an escape from it. The scope is stated rather than implied because implying it was not enough:
+this rule was written and then implemented file-wide by the same hand, inside one day.
+
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
 
