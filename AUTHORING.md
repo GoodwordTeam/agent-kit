@@ -450,9 +450,13 @@ it found exactly one, §3's `## Not for` example, which is why that example now 
 **No model routing, in any form.** No model or model-family names, no provider or vendor product
 names, no pricing or per-token cost expressions, no effort ladders, no escalation tiers, no routing
 directives. The literal denylist lives in `src/denylist.ts` rather than in this file, because
-reproducing the terms here would trip the check that enforces them; `ak validate` fails on a hit
-anywhere outside `provenance/` and `research/sources/`, which quote the sources verbatim by design.
-The substitutions are in `AGENTS.md`, "Model routing is stripped".
+reproducing the terms here would trip the check that enforces them. `ak validate` fails on a hit
+anywhere outside the exempt prefixes, which are `DENYLIST_EXEMPT_PREFIXES`
+(`src/validation/content.ts`). The invariant that decides that list: nothing packaged into `dist/`
+is ever exempt, and an exemption exists only where the material's job is to quote what the denylist
+excludes — pinned sources, dossiers recording a donor's routing, and the tests that prove the
+scanner fires. Read the symbol rather than this sentence for whether a given tree is scanned. The
+substitutions are in `AGENTS.md`, "Model routing is stripped".
 
 **Independence between seats is structural, never a model identity.** "An independent reviewer" is a
 runner-enforced constraint on who fills the seat (`adapters/runner-contract/CONTRACT.md`). It is
@@ -499,6 +503,19 @@ the receipt is fresh" is advice; "a receipt bound to a different revision is not
 request a new one" is a gate.
 
 No emoji. No decorative headers. Tables where the content is tabular, prose where it is not.
+
+**A claim about what the tooling does names the symbol, never its contents.** Where this contract or
+a body says what a check enforces, it names the exported symbol and the rule id, states the
+invariant that decides the symbol's contents, and stops. It does not enumerate them. An enumeration
+is a copy with nothing keeping it in sync, and it fails in one direction: the entries a reader would
+have guessed survive the copying and the entries nobody would reconstruct are the ones that drop out
+— §6's defect exactly, pointed at code instead of prose.
+
+The asymmetry is why this is a rule and not a preference. A paraphrase of a ruling goes stale when
+someone re-litigates the ruling, which is rare and loud. A paraphrase of code goes stale when
+someone edits the code, which is constant and silent, and nothing in `ak validate` can notice it.
+Naming the symbol does not prevent drift either; it makes drift findable, because a reader who greps
+the name reaches the definition, where an enumeration leaves them believing they already know it.
 
 ---
 
@@ -793,15 +810,11 @@ what it may never do, what it gives back, the empty case, and the rationalizatio
 from what the seat was given, which is why `## Evidence it must cite` follows
 `## What it must be given` rather than preceding it.
 
-**On length, and it matters because batch 1 built an exception out of this.** §1's targets bind
-protocol and role bodies as contract — §12 says §1 applies unchanged — but **nothing measures them**:
-`checkBudget` iterates the `skills` section alone (`src/validation/budget.ts`), so a `PROTOCOL.md` or
-`ROLE.md` of any length passes silently. Two consequences, and the second is the one that bit.
-A writer does not treat the silence as permission. And **a writer does not record an exception to a
-cap that was never applied to its file** — an exception argues with a gate, and there is no gate
-here, so the record asserts a constraint the validator never had and a later reader inherits a
-justification for a rule that was not in force. Report the length in the handback if it is unusual;
-do not manufacture a waiver.
+**On length.** §1 governs protocol and role bodies unchanged, and the validator measures them:
+`BUDGETED` (`src/validation/budget.ts`) includes the protocol and role sections, and a body over
+target raises `budget.body-over-target`. §1 says what follows from that, including that a body over
+target is not a defect and is never shortened to clear the number. Report an unusual length in the
+handback; do not re-derive §1's rule here.
 
 The 75–110 range below is **descriptive of the roles authored so far, not a bound.** A role at 118
 lines is not over anything. Eight headings is a lot for a file that runs 75–110 lines, and the two that grew the set from six
