@@ -22,7 +22,7 @@ adaptations:
     rationale: "Rulings-not-stalls and the ledgered adjudication pattern. The donor's five-round fix loop was deliberately NOT imported: policies/limits.yaml sets fix_cycles = 2 for this protocol, and the donor's five rounds are a task-review loop at a different granularity."
   - path: protocols/attach-pack/PROTOCOL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/scripts/packs-resolve.py
-    rationale: "Pack resolution and loading only: resolving a declared pack source to a usable pack root, selection by pack id, and warn-and-continue on an unavailable pack. The semantic matching that decides WHICH pack is relevant has no donor source and is recorded under conversation_origin_fragments below."
+    rationale: "Pack resolution and loading only: resolving a declared pack source to a usable pack root, selection by pack id, and warn-and-continue on an unavailable pack. The semantic matching that decides WHICH pack is relevant has no donor source and is recorded under the `conversation_origin_fragments` key of provenance/adaptations.d/protocols.yaml, which the merge into provenance/adaptations.yaml does not carry."
   - path: protocols/consensus-plan-gate/PROTOCOL.md
     source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/plan/SKILL.md
     rationale: Same mechanics under the consensus flag; confirms the two donor skills describe one gate. Interview/direct/review modes excluded as out of scope.
