@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { checkProvenance, parseGLocator, parseLocatorField } from "../src/validation/provenance.ts";
@@ -45,7 +45,7 @@ function ctxFor(files: Record<string, string>) {
 }
 
 /** A real donor clone: the pin check shells out to git, so the test does too. */
-function makeDonorRepo(root: string, dir: string, files: Record<string, string>): string {
+function makeDonorRepo(root: string, dir: string, files: Record<string, string>, links: Record<string, string> = {}): string {
   const full = join(root, dir);
   mkdirSync(full, { recursive: true });
   const git = (...args: string[]) => execFileSync("git", ["-C", full, ...args], { encoding: "utf8" });
@@ -55,6 +55,14 @@ function makeDonorRepo(root: string, dir: string, files: Record<string, string>)
   for (const [rel, contents] of Object.entries(files)) {
     mkdirSync(join(full, rel, ".."), { recursive: true });
     writeFileSync(join(full, rel), contents);
+  }
+  // Symlinks are committed, not just made: the three donors that carry them
+  // (AGENTS.md -> CLAUDE.md, .agy/skills -> ../skills, .claude/skills ->
+  // ../.agents/skills) are what forced the mode check, so a fixture that cannot
+  // hold one cannot test it.
+  for (const [rel, target] of Object.entries(links)) {
+    mkdirSync(join(full, rel, ".."), { recursive: true });
+    symlinkSync(target, join(full, rel));
   }
   git("add", "-A");
   git("commit", "-q", "-m", "seed");
@@ -145,6 +153,87 @@ describe("donor provenance", () => {
     const issue = checkProvenance({ root, catalog: catalog! }).find((i) => i.rule === "provenance.source-not-at-pin");
     expect(issue?.severity).toBe("error");
     expect(issue?.message).toContain("skills/ghost/SKILL.md");
+  });
+
+  /**
+   * What a donor path is, not merely whether the pin has something there.
+   *
+   * `git cat-file -e` and `cat-file -t` both accept a symlink -- git types one
+   * as a blob -- so the old check passed a row whose "source" is ten bytes of
+   * target path rather than the text the row claims was adapted. Three of the
+   * six pinned donors carry exactly that shape at their repository root
+   * (AGENTS.md -> CLAUDE.md and the inverse), so it is a live hazard here, not
+   * a hypothetical one. These cases use a real git repository for the same
+   * reason: a hand-built fixture would be a copy of the mode table, and a copy
+   * of the table proves the copy works.
+   */
+  function symlinkTree(source: string) {
+    const root = makeTree({
+      "catalog.yaml": CATALOG,
+      "skills/adapted/SKILL.md": "---\nname: adapted\ndescription: d\n---\nbody\n",
+      "skills/invented/SKILL.md": "---\nname: invented\ndescription: d\n---\nbody\n",
+      "research/sources/grok-transcript.md": TRANSCRIPT,
+      "provenance/conversation-map.yaml": CONVERSATION_MAP,
+    });
+    const commit = makeDonorRepo(
+      root,
+      ".donors/donor_one",
+      { "CLAUDE.md": "# Guide\n", "skills/ce-work/SKILL.md": "# Work\n", ".agents/notes.md": "# Notes\n" },
+      // `.agy/skills` mirrors the link that resolves in compound-engineering;
+      // `.claude/skills` mirrors the one that resolves to nothing at its pin.
+      { "AGENTS.md": "CLAUDE.md", ".agy/skills": "../skills", ".claude/skills": "../.agents/skills" },
+    );
+    writeFileSync(join(root, "provenance/upstream.lock.yaml"), lockFor(commit));
+    mkdirSync(join(root, "provenance/adaptations.d"), { recursive: true });
+    writeFileSync(
+      join(root, "provenance/adaptations.d/batch-1.yaml"),
+      `adaptations:\n  - path: skills/adapted/SKILL.md\n    source: donor-one@${commit}:${source}\n`,
+    );
+    const { catalog } = loadCatalog(root);
+    return checkProvenance({ root, catalog: catalog! });
+  }
+
+  test("a row naming a symlink is rejected, though git calls it a blob", () => {
+    const issue = symlinkTree("AGENTS.md").find((i) => i.rule === "provenance.source-is-symlink");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("records the target path");
+  });
+
+  test("the symlink rejection names the file the row should have cited", () => {
+    const issue = symlinkTree("AGENTS.md").find((i) => i.rule === "provenance.source-is-symlink");
+    expect(issue?.message).toContain("Cite 'CLAUDE.md', the file it points at.");
+  });
+
+  test("a row naming a directory is rejected, and not as a missing path", () => {
+    const issues = symlinkTree("skills");
+    expect(issues.find((i) => i.rule === "provenance.source-is-directory")?.severity).toBe("error");
+    expect(issues.some((i) => i.rule === "provenance.source-not-at-pin")).toBe(false);
+  });
+
+  test("a path through a symlinked directory is repaired, because git resolves neither", () => {
+    // ls-tree returns nothing for a path crossing a link, so this arrives as
+    // not-at-pin. Walking the prefix is what turns it into a one-line fix.
+    const issue = symlinkTree(".agy/skills/ce-work/SKILL.md").find((i) => i.rule === "provenance.source-not-at-pin");
+    expect(issue?.message).toContain("Cite 'skills/ce-work/SKILL.md'");
+  });
+
+  /**
+   * The constraint that makes the suggestion worth printing.
+   *
+   * Measured on the two real symlinked skill directories in the pinned donors:
+   * `.agy/skills -> ../skills` resolves to a file that is there, and
+   * `.claude/skills -> ../.agents/skills` resolves to a path the pin does not
+   * contain. One of two would have produced a confident repair pointing at
+   * nothing, inside an error about a path that points at nothing.
+   */
+  test("a repair that does not resolve at the pin is not offered at all", () => {
+    const issue = symlinkTree(".claude/skills/ce-work/SKILL.md").find((i) => i.rule === "provenance.source-not-at-pin");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).not.toContain("Cite");
+  });
+
+  test("a row naming an ordinary file still passes, so the check did not just start failing", () => {
+    expect(symlinkTree("skills/ce-work/SKILL.md").filter((i) => i.rule.startsWith("provenance.source"))).toEqual([]);
   });
 
   test("an adapted entry with no adaptations row at all is an error", () => {

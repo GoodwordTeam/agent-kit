@@ -311,13 +311,148 @@ export function checkAdaptationsSync(ctx: CheckContext): Issue[] {
   return [];
 }
 
-/** Verify the donor path exists at the pinned commit in the local clone. */
-function pathExistsAtPin(root: string, donor: Donor, commit: string, path: string): boolean {
-  const result = spawnSync("git", ["-C", join(root, donor.path), "cat-file", "-e", `${commit}:${path}`], {
-    encoding: "utf8",
-    stdio: "ignore",
-  });
-  return result.status === 0;
+/**
+ * Git tree-entry modes, which is what a donor path has to be checked against.
+ *
+ * The obvious check is `git cat-file -e <commit>:<path>`, and it was the check
+ * here. It answers "does the pin contain an object at this path", which is not
+ * the question a provenance row asks. `cat-file -t` is no better: git types a
+ * symlink as a `blob`, so a row naming one resolves, types as a blob, and
+ * records the ten bytes of a target path rather than the text anyone adapted.
+ * That is a row that validates while recording nothing -- the same shape as a
+ * row keyed on the wrong field, which AUTHORING.md:308 already warns about.
+ *
+ * Mode is the only field that separates the four cases in one call, so the
+ * check reads it and the three rejections say three different things. The
+ * citation checker in research/probes/dossier-citations.py keeps `-e` on
+ * purpose: a dossier citation points a reader at material, and a directory or a
+ * symlink is a fine thing to point a reader at. A row claims text was adapted
+ * from one file, which only a file can be.
+ */
+const MODE_FILE = "100644";
+const MODE_EXEC = "100755";
+const MODE_SYMLINK = "120000";
+const MODE_TREE = "040000";
+
+/** How far a repair suggestion will chase links before giving up. */
+const MAX_LINK_HOPS = 4;
+
+function gitOut(root: string, donor: Donor, args: ReadonlyArray<string>): string | null {
+  const result = spawnSync("git", ["-C", join(root, donor.path), ...args], { encoding: "utf8" });
+  return result.status === 0 ? result.stdout : null;
+}
+
+/** The tree-entry mode of `path` at `commit`, or null when the pin has no entry there. */
+function modeAtPin(root: string, donor: Donor, commit: string, path: string): string | null {
+  const out = gitOut(root, donor, ["ls-tree", "--full-tree", "-z", commit, "--", path]);
+  if (out === null) return null;
+  for (const record of out.split("\0")) {
+    if (record === "") continue;
+    const tab = record.indexOf("\t");
+    if (tab === -1) continue;
+    // A pathspec can match more than the literal path; take the entry that is it.
+    if (record.slice(tab + 1) !== path) continue;
+    const mode = record.slice(0, tab).split(" ")[0] ?? "";
+    return mode === "" ? null : mode;
+  }
+  return null;
+}
+
+/** A symlink entry's target, as written in the blob. */
+function symlinkTarget(root: string, donor: Donor, commit: string, path: string): string | null {
+  const out = gitOut(root, donor, ["cat-file", "blob", `${commit}:${path}`]);
+  return out === null ? null : out.trim();
+}
+
+/** `target` resolved against `fromDir`, or null when it escapes the tree or is absolute. */
+function resolveRelative(fromDir: string, target: string): string | null {
+  if (target.startsWith("/")) return null;
+  const out: string[] = [];
+  for (const part of [...fromDir.split("/"), ...target.split("/")]) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") {
+      if (out.length === 0) return null;
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return out.length === 0 ? null : out.join("/");
+}
+
+/** `path` with its first symlinked component replaced by that link's target. */
+function rewriteFirstLink(root: string, donor: Donor, commit: string, path: string): string | null {
+  const parts = path.split("/").filter((p) => p.length > 0);
+  for (let i = 0; i < parts.length; i += 1) {
+    const prefix = parts.slice(0, i + 1).join("/");
+    const mode = modeAtPin(root, donor, commit, prefix);
+    if (mode === null) return null;
+    if (mode !== MODE_SYMLINK) continue;
+    const target = symlinkTarget(root, donor, commit, prefix);
+    if (target === null) return null;
+    const resolved = resolveRelative(parts.slice(0, i).join("/"), target);
+    if (resolved === null) return null;
+    const rest = parts.slice(i + 1);
+    return rest.length === 0 ? resolved : `${resolved}/${rest.join("/")}`;
+  }
+  return null;
+}
+
+/**
+ * The path that reaches the same file without crossing a symlink, or null.
+ *
+ * Verified at the pin before it is returned, and that is not belt-and-braces.
+ * Both symlinked skill directories in the pinned donors were tested:
+ * compound-engineering's `.agy/skills -> ../skills` resolves to a file that is
+ * there, and its `.claude/skills -> ../.agents/skills` resolves to a path the
+ * pin does not contain at all. One of the two real cases would have produced a
+ * confident repair pointing at nothing, in an error message about a path that
+ * points at nothing. So a suggestion is printed only when it resolves to a file,
+ * and the plain rejection stands otherwise.
+ */
+function resolveThroughLinks(root: string, donor: Donor, commit: string, path: string): string | null {
+  let current = path;
+  for (let hop = 0; hop < MAX_LINK_HOPS; hop += 1) {
+    const rewritten = rewriteFirstLink(root, donor, commit, current);
+    if (rewritten === null) return null;
+    const mode = modeAtPin(root, donor, commit, rewritten);
+    if (mode === MODE_FILE || mode === MODE_EXEC) return rewritten;
+    if (mode !== null && mode !== MODE_SYMLINK) return null;
+    current = rewritten;
+  }
+  return null;
+}
+
+/** The rejection for a donor path that is not a file at its pin, or null when it is one. */
+function checkPathAtPin(root: string, donor: Donor, parsed: DonorSource, row: Adaptation): Issue | null {
+  const { donor: id, commit, path } = parsed;
+  const at = `${id}@${commit}`;
+  const mode = modeAtPin(root, donor, commit, path);
+  if (mode === MODE_FILE || mode === MODE_EXEC) return null;
+
+  const repair = resolveThroughLinks(root, donor, commit, path);
+
+  if (mode === MODE_SYMLINK) {
+    const suggestion = repair === null ? "" : ` Cite '${repair}', the file it points at.`;
+    return error(
+      "provenance.source-is-symlink",
+      row.file,
+      `'${path}' is a symlink at ${at}, not a file. Git types a symlink as a blob, so the row for '${row.path}' resolves and then records the target path rather than the text it claims was adapted: it validates while recording nothing.${suggestion}`,
+    );
+  }
+  if (mode === MODE_TREE) {
+    return error(
+      "provenance.source-is-directory",
+      row.file,
+      `'${path}' is a directory at ${at}. A row records the one file its text was adapted from, and a directory names a set without saying which member. The row for '${row.path}' needs the file.`,
+    );
+  }
+  const suggestion = repair === null ? "" : ` Cite '${repair}', which is the same file reached without crossing the link.`;
+  return error(
+    "provenance.source-not-at-pin",
+    row.file,
+    `'${path}' does not exist in ${id} at ${commit} (checked with git ls-tree in ${donor.path}). The row for '${row.path}' cites a path the pin does not contain.${suggestion}`,
+  );
 }
 
 function transcriptLineCount(root: string): number | null {
@@ -376,15 +511,8 @@ export function checkProvenance(ctx: CheckContext): Issue[] {
       );
     }
     if (!donorsPresent || !isDir(join(root, donor.path))) continue;
-    if (!pathExistsAtPin(root, donor, parsed.commit, parsed.path)) {
-      issues.push(
-        error(
-          "provenance.source-not-at-pin",
-          row.file,
-          `'${parsed.path}' does not exist in ${parsed.donor} at ${parsed.commit} (checked with git cat-file in ${donor.path}). The row for '${row.path}' cites a path the pin does not contain.`,
-        ),
-      );
-    }
+    const atPin = checkPathAtPin(root, donor, parsed, row);
+    if (atPin !== null) issues.push(atPin);
   }
 
   issues.push(...checkEntryOrigins(ctx, rows));
