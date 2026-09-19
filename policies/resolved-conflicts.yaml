@@ -78,6 +78,14 @@
 #              have no kind/id pair to be named by. The same test decides membership, and
 #              `ak validate` refuses a path that is not actually loose, so `doctrine:` cannot
 #              become a second spelling for a binding the kind/id form already covers.
+#              AGENTS.md and AUTHORING.md are bound: each states rulings as its own contract,
+#              so deciding a row the other way would require editing them. README.md and
+#              CONTRACT-DEFECTS.md are deliberately left unbound. Neither is governed — README
+#              summarises rulings for a reader and CONTRACT-DEFECTS states none — and binding
+#              either to clear its warning would turn `binds` into a mention index. Two standing
+#              `doctrine-unreachable` warnings are the correct state here, not zero.
+#              Order matters when adding a binding: a bound file that does not cite the ruling
+#              raises `rulings.binding-not-cited`, an error. The citation lands first.
 #   universal  the kinds this ruling governs *entirely*, as a claim rather than a census.
 #              A kind listed here asserts "every entry of this kind, including ones not yet
 #              written". `binds` still enumerates them, so the forward check keeps working
@@ -127,7 +135,7 @@ conflicts:
       policies: [invocation]
       profiles: [autonomy]
       adapters: [runner-contract, knowledgebase]
-      doctrine: [protocols/invocation-authority.md]
+      doctrine: [protocols/invocation-authority.md, AGENTS.md, AUTHORING.md]
     scenario: 23
     coverage: direct
     source:
@@ -157,6 +165,7 @@ conflicts:
       schemas: [review, finding]
       policies: [review]
       adapters: [runner-contract]
+      doctrine: [AUTHORING.md]
     scenario: 9
     coverage: direct
     source:
@@ -208,6 +217,7 @@ conflicts:
       roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
       schemas: [finding, verification, review]
       policies: [review, authority-defaults]
+      doctrine: [AUTHORING.md]
     universal: [roles]
     scenario: 3
     coverage: direct
@@ -240,6 +250,7 @@ conflicts:
       references: [engineering-principles]
       schemas: [project]
       policies: [limits]
+      doctrine: [AGENTS.md, AUTHORING.md]
     scenario: 2
     coverage: indirect
     note: >-
@@ -355,7 +366,7 @@ conflicts:
       policies: [invocation, authority-defaults]
       profiles: [maintainer]
       adapters: [knowledgebase]
-      doctrine: [protocols/invocation-authority.md]
+      doctrine: [protocols/invocation-authority.md, AUTHORING.md]
     scenario: 21
     coverage: direct
     note: >-
@@ -381,6 +392,7 @@ conflicts:
     binds:
       profiles: [core, autonomy, product, maintainer]
       references: [codebase-design, domain-modeling, engineering-principles, prose-quality]
+      doctrine: [AUTHORING.md]
     scenario: 24
     coverage: indirect
     note: >-
@@ -404,6 +416,7 @@ conflicts:
       protocols: [review-delta, apply-findings]
       policies: [limits, review]
       adapters: [runner-contract]
+      doctrine: [AUTHORING.md]
     scenario: 18
     coverage: direct
     source:
@@ -425,6 +438,7 @@ conflicts:
       protocols: [review-delta]
       schemas: [review, verification]
       policies: [limits, review]
+      doctrine: [AUTHORING.md]
     scenario: 10
     coverage: direct
     source:
@@ -448,6 +462,7 @@ conflicts:
       roles: [code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/adversarial, code-review/api-contract, code-review/data-migration, code-review/performance, code-review/reliability, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios]
       packs: [pack-api, pack-secure, pack-data, pack-perf, pack-test, pack-frontend]
       policies: [review]
+      doctrine: [AUTHORING.md]
     scenario: 1
     coverage: direct
     source:
@@ -471,7 +486,7 @@ conflicts:
       schemas: [review]
       policies: [review, authority-defaults]
       adapters: [runner-contract]
-      doctrine: [protocols/invocation-authority.md]
+      doctrine: [protocols/invocation-authority.md, AGENTS.md, AUTHORING.md]
     universal: [roles]
     scenario: 4
     coverage: direct
@@ -593,7 +608,7 @@ conflicts:
       policies: [authority-defaults]
       profiles: [autonomy]
       adapters: [runner-contract]
-      doctrine: [protocols/invocation-authority.md]
+      doctrine: [protocols/invocation-authority.md, AGENTS.md, AUTHORING.md]
     scenario: 17
     coverage: direct
     source:
