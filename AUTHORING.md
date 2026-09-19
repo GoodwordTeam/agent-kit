@@ -468,6 +468,18 @@ beyond the specific pinned files its dossier cites, not another batch's context,
 drafts. A writer that finds it needs a file another batch owns cites it by path and name and does
 not write it.
 
+**A brief cites this contract; it never restates it.** Whoever writes a batch brief names the
+sections that govern the work — §3, §12.1, §12.2 — and does not reproduce a heading name, a section
+list or a line cap in its own words. Restating creates a second surface. The moment the two disagree
+the writer holds two authorities and will reasonably follow the more specific one, which is how a
+forbidden heading reaches seven files at once: not writer drift, but a brief quoting a heading the
+contract had moved.
+
+Where a brief needs to say something this contract does not, that is evidence the contract is missing
+something. **Amend the contract before the batch starts**; never carry the difference in the brief. A
+writer that finds this contract underspecified reports the strain and stops, rather than silently
+reconciling two instructions — and a writer is never at fault for having followed this file.
+
 **A reviewer follows** that does not see the writer's narrative — only the produced files, the
 dossier, and this contract. It cannot be told "I checked that already"; it re-derives.
 
@@ -477,6 +489,12 @@ report look clean is a fabricated completion and is treated as one.
 
 **Authoring and review are separate passes.** A writer never approves its own output, and never
 merges a reviewer's fix and a fresh revision into one indistinguishable edit.
+
+**Recorded for batch 2.** §12.2's adjacency rule for `## Not this seat` is a preventive, not a proven
+fix — it was written before any panel larger than three seats had been authored. If batch 2's roles
+still restate each other's boundaries under it, the panel needs **one central boundary table that the
+roles reference**, rather than each role carrying its own copy. Escalate there; do not widen the
+heading and do not let the seats enumerate each other.
 
 ---
 
@@ -566,11 +584,24 @@ not one:
 | Heading | What goes in it |
 |---|---|
 | `## What this seat judges` | The one question this seat answers. One sentence |
-| `## Not this seat` | The neighbouring seats and what belongs to them. Fifteen code-review seats overlap without this |
+| `## Not this seat` | The adjacent seats this one would be mistaken for, and what belongs to them. Three or four, not fourteen — below |
+| `## What it must be given` | What must be true of the seat's input before it may judge at all. An obligation on the caller — below |
 | `## Evidence it must cite` | What the seat must point at for a finding to be admissible |
 | `## Never` | The seat's prohibitions. Two rows are mandatory — below |
 | `## What it returns` | The finding shape, and the explicit empty return |
 | `## When it has nothing to say` | The conditions under which empty is the correct answer |
+| `## Rationalizations this seat makes` | The excuses this seat will make, and where each one sends it instead. §3.1's three columns — below |
+
+The order is the seat's arc: what it is, what it is not, what it is handed, how it grounds in that,
+what it may never do, what it gives back, the empty case, and the rationalizations. Evidence is drawn
+from what the seat was given, which is why `## Evidence it must cite` follows
+`## What it must be given` rather than preceding it.
+
+Eight headings is a lot for a file that runs 75–110 lines, and the two that grew the set from six
+earn their place the same way. A seat has two hardest failure modes: **judging something it should
+never have accepted**, and **talking itself past a prohibition**. Neither had a home, so the material
+leaked into whichever neighbouring section sat closest — a precondition stretched into
+`## Not this seat`, a stale-input constraint filed under `## Evidence it must cite`.
 
 Dropped, and why — a writer reaching for one of these is describing the wrong thing:
 
@@ -578,9 +609,33 @@ Dropped, and why — a writer reaching for one of these is describing the wrong 
   all is decided by declared risk, not by the seat (ruling `panel-composition-by-declared-risk`).
 - `## Workflow` — a prompt is not a procedure. Procedure belongs to the protocol that convenes the
   panel.
+- `## Hard gates` — reaching for it means you are describing the protocol that seats this role, not
+  the seat. A gate stops a workflow, and a seat has no workflow to stop. §12.1 gives `## Hard gates`
+  to protocols precisely because a protocol *is* a procedure. The anti-rationalization table lives
+  under its own heading below, **never** under this one.
+- `## Inputs` — a seat states what it must be *given*, which is a contract on its caller. A protocol
+  lists the inputs it consumes. The difference is who is bound.
 - `## Side effects` — **a role has none.** A writer declaring one has put work in a role that belongs
   in a skill or a protocol.
 - `## Limits` — folded into `## Never`.
+
+`## Not this seat` names only the **adjacent** seats — the ones whose findings would land in this
+seat's output if the boundary blurred. Three or four neighbours, not fourteen. Fifteen seats each
+enumerating the other fourteen is quadratic and unmaintainable, and it degrades worst exactly where
+the boundaries matter most. A seat that cannot name its neighbours in three or four does not have a
+sharp enough question, which is a finding about that seat rather than about this heading.
+
+`## What it must be given` is the one heading that **states an obligation on the caller** rather than
+on the seat. `## Never` binds the seat's behavior; this binds whoever seats the role. Hold that
+distinction and the section stays small; lose it and it absorbs material belonging to four
+neighbours.
+
+Write it as bullets naming the artifacts the seat must receive and **the binding that makes each one
+trustworthy** — a hash, a revision, a packet — never a procedure for obtaining them. A seat that
+explains how to fetch its input has started writing a protocol.
+
+It pairs with `## When it has nothing to say`, and that pairing is what earns it a heading: a seat
+whose input no longer binds **returns nothing rather than judging a stale artifact**.
 
 Two `## Never` rows are mandatory in every role, because these are the two that erode first:
 
@@ -591,9 +646,20 @@ Two `## Never` rows are mandatory in every role, because these are the two that 
    return, never an invented preference — and a required lane that could not run is unavailable, not
    passing (ruling `required-lane-failure-is-unavailable`).
 
-§3.1's anti-rationalization table is required for any seat in a review panel. Its rows are the
-*seat's* rationalizations — "the other lanes agreed", "the standard is not written down but everyone
-knows it" — not the calling skill's.
+`## Rationalizations this seat makes` comes last, after `## When it has nothing to say`, and carries
+§3.1's table unchanged: the same three columns, `The thought | Why it is wrong | Do this instead`, no
+prose around it, and the same rule that a row invented to fill the table is worse than a shorter
+table. Two things differ for a role:
+
+- **The rows are the *seat's* rationalizations, not the calling skill's** — "we both picked the same
+  option and we are both confident, so this proceeds", "I can see the fix is correct, so the finding
+  is closed", "the standard is not written down but everyone knows it". The third column sends the
+  seat somewhere deterministic; it never tells the seat to try harder.
+- **A row naming a ruling cites it in §6's markdown form**, inline in the "Why it is wrong" column.
+
+This heading is **required, not optional**. A seat with no rationalizations to name has not been
+thought about hard enough, so an empty table is a signal to revisit the seat rather than a section to
+leave out.
 
 ### 12.3 Loose doctrine files
 
