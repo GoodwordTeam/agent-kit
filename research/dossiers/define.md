@@ -105,26 +105,26 @@ label CE attaches to a persona.
 
 ### 1.1 Sources
 
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/grilling/SKILL.md`
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/grilling/SKILL.md`
   (whole file, 20 lines) — the **only** interview primitive to import; grill-me and grill-with-docs
   are both one-line wrappers around it (`grill-me/SKILL.md`, `grill-with-docs/SKILL.md`, same
   commit) — do not treat those as separate mechanisms, just note that grill-with-docs = grilling +
   domain-modeling run together, which is what super-align already does by combining §1 and the
   domain-modeling reference.
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/SKILL.md`,
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/SKILL.md`,
   `.../domain-modeling/ADR-FORMAT.md`, `.../domain-modeling/CONTEXT-FORMAT.md` — the glossary/ADR
   content shapes align writes through the KB (see §0.1). Also the direct source for
   `references/domain-modeling` (§6 below) — align *loads* that reference rather than duplicating
   its text.
-- `obra_superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/brainstorming/SKILL.md`
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/brainstorming/SKILL.md`
   (whole file) — the HARD-GATE, the approval-never-scales-down rule, the "propose 2-3 approaches"
   step, the red-flags/rationalization table, the one-way ratchet on path classification.
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-brainstorm/SKILL.md#L1-L45`
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-brainstorm/SKILL.md#L1-L45`
   and `.../skills/ce-brainstorm/references/phase-0.md#L1-L45` — the "right-sized requirements
   discovery" tiering (Lightweight / Standard / Deep), the coherent-work gate (split a bundled
   multi-outcome request before brainstorming any one of them), and the rule that an already-clear
   request still gets *some* tier classification rather than skipping straight to build.
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/interview-me/SKILL.md`
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/interview-me/SKILL.md`
   (whole file) — the evidence-discipline mechanics: HYPOTHESIS/CONFIDENCE numbers, one question
   with a guess attached, the "want vs. should-want" probe, the five-field restate
   (Outcome/User/Why now/Success/Constraint/**Out of scope**), the explicit-yes gate, the
@@ -242,7 +242,7 @@ human if it is not.
 
 ### 2.1 Sources
 
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-plan/SKILL.md#L1-L60`
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-plan/SKILL.md#L1-L60`
   — "executable planning" framing: Specify→Plan is CE's job split ("`ce-brainstorm` defines WHAT,
   `ce-plan` plans HOW"), the **mandatory doc-review chaining** after the plan is written
   (non-interactive mode), and the settled-decision-invalidation escape hatch (a decision made
@@ -250,38 +250,38 @@ human if it is not.
   return an explicit blocked/replan signal, never resolve it silently). Do not import CE's
   Direct/Chat-brief/Durable output-contract vocabulary, `docs_root` resolution, or HTML rendering
   (§0.4, and redundant with super-align's tiering, §1.2).
-- `obra_superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md`
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md`
   (whole file) — "zero-context work packets," the **Interfaces block** (Consumes/Produces with
   exact signatures — "this block is how they learn the names and types neighboring tasks use"),
   Task Right-Sizing ("the smallest unit that carries its own test cycle and is worth a fresh
   reviewer's gate"), the **No Placeholders** list (verbatim bannable phrases — TBD, "add
   appropriate error handling," "similar to Task N"), and the **Self-Review** checklist (spec
   coverage, placeholder scan, type consistency) run by the planner itself before handoff.
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-spec/SKILL.md`
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-spec/SKILL.md`
   (whole file) — the six-section spec template (Problem Statement / Solution / User Stories /
   Implementation Decisions / Testing Decisions / Out of Scope / Further Notes), the **seam-first**
   instruction ("Sketch out the seams at which you're going to test the feature... Use the highest
   seam possible... the ideal number is one"), and the rule that file paths/code snippets are
   excluded from the spec *except* when a prototype already encoded a decision precisely (state
   machine, reducer, schema, type shape) — then inline just the decision-bearing fragment.
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md`
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md`
   (whole file) — tracer-bullet vertical-slice rules, the **blocking-edges** contract, the
   **wide-refactor exception** (expand→migrate-in-batches→contract, when one mechanical rename
   breaks thousands of call sites and no vertical slice can land green), the frontier-working rule
   ("any ticket whose blockers are all done"), and the local-file vs. real-tracker publish split
   (directly informs the KB-vs-external-tracker resolution in §0.1).
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/spec-driven-development/SKILL.md#L1-L130`
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/spec-driven-development/SKILL.md#L1-L130`
   — Phase 0 **capability map** (decompose a bundled multi-capability request into a dependency
   table with stable kebab-case module ids *before* writing any one spec — same job as
   super-align's coherent-work gate, but for bound's larger/multi-module case), the
   **ASSUMPTIONS I'M MAKING** surfacing block, and the **three-tier boundaries** contract (Always
   do / Ask first / Never do).
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/planning-and-task-breakdown/SKILL.md#L1-L100`
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/planning-and-task-breakdown/SKILL.md#L1-L100`
   — the dependency-graph-bottom-up ordering, vertical-vs-horizontal slicing worked example (good
   reusable illustration alongside Pocock's to-tickets), and the per-task acceptance/verification/
   dependencies/files-touched template — cross-check against Pocock's to-tickets templates rather
   than importing a second, competing task-template.
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/constraint-driven-development/SKILL.md#L1-L90`
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/constraint-driven-development/SKILL.md#L1-L90`
   — the "detect before you ask" step (read `package.json`/CI config/etc. before asking the user
   anything) and the four-question-with-defaults interview pattern, as the source for super-bound's
   once-per-repo **constraints file** (G:L1701: "PR size ~100 LOC when possible, pyramid 80/15/5,
@@ -389,7 +389,7 @@ here).
 
 ### 3.1 Sources
 
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md`
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md`
   (whole file, ~100 lines) — this is effectively the entire donor source for this skill; import
   its structure closely, adapting only the tracker-abstraction and invocation-authority points
   noted below. Key sections to carry over near-verbatim in substance:
@@ -461,7 +461,7 @@ as a gap for the KB CONTRACT.md batch (§7 below), do not invent a KB operation 
 
 ### 4.1 Sources
 
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md`
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md`
   (whole file, 75 lines) — the phase structure (intake → team selection/dispatch → cross-model
   pass, optional and excluded per §0.4 → synthesis/presentation → next action) and the **Done
   when** condition: "every selected reviewer has returned or is named as failed in Coverage,
@@ -641,7 +641,7 @@ docs):**
 
 ### 5.1 Sources
 
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/SKILL.md`
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/SKILL.md`
   (whole file, ~110 lines) — this **is** the reference; import essentially the whole glossary and
   principles section, adapting only the framing sentence ("Use this language and these principles
   wherever code is being designed or restructured") to match plan §2.4's stated loaders (align,
@@ -688,7 +688,7 @@ donor-plugin-specific content; there is none in the source to strip.
 
 ### 6.1 Sources
 
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/SKILL.md`
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/SKILL.md`
   (whole file) — the file-structure convention (single `CONTEXT.md` vs. `CONTEXT-MAP.md` +
   per-context `CONTEXT.md`), and the five "During the session" moves (challenge against the
   glossary, sharpen fuzzy language, discuss concrete scenarios, cross-reference with code, update

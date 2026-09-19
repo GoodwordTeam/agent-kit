@@ -18,14 +18,14 @@ skill content — see Exclusions (§9) and the repo-wide ground rules.
 ## 1. `skills/compound` (U) — capture a lesson
 
 ### Donor sources
-- `compound-engineering@05c42da9:skills/ce-compound/SKILL.md` (whole file, ~85 lines) — mode detection, write
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/SKILL.md` (whole file, ~85 lines) — mode detection, write
   boundary, durable-capture bar, phase sequence.
-- `compound-engineering@05c42da9:skills/ce-compound/references/schema.yaml` — frontmatter contract, bug vs.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/references/schema.yaml` — frontmatter contract, bug vs.
   knowledge track split.
-- `compound-engineering@05c42da9:skills/ce-compound/assets/resolution-template.md` — the two body templates.
-- `compound-engineering@05c42da9:skills/ce-compound/references/assembly.md` — overlap-with-existing-doc decision
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/assets/resolution-template.md` — the two body templates.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/references/assembly.md` — overlap-with-existing-doc decision
   table, destination choice, frontmatter validation gate.
-- `compound-engineering@05c42da9:skills/ce-compound/references/concepts-vocabulary.md` (referenced, not quoted
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/references/concepts-vocabulary.md` (referenced, not quoted
   below — read before finalizing; defines the "supported mutations" add/refine/fold/scrub).
 - Transcript: G:L1766 ("Then **compound**: write the lesson into docs/solutions/ (CE) *and* update CONTEXT.md if a
   term moved (Pocock)."); G:L1950 (compound + compound-refresh row, "one lesson per run... never batch five morals
@@ -97,12 +97,12 @@ skill content — see Exclusions (§9) and the repo-wide ground rules.
 ## 2. `skills/compound-refresh` (U) — maintain the lesson store
 
 ### Donor sources
-- `compound-engineering@05c42da9:skills/ce-compound-refresh/SKILL.md` (whole file).
-- `compound-engineering@05c42da9:skills/ce-compound-refresh/references/classify.md` — the five-outcome table and
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/SKILL.md` (whole file).
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/classify.md` — the five-outcome table and
   every judgment rule under it.
-- `compound-engineering@05c42da9:skills/ce-compound-refresh/references/modes.md` — interactive vs. non-interactive
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/modes.md` — interactive vs. non-interactive
   contract, stale-marking fallback.
-- `compound-engineering@05c42da9:skills/ce-compound-refresh/references/report.md` — Applied/Recommended report
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/report.md` — Applied/Recommended report
   shape.
 - Transcript G:L1950 ("Refresh is Keep / Update / Consolidate / Replace / Delete — never batch five morals into
   one slop file").
@@ -177,13 +177,13 @@ skill content — see Exclusions (§9) and the repo-wide ground rules.
 ## 3. `skills/handoff` (M) — continuity artifact
 
 ### Donor sources
-- `compound-engineering@05c42da9:skills/ce-handoff/SKILL.md` (whole file) — routing (create vs. resume), the
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/SKILL.md` (whole file) — routing (create vs. resume), the
   "supplements authoritative artifacts, does not replace them" framing, resume-source trust rules.
-- `compound-engineering@05c42da9:skills/ce-handoff/references/create.md` — body contract, pointer-first rule,
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/references/create.md` — body contract, pointer-first rule,
   frontmatter contract.
-- `compound-engineering@05c42da9:skills/ce-handoff/references/resume.md` (referenced; not quoted below — read for
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/references/resume.md` (referenced; not quoted below — read for
   the discovery/ranking bounds if resume is folded into this skill).
-- `pocock@c55ee460:skills/productivity/handoff/SKILL.md` (whole file, ~14 lines) — the terse "no LLM summary"
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/handoff/SKILL.md` (whole file, ~14 lines) — the terse "no LLM summary"
   framing and "suggested skills" section idea.
 - Transcript G:L1793 ("handoff — Pocock. Verbatim decisions, Jev keep/delete on the transcript, no LLM summary.");
   G:L1564 ("When the session is dying, compact into a handoff doc — verbatim decisions, not an LLM summary.").
@@ -255,9 +255,9 @@ skill content — see Exclusions (§9) and the repo-wide ground rules.
 ## 4. `skills/wait-what` (M) — re-explain in established vocabulary
 
 ### Donor sources
-- `pocock@c55ee460:skills/productivity/wait-what/SKILL.md` (whole file, 3 lines of body) — the primitive itself.
-- `pocock@c55ee460:docs/productivity/wait-what.md` (whole file) — design rationale, "it's working if" checklist.
-- `compound-engineering@05c42da9:skills/wtf/SKILL.md` (whole file) — the broader "explain the last message/a
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/wait-what/SKILL.md` (whole file, 3 lines of body) — the primitive itself.
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:docs/productivity/wait-what.md` (whole file) — design rationale, "it's working if" checklist.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/wtf/SKILL.md` (whole file) — the broader "explain the last message/a
   file/link/passage in plain language" version, with an explicit boundary against `ce-explain` and against prose
   rewriting.
 - Transcript G:L1794 ("wait-what — Pocock. Re-pitch in CONTEXT.md words. Do not start a new align."); G:L1564
@@ -309,9 +309,9 @@ skill content — see Exclusions (§9) and the repo-wide ground rules.
 ## 5. `skills/explain` (U) — describe, not recommend
 
 ### Donor sources
-- `compound-engineering@05c42da9:skills/ce-explain/SKILL.md` (whole file) — the full flow: consumer/interaction
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/SKILL.md` (whole file) — the full flow: consumer/interaction
   rules, phase 1–4 execution flow, boundaries.
-- `compound-engineering@05c42da9:skills/ce-explain/references/intake.md`,
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/references/intake.md`,
   `references/orchestration.md`, `references/check-in.md` (referenced for depth on subject/window resolution and
   evidence-gathering tiers; not quoted below — read before finalizing evidence-sourcing language).
 - Transcript G:L1974 ("explain — CE. Someone (or a future agent) needs how/why with evidence — Teaching artifact.
@@ -382,17 +382,17 @@ skill content — see Exclusions (§9) and the repo-wide ground rules.
 ## 6. `skills/writing-skills` (U) — author and maintain this package
 
 ### Donor sources
-- `superpowers@b36e0829:skills/writing-skills/SKILL.md` (whole file, ~650 lines) — the full TDD-for-skills
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/SKILL.md` (whole file, ~650 lines) — the full TDD-for-skills
   methodology: RED/GREEN/REFACTOR mapping, frontmatter rules, SDO (skill discovery optimization), "Match the Form
   to the Failure" table, bulletproofing/rationalization-table technique, the full authoring checklist.
-- `superpowers@b36e0829:skills/writing-skills/testing-skills-with-subagents.md` — pressure-scenario methodology,
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/testing-skills-with-subagents.md` — pressure-scenario methodology,
   the pressure-type table, RED/GREEN/REFACTOR worked process.
-- `superpowers@b36e0829:skills/writing-skills/persuasion-principles.md` (referenced, not quoted — cite as the
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/persuasion-principles.md` (referenced, not quoted — cite as the
   research basis for the bulletproofing technique; read before drafting rationalization tables).
-- `pocock@c55ee460:skills/productivity/writing-for-agents/SKILL.md` (whole file) — context pointers, the
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/writing-for-agents/SKILL.md` (whole file) — context pointers, the
   information hierarchy (in-file step / in-file reference / disclosed reference), leading words, pruning
   (single-source-of-truth, no-ops, negation-avoidance).
-- `pocock@c55ee460:skills/productivity/writing-for-agents/SKILL-MECHANICS.md` (whole file) — user-invoked vs.
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/writing-for-agents/SKILL-MECHANICS.md` (whole file) — user-invoked vs.
   model-invoked mechanics, router skills, the invocation-cut rule for splitting.
 - Transcript G:L1977 ("writing-skills — Superpowers. You will author more skills — Meta. Only if this repo *is*
   the skill pack."); G:L2028 (cut order places `writing-skills` last if trimming, i.e. lowest priority to drop,
@@ -537,7 +537,7 @@ Scope reminder: these are the **KB document templates**, i.e. what a project's K
 writes lessons) — this batch owns the *template shape and example content*, not those skills' own behavior.
 
 ### `templates/kb/CONTEXT.md`
-- Donor: `pocock@c55ee460:skills/engineering/domain-modeling/CONTEXT-FORMAT.md` (whole file, ~35 lines) — this is
+- Donor: `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/CONTEXT-FORMAT.md` (whole file, ~35 lines) — this is
   a complete, ready-to-adapt template.
 - Import near-verbatim: the `# {Context Name}` / `## Language` / bolded-term-with-`_Avoid_` structure, and the
   rules:
@@ -547,13 +547,13 @@ writes lessons) — this batch owns the *template shape and example content*, no
   > extensively." (`CONTEXT-FORMAT.md:27-31`)
   Also import the single-context vs. multi-context (`CONTEXT-MAP.md`) structure decision rule, since `wait-what`
   (§4) references it conditionally.
-- Secondary donor for framing only: `addy@c004a747:skills/context-engineering/SKILL.md`'s "Context Hierarchy"
+- Secondary donor for framing only: `addy@c004a74784a08295d52749b04cda634125b9a581:skills/context-engineering/SKILL.md`'s "Context Hierarchy"
   section — useful for the template's own header comment explaining *why* CONTEXT.md exists (highest-persistence,
   always-loaded layer), but do not import its example CLAUDE.md tech-stack block; that belongs to the working
   repo's own instructions file, not the KB.
 
 ### `templates/kb/ADR.md`
-- Primary donor: `pocock@c55ee460:skills/engineering/domain-modeling/ADR-FORMAT.md` (whole file) — the tight
+- Primary donor: `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/ADR-FORMAT.md` (whole file) — the tight
   version plan's KB philosophy clearly favors ("Central KB owns all project-derived artifacts" but the plan never
   asks for heavyweight documentation theater).
   > "{Short title of the decision} / {1-3 sentences: what's the context, what did we decide, and why.} That's it.
@@ -564,7 +564,7 @@ writes lessons) — this batch owns the *template shape and example content*, no
   This three-part test is exactly the mechanism plan §8 wants for "Do not force a fresh ADR for a mechanical fix
   with no decision; record the applicable existing decision or an explicit no-new-decision result."
 - Secondary donor for the *optional*, heavier shape (use when the project actually needs it):
-  `addy@c004a747:skills/documentation-and-adrs/SKILL.md`'s ADR template (Status/Date/Context/Decision/Alternatives
+  `addy@c004a74784a08295d52749b04cda634125b9a581:skills/documentation-and-adrs/SKILL.md`'s ADR template (Status/Date/Context/Decision/Alternatives
   Considered/Consequences) and lifecycle (`PROPOSED → ACCEPTED → (SUPERSEDED or DEPRECATED)`, "Don't delete old
   ADRs... write a new ADR that references and supersedes the old one"). Present both in the template file as
   "minimal" (default, Pocock) and "extended" (optional sections, Addy) rather than picking one — this mirrors
@@ -577,7 +577,7 @@ writes lessons) — this batch owns the *template shape and example content*, no
   project-derived artifacts" (plan §2.6/§8) — see Conflicts §8.
 
 ### `templates/kb/requirements.md`
-- Donor: `pocock@c55ee460:skills/engineering/to-spec/SKILL.md`'s `<spec-template>` block (Problem
+- Donor: `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-spec/SKILL.md`'s `<spec-template>` block (Problem
   Statement / Solution / User Stories / Implementation Decisions / Testing Decisions / Out of Scope / Further
   Notes). This is owned operationally by `super-bound` (not this batch), but the *document shape* it writes is a
   KB template this batch owns.
@@ -603,7 +603,7 @@ writes lessons) — this batch owns the *template shape and example content*, no
   process itself.
 
 ### `templates/kb/ticket.md`
-- Structural donor: `pocock@c55ee460:skills/engineering/to-tickets/SKILL.md`'s `<local-ticket-template>` and
+- Structural donor: `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md`'s `<local-ticket-template>` and
   `<issue-template>` blocks — title, "what to build" (end-to-end behavior, not layer-by-layer), blocked-by edges,
   acceptance criteria checkboxes.
   > "Give each ticket its **blocking edges**: the other tickets that must complete before it can start. A ticket
@@ -651,7 +651,7 @@ writes lessons) — this batch owns the *template shape and example content*, no
   skill share exactly one vocabulary.
 
 ### `templates/kb/lesson.md`
-- Primary donor, already detailed in §1: `compound-engineering@05c42da9:skills/ce-compound/assets/resolution-template.md`
+- Primary donor, already detailed in §1: `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/assets/resolution-template.md`
   (both the bug-track and knowledge-track bodies) and `references/schema.yaml` for the field contract. Import
   these two templates close to verbatim — they are the strongest single piece of ready-to-use template material
   in the entire donor set.

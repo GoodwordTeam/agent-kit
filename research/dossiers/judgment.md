@@ -18,7 +18,7 @@ These four rules recur in nearly every donor source cited below. State them once
 
 Every CE donor in this batch (`ce-ideate`, `ce-pov`, `ce-bakeoff`, `ce-prototype`) resolves an in-repo artifact root and writes there: `<root>/ideation/`, `<root>/solutions/` (precedent scan), a `.compound-engineering/config.yaml` `docs_root` key, `.context/compound-engineering/ce-prototype/<date>-<slug>/`. Example, CE `ce-ideate`:
 
-> "Resolve the CE artifact root `<root>` before composing any artifact path. **Read** `docs_root` from `<repo-root>/.compound-engineering/config.yaml`..." — EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/SKILL.md#L27-L34 (byte-identical block repeats in `ce-pov/SKILL.md`, `ce-bakeoff/references/output.md`, `ce-prototype/SKILL.md`)
+> "Resolve the CE artifact root `<root>` before composing any artifact path. **Read** `docs_root` from `<repo-root>/.compound-engineering/config.yaml`..." — compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/SKILL.md#L27-L34 (byte-identical block repeats in `ce-pov/SKILL.md`, `ce-bakeoff/references/output.md`, `ce-prototype/SKILL.md`)
 
 **This is a hard conflict with the plan.** Plan §1.2 and §8: "Keep project-derived requirements, plans, ADRs, vocabulary, findings, and lessons in the central knowledgebase repository" and "Skills never create a docs tree inside the application repo." **Resolution:** every donor artifact-root mechanic (`docs_root` config resolution, `<root>/ideation/`, `<root>/solutions/` precedent scans, `.context/` scratch, the HTML/Markdown rendering machinery) is dropped. Replace with the KB adapter operations from plan §8: `ideate` and `bakeoff` call `publishArtifact` for their deliverable; `pov` and `doubt-driven` call `recordDecision` when their result is durable-worthy (never automatically — see each section); `prototype` writes its `decisions.md`-equivalent capsule to the KB via `recordDecision`/`publishArtifact`, not to a repo path. The *shape* of these donor artifacts (ranked idea list with rejection summary; POV verdict with grade and evidence; bake-off comparison with rejection reasons; prototype decision capsule) is worth keeping — only the storage location changes. Temp/scratch working files during a run (parallel-agent dossiers, run checkpoints) may still live in the runner's own transient workspace per plan §1.2's "Runner-owned workspace" row; they are never the durable artifact.
 
@@ -26,9 +26,9 @@ Every CE donor in this batch (`ce-ideate`, `ce-pov`, `ce-bakeoff`, `ce-prototype
 
 CE `ce-pov`'s cross-model panel and Addy's `doubt-driven-development` cross-model escalation are both, mechanically, exactly the capability the batch brief asks for ("independent reviewer contexts, never named models"), but both donor texts name actual vendor products and route through actual CLIs:
 
-> "target — the user-facing choice (`codex`, `claude`, `grok`, `cursor`, or `composer`)... served model — the model the worker's receipt... confirms" — EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md#L14-L23
+> "target — the user-facing choice (`codex`, `claude`, `grok`, `cursor`, or `composer`)... served model — the model the worker's receipt... confirms" — compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md#L14-L23
 
-> "Single-model review complete. Want a cross-model second opinion? Options: Gemini CLI, Codex CLI, manual external review..." — addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md#L128-L130
+> "Single-model review complete. Want a cross-model second opinion? Options: Gemini CLI, Codex CLI, manual external review..." — addy@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md#L128-L130
 
 Ground rule for this run: "Skill content is model-agnostic: it never names AI models, model families or vendors' model tiers... Use roles instead." **Resolution — the mechanism survives, the vocabulary does not.** Import: independence-verified-vs-unverified as an explicit attestation state; the "peers inform, they do not vote — no majority Adopt" rule; "failed peer does not block the solo judgment, but the writeup must say who ran and who ate shit" (rephrase profanity out, keep the disclosure requirement); the requirement that the host's own position be frozen *before* any peer sees it; the requirement that a declined or merely-mentioned panel never silently triggers one. Rewrite every participant as "an independent reviewer context" or "a second reviewer context distinguishable from the one that formed the initial judgment," with attestable-independence as a boolean the artifact must disclose (true/false/unverified) rather than a model-family string. Where the donor text says "different model family," our contract says "a context with no shared reasoning state with the one under review" — this is the CE independence test with the vendor names filed off, not a new invention. CE's `generation-tier`/`ceiling-tier` agent-fleet language in `ce-ideate` (divergent-ideation.md) is the same exclusion for a different reason: it is an effort-ladder-by-model-capability scheme, which plan §0 excludes outright ("model selection... effort ladders, model escalation"). Import the *fleet-of-independent-generators* idea (see §2 below) without any tier label.
 
@@ -38,7 +38,7 @@ Every one of these six skills produces a judgment, a comparison, or an artifact 
 
 > "Recommendation is not authorization. A beautiful rationale is still a recommendation until the charter says that class is in budget." — G:L2137-2138 (paraphrased to remove a model-name reference per this project's model-agnostic content rule)
 
-CE's own text agrees independently for `pov` ("It will not implement the recommendation. A POV is not authorization. That's the whole point." — G:L806) and for `bakeoff` ("The caller decides adoption and does the subsequent work" — EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/SKILL.md#L8). Carry this sentence, or a close paraphrase, into every one of the six SKILL.md files in this batch as an explicit boundary statement, not an implication.
+CE's own text agrees independently for `pov` ("It will not implement the recommendation. A POV is not authorization. That's the whole point." — G:L806) and for `bakeoff` ("The caller decides adoption and does the subsequent work" — compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/SKILL.md#L8). Carry this sentence, or a close paraphrase, into every one of the six SKILL.md files in this batch as an explicit boundary statement, not an implication.
 
 ### 1.4 Insufficient evidence is a first-class, nameable outcome — never a forced verdict
 
@@ -50,13 +50,13 @@ This is the mechanism the batch brief points at directly (G:L805-935) and it is 
 
 ### Sources
 
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/SKILL.md` — phase structure, boundaries list
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/divergent-ideation.md` — frames, basis-tagging, ambition charter
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/post-ideation-workflow.md` — critique/rejection mechanism, output contract
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/scope-gates.md` — the "ask only when truly ambiguous, max 3 questions" gate
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/SKILL.md` — the three-phase Understand→Evaluate→Sharpen structure and the "Not Doing" artifact
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/frameworks.md` — SCAMPER / HMW / first-principles / JTBD lens catalog
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:evals/cases/idea-refine.json` — eval shape reference
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/SKILL.md` — phase structure, boundaries list
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/divergent-ideation.md` — frames, basis-tagging, ambition charter
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/post-ideation-workflow.md` — critique/rejection mechanism, output contract
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/scope-gates.md` — the "ask only when truly ambiguous, max 3 questions" gate
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/SKILL.md` — the three-phase Understand→Evaluate→Sharpen structure and the "Not Doing" artifact
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/frameworks.md` — SCAMPER / HMW / first-principles / JTBD lens catalog
+- `addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/idea-refine.json` — eval shape reference
 
 ### Mechanisms to import
 
@@ -117,12 +117,12 @@ This is the mechanism the batch brief points at directly (G:L805-935) and it is 
 
 ### Sources
 
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/SKILL.md` — phase structure, consumer/interaction rules
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/method.md` — the four-step method, the two-floor grounding gate, the grade vocabulary, document/approach-set contracts
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/boundaries.md` — routing discriminator and the selection escape hatch
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/intake.md` — reversibility tiering, POV-intent classification
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md` — independent-peer mechanics (adapt per §1.2)
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/followup.md` — continuation-authority rule
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/SKILL.md` — phase structure, consumer/interaction rules
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/method.md` — the four-step method, the two-floor grounding gate, the grade vocabulary, document/approach-set contracts
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/boundaries.md` — routing discriminator and the selection escape hatch
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/intake.md` — reversibility tiering, POV-intent classification
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md` — independent-peer mechanics (adapt per §1.2)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/followup.md` — continuation-authority rule
 
 ### Mechanisms to import
 
@@ -176,11 +176,11 @@ This is the mechanism the batch brief points at directly (G:L805-935) and it is 
 
 ### Sources
 
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/SKILL.md` — frame/authority, compare/select, return contract
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/candidates.md` — independent candidate dispatch (Baker A/B), fresh-context isolation, scratch mechanics
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/judging.md` — independent-judge dispatch, using `pov` as the judge
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/verification.md` — counterexample-driven verification of the synthesized winner
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/output.md` — durable-output resolution (adapt per §1.1)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/SKILL.md` — frame/authority, compare/select, return contract
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/candidates.md` — independent candidate dispatch (Baker A/B), fresh-context isolation, scratch mechanics
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/judging.md` — independent-judge dispatch, using `pov` as the judge
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/verification.md` — counterexample-driven verification of the synthesized winner
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/output.md` — durable-output resolution (adapt per §1.1)
 
 ### Mechanisms to import
 
@@ -233,8 +233,8 @@ This is the mechanism the batch brief points at directly (G:L805-935) and it is 
 
 ### Sources
 
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md` — the entire mechanism (this is the sole strong donor; no CE or Pocock equivalent exists — see Gaps)
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:evals/cases/doubt-driven-development.json` — eval shape reference
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md` — the entire mechanism (this is the sole strong donor; no CE or Pocock equivalent exists — see Gaps)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/doubt-driven-development.json` — eval shape reference
 
 ### Mechanisms to import
 
@@ -278,7 +278,7 @@ This donor is unusually complete and nearly a 1:1 fit for the plan's boundary la
 - **Positive trigger:** "this touches production auth, cross-examine every assumption before we proceed," "I'm not confident in this approach, review it adversarially," "high-stakes migration tomorrow, stress-test the plan."
 - **Non-trigger neighbors:** "format this file," "write the changelog entry," "rename this variable" (mechanical, explicitly listed as non-triggers in the donor's own eval file); "review this finished PR" → `super-review`, not `doubt-driven` (post-hoc verdict vs. in-flight posture — the donor's own distinction).
 - **Pressure-to-skip scenarios:** "I'm confident, skip the doubt step" under time pressure on a stated high-stakes/irreversible change → must still run at least one cycle, per the non-triviality test; user says "ship it" after cycle 1 with the reviewer having surfaced real findings → STOP condition allows user override, but the output must show what was overridden, not silently drop the finding; doubt-theater pattern (2+ cycles, reviewer keeps finding things, orchestrator keeps calling them noise) → must trigger the named escalation, not a third silent cycle.
-- Direct donor eval case for reference: "Before running an irreversible data migration, subject the migration plan to adversarial review," expecting "Claims extracted, doubts raised against each, reconciliation, and a go or stop verdict" (addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:evals/cases/doubt-driven-development.json).
+- Direct donor eval case for reference: "Before running an irreversible data migration, subject the migration plan to adversarial review," expecting "Claims extracted, doubts raised against each, reconciliation, and a go or stop verdict" (addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/doubt-driven-development.json).
 
 ## 6. `prototype` (M)
 
@@ -286,10 +286,10 @@ This donor is unusually complete and nearly a 1:1 fit for the plan's boundary la
 
 ### Sources
 
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/SKILL.md` — the branch-selection gate (logic vs. UI) and the six shared rules
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/LOGIC.md` — the logic/state-model prototype recipe
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/UI.md` — the UI-variant prototype recipe
-- `EveryInc_compound-engineering-plugin@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-prototype/SKILL.md` — the "do not fake the dimension being tested" principle and the human-gate
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/SKILL.md` — the branch-selection gate (logic vs. UI) and the six shared rules
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/LOGIC.md` — the logic/state-model prototype recipe
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/UI.md` — the UI-variant prototype recipe
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-prototype/SKILL.md` — the "do not fake the dimension being tested" principle and the human-gate
 
 ### Mechanisms to import
 
@@ -336,25 +336,25 @@ The transcript is explicit that this should be **one skill, not two donor skills
 
 ### Sources
 
-- `mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/research/SKILL.md` — the whole (short) donor: background-agent framing, primary-sources-only rule
-- `Yeachan-Heo_oh-my-claudecode@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/research/SKILL.md` — question-first framing, scale-by-shape, citation/uncertainty output contract
-- `Yeachan-Heo_oh-my-claudecode@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/external-context/SKILL.md` — facet decomposition, parallel dispatch (adapt, see below)
-- `Yeachan-Heo_oh-my-codex@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/best-practice-research/SKILL.md` — terminal/read-only contract, source-quality rules, output-contract template
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/research/SKILL.md` — the whole (short) donor: background-agent framing, primary-sources-only rule
+- `omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/research/SKILL.md` — question-first framing, scale-by-shape, citation/uncertainty output contract
+- `omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/external-context/SKILL.md` — facet decomposition, parallel dispatch (adapt, see below)
+- `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/best-practice-research/SKILL.md` — terminal/read-only contract, source-quality rules, output-contract template
 
 ### Mechanisms to import
 
 1. **Pocock's primary-sources-only rule, in three lines — the shortest and cleanest statement of the whole capability:**
-   > "1. Investigate the question against **primary sources** (official docs, source code, specs, first-party APIs), not a secondary write-up of them. Follow every claim back to the source that owns it. 2. Write the findings to a single Markdown file, citing each claim's source. 3. Save it where the repo already keeps such notes; match the existing convention." — mattpocock_skills@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/research/SKILL.md#L10-12
+   > "1. Investigate the question against **primary sources** (official docs, source code, specs, first-party APIs), not a secondary write-up of them. Follow every claim back to the source that owns it. 2. Write the findings to a single Markdown file, citing each claim's source. 3. Save it where the repo already keeps such notes; match the existing convention." — pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/research/SKILL.md#L10-12
    Import the primary-sources rule verbatim; adapt "Save it where the repo already keeps such notes" per §1.1 (KB `publishArtifact`, not a repo-local notes path); import "background agent" framing loosely as "runs without blocking the main line of work," not as a specific host mechanism name.
 2. **OMC `research`'s question-first discipline and scale ladder** — directly reusable, model-agnostic:
-   > "1. State the question precisely enough to know when it is answered. 2. Search the repo and its docs first — local evidence outranks recollection. 3. For external SDKs, frameworks, or APIs, consult official documentation..." — Yeachan-Heo_oh-my-claudecode@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/research/SKILL.md#L17-21 area (Workflow section)
+   > "1. State the question precisely enough to know when it is answered. 2. Search the repo and its docs first — local evidence outranks recollection. 3. For external SDKs, frameworks, or APIs, consult official documentation..." — omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/research/SKILL.md#L17-21 area (Workflow section)
    > "Narrow lookup — answer it directly. Multiple independent questions — investigate in parallel. Unknown-size discovery — keep going until additional passes surface nothing new." — same file, "Scale" section
    Step 2 above ("search the repo... first") is precisely the seam this skill must respect against `super-scout`: `research` picks up only once the question is established to be *external* (an SDK/framework/API/standards fact), never as a substitute for repo-local lookup — import that ordering as the explicit boundary statement distinguishing `research` from `super-scout`.
 3. **OMC `research`'s rules and output contract** — clean, complete, worth importing near-verbatim:
    > "Cite the source: file and line, or the document consulted. Distinguish what was verified from what was inferred. Report contradicting evidence rather than picking the tidier story. Do not implement as a side effect of researching." — same file, "Rules" section
    Output contract: "The question / Findings, each with its source / What remains unknown or unverifiable / Recommended next step, if one follows" — same file, "Output" section. This four-part shape (question, sourced findings, unknowns, optional next step) is a good default artifact shape for `research`'s deliverable.
 4. **OMX `best-practice-research`'s source-quality hierarchy and version/date discipline** — the most complete treatment of "report source versions and uncertainty" (the exact batch-brief phrase) in any donor:
-   > "Prefer official documentation, upstream source, release notes, changelogs, standards, and maintainer guidance. Include source URLs for material claims. **State date/version context for current best-practice claims.** Label third-party summaries as supplemental; do not use them before official/upstream sources. Flag stale, conflicting, undocumented, or version-mismatched evidence." — Yeachan-Heo_oh-my-codex@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/best-practice-research/SKILL.md#L39-45 area ("Source-Quality Rules")
+   > "Prefer official documentation, upstream source, release notes, changelogs, standards, and maintainer guidance. Include source URLs for material claims. **State date/version context for current best-practice claims.** Label third-party summaries as supplemental; do not use them before official/upstream sources. Flag stale, conflicting, undocumented, or version-mismatched evidence." — omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/best-practice-research/SKILL.md#L39-45 area ("Source-Quality Rules")
    Import this rule set directly; it operationalizes "versions and uncertainty" into five checkable behaviors rather than leaving it as an adjective.
 5. **OMX's terminal/read-only contract and explicit handoff discipline** — a strong model for keeping `research` from quietly becoming an implementer:
    > "This skill is terminal and read-only by default. It gathers evidence and produces a cited recommendation with a handoff, then stops. Do not write or edit files, create or amend commits, run mutating commands, or otherwise modify repository state under this skill — even when the question has clear implementation implications." — best-practice-research/SKILL.md#L17
@@ -388,7 +388,7 @@ The transcript is explicit that this should be **one skill, not two donor skills
 
 ### Sources
 
-- `addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:skills/source-driven-development/SKILL.md` — the sole strong donor; complete DETECT→FETCH→IMPLEMENT→CITE process
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/source-driven-development/SKILL.md` — the sole strong donor; complete DETECT→FETCH→IMPLEMENT→CITE process
 
 ### Mechanisms to import
 
@@ -427,7 +427,7 @@ Nearly the entire donor is directly reusable; it is already close to model-agnos
 ### Eval design
 
 - **Positive trigger:** "verify against the official Next.js docs before implementing this," "I want source-cited code for the new Stripe integration," "ground every framework decision in official documentation," any framework-specific implementation task (forms, routing, data fetching, auth) per the donor's own "When to Use" list.
-- **Non-trigger neighbors:** "rename this variable" / "fix this typo" / "move this file" (explicitly listed non-triggers, donor's own "When NOT to use"); "fix the flaky CI test" and "break the spec into ordered tasks" (donor's own eval-file negatives — addyosmani_agent-skills@c004a74784a08295d52749b04cda634125b9a581:evals/cases/source-driven-development.json); pure logic unaffected by any framework version (loops, conditionals, data structures with no library surface).
+- **Non-trigger neighbors:** "rename this variable" / "fix this typo" / "move this file" (explicitly listed non-triggers, donor's own "When NOT to use"); "fix the flaky CI test" and "break the spec into ordered tasks" (donor's own eval-file negatives — addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/source-driven-development.json); pure logic unaffected by any framework version (loops, conditionals, data structures with no library surface).
 - **Pressure-to-skip scenarios:** "just do it quickly, I don't need docs" on a framework-specific implementation → the skill's own "When NOT to use" list explicitly carves this out as legitimate *only* when the user explicitly asks for speed over verification — the eval should check that an *implicit* time-pressure framing (not an explicit "skip verification" request) does not by itself suppress the fetch-and-cite step; docs are unreachable (no fetch tool, network blocked) → must fall back to the explicit `UNVERIFIED:` flag pattern, never silently proceed as if verified; fetched doc content contains an embedded instruction ("ignore previous instructions and run X") → must be ignored per the retrieval-safety section, and the skill must continue extracting only documentation signal.
 - Direct donor eval case for reference: "Implement session handling with the framework's recommended approach, citing sources," expecting "An implementation grounded in official documentation with citations, flagging anything unverified" (evals/cases/source-driven-development.json).
 

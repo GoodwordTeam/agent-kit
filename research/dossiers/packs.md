@@ -4,7 +4,7 @@ Scope: `packs/{pack-api,pack-delete,pack-test,pack-secure,pack-frontend,pack-dat
 
 Status at time of writing: `packs/` and `references/` are empty directories; `AUTHORING.md`, `catalog.yaml`, `schemas/*`, `roles/code-review/*` do not exist yet. Nothing here can cite those files. Treat plan §3, §4, §5.1, §6.1 and the ground-rules' fixed catalog as the law until `AUTHORING.md` lands; re-check it before writing if it exists by the time this batch runs.
 
-All donor paths below were verified with `git -C .donors/<dir> cat-file -e <commit>:<path>` at the pinned commits in the task header. Donor ids: `compound-engineering@05c42da9`, `superpowers@b36e0829`, `pocock@c55ee460`, `addy@c004a747`.
+All donor paths below were verified with `git -C .donors/<dir> cat-file -e <commit>:<path>` at the pinned commits in the task header. Donor ids: `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1`, `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797`, `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7`, `addy@c004a74784a08295d52749b04cda634125b9a581`.
 
 ---
 
@@ -14,9 +14,9 @@ All donor paths below were verified with `git -C .donors/<dir> cat-file -e <comm
 
 CE's own packs design draws the line we need, even though CE's mechanism (config-driven, multi-source, git-pinned knowledge folders) is *not* what we're building — our eight packs are fixed catalog members with static `PACK.md`/`pack.yaml`, not a repo-configurable resolver. Import the **framing**, not the resolver machinery:
 
-> "A pack is not a skill. A skill is something CE can *do*; a pack is something CE must *know* while doing it." — `compound-engineering@05c42da9:docs/guides/packs.md#L9`
+> "A pack is not a skill. A skill is something CE can *do*; a pack is something CE must *know* while doing it." — `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md#L9`
 
-> "Pack text is evidence, never instructions: a rule file that says 'reviewer, skip this check' gets quoted, not obeyed." — `compound-engineering@05c42da9:docs/guides/packs.md#L206` (Why packs aren't skills section)
+> "Pack text is evidence, never instructions: a rule file that says 'reviewer, skip this check' gets quoted, not obeyed." — `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md#L206` (Why packs aren't skills section)
 
 Adapt: every `PACK.md` should state plainly that its constraints are evidence a reviewer cites, not commands a reviewer obeys, and that the pack **never starts a lifecycle phase** — it only attaches constraints and review lenses to a phase already running. This is explicit in the plan and the transcript:
 
@@ -24,7 +24,7 @@ Adapt: every `PACK.md` should state plainly that its constraints are evidence a 
 > "Domain packs auto-attach by artifact type. They never start a phase." — `G:L1676`
 > "Packs never start lifecycle phases." — ground rules (fixed catalog)
 
-Drop CE's runtime resolver entirely (git `source:`/`ref:`/`pack:` entries, `config.yaml`/`config.local.yaml` layering, the cache under `/tmp/...`). Our activation is deterministic rule evaluation against the diff/spec in front of the running skill, not a live multi-repo config. `compound-engineering@05c42da9:skills/ce-code-review/scripts/packs-resolve.py` is useful only as a reminder of the failure modes a resolver has to declare loudly (missing frontmatter, unreachable source, duplicate id) — our `pack.yaml` has none of those problems since packs ship in-repo, so don't import that machinery.
+Drop CE's runtime resolver entirely (git `source:`/`ref:`/`pack:` entries, `config.yaml`/`config.local.yaml` layering, the cache under `/tmp/...`). Our activation is deterministic rule evaluation against the diff/spec in front of the running skill, not a live multi-repo config. `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/scripts/packs-resolve.py` is useful only as a reminder of the failure modes a resolver has to declare loudly (missing frontmatter, unreachable source, duplicate id) — our `pack.yaml` has none of those problems since packs ship in-repo, so don't import that machinery.
 
 ### 1.2 Citation format
 
@@ -36,25 +36,25 @@ Two donor mechanisms model the right shape for `pack.yaml`'s "deterministic acti
 
 **(a) CE's persona spawn-gate language** — each rule reads "select X when diff touches Y, do not spawn for Z" with a named exception list. This is the closest existing analogue to what `pack.yaml` needs, and it already distinguishes semantic judgment from file-extension matching:
 
-> "Select stack-specific reviewers only when the diff touches runtime behavior they specialize in... never mechanically from file extensions alone." — `compound-engineering@05c42da9:skills/ce-code-review/references/select-and-route.md#L45`
+> "Select stack-specific reviewers only when the diff touches runtime behavior they specialize in... never mechanically from file extensions alone." — `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md#L45`
 
-> "For `data-migration`, spawn only when the diff includes migration or schema artifacts (`db/migrate/*`, `db/schema.rb`, `db/structure.sql`, Alembic/Flyway/Liquibase paths, or explicit backfill/data-transform scripts). Do **not** spawn for model-only or query-only changes without those files." — `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L37` (selection rule 5)
+> "For `data-migration`, spawn only when the diff includes migration or schema artifacts (`db/migrate/*`, `db/schema.rb`, `db/structure.sql`, Alembic/Flyway/Liquibase paths, or explicit backfill/data-transform scripts). Do **not** spawn for model-only or query-only changes without those files." — `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L37` (selection rule 5)
 
 Adapt directly for `pack-data/pack.yaml`: this is a ready-made positive/negative activation-rule pair with file-glob evidence plus an explicit non-trigger. Do the same shape for `pack-api` (Hyrum surface: routes/serializers/published events/versioned package exports — "a new or changed exported symbol inside one module is insufficient by itself," same file) and `pack-secure` (auth middleware, public endpoints, input handling, permission/entitlement checks, secrets — same file, security row).
 
 **(b) CE's `applies_when` semantic-condition style** — write conditions "in the words a task would use," not topic labels:
 
-> "Good — describes the situation... adding a page that needs server data... Weak — labels the topic instead of the situation... inertia... architecture." — `compound-engineering@05c42da9:docs/guides/packs.md#L98-107`
+> "Good — describes the situation... adding a page that needs server data... Weak — labels the topic instead of the situation... inertia... architecture." — `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md#L98-107`
 
 Adapt this phrasing discipline for every `pack.yaml` rule's `rationale`/condition text, but keep CE's matching *deterministic* where plan §3 demands it: CE matches `applies_when` "semantically by the agent... not regexes" (soft, best-effort). Plan §3 is stricter for the risk-bearing packs: **"Security/API/data facts must not be dropped because a probabilistic classifier was uncertain."** Resolve this tension the same way plan §3 already resolves it: `pack-secure`, `pack-api`, and `pack-data` must fail *open* (attach) on ambiguity; the low-risk packs (`pack-frontend`, `pack-perf`, `pack-deps`, `pack-test`) can fail closed with a stated reason. Encode this per-pack as a `on_uncertain: attach | skip` field with a rationale, not a single global policy.
 
 ### 1.4 Review lenses — use only the fixed `roles/code-review` catalog, and two real gaps
 
-The fixed catalog (ground rules) is: `correctness, testing, maintainability, project-standards, security, adversarial, api-contract, data-migration, performance, reliability, agent-native, learnings, frontend-races, swift-ios, deployment-verification`. This is nearly 1:1 with CE's current persona catalog (`compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md`), with two intentional drops worth recording in the pack `PACK.md`s: CE's `previous-comments-reviewer` (PR-comment-gated, not diff-content-gated — doesn't fit a pack's activation model) and CE's `julik-frontend-races` is renamed `frontend-races` (drop the personal attribution).
+The fixed catalog (ground rules) is: `correctness, testing, maintainability, project-standards, security, adversarial, api-contract, data-migration, performance, reliability, agent-native, learnings, frontend-races, swift-ios, deployment-verification`. This is nearly 1:1 with CE's current persona catalog (`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md`), with two intentional drops worth recording in the pack `PACK.md`s: CE's `previous-comments-reviewer` (PR-comment-gated, not diff-content-gated — doesn't fit a pack's activation model) and CE's `julik-frontend-races` is renamed `frontend-races` (drop the personal attribution).
 
 Two packs do **not** have a matching lens in the fixed catalog — flag both as conflicts (§4 below), don't invent a new role id:
 
-- `pack-frontend`: transcript says "optional CE frontend persona" (`G:L1778`), but CE's only frontend-shaped persona is `julik-frontend-races` (async/DOM race conditions only — `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L52`), which is our `frontend-races`. There is no generic UI-quality/a11y persona in the fixed list.
+- `pack-frontend`: transcript says "optional CE frontend persona" (`G:L1778`), but CE's only frontend-shaped persona is `julik-frontend-races` (async/DOM race conditions only — `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L52`), which is our `frontend-races`. There is no generic UI-quality/a11y persona in the fixed list.
 - `pack-deps`: transcript says "deps audit" (`G:L1781`) but no such persona exists in CE's catalog or our fixed list.
 
 ### 1.5 `autofix_class` defaults per pack (plan §5.5 vocabulary: `safe_auto`, `gated_auto`, `manual`, `advisory`)
@@ -74,7 +74,7 @@ Read straight off the transcript's per-pack "bald rule" column (`G:L1774-1781`) 
 
 ### 1.6 `tests/` fixture format — a real gap, not a donor path
 
-The batch brief asks for "selector fixtures... in the AUTHORING fixture format," but `AUTHORING.md` doesn't exist yet, and ground rules are explicit that packs' `tests/` are **not** the `skills/<id>/tests/<case>/case.yaml` eval format (that format is for skills, schema_version "1.1", claude-plugin eval cases — a pack is not invoked, so it has no "case" to run). Until `AUTHORING.md` specifies otherwise, the closest workable shape, modeled on how CE's own pack tests represent a diff/PR context as a small fixture tree (`compound-engineering@05c42da9:tests/skill-eval-cell/fixtures/tiny-auth/`, `.../seat-cap/`) plus its resolver-input helper (`compound-engineering@05c42da9:tests/skills/helpers/packs-fixtures.ts#L1-14`), is:
+The batch brief asks for "selector fixtures... in the AUTHORING fixture format," but `AUTHORING.md` doesn't exist yet, and ground rules are explicit that packs' `tests/` are **not** the `skills/<id>/tests/<case>/case.yaml` eval format (that format is for skills, schema_version "1.1", claude-plugin eval cases — a pack is not invoked, so it has no "case" to run). Until `AUTHORING.md` specifies otherwise, the closest workable shape, modeled on how CE's own pack tests represent a diff/PR context as a small fixture tree (`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:tests/skill-eval-cell/fixtures/tiny-auth/`, `.../seat-cap/`) plus its resolver-input helper (`compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:tests/skills/helpers/packs-fixtures.ts#L1-14`), is:
 
 ```text
 packs/pack-api/tests/
@@ -104,10 +104,10 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** public interfaces, OpenAPI/protocol definitions, observable response shapes.
 
 **Donor sources:**
-- `addy@c004a747:skills/api-and-interface-design/SKILL.md#L20-33` (Hyrum's Law statement + design implications)
-- `addy@c004a747:skills/api-and-interface-design/SKILL.md#L156-217` (idempotency-key section — full mechanism)
-- `addy@c004a747:skills/api-and-interface-design/SKILL.md#L323-367` (rationalizations, red flags, verification checklist)
-- `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L30` (`api-contract` spawn condition — "an externally consumed boundary changes... A new or changed exported symbol inside one module is insufficient by itself")
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md#L20-33` (Hyrum's Law statement + design implications)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md#L156-217` (idempotency-key section — full mechanism)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md#L323-367` (rationalizations, red flags, verification checklist)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L30` (`api-contract` spawn condition — "an externally consumed boundary changes... A new or changed exported symbol inside one module is insufficient by itself")
 - `G:L1774` (pack-api row), `G:L1514` (Hyrum's Law table row)
 
 **Mechanisms to import:**
@@ -134,10 +134,10 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** removal, deprecation, replacement.
 
 **Donor sources:**
-- `addy@c004a747:skills/deprecation-and-migration/SKILL.md#L23-33` (Code Is a Liability, Hyrum Makes Removal Hard)
-- `addy@c004a747:skills/deprecation-and-migration/SKILL.md#L37-58` (The Deprecation Decision — 5 questions; Compulsory vs Advisory)
-- `addy@c004a747:skills/deprecation-and-migration/SKILL.md#L192-231` (Zombie Code, rationalizations, red flags, verification)
-- `addy@c004a747:skills/code-simplification/SKILL.md#L107-109` (Chesterton's Fence, stated plainly)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md#L23-33` (Code Is a Liability, Hyrum Makes Removal Hard)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md#L37-58` (The Deprecation Decision — 5 questions; Compulsory vs Advisory)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md#L192-231` (Zombie Code, rationalizations, red flags, verification)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md#L107-109` (Chesterton's Fence, stated plainly)
 - `G:L1775` (pack-delete row: "Chesterton + code-as-liability → standards + human if unexplained")
 
 **Mechanisms to import:**
@@ -167,11 +167,11 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** new or changed behavior.
 
 **Donor sources:**
-- `addy@c004a747:skills/test-driven-development/SKILL.md#L144-163` (Test Pyramid + Beyoncé Rule, verbatim)
-- `addy@c004a747:skills/test-driven-development/SKILL.md#L96-144` (Prove-It Pattern for bug fixes)
-- `addy@c004a747:skills/test-driven-development/SKILL.md#L363-398` (rationalizations, red flags, verification)
-- `superpowers@b36e0829:skills/test-driven-development/SKILL.md` (red-green-refactor discipline; belongs primarily to the `tdd` protocol, cite only for the "tests that pass on first run may not test what you think" red flag if `protocols/tdd` doesn't already own it — check for duplication before importing)
-- `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L26` (`testing` persona spawn condition — behavioral triggers, "production-file presence alone... do not select it")
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md#L144-163` (Test Pyramid + Beyoncé Rule, verbatim)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md#L96-144` (Prove-It Pattern for bug fixes)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md#L363-398` (rationalizations, red flags, verification)
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/test-driven-development/SKILL.md` (red-green-refactor discipline; belongs primarily to the `tdd` protocol, cite only for the "tests that pass on first run may not test what you think" red flag if `protocols/tdd` doesn't already own it — check for duplication before importing)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L26` (`testing` persona spawn condition — behavioral triggers, "production-file presence alone... do not select it")
 - `G:L1743` ("No 'looks good.' No persona. If the proof is missing, the ticket is not done. Beyoncé."), `G:L1776`
 
 **Mechanisms to import:**
@@ -199,10 +199,10 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** authentication, authorization, tenancy, secrets, payments, trust boundaries.
 
 **Donor sources:**
-- `addy@c004a747:skills/security-and-hardening/SKILL.md#L42-75` (Three-Tier Boundary System — Always Do / Ask First / Never Do)
-- `addy@c004a747:skills/security-and-hardening/SKILL.md#L427-467` (full Security Review Checklist, by category)
-- `addy@c004a747:skills/security-and-hardening/SKILL.md#L476-524` (rationalizations, red flags, verification)
-- `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L27` (`security` spawn condition), `references/select-and-route.md#L43` ("Security at anchor 50 still files — CE's exception" is transcript-only phrasing; the persisted-findings mechanic behind it is plan §6.1, not a donor file — cite plan, not a donor path, for that specific rule)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md#L42-75` (Three-Tier Boundary System — Always Do / Ask First / Never Do)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md#L427-467` (full Security Review Checklist, by category)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md#L476-524` (rationalizations, red flags, verification)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L27` (`security` spawn condition), `references/select-and-route.md#L43` ("Security at anchor 50 still files — CE's exception" is transcript-only phrasing; the persisted-findings mechanic behind it is plan §6.1, not a donor file — cite plan, not a donor path, for that specific rule)
 - `G:L1743-1751` (pass-1 panel: "Security at anchor 50 still files"), `G:L1777`, `G:L2101-2111` (autopilot escalation list items 2-3, 8)
 
 **Mechanisms to import:**
@@ -230,10 +230,10 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** UI components, styles, routes, user-visible strings.
 
 **Donor sources:**
-- `addy@c004a747:skills/frontend-ui-engineering/SKILL.md#L116-165` (Design System Adherence — "Avoid the AI Aesthetic" table, spacing/typography/color)
-- `addy@c004a747:skills/frontend-ui-engineering/SKILL.md#L165-243` (Accessibility — keyboard nav, ARIA, focus management, empty/error states)
-- `addy@c004a747:skills/frontend-ui-engineering/SKILL.md#L299-328` (rationalizations, red flags, verification)
-- `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L52` (`julik-frontend-races` — our `frontend-races` — "Stimulus/Turbo controllers, DOM event wiring, timers, async UI flows, animations, or frontend state transitions with race potential")
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md#L116-165` (Design System Adherence — "Avoid the AI Aesthetic" table, spacing/typography/color)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md#L165-243` (Accessibility — keyboard nav, ARIA, focus management, empty/error states)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md#L299-328` (rationalizations, red flags, verification)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L52` (`julik-frontend-races` — our `frontend-races` — "Stimulus/Turbo controllers, DOM event wiring, timers, async UI flows, animations, or frontend state transitions with race potential")
 - `G:L1778` (pack-frontend row: "a11y + i18n if user-visible strings → optional CE frontend persona")
 
 **Mechanisms to import:**
@@ -260,9 +260,9 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** schema, migrations, backfills, data transformations.
 
 **Donor sources:**
-- `addy@c004a747:skills/deprecation-and-migration/SKILL.md#L164-192` (Database Schema Migrations — Expand/Contract pattern)
-- `addy@c004a747:skills/deprecation-and-migration/SKILL.md#L204-231` (rationalizations/red flags/verification — the schema-specific rows and the post-migration checklist)
-- `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L37` (`data-migration` spawn gate — exact file-glob evidence, quoted in §1.3 above)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md#L164-192` (Database Schema Migrations — Expand/Contract pattern)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md#L204-231` (rationalizations/red flags/verification — the schema-specific rows and the post-migration checklist)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L37` (`data-migration` spawn gate — exact file-glob evidence, quoted in §1.3 above)
 - `G:L1779` (pack-data row: "irreversible → [escalate], launch-checklist flags"), plan §7.4 items 3-4 (irreversible data always escalates)
 
 **Mechanisms to import:**
@@ -290,11 +290,11 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** a stated performance budget or a relevant measured performance problem.
 
 **Donor sources:**
-- `addy@c004a747:skills/performance-optimization/SKILL.md#L30-46` (5-step Optimization Workflow: Measure → Identify → Fix → Verify → Guard)
-- `addy@c004a747:skills/performance-optimization/SKILL.md#L368-403` (Step 4: Verify — Keep or Revert decision table, "Neutral is a revert, not a keep")
-- `addy@c004a747:skills/performance-optimization/SKILL.md#L391-403` (Log every attempt, including the reverted ones — ledger table)
-- `addy@c004a747:skills/performance-optimization/SKILL.md#L446-480` (rationalizations, red flags)
-- `compound-engineering@05c42da9:skills/ce-code-review/references/persona-catalog.md#L28` (`performance` spawn condition — "Async/concurrent code or a cache data structure alone does not select it when correctness/reliability already own the changed semantics")
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md#L30-46` (5-step Optimization Workflow: Measure → Identify → Fix → Verify → Guard)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md#L368-403` (Step 4: Verify — Keep or Revert decision table, "Neutral is a revert, not a keep")
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md#L391-403` (Log every attempt, including the reverted ones — ledger table)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md#L446-480` (rationalizations, red flags)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md#L28` (`performance` spawn condition — "Async/concurrent code or a cache data structure alone does not select it when correctness/reliability already own the changed semantics")
 - `G:L1780` (pack-perf row: "measure before rewrite (Addy /webperf) → only if the ticket named a budget")
 
 **Mechanisms to import:**
@@ -321,9 +321,9 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Activation evidence (plan §3):** manifest and lockfile changes.
 
 **Donor sources:**
-- `addy@c004a747:skills/security-and-hardening/SKILL.md#L280-320` (Triaging Dependency Audit Results, Supply-Chain Hygiene)
-- `addy@c004a747:skills/security-and-hardening/SKILL.md#L427-467` (Security Review Checklist — "Supply Chain" category)
-- `addy@c004a747:skills/security-and-hardening/SKILL.md#L476-524` (the audit-related rationalization/red-flag/verification rows specifically: "The audit passed, so the dependency is safe," "competing lockfiles," "blanket-approved scripts")
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md#L280-320` (Triaging Dependency Audit Results, Supply-Chain Hygiene)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md#L427-467` (Security Review Checklist — "Supply Chain" category)
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md#L476-524` (the audit-related rationalization/red-flag/verification rows specifically: "The audit passed, so the dependency is safe," "competing lockfiles," "blanket-approved scripts")
 - `G:L1781` (pack-deps row: "supply chain, no surprise majors → deps audit, [cheap tier] can apply pins")
 
 **Mechanisms to import:**
@@ -350,14 +350,14 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Purpose (batch brief):** core engineering principles shared by skills — evidence over assertion, smallest correct change, verification before claims, explicit authority — adapted from Addy and superpowers.
 
 **Donor sources:**
-- `addy@c004a747:skills/using-agent-skills/SKILL.md#L45-116` (Core Operating Behaviors 1-6 + Failure Modes to Avoid) — this single section is the primary source; it maps onto the four named principles almost one-for-one:
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/using-agent-skills/SKILL.md#L45-116` (Core Operating Behaviors 1-6 + Failure Modes to Avoid) — this single section is the primary source; it maps onto the four named principles almost one-for-one:
   - "Verify, Don't Assume" (`#L110-114`) → **verification before claims**
   - "Enforce Simplicity" (`#L86-96`) → **smallest correct change**
   - "Maintain Scope Discipline" (`#L97-109`) → **explicit authority** (touch only what's authorized)
   - "Surface Assumptions" / "Manage Confusion Actively" (`#L49-74`) → **evidence over assertion** (state assumptions and evidence rather than silently proceeding)
-- `superpowers@b36e0829:skills/verification-before-completion/SKILL.md` (whole file — Iron Law, Gate Function, rationalization table) — primary source for **verification before claims**, complementing Addy's shorter statement with the actual mechanism (a gate function, not just a value statement).
-- `superpowers@b36e0829:skills/receiving-code-review/SKILL.md#L88-98` (YAGNI Check) — primary source for **smallest correct change**'s enforcement mechanism: "grep codebase for actual usage... IF unused: 'This endpoint isn't called. Remove it (YAGNI)?'"
-- `superpowers@b36e0829:skills/writing-plans/SKILL.md#L10` ("DRY. YAGNI. TDD.") — one-line reinforcement, cite only if the fuller YAGNI Check above needs a second anchor; likely redundant, prefer the fuller source.
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/verification-before-completion/SKILL.md` (whole file — Iron Law, Gate Function, rationalization table) — primary source for **verification before claims**, complementing Addy's shorter statement with the actual mechanism (a gate function, not just a value statement).
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/receiving-code-review/SKILL.md#L88-98` (YAGNI Check) — primary source for **smallest correct change**'s enforcement mechanism: "grep codebase for actual usage... IF unused: 'This endpoint isn't called. Remove it (YAGNI)?'"
+- `superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md#L10` ("DRY. YAGNI. TDD.") — one-line reinforcement, cite only if the fuller YAGNI Check above needs a second anchor; likely redundant, prefer the fuller source.
 
 **Mechanisms to import:**
 1. Addy's "Core Operating Behaviors" framing (numbered, each with a bad/good example) is the right shape for this reference: four short sections, one per principle, each with a one-line statement plus a concrete bad/good pair. Quote to adapt for evidence-over-assertion: "Every skill includes a verification step. A task is not complete until verification passes. 'Seems right' is never sufficient — there must be evidence (passing tests, build output, runtime data)." (`using-agent-skills/SKILL.md#L112-114`)
@@ -377,9 +377,9 @@ Numeric budgets (PR size, coverage %, LCP thresholds, lockfile policy) are proje
 **Purpose (batch brief):** CE ce-noslop ideas for plain, fact-preserving writing; wording cleanup is separate from substantive document decisions and from code simplification.
 
 **Donor sources:**
-- `compound-engineering@05c42da9:skills/ce-noslop/SKILL.md` (whole file — the tests, modes, register guidance)
-- `compound-engineering@05c42da9:skills/ce-noslop/references/patterns.md` (whole file — 41 numbered rules across Content/Language/Structure/Formatting/Chat-artifacts)
-- `compound-engineering@05c42da9:skills/ce-noslop/references/terminology.md` (short — wording-cleanup boundary statement)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-noslop/SKILL.md` (whole file — the tests, modes, register guidance)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-noslop/references/patterns.md` (whole file — 41 numbered rules across Content/Language/Structure/Formatting/Chat-artifacts)
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-noslop/references/terminology.md` (short — wording-cleanup boundary statement)
 - `G:L625` (the boundary line: "It is findings, not a verdict. /ce-pov is the essay... Doc-review is the issue list that can edit the file. /ce-noslop is prose. Do not mash those three together.")
 
 **Mechanisms to import:**

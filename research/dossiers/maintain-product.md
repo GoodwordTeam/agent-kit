@@ -36,21 +36,21 @@ Read this whole file before writing any of the six skills — §7 (conflicts) an
 ## 1. `simplify` (M)
 
 ### Sources
-- `ce@05c42da9:skills/ce-simplify-code/SKILL.md` — primary donor, full process.
-- `ce@05c42da9:skills/ce-simplify-code/references/personas/code-quality-reviewer.md`
-- `ce@05c42da9:skills/ce-simplify-code/references/personas/code-reuse-reviewer.md`
-- `ce@05c42da9:skills/ce-simplify-code/references/personas/efficiency-reviewer.md`
-- `addy@c004a747:skills/code-simplification/SKILL.md` — secondary donor, process framing and
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/SKILL.md` — primary donor, full process.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/references/personas/code-quality-reviewer.md`
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/references/personas/code-reuse-reviewer.md`
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/references/personas/efficiency-reviewer.md`
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md` — secondary donor, process framing and
   tables.
-- `omc@5281b19e:skills/ai-slop-cleaner/SKILL.md` — deletion-first sequencing ideas only.
-- `omc@5281b19e:skills/minimal-code-discipline/SKILL.md` — "existence first" framing, useful
+- `omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ai-slop-cleaner/SKILL.md` — deletion-first sequencing ideas only.
+- `omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/minimal-code-discipline/SKILL.md` — "existence first" framing, useful
   for the preflight step.
-- `omx@cb955b0d:skills/ai-slop-cleaner/SKILL.md` — near-duplicate of the OMC version; its one
+- `omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ai-slop-cleaner/SKILL.md` — near-duplicate of the OMC version; its one
   addition worth stealing is the masking-vs-grounded fallback classification (below).
 
 Batch brief donor starting points also named `omx skills/minimal-code-discipline`, but that
 path does not exist in the OMX donor at the pinned commit — OMX has `ai-slop-cleaner` only;
-`minimal-code-discipline` is OMC-only. Cite it as `omc@5281b19e:...` alone.
+`minimal-code-discipline` is OMC-only. Cite it as `omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/minimal-code-discipline/SKILL.md` alone.
 
 ### The backbone: CE's SKILL.md, almost as-is
 CE's `ce-simplify-code` already *is* the plan's `simplify` contract, nearly verbatim against
@@ -160,16 +160,16 @@ lacks and the batch brief explicitly wants:
 ## 2. `improve-architecture` (U)
 
 ### Sources
-- `pocock@c55ee460:skills/engineering/improve-codebase-architecture/SKILL.md` — primary donor,
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/improve-codebase-architecture/SKILL.md` — primary donor,
   full process.
-- `pocock@c55ee460:skills/engineering/improve-codebase-architecture/HTML-REPORT.md` — report
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/improve-codebase-architecture/HTML-REPORT.md` — report
   scaffold detail; skim only, it's mostly Tailwind/Mermaid markup instructions.
-- `pocock@c55ee460:skills/engineering/codebase-design/SKILL.md` — the shared vocabulary this
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/SKILL.md` — the shared vocabulary this
   skill is required to use (module, interface, depth, seam, adapter, leverage, locality, the
   deletion test, "the interface is the test surface", "one adapter = hypothetical seam, two =
   real"). This file is the source for `references/codebase-design/` (another batch's output);
   `improve-architecture` links to it, it does not restate it.
-- `pocock@c55ee460:skills/engineering/codebase-design/DEEPENING.md` — dependency-category
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/DEEPENING.md` — dependency-category
   taxonomy (in-process / local-substitutable / remote-but-owned / true-external) used once a
   candidate is picked; also belongs to `references/codebase-design/`.
 
@@ -241,8 +241,8 @@ lacks and the batch brief explicitly wants:
 ## 3. `deprecate` (U)
 
 ### Sources
-- `addy@c004a747:skills/deprecation-and-migration/SKILL.md` — primary donor, full process.
-- `addy@c004a747:evals/cases/deprecation-and-migration.json` — donor's own eval case shape;
+- `addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md` — primary donor, full process.
+- `addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/deprecation-and-migration.json` — donor's own eval case shape;
   useful as one more example of positive/negative framing, not to be imported verbatim (donor
   eval format differs from our `case.yaml` schema — see §9 Eval design).
 - Transcript: G:L1513 (Hyrum's Law → `deprecation-and-migration`, "Code as liability"),
@@ -324,12 +324,12 @@ lacks and the batch brief explicitly wants:
 ## 4. `triage` (U)
 
 ### Sources
-- `pocock@c55ee460:skills/engineering/triage/SKILL.md` — primary donor, full state machine.
-- `pocock@c55ee460:skills/engineering/triage/AGENT-BRIEF.md` — the brief template and its
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/SKILL.md` — primary donor, full state machine.
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/AGENT-BRIEF.md` — the brief template and its
   four durability/behavioral/acceptance-criteria/scope principles.
-- `pocock@c55ee460:skills/engineering/triage/OUT-OF-SCOPE.md` — the rejected-request knowledge
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/OUT-OF-SCOPE.md` — the rejected-request knowledge
   base mechanism.
-- `pocock@c55ee460:skills/engineering/setup-matt-pocock-skills/triage-labels.md` — the label
+- `pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/setup-matt-pocock-skills/triage-labels.md` — the label
   mapping this skill depends on; confirms the donor's own "tell the user to run setup if no
   mapping exists" stop condition is backed by a real configuration file, not hand-waved.
 
@@ -407,12 +407,12 @@ lacks and the batch brief explicitly wants:
 ## 5. `strategy` (U)
 
 ### Sources
-- `ce@05c42da9:skills/ce-strategy/SKILL.md` — primary donor, full process.
-- `ce@05c42da9:skills/ce-strategy/references/strategy-template.md` — the document template
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/SKILL.md` — primary donor, full process.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/references/strategy-template.md` — the document template
   and its fill-in/post-write checklist.
-- `ce@05c42da9:skills/ce-strategy/references/interview.md` — interview question order and
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/references/interview.md` — interview question order and
   pushback bar (179 lines; read in full when writing, only the phase list is summarized here).
-- `ce@05c42da9:skills/ce-strategy/references/update-run.md` — how an existing doc is revised
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/references/update-run.md` — how an existing doc is revised
   without disturbing untouched sections; ownership test for "solely our format" vs. "shared,
   edit in place."
 
@@ -481,14 +481,14 @@ lacks and the batch brief explicitly wants:
 ## 6. `product-pulse` (U)
 
 ### Sources
-- `ce@05c42da9:skills/ce-product-pulse/SKILL.md` — primary donor, full process.
-- `ce@05c42da9:skills/ce-product-pulse/references/report-template.md` — report template,
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/SKILL.md` — primary donor, full process.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/report-template.md` — report template,
   per-metric source-resolution rule, and post-write checklist.
-- `ce@05c42da9:skills/ce-product-pulse/references/run.md` — which queries run in parallel vs.
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/run.md` — which queries run in parallel vs.
   serially, the DB-enabled check, quality sampling.
-- `ce@05c42da9:skills/ce-product-pulse/references/config.md` — the `pulse_*` key schema
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/config.md` — the `pulse_*` key schema
   (skim for the shape only; the keys themselves are CE-plugin-specific, see below).
-- `ce@05c42da9:skills/ce-product-pulse/references/setup.md` — first-run interview and the
+- `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/setup.md` — first-run interview and the
   read-write-credential refusal.
 
 ### Mechanisms to import

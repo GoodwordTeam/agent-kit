@@ -495,7 +495,7 @@ field list stays plan §7.2's, not this ADR's stage-profile fields.
 
 ## 4. Narrower donors read for corroboration/contrast (not primary sources)
 
-### 4.1 CE lfg — ce@05c42da94fd318fa081f29d17bf947762aa477b1:skills/lfg/SKILL.md
+### 4.1 CE lfg — compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/lfg/SKILL.md
 
 Full text read (59 lines + references, references not read — not needed for this
 batch). Batch brief: "read to understand what NOT to duplicate." Confirmed: `lfg` is
