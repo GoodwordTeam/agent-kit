@@ -77,6 +77,81 @@ adaptations:
   - path: protocols/worktree-ownership/PROTOCOL.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/using-git-worktrees/SKILL.md
     rationale: Detect existing isolation by comparing resolved git dir against resolved common git dir with a superproject guard; prefer the native worktree capability; verify the gitignore entry; the rationalization rows behind this protocol's Hard gates table. Deliberate divergence on the gitignore probe. The donor runs `git check-ignore -q` on the bare directory name, which is correct for its own ordering because it verifies a directory that already exists. This protocol probes before creating anything, so it uses the trailing-slash form. The two forms agree in every case but one, a directory-only rule probed before the directory exists, where git tests the bare name as a file and returns a false negative. The donor is authority for what the donor does, not for what is correct under a different ordering.
+  - path: roles/code-review/adversarial/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/adversarial-reviewer.md
+    rationale: Constructing concrete failure scenarios against the diff rather than checking it against known patterns, and the rule that a scenario not traceable to real lines is not admissible.
+  - path: roles/code-review/agent-native/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/agent-native-reviewer.md
+    rationale: "Agent-native parity: any action a user can take, an agent can also take. The two-pass shape (find user-facing actions, then organize by domain entity) is kept; the donor's unstructured markdown return and PASS / NEEDS WORK verdict are replaced by the canonical finding, per dossier §24.2."
+  - path: roles/code-review/api-contract/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/api-contract-reviewer.md
+    rationale: Breaking contract changes on request and response shapes, serialization, versioning and exported type signatures, and the existing-caller test that distinguishes a breaking change from an additive one.
+  - path: roles/code-review/correctness/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/correctness-reviewer.md
+    rationale: "The seat itself: logic errors, edge cases, state-management bugs, error-propagation failures, and the intent-versus-implementation mismatch that is this seat's distinctive question. Donor severity vocabulary replaced by the three-axis finding grade."
+  - path: roles/code-review/data-migration/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md
+    rationale: "The explicitly supplied review base: this seat compares schema state against a given merge-base revision and never assumes the default branch, because a drift comparison against a guessed base produces confident findings about someone else's changes."
+  - path: roles/code-review/data-migration/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/data-migration-reviewer.md
+    rationale: Migration and backfill safety judged against production data shape rather than against fixtures, reversibility, and the lock and table-rewrite behaviour of the statements the migration actually issues.
+  - path: roles/code-review/frontend-races/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/julik-frontend-races-reviewer.md
+    rationale: Race conditions and janky failure modes in async UI code — ordering between an in-flight request and a lifecycle event, and the interleavings a fast user or a slow network produces. Donor author prefix dropped from the seat id.
+  - path: roles/code-review/learnings/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/learnings-researcher.md
+    rationale: "Surfacing prior recorded learnings so institutional knowledge reaches the change, and the rule that retrieved text is evidence and never instruction. Every repo-tree read is replaced by a KB adapter call per ADR-0001: the donor's solutions walk, grep pre-filter, frontmatter probe and concepts step are excluded, as is its markdown return."
+  - path: roles/code-review/maintainability/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/maintainability-reviewer.md
+    rationale: Premature abstraction, unnecessary indirection, dead code, coupling between unrelated modules, and naming that obscures intent.
+  - path: roles/code-review/maintainability/ROLE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: "The named-smell baseline this seat carries beyond what the project documents, and the precedence rule that the repo's documented standard wins and the smell is suppressed. Recorded as this seat's own prohibition rather than as a citation: no ruling in policies/resolved-conflicts.yaml states that precedence, and this batch does not write that file. See the handback."
+  - path: roles/code-review/performance/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/performance-reviewer.md
+    rationale: Algorithmic complexity, query patterns, and I/O in loops, judged against the data volume the code will actually see rather than against a micro-benchmark.
+  - path: roles/code-review/previous-comments/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/previous-comments-reviewer.md
+    rationale: "Whether prior review feedback was addressed, dismissed or silently dropped, and the rule that a reply is not evidence of a change. Forge plumbing excluded: the donor's two `gh` invocations become supplied inputs."
+  - path: roles/code-review/project-standards/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/project-standards-reviewer.md
+    rationale: Auditing a change against the project's own declared standards rather than against a reviewer's preference, and the rule that an absent standard produces no finding. Donor's fixed list of standards files replaced by whatever the project declares.
+  - path: roles/code-review/reliability/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/reliability-reviewer.md
+    rationale: Production failure modes — retries, timeouts, idempotency, partial failure and recovery — judged by asking what happens when the dependency is slow rather than when it is down.
+  - path: roles/code-review/security/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/security-reviewer.md
+    rationale: Exploitable vulnerabilities reached by tracing a path from an untrusted entry point to the damage, rather than pattern-matching a category name. The traced path is what the finding cites.
+  - path: roles/code-review/swift-ios/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/swift-ios-reviewer.md
+    rationale: SwiftUI state and view-identity correctness, reference-cycle and memory safety, Swift concurrency and actor isolation, Core Data threading, and accessibility.
+  - path: roles/code-review/testing/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md
+    rationale: "The tree-mutation exception: this is the one seat permitted to mutate, and only in an isolated worktree or scratch copy that is a faithful snapshot of the reviewed tree. The donor's run-directory plumbing is excluded; the isolation requirement is kept."
+  - path: roles/code-review/testing/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/testing-reviewer.md
+    rationale: Coverage gaps, weak assertions, implementation-coupled brittleness, and the distinction between a missing test and a test that cannot fail.
+  - path: roles/doc-review/adversarial-document/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/adversarial-document-reviewer.md
+    rationale: Falsification rather than evaluation — premise challenging, assumption surfacing, decision stress-testing, alternative blindness — the origin-conditional suppression of two of those techniques, and the structural anchor cap on premise findings.
+  - path: roles/doc-review/coherence/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/coherence-reviewer.md
+    rationale: "Internal consistency only: contradictions between passages, terminology drift, and ambiguity where two careful readers diverge. The donor's own document identifier scheme and unified-requirements artifacts are excluded, per dossier §24."
+  - path: roles/doc-review/design-lens/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/design-lens-reviewer.md
+    rationale: Missing design decisions — information architecture, interaction and error states, user flows — found by dimensional rating rather than by taste, and the generic-output risk the donor names.
+  - path: roles/doc-review/feasibility/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/feasibility-reviewer.md
+    rationale: Whether a proposed approach survives contact with the codebase it will land in — architecture conflicts, dependency gaps, migration risk — and the currency checks that make a stale baseline this seat's finding.
+  - path: roles/doc-review/product-lens/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/product-lens-reviewer.md
+    rationale: Premise claims and strategic consequence — trajectory, identity, adoption, opportunity cost — and the domain-agnostic reading of "user" that keeps the seat usable on developer-facing and operator-facing documents.
+  - path: roles/doc-review/scope-guardian/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/scope-guardian-reviewer.md
+    rationale: Right-sizing against the document's stated goals, the complexity smell test, indirect scope, speculative abstraction, prioritization coherence, the completeness principle, and the territory boundary that keeps a self-contradiction about scope with doc-review/coherence.
+  - path: roles/doc-review/security-lens/ROLE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/security-lens-reviewer.md
+    rationale: "Plan-level security gaps: auth and authorization assumptions, data exposure, API surface, and missing threat-model elements. The suppression of unfalsifiable exploit paths is kept and is the deliberate asymmetry against code-review/security."
   - path: roles/implementer/ROLE.md
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/incremental-implementation/SKILL.md
     rationale: The noticed-but-not-touching pattern, this seat's scope-discipline mechanism.
