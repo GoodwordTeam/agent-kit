@@ -643,6 +643,19 @@ An entry records three things, and the middle one is what makes it actionable wi
    keyed `target:` is skipped by the parser" is the report; "§5 seems wrong" is not.
 3. **What the correct behavior appears to be**, or that the writer cannot tell.
 
+**An entry is retired by deleting it**, in the commit that resolves it, with the ruling in that
+commit's message. An entry is never marked resolved and left in place: a resolved entry reads
+exactly like an open one to anything scanning this file, and the blocking clause below cannot tell
+them apart. It follows that the file has no resolved section — a heading for retired entries is an
+invitation to do the thing this rule forbids, and an empty one reads as a claim that nothing has
+ever been found.
+
+Deleting an entry does not lose it. The entry and the ruling are both in the resolving commit, and
+`git log -- CONTRACT-DEFECTS.md` is the index of every defect this contract has ever had. The file
+says that in one line, because the record is worth little if a reader has to already suspect it
+exists: whether a writer who reports a contract defect gets a contract fix rather than a workaround
+is the one thing this mechanism has to demonstrate, and an empty list demonstrates the opposite.
+
 **An open entry blocks the batch commit until the contract owner rules on it.** Without that clause
 the file degrades into a suggestions box, which is the failure it exists to prevent: the defect that
 prompted this rule was reported correctly and nothing was obliged to read it. Ruling may mean
