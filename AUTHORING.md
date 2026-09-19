@@ -21,11 +21,17 @@ Everything longer lives behind `references/` in the skill's own directory and is
 Full persona catalog and lane-selection rules: `references/panel-composition.md`.
 ```
 
-Progressive disclosure through `references/` is **the** mechanism. It is explicitly **not** a
-full-body shim that defers to another plugin's hooks, skills or session state — a skill written that
-way produces an empty body under a plain `claude plugin install` of this package alone, which is the
-only install this catalog supports. A `SKILL.md` whose workflow cannot be executed with nothing but
-this package's own files is a validation failure, not a design.
+Progressive disclosure through `references/` is **the** mechanism, and explicitly **not** a body
+that depends on another package's hooks, skills or session state (ruling
+`full-catalog-opt-in-profiles`). A skill written that way produces an empty body under a plain
+`claude plugin install` of this package alone, which is the only install this catalog supports. A
+`SKILL.md` whose workflow cannot be executed with nothing but this package's own files is a
+validation failure, not a design.
+
+That ruling also governs packaging, which this section does not: the full catalog ships and
+profiles select what installs, so a skill is never trimmed, gated or duplicated to suit a profile.
+Read it before adding an entrypoint — "no duplicate donor lifecycles, no second run-everything
+entrypoint" is the same ruling, and §7 enforces it.
 
 What belongs in the body: the trigger, the boundary, the ordered workflow, the gates, the stop
 conditions. What belongs in `references/`: catalogs, rubrics, long tables, worked examples, format
@@ -114,7 +120,7 @@ anti-rationalization table (§3.1).
 
 Every artifact this skill produces: id shape, schema reference, and where it goes. A skill that
 writes project-derived content names the knowledgebase operation it calls, never a repository path
-(plan §1.2, §8; release scenario 21).
+(ruling `central-kb-owns-project-artifacts`; plan §1.2, §8; release scenario 21 — §7).
 
 > Emits one `review` artifact (`schemas/review.schema.json`) and one finding ledger; both are
 > published through the KB adapter's `publishArtifact`, never to a path in the working repo.
@@ -285,8 +291,16 @@ and the adapted file ends up with no provenance at all, in a fragment that valid
 with `path:` and no `source:` at least fails loudly, as `provenance.malformed-source`. Write one row
 per `(path, source)` pair: a file adapted from several donor files carries several rows, and one
 fragment owns each path — a second fragment claiming it raises `provenance.conflicting-adaptation`.
-No other key is read. Anything extra is copied verbatim into the generated merge, so it appears in
-the record without ever having been checked.
+No other key is read — but an unread key is not a discarded one. The whole row is copied verbatim
+into the generated merge, so an invented key appears in the published record having never been
+checked by anything.
+
+**A row may not point at anything outside the merge.** Keys *beside* `adaptations:` in a fragment are
+a different matter: the merge takes the `adaptations` list and nothing else, so a sibling key is
+dropped. A `rationale:` that refers the reader to one — "recorded under `<key>` below" — resolves in
+the fragment and dangles in the generated file, which is the artifact `NOTICE` points a downstream
+consumer at. Write each row to stand alone, and cross-reference only paths and `donor@commit:path`
+sources, which survive.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
@@ -303,6 +317,17 @@ two together — a `conversation` entry whose capability the map does not land i
 lands there as `origin: donor`, is reported, because one of the two is then wrong about where the
 capability came from. Inventing an `origin:` or `locator:` key on an adaptations row does not
 substitute: nothing reads it.
+
+**A donor-origin entry may still contain design-originated capabilities, and the route for them is
+the same one.** The two granularities are independent: `provenance_origin` classifies the *entry*,
+while a conversation-map row records a *capability* landing in that entry's directory. A directory
+adapted from a donor can therefore carry a capability no donor implements, recorded at
+`destination: <entry dir>` with its `G:L` locator, while the entry stays `provenance_origin: donor`
+and its adapted files keep their rows. Nothing forbids the mix and several entries already use it.
+What has no route is a **loose doctrine file** (§12.3): with no catalog entry there is no directory
+to be a destination, so a design-originated rule in one is recorded by citation in the file itself
+and nowhere else. If a writer cannot find the route for something, that is a contract defect (§10) —
+never a new key parked in a fragment, which records nothing and dangles once merged.
 
 **Never fabricate a source path because a document named a skill.** A donor file that was renamed,
 moved or never existed is `origin: conversation`, not a guess at where it used to be.
@@ -342,7 +367,8 @@ Only independent verification evidence closes a finding; reviewer confidence is 
 (ruling `closure-requires-independent-verification`).
 ```
 
-There are two citation shapes, and `ak validate` resolves both against the same 18 ids:
+There are two citation shapes, and `ak validate` resolves both against the ids in
+`policies/resolved-conflicts.yaml`:
 
 | Where | Shape |
 |---|---|
@@ -393,12 +419,20 @@ introduce a "run everything", "do the whole thing" or "full loop" entrypoint bes
 reach a forbidden U-to-U call through a wrapper. Where a host cannot validate a grant, the skill
 stops for explicit invocation (`AGENTS.md`, "The invocation law").
 
-**No repository-local project documentation.** Project-derived artifacts are KB-owned (plan §1.2,
-§8). A skill that writes `docs/`, `CONTEXT.md`, `plans/`, `.scratch/` or an ADR tree into the working
+**No repository-local project documentation.** Project-derived artifacts are KB-owned — decisions,
+requirements, plans, tickets, reviews, lessons and sanitized run receipts — and this package owns
+reusable instructions and templates only (ruling `central-kb-owns-project-artifacts`; plan §1.2, §8). A skill that writes `docs/`, `CONTEXT.md`, `plans/`, `.scratch/` or an ADR tree into the working
 repository fails release scenario 21, whatever the donor did. `docs/decisions/0001-kb-document-vocabulary.md`
 (ADR-0001) names the central equivalent for each retired path and the nine document kinds a KB write
 may use; convert every donor "write a file in the repo" instruction into a KB adapter call
 (`adapters/knowledgebase/CONTRACT.md`). `ak validate` scans skill bodies for the retired targets.
+
+Two clauses of that ruling are easy to lose and both bind a writer. **Directory names under the
+knowledgebase root are configurable; the central ownership is not** — so a body names the operation
+it calls and never hardcodes a knowledgebase path, which would re-create the local tree one level
+further out. And **a completed ship is not permission to rewrite project knowledge**: a skill that
+finishes its work does not thereby acquire a write it did not have, and a body that has a step
+revising project knowledge after shipping is describing an authority no skill holds.
 
 ---
 
@@ -538,7 +572,15 @@ resolves against the pin is a *record*; the same path moved into a field nothing
 other way, because complying with a gate feels like discipline.
 
 **A reviewer follows** that does not see the writer's narrative — only the produced files, the
-dossier, and this contract. It cannot be told "I checked that already"; it re-derives.
+dossier, this contract, and **any prior findings against this batch, with their fingerprints and
+evidence**. It cannot be told "I checked that already"; it re-derives.
+
+That last item is not optional and not the writer's to withhold. **Independence from the author is
+mandatory; amnesia is not** (ruling `reviewer-continuity-not-amnesia`). A second-cycle reviewer that
+is denied the first cycle's findings is not more independent, it is less useful — it re-derives what
+was already established instead of checking whether it was addressed. A continuing reviewer may
+retain its own finding context; a replacement receives a durable prior-finding packet. What
+independence forbids is inheriting the *author's* account, never the prior findings themselves.
 
 **A reviewer reads the working tree and records the revision it read.** A review pinned to a revision
 that has since moved is judging a batch against a contract the batch never saw, and it will report
@@ -556,9 +598,19 @@ because the reviewer re-derives from the dossier, so material the dossier never 
 reviewer cannot miss — artifact and packet still agree once it is gone. The delta is what makes that
 loss visible.
 
-**At most two fix cycles.** Anything still open after the second cycle is reported with its evidence,
-not looped. An open item in a batch report is a normal, expected outcome; a stub committed to make a
-report look clean is a fabricated completion and is treated as one.
+**At most two fix-and-verify cycles after the first pass** (ruling `two-fix-cycles-then-stop`). The
+third does not run. It **stops with an explicit blocked-or-replan decision and the open findings
+attached** — a decision that is recorded, not a loop that quietly ends. An open item in a batch
+report is a normal, expected outcome; a stub committed to make a report look clean is a fabricated
+completion and is treated as one.
+
+**Repeated failure is a signal about the plan, not an invitation to a third loop.** A batch that
+fails twice is evidence about the brief, not about the writer's output, and this contract gives that
+evidence somewhere to go: the replan branch is a contract defect (above), filed with the two cycles
+as its record. A writer that reads the cycle limit as a verdict on its own work will report and stop
+where it should report and escalate. Where the replan lands on a materially changed baseline, that is
+a new review scope with its own first pass rather than a third delta loop (ruling
+`delta-baseline-reset-not-third-loop`).
 
 **Authoring and review are separate passes.** A writer never approves its own output, and never
 merges a reviewer's fix and a fresh revision into one indistinguishable edit.
@@ -569,7 +621,18 @@ still restate each other's boundaries under it, the panel needs **one central bo
 roles reference**, rather than each role carrying its own copy. Escalate there; do not widen the
 heading and do not let the seats enumerate each other.
 
-**Measure that trigger on sibling-seat entries only.** The trigger is roles restating *each other's*
+**The trigger has two channels, and `## Not this seat` is only one of them.** The other is
+panel-wide preconditions restated per seat — a shared snapshot condition, a shared contamination
+rule, a shared return vocabulary — which surface under `## When it has nothing to say` and are
+invisible to a bullet count on a different heading. This channel is the one that scales worst: a
+condition the panel's protocol already states, copied into every seat, is one copy per seat, and
+fifteen copies read as compliant the whole way. **A precondition the panel's protocol already carries
+is cited, not restated** — the seat states its own return for that condition and points at the
+protocol for the condition itself. Where a seat must restate it to be usable standalone, that is the
+signal the protocol and the panel have drifted apart, and it escalates to the same central-table
+remedy.
+
+**Measure the sibling-seat trigger on sibling-seat entries only.** The trigger is roles restating *each other's*
 boundaries, which is kind 1 in §12.2 and nothing else. A role's non-seat and cross-layer entries are
 unbudgeted, and pooling all three kinds into one bullet count turns a compliant role into an apparent
 breach. Batch 1's seven roles each name two or three sibling seats — well inside the bound, not at
@@ -678,7 +741,18 @@ what it may never do, what it gives back, the empty case, and the rationalizatio
 from what the seat was given, which is why `## Evidence it must cite` follows
 `## What it must be given` rather than preceding it.
 
-Eight headings is a lot for a file that runs 75–110 lines, and the two that grew the set from six
+**On length, and it matters because batch 1 built an exception out of this.** §1's targets bind
+protocol and role bodies as contract — §12 says §1 applies unchanged — but **nothing measures them**:
+`checkBudget` iterates the `skills` section alone (`src/validation/budget.ts`), so a `PROTOCOL.md` or
+`ROLE.md` of any length passes silently. Two consequences, and the second is the one that bit.
+A writer does not treat the silence as permission. And **a writer does not record an exception to a
+cap that was never applied to its file** — an exception argues with a gate, and there is no gate
+here, so the record asserts a constraint the validator never had and a later reader inherits a
+justification for a rule that was not in force. Report the length in the handback if it is unusual;
+do not manufacture a waiver.
+
+The 75–110 range below is **descriptive of the roles authored so far, not a bound.** A role at 118
+lines is not over anything. Eight headings is a lot for a file that runs 75–110 lines, and the two that grew the set from six
 earn their place the same way. A seat has two hardest failure modes: **judging something it should
 never have accepted**, and **talking itself past a prohibition**. Neither had a home, so the material
 leaked into whichever neighbouring section sat closest — a precondition stretched into
@@ -716,6 +790,25 @@ Three kinds of confusion belong in this heading, and the budget above governs **
    strictly would leave out the step a seat's output is most often mistaken for. **Not budgeted.**
 3. **Same-named seats at another layer.** A different error from the other two: not a blurred
    boundary but a reader who has the wrong file open. **Required, and not budgeted.**
+4. **Seats in another panel that are not counterparts** — `reviewer-spec` naming
+   `plan-review/critic`, `plan-review/planner` naming `implementer`. Neither a sibling nor a twin:
+   a seat whose output could be mistaken for this one's across a stage boundary. **Not budgeted, and
+   each must name the confusion it prevents.** That sentence is the entry's whole justification, and
+   without it this kind has no natural limit — there are twenty-eight other seats and any of them can
+   be argued adjacent to any other.
+
+**Kind 1 means same-panel, and the three-or-four cap counts only those.** A seat in another panel is
+kind 3 or kind 4 and is never charged against it.
+
+**Every exemption in this section is from the bullet count, and from nothing else.** "Unbudgeted"
+means the entry does not consume one of the three or four sibling slots; it does not mean the entry
+is free of length, and no entry here is exempt from a file-length target should one ever be enforced
+against role bodies (see §12.2's note on §1 above). If a role is ever over a length bound, **a
+required entry is not what gets cut** — dropping a mandated `## Never` row or a declared counterpart
+to fit a line count is weakening the artifact to satisfy a check, which §10 forbids outright. The
+material to cut is prose the contract does not require. This is what keeps the cap doing the work it was
+written for: sibling enumeration is what grows quadratically with panel size, and cross-panel
+entries do not.
 
 Kinds 2 and 3 are exempt for the same reason, and it is the reason the budget exists at all. Fifteen
 seats each enumerating the other fourteen is quadratic — but **only kind 1 is quadratic.** The
@@ -745,6 +838,16 @@ that exist today:
 | `code-review/adversarial` | `doc-review/adversarial-document`, `plan-review/critic` |
 | `doc-review/adversarial-document` | `code-review/adversarial`, `plan-review/critic` |
 | `plan-review/critic` | `code-review/adversarial`, `doc-review/adversarial-document` |
+| `reviewer-spec` | `code-review/previous-comments` |
+| `code-review/previous-comments` | `reviewer-spec` |
+| `code-review/maintainability` | `doc-review/scope-guardian` |
+| `doc-review/scope-guardian` | `code-review/maintainability` |
+
+**This table is not complete, and a seat's absence from it is not a finding that it has no
+counterpart.** Eleven seats of twenty-nine are named here. Some counterparts are only visible while
+the seats are being written, so completeness is a handback obligation rather than a property this
+table can claim — see below. What the table does guarantee is that what it *does* declare is
+consistent in both directions.
 
 **Every pairing is stated in both directions, and a new pair is added as two rows or it is not
 added.** A reader arrives from whichever file they happen to have open, so a one-directional pairing
@@ -752,6 +855,36 @@ is a coin flip on whether the boundary is stated at all — and the direction th
 one nobody was holding when the row was written. A family of three is three rows naming two each.
 This table had the defect it exists to prevent: the `security` and `standards` pairs were entered one
 way round, which left the reverse naming missing from the two seats that had not been authored yet.
+
+**Unresolved candidates.** These pairs are suggested by the seats' catalog summaries and have not
+been confirmed. Each is resolved by the writer who authors either seat **while that seat is still
+open**, in one of two ways: promoted into the table as two rows, or recorded in the handback as
+examined and not a family, with the distinction that separates them. Leaving one unresolved is not an option, because an unexamined
+candidate is indistinguishable from a declared non-family.
+
+| Candidate pair | Why it is a candidate |
+|---|---|
+| `doc-review/feasibility` / `plan-review/architect` | Both judge whether a proposed approach holds up structurally; the layers differ, and it is not yet established that the questions do. |
+| `doc-review/design-lens` / `code-review/frontend-races` | Both concern interaction states and UI flows — one as missing design decisions, one as race potential. Possibly adjacent rather than same-named. |
+
+**A pair that reaches backwards into a closed batch is a contract defect routed to the earlier
+batch's fix cycle.** The writer who finds such a pair owns reporting it and never owns fixing the far
+side. A later writer amending an earlier body is editing a file it was never given, under a brief
+that never covered it, producing an edit that neither batch's reviewer will see against its own
+dossier — the batch boundary is what makes a handback reviewable, and a cross-batch edit dissolves
+it. The report names both seats and the distinction the writer believes separates them; the earlier
+batch's fix cycle writes the bullet, because a seat's own writer is the one who can say what that
+seat is not.
+
+**A seat that finds a pair this contract does not declare files a contract defect (§10).** It is not
+a body defect, and the writer does not quietly add the bullet and move on: the counterpart is in
+another panel that another writer may be authoring from the same table, and a pair recorded in one
+body and not the other reproduces exactly the asymmetry the table is checked for. The table is the
+specification; a discovery amends the specification.
+
+Batch 2's handback reports every pair it found, including the ones already declared, and every
+candidate it resolved. That report is what makes the census auditable — without it, a seat with no
+counterpart bullet is silent about whether it has no counterpart or whether nobody looked.
 
 The adversarial family is three seats, not a pair: each of the three names the other two. The
 standards pair needs the most care, because those two seats carry conditional `## Never` row 4 in
