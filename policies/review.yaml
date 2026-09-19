@@ -180,6 +180,154 @@ lane_results:
   scenario: 4
 
 # ---------------------------------------------------------------------------
+# What a seat may emit (plan §5.5; dossier research/dossiers/review-personas.md:596-735,
+# which carries the donor citations at the pin).
+#
+# Three gates sit between a seat's observation and a finding: the evidence a claim must carry,
+# the categories that are not findings at all, and what a `suggested_fix` commits to. All three
+# are panel-wide and hold on both surfaces, which is why they are here and not in each role
+# body — a seat's own `What you don't flag` list then carries only its own territory and its
+# boundary hand-offs.
+#
+# These keys carry no `scenario:`, unlike their neighbours. `provenance/conversation-map.yaml`
+# has no row for this capability — not retained, folded or excluded — which is a known Phase-1
+# gap routed to `provmap`. A scenario number invented here could not be checked against
+# anything, so the absence is recorded rather than filled.
+# ---------------------------------------------------------------------------
+evidence:
+  quote_the_line:
+    rule: >-
+      Before a finding is anchored at 75 or 100, its first evidence item is the verbatim line or
+      lines, with `file:line`, that make the claim true. A claim that a field does not exist
+      quotes where it would be defined; a nullable-return claim quotes the initialization; a race
+      quotes both sides; a swapped-argument claim quotes the call site and the signature.
+    cannot_quote: >-
+      A seat that cannot quote the motivating line cannot claim 75 or 100. It anchors at 50 — a
+      recorded anchor, not a discarded finding. Fabricating an excerpt to reach 75 is strictly
+      worse than the honest anchor the vocabulary already provides.
+    generated_symbols: >-
+      Where a symbol is created by a framework metaclass, an ORM `Meta` declaration, a decorator
+      or migration history, the seat quotes the construct that generates it. Reading the source
+      that generates a symbol satisfies this gate.
+    failed_search_is_not_evidence: >-
+      A search that returned nothing is not evidence that a symbol does not exist; it is evidence
+      about the search. Absence is established from the construct that would define the symbol,
+      never from a query that found no rows.
+    doc_review_bar: >-
+      The same bar holds on the document surface: a quoted passage is mandatory at 75 and 100
+      there too, because a finding's fingerprint is computed over its evidence substrings.
+    structural_gate: >-
+      schemas/finding.schema.json enforces the structural half: at anchor 75 or 100 the
+      `evidence` array must contain a supporting entry carrying a non-empty `excerpt`. That
+      branch defers the semantic half here by name — which excerpt is the motivating line, and
+      whether a generated symbol may be grounded in the construct that generates it. The split
+      is reciprocal and neither side restates the other.
+  line_provenance:
+    is: an additional evidence item, never a substitute
+    attach_when: >-
+      The claim depends on line history — a `pre_existing` judgment, a claim that a construct is
+      intentional or historical, a judgment that this diff introduced it, or a P0 or P1 whose
+      severity turns on authorship or age.
+    never: >-
+      Provenance never replaces the quoted line at 75 or 100, and it is omitted where the finding
+      is fully justified by the diff and the surrounding code. No authorship history on a bug that
+      is legible from the diff alone.
+
+# ---------------------------------------------------------------------------
+# Suppression — the two false-positive catalogs, one per surface. These are the panel's main
+# defense against seat noise.
+# ---------------------------------------------------------------------------
+suppression:
+  is_not_a_confidence_floor: >-
+    These are non-findings, not weak findings. A seat does not emit them at any anchor, including
+    25 and 50, and does not relocate them to a softer bucket. The test is categorical — what the
+    observation is — and never how confident the seat feels about it.
+  never_reaches_a_security_concern:
+    rule: >-
+      No suppression category is grounds for withholding a security observation. One that matches
+      a category here is still emitted and adjudicated at the finding adjudication checkpoint.
+      The ruling bars a confidence threshold from standing in front of a security finding; this
+      key bars a suppression category from doing the same thing by another route.
+    ruling: low-confidence-security-adjudicated
+  lane_result: >-
+    A seat that suppressed every candidate on its axis returns `complete` with no findings, never
+    `empty`. `empty` records an axis that did not apply; suppression records observations that
+    were not findings. The distinction is the one `lane_results` already draws between not looking
+    and looking without result.
+  code_review:
+    - pre-existing issues unrelated to this diff
+    - pedantic style nitpicks a linter would catch
+    - >-
+      code that looks wrong but is intentional — comments, commit messages and the change
+      description are read before the finding is written
+    - >-
+      issues already handled elsewhere — callers, guards, middleware and framework defaults are
+      checked first
+    - suggestions that restate what the code already does
+    - generic "consider adding" advice with no named failure mode
+    - >-
+      issues carrying a relevant lint-ignore comment. The author already chose to suppress it;
+      re-raising it through a different seat manufactures noise and overrides a decision that was
+      taken deliberately.
+    - >-
+      general code-quality concerns with no rule behind them. "This file is getting long", "this
+      method has too many parameters", "this is hard to read" — absent a rule from a criteria file
+      this review designated to anchor the concern, it is subjective and spends reviewer attention
+      for nothing.
+    - speculative future-work concerns with no current signal
+  doc_review:
+    - pedantic style nitpicks
+    - issues belonging to another seat's territory
+    - findings already resolved elsewhere in the document
+    - content inside a deferred or open-questions section
+    - pre-existing issues the document did not introduce
+    - speculative future-work
+    - theoretical concerns with no baseline data
+    - changes in functionality that are likely intentional
+    - issues a linter or typechecker would catch
+    - >-
+      visual-aid removal as redundancy. Diagrams, illustrative tables and comparable aids are
+      communication choices, not duplication of the prose, and a seat never proposes deleting one
+      on the grounds that the prose covers the same ground. Where an aid contradicts the prose —
+      drifted counts, mismatched labels, wrong sequencing, stale numbers — the contradiction is
+      the finding and the `suggested_fix` updates the aid to match. Deletion is not an eligible
+      fix at any tier.
+    - >-
+      settlement-annotation removal. A settled-decision parenthetical on a decision entry is that
+      decision's provenance, not prose clutter, and is never flagged for removal or rewording.
+
+# ---------------------------------------------------------------------------
+# `suggested_fix` — what a seat commits to when it proposes a remedy.
+# ---------------------------------------------------------------------------
+suggested_fix:
+  applies_to: both surfaces — the pass_1 panel and doc_review
+  commits: >-
+    A `suggested_fix` names one recommendation. A seat proposes one wherever a defensible change
+    is reachable from the diff and the surrounding material; the field is the seat's statement
+    that, with the evidence in front of it, it can say what the fix looks like.
+  no_menus:
+    rule: >-
+      An alternative menu is not a fix. Lettered or numbered option lists, "either X or Y", and
+      "consider A, B or C" all defer the choice to apply time, which is the decision the field
+      exists to make.
+    test: >-
+      At apply time, would the agent still have to choose which sub-option to implement? If so,
+      the field is rewritten as the committed choice.
+    genuinely_independent: >-
+      Where the alternatives are independent and each is worth taking on its own, the seat emits
+      one finding per alternative rather than one finding carrying a menu.
+  soft_punt: >-
+    "I need further input before I can commit to a fix" is a deferral wearing a fix's clothes. The
+    question is what change the seat would propose if it had to choose now. It proposes that and
+    names the assumption it rests on, so a reader corrects an assumption instead of supplying an
+    answer.
+  not_authorization: >-
+    A `suggested_fix` is a proposed remedy and carries no permission to apply it. Permission is
+    `autofix_class` plus policy, and eligibility is gated on `authorization_ref` by the
+    `apply-findings` protocol, which owns that gate. Difficulty selects who applies a fix; it
+    never decides whether the fix may be applied.
+
+# ---------------------------------------------------------------------------
 # Synthesis. Findings from independent seats are merged, never negotiated.
 # ---------------------------------------------------------------------------
 synthesis:
