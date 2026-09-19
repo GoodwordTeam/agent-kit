@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
@@ -141,6 +141,27 @@ describe("the positive fixture", () => {
     const run = runValidation(materializeFixture("valid/minimal"));
     expect(run.issues.map((i) => i.rule)).toContain("provenance.lock-unavailable");
     expect(run.issues.map((i) => i.rule)).toContain("policy.invocation-unavailable");
+  });
+
+  test("its clean run covers schema conformance, and the positive control proves it", () => {
+    // The fixture carried no `schemas/` and no `templates/` for most of its
+    // life, so `checkSchemas` ran over it and contributed nothing. The one tree
+    // whose entire job is to demonstrate that everything passes was not
+    // demonstrating that schema conformance passes -- it was silent about it,
+    // which reads the same way in the output.
+    //
+    // Adding the files is not on its own enough, because a fixture that nothing
+    // validates against looks identical to one that validates clean. So this is
+    // a positive control: break the template inside the materialized copy and
+    // the same run has to fail. If it does not, the clean result above is
+    // measuring nothing and this test is the only thing that would say so.
+    const root = materializeFixture("valid/minimal");
+    expect(runValidation(root).issues.filter((i) => i.severity === "error")).toEqual([]);
+
+    writeFileSync(join(root, "templates/ticket.json"), JSON.stringify({ schema: "ticket", id: 7, title: "wrong type" }));
+    const broken = runValidation(root).issues.filter((i) => i.severity === "error");
+    expect(broken.map((i) => i.rule)).toContain("schemas.document-invalid");
+    expect(broken.some((i) => i.file === "templates/ticket.json")).toBe(true);
   });
 });
 

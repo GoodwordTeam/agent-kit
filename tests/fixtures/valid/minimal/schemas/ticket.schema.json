@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/ticket.schema.json",
+  "title": "Fixture ticket",
+  "description": "The smallest schema that makes the positive fixture exercise schema conformance rather than skip it. It carries no x-validator-rule on purpose: a rule id here would be a coverage obligation on ak validate's registry, and this tree exists to demonstrate a clean run rather than to add contracts to the real one.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "title"],
+  "properties": {
+    "schema": { "const": "ticket" },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 }
+  }
+}

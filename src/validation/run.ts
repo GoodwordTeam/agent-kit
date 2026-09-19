@@ -87,6 +87,25 @@ export function runValidation(root: string, options: RunOptions = {}): Validatio
     check.name === "links-bundle" ? { name: check.name, run: (c: CheckContext) => checkBundleLinks(c, build) } : check,
   );
 
+  // A narrowing that matches nothing used to run nothing and say nothing.
+  // `only` is a pure `includes`, so a misspelled name selected zero checks and
+  // returned a clean, short result -- which reads exactly like a check that ran
+  // and found no problems. The cost is not hypothetical: two tests in this
+  // repository narrow the run to a single check and assert on what comes back,
+  // and one of them is the check that this package does not trip its own
+  // content scan. Either would have passed while measuring nothing.
+  const known = new Set(checks.map((check) => check.name));
+  for (const name of options.only ?? []) {
+    if (known.has(name)) continue;
+    issues.push(
+      error(
+        "run.unknown-check",
+        "catalog.yaml",
+        `run narrowed to '${name}', which is not a check in this run; nothing was selected for that name. Known checks: ${[...known].sort().join(", ")}.`,
+      ),
+    );
+  }
+
   for (const check of checks) {
     if (options.only !== undefined && !options.only.includes(check.name)) continue;
     try {

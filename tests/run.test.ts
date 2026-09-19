@@ -90,11 +90,46 @@ describe("the validation run", () => {
   });
 
   test("the run can be narrowed to named checks", () => {
-    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
+    const root = makeTree({
+      "catalog.yaml": CATALOG,
+      "skills/triage/SKILL.md": SKILL,
+      "skills/stray/SKILL.md": SKILL,
+      // Something only `checkSchemas` reports, so the narrowed run has to show
+      // positive evidence that the named check ran.
+      "schemas/broken.schema.json": "{ not json",
+    });
     const all = runValidation(root);
     const narrowed = runValidation(root, { only: ["schemas"] });
     expect(all.issues.length).toBeGreaterThan(narrowed.issues.length);
     expect(narrowed.issues.some((i) => i.rule === "catalog.directory-without-entry")).toBe(false);
+
+    // The assertions above are both satisfied by a narrowing that selects
+    // nothing at all, which is what `only: ["schemas-typo"]` does: the filter
+    // is a pure `includes`, an unmatched name quietly selects zero checks, and
+    // a run of no checks is shorter than the full run and contains no
+    // `catalog.directory-without-entry` either. Measured by running it, not by
+    // reading the filter. So the narrowing has to be shown to have selected
+    // something, and this is the line that does it.
+    expect(narrowed.issues.some((i) => i.rule === "schemas.unparseable")).toBe(true);
+  });
+
+  test("a name that matches no check is an error, not an empty run", () => {
+    // The cost of the silent version is not this test, it is the one below:
+    // `this repository's own source is not flagged by its own content scan`
+    // narrows to `content`, and had that name been wrong it would have
+    // asserted nothing about anything while still passing. A validator whose
+    // selector fails open is the same defect class the rest of this suite
+    // exists to catch.
+    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL });
+    const issue = runValidation(root, { only: ["schemas-typo"] }).issues.find((i) => i.rule === "run.unknown-check");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("schemas-typo");
+  });
+
+  test("every name a narrowed run does match is left alone", () => {
+    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL });
+    const issues = runValidation(root, { only: ["schemas", "content"] }).issues;
+    expect(issues.some((i) => i.rule === "run.unknown-check")).toBe(false);
   });
 
   test("this repository's own source is not flagged by its own content scan", () => {

@@ -13,3 +13,6 @@ references:
   - id: guide
     status: authored
     loaded_by: [alpha]
+schemas:
+  - id: ticket
+    status: authored
