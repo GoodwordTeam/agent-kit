@@ -27,6 +27,21 @@ Source: `G:L1672–1676`. The elision in the fourth bullet drops a model-routing
 content denylist forbids outside `provenance/` and `research/sources/`; the unedited text is at
 `research/sources/grok-transcript.md:1675`. The *rule* is reproduced exactly.
 
+**The quote uses the design brief's vocabulary, not this package's.** It names capabilities, and this
+package reclassified several of them: two became protocols and two became roles, none of which are
+skills. `catalog.yaml` is authoritative for what each id *is*; take a section from it, never from the
+law above. No id is both a skill and a protocol, so this is reclassification, not a contradiction.
+
+| In the quote | Here | Lives at |
+|---|---|---|
+| align, bound, ship, scout | `super-align`, `super-bound`, `super-ship`, `super-scout` | `skills/super-*/` |
+| wayfind, compound, diagnose, prototype | unchanged | `skills/<id>/` |
+| tdd, attach-pack | protocols, not skills | `protocols/<id>/PROTOCOL.md` |
+| standards-review, spec-review | `reviewer-standards`, `reviewer-spec` — roles, not skills | `roles/<id>/ROLE.md` |
+
+The law still binds each of them. A protocol or a role is not an entrypoint at all, which is a
+stricter position than the quote's model-invoked class, not a loophole in it.
+
 ### How the law is satisfied where skills legitimately need each other
 
 `super-ship` needs `compound`; `autopilot` needs gated phases. Both are U skills calling U skills,

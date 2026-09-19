@@ -25,7 +25,7 @@ ADR-0001 §2. The distinction is load-bearing and decides which operation a skil
 |---|---|---|
 | What | Curated, human-readable, long-lived pages | Revision-bound, schema-validated operational records |
 | Vocabulary | The nine `KBDocumentType` kinds below | `common#/$defs/schema_id` |
-| Validated by | The KB's own templates and review | `schemas/*.schema.json` plus the §5.2 envelope |
+| Validated by | The KB's own templates and review | `schemas/*.schema.json` plus the plan §5.2 envelope (`common#/$defs/envelope`) |
 | Reviewed | By a human | Not prose; proof |
 | Stored | As KB pages | In the KB's run-scoped storage, **linked from** pages, never rendered as curated prose |
 
@@ -88,14 +88,21 @@ Signatures are sketches in a neutral notation; the wire form belongs to the impl
 types are opaque handles the KB issues. `Result<T>` is either `T` or a structured failure carrying
 `common#/$defs/operation_status` and, for `needs-input`, an `escalation`.
 
+Which operation a skill calls follows from §0's two classes: `publishArtifact` writes both, and its
+`placement` argument is what declares the class. `recordDecision` writes the `decision` **run
+artifact** — the decision card, with its options and evidence. An `adr` **page** is a different
+thing and takes the `publishArtifact` KB-document path; a decision card is frequently the evidence a
+proposed `adr` cites, which is why both exist.
+
 ### `readContext`
 
 ```text
 readContext(project: ProjectRef, selector: ContextSelector) -> Result<KBDocument[]>
 ```
 
-- **Inputs** — `project` is `common#/$defs/project_ref`. `selector` names document types from the
-  §0 ADR's vocabulary, optionally narrowed by tag, revision or recency.
+- **Inputs** — `project` is `common#/$defs/project_ref`. `selector` names one or more of the nine
+  `KBDocumentType` kinds and a scope, optionally narrowed by tag, revision or recency. It may also
+  select run artifacts linked from those pages, which return as links, not as page bodies.
 - **Outputs** — zero or more documents, each with its KB record id, content hash and last-modified
   revision, so a caller can bind evidence to what it actually read.
 - **Failure modes** — KB unreachable → `failed` with the error. KB reachable but the project has no
@@ -110,7 +117,8 @@ readContext(project: ProjectRef, selector: ContextSelector) -> Result<KBDocument
 recordDecision(decision: DecisionArtifact) -> Result<KBRecordRef>
 ```
 
-- **Carries** `schemas/decision.schema.json`, envelope-bearing per `common#/$defs/envelope`.
+- **Carries** `schemas/decision.schema.json`, envelope-bearing per `common#/$defs/envelope`. This is
+  a **run artifact** (§0), not a page.
 - **Inputs** — the decision with its question, bounded options, chosen option, evidence references
   and affected artifact hashes.
 - **Outputs** — the KB record ref plus the stored content hash, for the caller's own evidence chain.
@@ -119,21 +127,33 @@ recordDecision(decision: DecisionArtifact) -> Result<KBRecordRef>
   rather than merged.
 - **Side effects** — `kb-draft`, then `kb-publish` when authority permits.
 - **Note** — recording the applicable **existing** decision, or an explicit no-new-decision result,
-  is a valid outcome. A mechanical fix does not force a fresh ADR (plan §8).
+  is a valid outcome. A mechanical fix does not force a fresh ADR: absence of a decision is a
+  recordable outcome, not a gap to fill with prose (plan §8, ADR-0001 §5).
 
 ### `publishArtifact`
 
 ```text
-publishArtifact(artifact: EnvelopeArtifact, type: KBDocumentType) -> Result<KBRecordRef>
+publishArtifact(artifact: EnvelopeArtifact, placement: Placement) -> Result<KBRecordRef>
+
+Placement = { class: "kb-document", kind: KBDocumentType, scope: Scope }
+          | { class: "run-artifact", run: RunRef, links: KBRecordRef[] }
 ```
 
 - **Carries** any artifact whose `envelope.schema` is in `common#/$defs/schema_id` — `project`,
   `ticket`, `dossier`, `finding`, `review`, `verification`, `charter`, `decision`, `event`, `lesson`.
-- **Inputs** — the artifact, plus the document type from the §0 ADR's vocabulary. The mapping from
-  artifact schema to document type is the ADR's, not this file's.
+- **Inputs** — the artifact, plus the `placement` that declares its §0 class. A `kb-document`
+  placement names one of the nine kinds and a **scope**; the KB resolves the scope to a location
+  (ADR-0001 §7) and the caller supplies no path. A `run-artifact` placement names the run and the KB
+  records the artifact should be linked from.
 - **Outputs** — the KB record ref and stored content hash.
-- **Failure modes** — an artifact failing its own schema is refused before any write. A publish whose
-  `type` is not in the ADR's vocabulary is refused; the caller does not invent one.
+- **Failure modes** — an artifact failing its own schema is refused before any write. A `kind` outside
+  the nine is refused; the caller does not invent a tenth. A `kb-document` placement whose kind the
+  calling skill is not assigned in ADR-0001 §3 is a validation failure, caught before release.
+- **ADR lifecycle** — an `adr` is published with status `proposed`. **No operation in this contract
+  accepts one**, and no skill may call one that appears to: acceptance happens in review and never by
+  the author (ADR-0001 §4). `policies/authority-defaults.yaml` treats KB acceptance as an authority a
+  skill does not hold, which is the same principle as this package's review independence and its rule
+  that an author may not close their own finding.
 - **Side effects** — `kb-publish`. Idempotency key derived per runner-contract §5 from the artifact
   hash, so republishing an unchanged artifact after a restart is a no-op success.
 
@@ -203,8 +223,8 @@ proposeLesson(lesson: LessonArtifact) -> Result<KBProposalRef>
 
 ## 3. Centrality (release scenario 21)
 
-A KB write stays central (ruling `central-kb-owns-project-artifacts`). No operation in this
-contract, and no skill calling one, may create or
+A KB write stays central (ruling `central-kb-owns-project-artifacts`, ADR-0001 §1). No operation in
+this contract, and no skill calling one, may create or
 extend a documentation tree inside the application repository — no `docs/`, no `CONTEXT.md`, no
 `plans/`, no ADR directory, no `.scratch/` artifact store.
 
@@ -222,7 +242,9 @@ corresponding eval case asserts that no application-local docs tree appears.
 
 ## 4. The paired-PR requirement (release scenario 22)
 
-Preserved exactly as stated in plan §8, including what it is **not**.
+Preserved exactly as stated in plan §8 and reaffirmed by ADR-0001 §6, including what it is **not**.
+The authority split is the model: the KB owns git-backed decisions and reviewed history, the runner
+owns command authorization and receipts, and neither claims the other's surface.
 
 1. A source PR links to its associated KB PR through `linkPullRequests`.
 2. A **source merge event** — delivered by the runner as an `event` artifact
@@ -260,19 +282,26 @@ Tests this adapter owns, in `tests/adapters/` and `tests/scenarios/`:
 
 1. **No local docs tree** — for every skill whose outputs are project-derived, a fixture run leaves
    the working repository free of any documentation directory (scenario 21).
-2. **No inlined document types** — `ak validate` fails a skill body containing a literal KB document
-   type string; the vocabulary resolves through the §0 ADR only.
-3. **Unavailable KB refuses, never falls back** — with no KB configured, `kb-write` operations refuse
+2. **No tenth kind** — a publish naming a `kind` outside the nine is refused, and `ak validate` fails
+   a skill declaring one.
+3. **Emission-table conformance** — a skill publishing a KB document of a kind ADR-0001 §3 does not
+   assign it fails validation, and a skill absent from that table publishes no KB document at all.
+4. **An ADR is proposed, never accepted** — publishing an `adr` yields status `proposed`, and no
+   operation or skill path reaches acceptance (ADR-0001 §4).
+5. **Scope, not path** — a publish carrying a computed KB path rather than a scope is refused
+   (ADR-0001 §7).
+6. **Unavailable KB refuses, never falls back** — with no KB configured, `kb-write` operations refuse
    and no repository file is created.
-4. **Empty is not an error** — `readContext` against a project with no records returns an empty
+7. **Empty is not an error** — `readContext` against a project with no records returns an empty
    result, and the calling skill stops rather than proceeding on invented context.
-5. **Coverage limitation surfaces** — a stale impact graph produces an explicit limitation in the
+8. **Coverage limitation surfaces** — a stale impact graph produces an explicit limitation in the
    report and in whatever artifact consumes it (scenario 14).
-6. **Publish idempotency** — republishing an unchanged artifact after a simulated restart performs no
+9. **Publish idempotency** — republishing an unchanged artifact after a simulated restart performs no
    second remote effect; a changed artifact under a reused key refuses (scenario 20).
-7. **Paired-PR honesty** — a blocked KB merge is reported blocked and retryable, and the ship report
-   does not read as complete (scenario 22).
-8. **Lesson restraint** — a successful routine run with no new knowledge proposes no lesson
-   (scenario 23); an unauthorized promotion of a proposed lesson is refused (plan §7.1).
-9. **Rollback independence** — rolling back a published skill revision leaves the supporting lesson
-   and evidence history intact (scenario 24).
+10. **Paired-PR honesty** — a blocked KB merge is reported blocked and retryable, and the ship report
+    does not read as complete (scenario 22).
+11. **Lesson restraint** — a successful routine run with no new knowledge proposes no lesson
+    (scenario 23); an unauthorized promotion of a proposed lesson is refused (plan §7.1).
+12. **Rollback independence** — rolling back a published skill revision leaves the supporting lesson
+    and evidence history intact (scenario 24), because lessons are KB pages with supersession and
+    skills are package files.

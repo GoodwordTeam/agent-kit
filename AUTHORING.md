@@ -233,6 +233,30 @@ The `description` is the activation surface. It carries the trigger and at least
 non-trigger clause, because on a host that cannot suppress model invocation the description is the
 only thing standing between a U skill and an unrequested start.
 
+### 4.2 Fields with no prose mirror
+
+The §4.1 table is about **agreement, not completeness**. `skill.yaml` must satisfy
+`schemas/skill.schema.json` in full — nineteen required fields — and four of them have no prose
+mirror above, which is exactly why each would otherwise be invented differently in every batch.
+
+**`id`** — equals the skill's directory name and its `catalog.yaml` entry id. With the frontmatter
+`name` from §4, that is one string in four places. There is no separate naming step.
+
+**`version`** — `common.schema.json#/$defs/semver`, and the skill's **own contract version**,
+independent of the package version and of the `schema_version` an eval case carries (§9).
+
+- Every skill authored in batches 1–10 starts at **`0.1.0`**.
+- Bump the **minor** when the contract changes: a new entrypoint, a changed hard gate, a new required
+  input.
+- Bump the **patch** for wording that leaves the contract intact.
+
+A skill claiming `1.0.0` inside a package tagged `v0.1.0` misrepresents its maturity, and whether the
+contract is stable is the first thing a reader checks.
+
+**`kind`** and **`summary`** — copied from that skill's `catalog.yaml` entry, not re-authored.
+`ak validate` cross-checks both. If the catalog's summary looks wrong, that is a catalog change to
+raise with its owner, not a divergence to introduce here: the catalog is the single source of truth.
+
 ---
 
 ## 5. Provenance law
@@ -349,7 +373,10 @@ stops for explicit invocation (`AGENTS.md`, "The invocation law").
 
 **No repository-local project documentation.** Project-derived artifacts are KB-owned (plan §1.2,
 §8). A skill that writes `docs/`, `CONTEXT.md`, `plans/`, `.scratch/` or an ADR tree into the working
-repository fails release scenario 21, whatever the donor did.
+repository fails release scenario 21, whatever the donor did. `docs/decisions/0001-kb-document-vocabulary.md`
+(ADR-0001) names the central equivalent for each retired path and the nine document kinds a KB write
+may use; convert every donor "write a file in the repo" instruction into a KB adapter call
+(`adapters/knowledgebase/CONTRACT.md`). `ak validate` scans skill bodies for the retired targets.
 
 ---
 
@@ -472,3 +499,126 @@ Then confirm by reading the file, not by remembering that you wrote it:
 - Every adapted file has a provenance row, and the cited path exists at the pin.
 - Three or more eval cases exist under `evals/<skill-id>/`, tagged with their scenarios.
 - Nothing in the body depends on a file this package does not install.
+
+For a protocol or a role body, §12 replaces this checklist.
+
+---
+
+## 12. Protocols, roles and loose doctrine files
+
+§1–§11 are written for skills. Three further body shapes exist in this package, and two of them are
+batch 1's entire output.
+
+What all three share: none is human-invocable, none appears in a host command surface, and neither a
+protocol nor a role carries host frontmatter — no `disable-model-invocation`, no `argument-hint`, no
+`allowed-tools`, and the packager emits none of them (`policies/invocation.yaml`, statement
+`protocols-and-roles-are-not-entrypoints`). §1's size rule and progressive disclosure, §5's
+provenance law, §6's ruling citations, §7's prohibitions and §8's writing standard all apply
+unchanged.
+
+### 12.1 Protocols
+
+`protocols/<id>/PROTOCOL.md`, one directory per catalog entry, seven of them.
+
+Shared phase logic invoked **by skills**. A protocol is what a skill's phase operation delegates to,
+which is exactly why it is not an entrypoint: it has no human trigger of its own.
+
+One naming trap before you start. The invocation law quoted in `AGENTS.md` reproduces the design
+brief verbatim, and that brief called `tdd` and `attach-pack` model-invoked *skills*. This package
+classifies both as **protocols** — `catalog.yaml` is authoritative, no id is both, and `scout`,
+`standards-review` and `spec-review` were likewise renamed or became roles. Take the section from the
+catalog, never from the quoted law.
+
+**There is deliberately no `protocol.schema.json`.** The fourteen schemas contain none, and none is
+missing. A protocol has no execution contract of its own because it is never invoked directly — it
+runs inside the contract of the skill that invoked it. Do not write a `protocol.yaml`. **The
+protocol's catalog entry plus its prose is the contract.**
+
+Required sections are §3's ten, with one substitution:
+
+| §3 section | For a protocol |
+|---|---|
+| `## When to use` | **Required**, reframed: which skills invoke this, at which point in their phase. A protocol declares no trigger phrases — triggers belong to the invoking skill |
+| `## Not for` | **Required.** The boundary against the neighbouring protocol |
+| `## Authority` | **Replaced by `## Invoked by`**: the skills and phase operations that may call it. A protocol holds no authority of its own and never widens the authority it was called with (ruling `entrypoint-phase-operation-split`; protocol `phase-operations`) |
+| `## Inputs` through `## Limits` | **Required**, unchanged |
+
+§3.1's anti-rationalization table is required under `## Hard gates`. Protocols are where steps get
+skipped: `tdd`, `apply-findings` and `review-delta` each exist because a recorded run skipped one.
+
+Long material goes behind `protocols/<id>/references/` on §1's rule.
+
+### 12.2 Roles
+
+`roles/<path>/ROLE.md`, twenty-nine of them. `<path>` nests at most one level — the four core roles
+sit at `roles/<id>/`, the three panels at `roles/code-review/<seat>/`, `roles/doc-review/<seat>/` and
+`roles/plan-review/<seat>/`. The catalog ids already carry the slash, so the id and the path are one
+string: `code-review/security` is both. There is no separate path-naming step, and no
+`role.schema.json` for the same reason there is no protocol schema.
+
+A role is **a prompt the runner fills a seat with**. It is not an agent, not a skill, and not a
+procedure. It states what the seat judges, the evidence it must cite, what it may never do, and what
+it returns when it has nothing to say.
+
+Required sections are a role-specific set, because §3's headings describe a procedure and a role is
+not one:
+
+| Heading | What goes in it |
+|---|---|
+| `## What this seat judges` | The one question this seat answers. One sentence |
+| `## Not this seat` | The neighbouring seats and what belongs to them. Fifteen code-review seats overlap without this |
+| `## Evidence it must cite` | What the seat must point at for a finding to be admissible |
+| `## Never` | The seat's prohibitions. Two rows are mandatory — below |
+| `## What it returns` | The finding shape, and the explicit empty return |
+| `## When it has nothing to say` | The conditions under which empty is the correct answer |
+
+Dropped, and why — a writer reaching for one of these is describing the wrong thing:
+
+- `## Authority` — the runner seats a role; a role never self-authorizes. Whether a seat is filled at
+  all is decided by declared risk, not by the seat (ruling `panel-composition-by-declared-risk`).
+- `## Workflow` — a prompt is not a procedure. Procedure belongs to the protocol that convenes the
+  panel.
+- `## Side effects` — **a role has none.** A writer declaring one has put work in a role that belongs
+  in a skill or a protocol.
+- `## Limits` — folded into `## Never`.
+
+Two `## Never` rows are mandatory in every role, because these are the two that erode first:
+
+1. **A role never edits.** It judges and returns. Reading a patch is the author's confidence, not a
+   receipt; only independent verification closes a finding (ruling
+   `closure-requires-independent-verification`).
+2. **A standards seat cites an actual project rule or returns empty.** An absent standard is an empty
+   return, never an invented preference — and a required lane that could not run is unavailable, not
+   passing (ruling `required-lane-failure-is-unavailable`).
+
+§3.1's anti-rationalization table is required for any seat in a review panel. Its rows are the
+*seat's* rationalizations — "the other lanes agreed", "the standard is not written down but everyone
+knows it" — not the calling skill's.
+
+### 12.3 Loose doctrine files
+
+`protocols/invocation-authority.md` is a **file, not a directory**, and has **no catalog entry**. The
+catalog's seven protocols do not include it, and that is correct: the plan's tree places it exactly
+there (`research/sources/engineering-skills-repo-plan.md:220`).
+
+This is safe rather than an oversight. `ak validate`'s directory-without-entry check lists
+*directories* under each section root and never examines a loose `.md`
+(`src/validation/completeness.ts`, rule `catalog.directory-without-entry`). A loose doctrine file at
+`protocols/` root is therefore not an orphan, and **adding a catalog row for it would be the error,
+not the fix.**
+
+A loose doctrine file carries shared doctrine that several protocols cite. It has no required section
+list, no frontmatter and no sidecar. It is prose, and §8 governs it.
+
+### 12.4 Before handing a protocol or a role back
+
+- The body file is `PROTOCOL.md` or `ROLE.md`. Only `skills` mandates its body filename; for these
+  sections a different `.md` name validates with the warning `catalog.unexpected-body-name` — a
+  warning to fix, not an allowance to use.
+- No frontmatter. No `*.yaml` sidecar.
+- Every ruling whose `binds` block in `policies/resolved-conflicts.yaml` names this protocol or role
+  is cited in the body. That block is the machine-checkable inverse of §6: it tells you before you
+  write which rulings you owe a citation.
+- Authoring a body makes that entry's `status: contract` stale and raises
+  `catalog.status-behind-body`. **`catalog.yaml` is owned outside this batch — report the entries you
+  authored and let its owner flip them to `authored`; do not edit it yourself.**
