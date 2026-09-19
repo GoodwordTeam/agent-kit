@@ -1,7 +1,8 @@
 import { join } from "node:path";
 
 import { exists, isDir, readTextIfPresent, walkFiles } from "../util/fs.ts";
-import { extractRelativeLinks, resolveFromFile } from "../util/links.ts";
+import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../util/links.ts";
+import { entryBodyPath } from "../catalog/layout.ts";
 import { planAll, type BuildOptions } from "../packaging/build.ts";
 import { SHARED_ROOT } from "../packaging/plan.ts";
 import type { CheckContext } from "./context.ts";
@@ -37,6 +38,66 @@ export function checkSourceLinks(ctx: CheckContext): Issue[] {
           error("links.broken-source", file, `Reference '${link.target}' does not resolve; '${resolved}' does not exist.`, link.line),
         );
       }
+    }
+  }
+
+  return issues;
+}
+
+/**
+ * The reciprocal of `catalog.reference-loaded-by-names-a-declared-skill`.
+ *
+ * That rule reads catalog.yaml only: a pack must name its loaders, and each
+ * loader must be a declared skill. Nothing read the loader's body, so the
+ * relationship the catalog declares could be absent from the tree entirely and
+ * validation still returned clean. AUTHORING.md §12.5 makes `loaded_by` the
+ * defining property of a reference pack -- progressive disclosure is the
+ * mechanism, and a pack nothing links is unreachable -- so an unlinked pack is
+ * not a reference pack missing a nicety. It is not a reference pack.
+ *
+ * Both ends gate on `status: authored`, which is the design and not a
+ * shortcut. Each declared edge becomes checkable at the first commit where
+ * both of its files exist, and is silent before that: gating on the pack alone
+ * would fail a batch for not linking a loader nobody has written yet, and
+ * gating on the loader alone would never check a newly authored pack against
+ * the skills already in the tree.
+ *
+ * What counts as a link is `extractRelativeLinks` and `resolveFromFile`, the
+ * same pair `checkSourceLinks` uses, so "links to" means one thing in this
+ * validator rather than two that can drift.
+ */
+export function checkLoaderLinks(ctx: CheckContext): Issue[] {
+  const issues: Issue[] = [];
+  const { root, catalog } = ctx;
+
+  for (const pack of catalog.bySection("references")) {
+    if (pack.status !== "authored") continue;
+    const target = entryBodyPath("references", pack.id);
+
+    for (const loaderId of pack.loadedBy) {
+      const loader = catalog.get("skills", loaderId);
+      if (loader === undefined || loader.status !== "authored") continue;
+
+      const body = entryBodyPath("skills", loaderId);
+      const text = readTextIfPresent(join(root, body));
+      /**
+       * An authored skill with no body is `catalog.entry-without-directory` or
+       * `catalog.missing-body` from checkCompleteness, which names that file
+       * and that defect. Reporting it twice would bury the actionable error,
+       * and "add a link to a file that does not exist" is not a followable
+       * instruction. The run still fails; it fails under the right rule.
+       */
+      if (text === null) continue;
+
+      if (extractRelativeLinks(text).some((link) => resolveFromFile(body, link.target) === target)) continue;
+
+      issues.push(
+        error(
+          "catalog.loader-does-not-link-reference",
+          body,
+          `Reference pack '${pack.id}' is loaded_by '${loaderId}', but ${body} contains no link to ${target}. Add one -- from this file it is written '${relativeLinkBetween(body, target)}'. loaded_by declares progressive disclosure, and a pack its loader never links cannot be reached.`,
+        ),
+      );
     }
   }
 

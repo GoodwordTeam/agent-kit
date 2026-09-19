@@ -20,7 +20,7 @@ import { checkDocumentRules } from "./docrules.ts";
 import { checkEvals } from "./evals.ts";
 import { checkFrontmatter } from "./frontmatter.ts";
 import { checkInvocation } from "./invocation.ts";
-import { checkBundleLinks, checkSourceLinks } from "./links.ts";
+import { checkBundleLinks, checkLoaderLinks, checkSourceLinks } from "./links.ts";
 import { checkPolicies } from "./policies.ts";
 import { checkSchemaRuleCoverage } from "./rulemap.ts";
 import { checkProvenance } from "./provenance.ts";
@@ -63,6 +63,7 @@ export const CHECKS: readonly Check[] = [
   { name: "skill-manifests", run: checkSkillManifests },
   { name: "pack-manifests", run: checkPackManifests },
   { name: "links-source", run: checkSourceLinks },
+  { name: "links-loader", run: checkLoaderLinks },
   { name: "links-bundle", run: (ctx) => checkBundleLinks(ctx, DEFAULT_BUILD) },
   { name: "content", run: checkContent },
   { name: "provenance", run: checkProvenance },

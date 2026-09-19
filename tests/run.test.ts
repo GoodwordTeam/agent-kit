@@ -37,6 +37,26 @@ describe("the validation run", () => {
     expect(new Set(CHECKS.map((c) => c.name)).size).toBe(CHECKS.length);
   });
 
+  test("a check that is written but not registered here never runs", () => {
+    // The registry is the only thing that makes a check real, so a check
+    // exercised only by its own unit test is indistinguishable from one that
+    // was never wired in -- `ak validate` would return clean past it. This
+    // reaches the loader-link rule the way a user does, through the run.
+    const root = makeTree({
+      "catalog.yaml": `${CATALOG}references:
+  - id: guide
+    status: authored
+    loaded_by: [triage]
+`,
+      "skills/triage/SKILL.md": SKILL,
+      "references/guide/REFERENCE.md": "# Guide\n\nLong material.\n",
+    });
+    const run = runValidation(root);
+    const issue = run.issues.find((i) => i.rule === "catalog.loader-does-not-link-reference");
+    expect(issue?.file).toBe("skills/triage/SKILL.md");
+    expect(run.ok).toBe(false);
+  });
+
   test("a clean tree validates with no errors", () => {
     const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL });
     const result = runValidation(root);
