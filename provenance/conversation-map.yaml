@@ -29,6 +29,10 @@
 # a design change that has to argue with the row, not a fix that closes a hole.
 #
 # Field notes
+#   locator         Where the capability is *specified* -- a transcript range, a plan section, or
+#                   both. Never where its text came from: no row in this file carries a donor
+#                   path, and `origin: donor` constrains the adaptations row rather than this
+#                   field. The two answer different questions and neither substitutes.
 #   origin          donor        = at least one pinned donor in provenance/upstream.lock.yaml
 #                                 implements this; the adapted file's row lives in
 #                                 provenance/adaptations.d/.
@@ -43,6 +47,8 @@
 
 schema_version: 1
 
+# `locator` cites where a capability was specified, never where its text was adapted from;
+# the donor path lives in provenance/adaptations.d/. See the locator field note above.
 capabilities:
 
   # =========================================================================
@@ -930,6 +936,87 @@ capabilities:
       Anchors with behavioral tests, never numeric sliders. The transcript's own proposal — the
       donor had not adopted these two axes at the pinned commit — so there is no donor path for the
       combination even though `autofix_class` alone has one.
+
+  - id: quote-the-line-gate
+    capability: Before a finding may be anchored at 75 or 100, the verbatim line that makes it true is quoted with file:line as its first evidence item
+    disposition: retained
+    destination: schemas/finding
+    locator: G:L1203-1203; plan §5.5
+    origin: donor
+    acceptance_test: >-
+      A finding submitted at anchor 75 or 100 whose first evidence item carries no `file:line` quote
+      is rejected by the schema rather than by a reviewer's discretion. "Field X does not exist on
+      model Y" reaches 75 only when the class, Meta or migration where X would be defined is quoted.
+    note: >-
+      The highest-value suppression mechanism in the donor set, because it kills the
+      "field/symbol does not exist" false-positive class at the point of filing rather than at
+      triage. Carried as a conditional required field (`first_evidence` at anchors 75 and 100)
+      because the schema already expresses five constraints that way, and a gate outperforms the
+      same sentence repeated across twenty-two role bodies.
+
+  - id: evidence-admissibility-rules
+    capability: What may be offered as evidence at all — a failed search is not evidence of absence, and a symbol with no static definition site is carved out rather than reported missing
+    disposition: retained
+    destination: policies/review
+    locator: plan §5.5
+    origin: donor
+    acceptance_test: >-
+      A finding whose only support is a search that returned nothing is not admissible above anchor
+      50. A symbol defined by a generator, a macro or dynamic dispatch is not reportable as
+      undefined on the strength of a static search.
+    note: >-
+      The two clauses the donor's code-review gate carries alongside the quote requirement. They
+      land in the policy rather than the schema because they constrain what a seat may treat as
+      evidence, which is not checkable from the artifact alone.
+
+  - id: line-provenance-additional-never-substitute
+    capability: Line provenance attached to a finding as a conditional additional evidence item, never as a substitute for the evidence that makes the finding true
+    disposition: retained
+    destination: policies/review
+    locator: plan §5.5
+    origin: donor
+    acceptance_test: >-
+      A finding carrying a line reference and no quoted supporting text does not satisfy the
+      evidence requirement. Moving a line number neither duplicates the finding nor falsely
+      suppresses it, because identity never rests on the line alone (release scenario 9).
+
+  - id: suggested-fix-no-menus
+    capability: A suggested_fix commits to one recommendation; an alternative menu that punts the choice downstream is not a fix, on the document surface as much as the code surface
+    disposition: retained
+    destination: policies/review
+    locator: G:L1203-1204; plan §5.5
+    origin: donor
+    acceptance_test: >-
+      A finding whose `suggested_fix` names two or more options grades no better than `bounded` and
+      is not handed to an automatic fixer (release scenario 6). The rule binds both review surfaces
+      on the same terms.
+
+  - id: review-suppression-catalog-code
+    capability: Nine categories of non-finding a code-review seat suppresses outright rather than filing at a low anchor — pre-existing issues, linter nitpicks, intentional-looking code, issues handled elsewhere, restatements, advice with no named failure mode, lint-ignored issues, rule-less quality concerns, and speculative future work
+    disposition: retained
+    destination: policies/review
+    locator: plan §6.1
+    origin: donor
+    acceptance_test: >-
+      A seat that would file "this file is getting long" with no rule behind it emits nothing — not
+      a finding at anchor 25. An issue carrying a relevant lint-ignore comment is not re-filed by a
+      different seat. These are non-findings, not soft-bucket findings.
+    note: >-
+      §6.1's rule that absent standards must not become invented preferences is the eighth category
+      stated from the other direction; the catalog makes that sentence enumerable. Bounded by the
+      standing exception that a low-confidence security concern stays visible and is adjudicated
+      rather than filtered away.
+
+  - id: review-suppression-catalog-doc
+    capability: Eleven categories of non-finding a document-review seat suppresses, including two the donor states specifically — a visual aid is never flagged for deletion as redundant with prose, and a settlement annotation is decision provenance rather than clutter
+    disposition: retained
+    destination: policies/review
+    locator: plan §6.5
+    origin: donor
+    acceptance_test: >-
+      A diagram duplicating the prose is not a finding; a diagram contradicting the prose is a
+      finding whose `suggested_fix` updates the diagram and never deletes it. Content inside a
+      Deferred or Open Questions section is not reviewed as though it were settled.
 
   - id: review-delta
     capability: The two-axis delta pass over a fix — bounded scope, novelty evidence required, verdict monotonicity, at most two fix cycles
