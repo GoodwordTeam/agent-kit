@@ -75,7 +75,7 @@ was replaced with a role- or evidence-based equivalent:
 | Tier choice / confidence scoring before a spawn | Deterministic policy checks against artifact evidence |
 | Named-model implementer seating | An `implementer` role; the runner binds who fills it |
 | "Cross-family on purpose" supervisor pairing | Two `supervisor` seats declared **independent**; independence is a runner-enforced constraint |
-| "Fail closed on low confidence" | "Fail closed when required evidence is absent" |
+| "Fail closed on low confidence" | "Fail closed when required evidence is absent" (ruling `required-lane-failure-is-unavailable`) |
 | "Do not put <model> on security" | The security seat may not be filled by the implementer of the change under review nor by whoever approved its spec (ruling `missing-supervisor-never-implementer`) |
 | In-skill cost/token caps | Budgets passed in by the runner; the repo enforces only the cap it was handed |
 

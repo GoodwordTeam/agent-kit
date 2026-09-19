@@ -95,6 +95,10 @@ content denylist (model names, pricing, effort ladders, placeholders) outside `p
 
 ## Contracts worth knowing before you read a skill
 
+Each of these is a resolved conflict, not a house style. The authoritative text of every one is in
+`policies/resolved-conflicts.yaml`, which also records the tension it settles, the entries it binds
+and the release scenario that tests it; the ids below are the lookup keys.
+
 - **Artifacts are revision-bound.** Approvals bind to a content hash, never a filename. A changed plan
   does not inherit the old plan's approval; a changed patch does not inherit stale receipts.
 - **Findings are P0–P3.** Critical/Important/Nit/FYI are presentation labels, not a replacement.
