@@ -34,8 +34,24 @@ const PREFERRED_BODY: Record<DirectorySection, string> = {
  * distinguishes a body from the long material behind it (§12.1's
  * `protocols/<id>/references/`). A differently named body in these trees is an
  * error, not a warning: the packager would ship the directory without its body.
+ *
+ * `references` joined them once §12.5 gave a reference pack exactly one body
+ * file, `references/<id>/REFERENCE.md`, one per catalog entry. That is the same
+ * criterion the other three meet, so the promotion applies the existing rule to
+ * a shape that now satisfies it rather than setting a new one. It landed while
+ * all four `references` entries were still `status: contract` with no directory
+ * on disk, so no authored pack was grandfathered and the first ones written are
+ * written under the enforced rule -- tightening it afterwards would have put the
+ * cost on a writer who had already handed work back.
+ *
+ * `packs` is deliberately absent and is not an oversight. §12.5 states that
+ * domain packs are the fifth shape and the contract does not govern them yet:
+ * nothing says what a `PACK.md` contains. Mandating a filename for a body with
+ * no specification would be inventing a shape for an artifact nobody has
+ * designed, from the validator's side, which is the failure §10 exists to catch.
+ * It waits for its section.
  */
-export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills", "protocols", "roles"];
+export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills", "protocols", "roles", "references"];
 
 export function entryDir(section: DirectorySection, id: string): string {
   return `${section}/${id}`;

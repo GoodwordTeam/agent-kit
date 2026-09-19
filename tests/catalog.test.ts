@@ -138,15 +138,18 @@ describe("catalog layout", () => {
   test("the sections whose body file name is mandatory, including the ones left out", () => {
     // Membership in this list is what makes `catalog.unexpected-body-name` an
     // error rather than a warning, and bodies.test.ts covers four of the five
-    // directory sections by that consequence: promote `references` and its
-    // "stays a warning" test fails, demote `protocols` or `roles` and theirs do.
+    // directory sections by that consequence: drop any of `skills`,
+    // `protocols`, `roles` or `references` and its error-severity test fails.
     //
-    // `packs` is the gap. It has no body-name test of its own, so adding it
-    // here flips a severity for an entire section and the suite stays green --
-    // measured. That is what this assertion is for. It guards the sections that
-    // are absent, which is the half no behavioural test can reach, and it is
-    // deliberately not a second copy of the three assertions that already pass.
-    expect([...MANDATORY_BODY_SECTIONS]).toEqual(["skills", "protocols", "roles"]);
+    // `packs` is the remaining gap, and the reason this pin exists. It has no
+    // body-name test of its own, so adding it here flips a severity for an
+    // entire section and the suite stays green -- measured. This assertion
+    // guards the section that is absent, which is the half no behavioural test
+    // can reach; it is deliberately not a second copy of the four that pass.
+    //
+    // This pin failed when `references` was promoted, which is the pin working:
+    // the list cannot change without someone deciding, here, that it should.
+    expect([...MANDATORY_BODY_SECTIONS]).toEqual(["skills", "protocols", "roles", "references"]);
   });
 
   test("entryDir joins the section root and the id, including nested role ids", () => {

@@ -236,10 +236,46 @@ describe("the body file is named by kind", () => {
     expect(issue?.message).toContain("ROLE.md");
   });
 
-  test("a wrongly named body file in references/ stays a warning", () => {
+  test("a wrongly named body file in references/ is an error", () => {
+    // Promoted from a warning. The membership criterion for
+    // `MANDATORY_BODY_SECTIONS` is the shapes AUTHORING.md §12 gives one body
+    // file, and §12.5 gives a reference pack exactly one,
+    // `references/<id>/REFERENCE.md`, one per catalog entry. So this applies
+    // the existing criterion to a shape that now meets it rather than setting
+    // a new policy, and it landed while all four `references` entries were
+    // still `status: contract` with no directory on disk -- nothing was
+    // grandfathered and the first packs authored are written under the
+    // enforced rule rather than having it tightened around them afterwards.
     const ctx = ctxFor({
       "catalog.yaml": `${CATALOG_HEAD}references:\n  - id: guide\n    status: authored\n`,
       "references/guide/NOTES.md": "# Notes\n",
+    });
+    const issue = checkCompleteness(ctx).find((i) => i.rule === "catalog.unexpected-body-name");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("REFERENCE.md");
+  });
+
+  test("a correctly named reference body validates clean", () => {
+    // The direction that a gate test cannot establish on its own. Proving the
+    // error fires proves nothing about what clears it, and a rule that flags
+    // the right name as well as the wrong one would pass the test above.
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}references:\n  - id: guide\n    status: authored\n`,
+      "references/guide/REFERENCE.md": "# Guide\n\nBody.\n",
+    });
+    expect(checkCompleteness(ctx).filter((i) => i.rule === "catalog.unexpected-body-name")).toEqual([]);
+  });
+
+  test("a wrongly named body file in packs/ stays a warning", () => {
+    // Deliberately left out of the promotion. §12.5 says domain packs are the
+    // fifth shape and the contract does not govern them yet: nothing states
+    // what a `PACK.md` contains, and inventing a shape for an artifact nobody
+    // has designed is the failure §10 exists to catch. Mandating a body
+    // filename for a body with no spec would be doing that from the
+    // validator's side, so `packs` waits for its section to be written.
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}packs:\n  - id: pack-test\n    status: authored\n`,
+      "packs/pack-test/NOTES.md": "# Notes\n",
     });
     const issue = checkCompleteness(ctx).find((i) => i.rule === "catalog.unexpected-body-name");
     expect(issue?.severity).toBe("warning");
