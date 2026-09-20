@@ -69,7 +69,7 @@ is recorded.
 
 - `research/sources/engineering-skills-repo-plan.md` §5.5 (findings axes),
   §6.1–§6.5 (review protocols), §10 (release scenarios, lines 605–630), §11.
-- `research/sources/grok-transcript.md` (2264 lines) for `origin: conversation`
+- `research/sources/grok-transcript.md` (2265 lines) for `origin: conversation`
   capabilities. Every `G:L` locator in §23 was resolved with `sed -n '<n>p'`.
 - `catalog.yaml` `roles:` block — authoritative ids, tiers, and summaries.
 - `policies/review.yaml`, `policies/resolved-conflicts.yaml`,
