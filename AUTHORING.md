@@ -692,6 +692,36 @@ measured, reporting one more over-width line than the run before. No pattern wou
 because nobody greps for a line they do not know is there. The same count caught the same slip a
 second time, on a different paragraph, a commit later.
 
+**An instrument asserts the outcome only its hypothesis predicts, never one both would produce.**
+This is the population rule's companion and neither replaces it: the population question is whether
+you looked at everything, and this one is whether what you looked at could have told you apart. The
+two fail together rather than cancelling. A sweep over a complete population, asserting something
+non-specific, returns a uniform and confident result meaning nothing — and the completeness makes it
+more persuasive, not less.
+
+`research/probes/artifact-rule-firing.ts` is the worked case. It applies one mutation per rule to a
+copy of the shipped documents and asks whether that rule reports. Its first version asserted that
+validation failed after the mutation, which a working rule and a dead one both produce: a mutated
+document trips several rules at once, and the target staying silent is invisible underneath the
+others. It now asserts the rule reports under its own id, and that change immediately found a rule
+it had been scoring as exercised. `dossier.lexical-baseline-present` fires only when *no* recorded
+search is lexical; the shipped dossier has two, so mutating one leaves the rule satisfied while the
+run still fails loudly for other reasons. Under the weaker assertion it would have counted as
+exercised indefinitely.
+
+Note what this does not ask for. The earlier form — *does the instrument return the same answer
+under both hypotheses* — requires naming the alternative, and the alternative that catches you is
+the one you did not think of. This form requires only that the assertion be specific to what is
+under test, which is answerable from the hypothesis alone. *Validation failed* is not specific.
+*This rule reported, under this id* is.
+
+The executable version is to remove the thing under test and watch the assertion fail.
+`tests/charter-constraints.test.ts` records both directions — restore the deleted constraint and the
+case depending on its absence fails, delete the branch and the case depending on its presence fails
+— and states the reason: a constraint test that still passes with the constraint gone is measuring
+nothing. Both were run rather than asserted, which is the difference between a negative test and a
+claim about one.
+
 ---
 
 ## 9. Evals
