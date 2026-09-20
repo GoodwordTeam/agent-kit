@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, test } from "bun:test";
 
 import { compileSchemas, checkSchemas } from "../src/validation/schemas.ts";
@@ -181,5 +184,106 @@ describe("document validation against schemas", () => {
     const issues = checkSchemas(ctx);
     expect(issues.some((i) => i.rule === "schemas.validator-unavailable")).toBe(true);
     expect(issues.some((i) => i.rule === "schemas.document-invalid")).toBe(false);
+  });
+});
+
+/**
+ * Executable eval cases.
+ *
+ * These read the shipped `case.schema.json` rather than a synthetic stand-in.
+ * The two refusals below are this schema's entire reason for existing -- before
+ * it, an empty file and a one-line `tags:` file were both valid cases that
+ * satisfied `evals.declaration-without-case` and counted toward the three-case
+ * floor -- so asserting them against a schema written here would assert nothing
+ * about the file that ships.
+ */
+const SCHEMAS_DIR = join(import.meta.dir, "..", "schemas");
+const shipped = (name: string) => readFileSync(join(SCHEMAS_DIR, name), "utf8");
+
+/** A catalog that declares one skill, because cases are reached through skills. */
+const EVALS_CATALOG = `schema_version: 1
+package:
+  id: ak
+  name: agent-kit
+  version: 0.1.0
+  namespace: "/ak:"
+  default_profile: core
+skills:
+  - id: demo
+    status: authored
+schemas:
+  - id: common
+    status: authored
+  - id: case
+    status: authored
+  - id: catalog
+    status: authored
+`;
+
+const WELL_FORMED_CASE = `schema_version: "1.1"
+name: demo-fires-on-its-own-territory
+tags: [positive]
+execution:
+  prompt: Review the change on the branch and report what blocks it.
+  max_turns: 8
+  allowed_tools: [Read, Grep, Skill]
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    weight: 1
+`;
+
+function evalsTree(cases: Record<string, string>) {
+  return ctxFor({
+    "catalog.yaml": EVALS_CATALOG,
+    "schemas/common.schema.json": shipped("common.schema.json"),
+    "schemas/case.schema.json": shipped("case.schema.json"),
+    "schemas/catalog.schema.json": CATALOG_SCHEMA,
+    ...cases,
+  });
+}
+
+function caseIssues(ctx: ReturnType<typeof ctxFor>, file: string) {
+  return checkSchemas(ctx).filter((i) => i.file === file);
+}
+
+describe("executable eval cases are reached through the catalog's skills", () => {
+  const FILE = "evals/demo/fires-on-territory/case.yaml";
+
+  // The positive control. Without it the two refusals below are satisfied by a
+  // schema that refuses everything, including the corpus.
+  test("a well-formed case produces no issue", () => {
+    expect(caseIssues(evalsTree({ [FILE]: WELL_FORMED_CASE }), FILE)).toEqual([]);
+  });
+
+  test("an empty case.yaml is refused", () => {
+    const issues = caseIssues(evalsTree({ [FILE]: "" }), FILE);
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("must be object");
+  });
+
+  test("a case reduced to its tags line is refused, naming every key it lacks", () => {
+    const issues = caseIssues(evalsTree({ [FILE]: "tags: [scenario-18]\n" }), FILE);
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    for (const key of ["schema_version", "name", "execution", "graders"]) {
+      expect(issues[0]?.message).toContain(key);
+    }
+  });
+
+  // The join is the directory name, and `evals.case-without-declaration` already
+  // owns a case no skill claims. Reaching cases by walking `evals/` instead of by
+  // walking the catalog would report that case twice, under two rules, one of
+  // which would be talking about a file it has no standing to judge.
+  //
+  // Both halves in one test, on byte-identical content, because "no issue here"
+  // is also what a tree with no wiring at all reports. Only the contrast
+  // separates a case correctly left to another rule from a case nothing reaches.
+  test("the same empty case is refused under a declared skill and ignored under one no skill declares", () => {
+    const declared = "evals/demo/fires-on-territory/case.yaml";
+    const stray = "evals/nosuchskill/whatever/case.yaml";
+    const ctx = evalsTree({ [declared]: "", [stray]: "" });
+    expect(caseIssues(ctx, declared).map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(caseIssues(ctx, stray)).toEqual([]);
   });
 });
