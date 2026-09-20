@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { checkProvenance, parseGLocator, parseLocatorField } from "../src/validation/provenance.ts";
+import { DOCUMENT_FILE, DOCUMENT_REFERENCE, checkProvenance, parseGLocator, parseLocatorField } from "../src/validation/provenance.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { writeAdaptations } from "../src/packaging/build.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -833,7 +833,7 @@ capabilities:
   });
 });
 
-describe("a reference resolves against the document it names, or against nothing", () => {
+describe("plan and arch are two spellings of one document", () => {
   function archIssues(locator: string) {
     const ctx = ctxFor({
       "research/sources/engineering-skills-repo-plan.md": "# Plan\n\n## 5. A section the plan does have\n\nbody\n",
@@ -847,28 +847,233 @@ capabilities:
 `,
       "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
     });
+    // `document-unavailable` is kept in the filter with no producer left in
+    // src/: if anything reintroduces it, the first test below fails rather than
+    // the rule quietly returning.
     return checkProvenance(ctx).filter(
       (i) => i.rule === "provenance.document-unavailable" || i.rule === "provenance.document-reference-unresolved",
     );
   }
 
-  test("arch §5 does not resolve against the plan's §5", () => {
-    // The defect: until this was read, any `arch` reference was checked against
-    // planIndex, so a section number the plan happened to have made an arch
-    // citation pass while naming a document this tree does not hold.
-    const issues = archIssues("arch §5");
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.rule).toBe("provenance.document-unavailable");
+  test("arch \u00a75 resolves against the plan's \u00a75, because it is the same file", () => {
+    // This asserted the opposite until the premise under it was checked. The
+    // architecture document is not missing from this tree: it is
+    // research/sources/engineering-skills-repo-plan.md, which ADR-0001 names as
+    // its authority before citing the same sections as `arch \u00a78`. Erroring here
+    // sent a writer using the canonical spelling to go hold a document the tree
+    // already holds, and to register it in a lock where it is already registered.
+    expect(archIssues("arch \u00a75")).toEqual([]);
+  });
+
+  test("the plan's own \u00a75 still resolves", () => {
+    expect(archIssues("plan \u00a75")).toEqual([]);
+  });
+
+  test("a section the document does not have fails under either spelling", () => {
+    // The identity has to hold in both directions. If only `plan` were checked,
+    // `arch` would be a spelling that silently passes anything.
+    for (const locator of ["plan \u00a799", "arch \u00a799"]) {
+      const issues = archIssues(locator);
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.rule).toBe("provenance.document-reference-unresolved");
+    }
+  });
+
+  test("the failure names the file rather than the keyword the row used", () => {
+    // A writer who cites `arch` and a writer who cites `plan` are sent to the
+    // same file to look, because there is only one file to look in.
+    for (const locator of ["plan \u00a799", "arch \u00a799"]) {
+      expect(archIssues(locator)[0]?.message).toContain("research/sources/engineering-skills-repo-plan.md");
+    }
+  });
+});
+
+describe("every keyword the grammar admits resolves somewhere", () => {
+  // The population is the alternation inside DOCUMENT_REFERENCE, read from the
+  // pattern rather than retyped here -- a list copied into a test drifts from
+  // the thing it claims to cover, and then agrees with it by construction.
+  function keywordsInGrammar(): string[] {
+    const alternation = /\^\((([a-z]+\|)*[a-z]+)\)/.exec(DOCUMENT_REFERENCE.source);
+    if (alternation?.[1] === undefined) throw new Error("could not read the keyword alternation out of DOCUMENT_REFERENCE");
+    return alternation[1].split("|");
+  }
+
+  test("the grammar's keywords are the ones this test thinks they are", () => {
+    // Guards the guard: if the pattern is restructured so the alternation stops
+    // being readable, the check above must fail loudly rather than return [].
+    expect(keywordsInGrammar()).toEqual(["plan", "arch"]);
+  });
+
+  test("each keyword has a DOCUMENT_FILE entry", () => {
+    // Widening the grammar without deciding what the new keyword resolves
+    // against fails here. Nothing in this repository typechecks, so the
+    // Record<DocumentKeyword, string> annotation cannot do this job.
+    for (const keyword of keywordsInGrammar()) {
+      expect(Object.keys(DOCUMENT_FILE)).toContain(keyword);
+    }
+  });
+
+  test("every keyword maps to a file the resolver has an index for", () => {
+    // checkLocatorField resolves document references against one index, built
+    // from PLAN. A keyword mapped to any other file would be checked against
+    // the wrong sections -- the original defect, one indirection further out.
+    for (const file of Object.values(DOCUMENT_FILE)) {
+      expect(file).toBe("research/sources/engineering-skills-repo-plan.md");
+    }
+  });
+});
+
+/**
+ * §5: "A `rationale:` that cites a section names the document, or it cites
+ * nothing." `per dossier §24.2` shipped into `provenance/adaptations.yaml` at
+ * `ae061b2` and a reviewer caught it, not a check.
+ *
+ * §5 also says the fragment and the generated artifact are two surfaces and a
+ * repair to one is not a repair to both, so each case below is asserted on
+ * whichever surface carries the defect rather than on the pair.
+ */
+describe("a section cited in a rationale names its document", () => {
+  const PLAN_FILE = "research/sources/engineering-skills-repo-plan.md";
+  const PLAN_TEXT = "# Plan\n\n## 5.5 Findings\n\nbody\n\n## 10. Release scenarios\n\n1. One\n";
+  const SOURCE = "donor-one@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:x.md";
+
+  function fragment(rationale: string): string {
+    return `adaptations:\n  - path: skills/adapted/SKILL.md\n    source: ${SOURCE}\n    rationale: ${JSON.stringify(rationale)}\n`;
+  }
+
+  /** The merge copies each row verbatim, which is why both surfaces carry it. */
+  function generated(rationale: string): string {
+    return [
+      "# Generated by `ak build` from provenance/adaptations.d/*.yaml. Do not edit this file.",
+      "# Write surface: provenance/adaptations.d/<batch>.yaml, one fragment per batch.",
+      "# Each adapted file is recorded here with its exact donor@commit:path source.",
+      "adaptations:",
+      "  - path: skills/adapted/SKILL.md",
+      `    source: ${SOURCE}`,
+      `    rationale: ${JSON.stringify(rationale)}`,
+      "",
+    ].join("\n");
+  }
+
+  function issuesFor(files: Record<string, string>, plan: string | null = PLAN_TEXT) {
+    const ctx = ctxFor({
+      "provenance/upstream.lock.yaml": lockFor("a".repeat(40)),
+      "provenance/conversation-map.yaml": CONVERSATION_MAP,
+      ...(plan === null ? {} : { [PLAN_FILE]: plan }),
+      ...files,
+    });
+    return checkProvenance(ctx).filter((i) => i.rule.startsWith("provenance.rationale-"));
+  }
+
+  test("a bare section number in a fragment rationale is an error naming the file", () => {
+    const issues = issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Adopted per dossier §24.2.") });
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-unanchored-section"]);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.file).toBe("provenance/adaptations.d/batch-1.yaml");
+    // The message carries the spelling that would be accepted, or the writer's
+    // next attempt is a guess.
+    expect(issues[0]?.message).toContain("plan §");
+  });
+
+  test("a rationale that cites no section is silent", () => {
+    // The positive control. A rule that fired on every rationale would pass
+    // every error-severity assertion above.
+    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Severity and owner routing.") })).toEqual([]);
+  });
+
+  test("plan §N resolves and passes", () => {
+    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Recorded conflict: plan §5.5's enum stands.") })).toEqual([]);
+  });
+
+  test("plan §N naming a section the plan does not have is an error", () => {
+    // Anchoring is not resolution. A reference that parses is not one that
+    // resolves, and the reason §8 distrusts positional references into a live
+    // document is that they keep parsing after the document moves.
+    const issues = issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("See plan §99.") });
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-section-unresolved"]);
     expect(issues[0]?.severity).toBe("error");
   });
 
-  test("the plan's own §5 still resolves", () => {
-    expect(archIssues("plan §5")).toEqual([]);
+  test("arch is the plan's second spelling and resolves against the same index", () => {
+    // `DOCUMENT_FILE` is where that is decided, so a rationale writing `arch §N`
+    // is naming this tree's one design document under its other name. Resolved
+    // rather than rejected -- and a section it does not have still fails, which
+    // is the half that matters.
+    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("See arch §5.5.") })).toEqual([]);
+    const issues = issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("See arch §99.") });
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-section-unresolved"]);
   });
 
-  test("a plan section that does not exist still fails as unresolved", () => {
-    const issues = archIssues("plan §99");
-    expect(issues).toHaveLength(1);
-    expect(issues[0]?.rule).toBe("provenance.document-reference-unresolved");
+  test("a repair to the fragment alone leaves the published record failing", () => {
+    // The case §5 names: the merge copies each row verbatim, so the defect
+    // exists in two files from the moment it is written. A check reading only
+    // the write surface would go green on a half-done repair -- and the
+    // generated file is the one NOTICE points a downstream consumer at.
+    const issues = issuesFor({
+      "provenance/adaptations.d/batch-1.yaml": fragment("Adopted per the dossier."),
+      "provenance/adaptations.yaml": generated("Adopted per dossier §24.2."),
+    });
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-unanchored-section"]);
+    expect(issues[0]?.file).toBe("provenance/adaptations.yaml");
+  });
+
+  test("a repair to the generated file alone leaves the fragment failing", () => {
+    // The inverse, and the one that keeps the rule from being satisfiable by
+    // editing the generated file -- which `ak build` would then overwrite.
+    const issues = issuesFor({
+      "provenance/adaptations.d/batch-1.yaml": fragment("Adopted per dossier §24.2."),
+      "provenance/adaptations.yaml": generated("Adopted per the dossier."),
+    });
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-unanchored-section"]);
+    expect(issues[0]?.file).toBe("provenance/adaptations.d/batch-1.yaml");
+  });
+
+  test("both surfaces carrying it are reported once each", () => {
+    const issues = issuesFor({
+      "provenance/adaptations.d/batch-1.yaml": fragment("Adopted per dossier §24.2."),
+      "provenance/adaptations.yaml": generated("Adopted per dossier §24.2."),
+    });
+    expect(issues.map((i) => i.file).sort()).toEqual([
+      "provenance/adaptations.d/batch-1.yaml",
+      "provenance/adaptations.yaml",
+    ]);
+  });
+
+  test("with no plan in the tree an anchored reference is skipped, never passed", () => {
+    // A reference that resolves against nothing looks exactly like one that
+    // resolves.
+    const issues = issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("See plan §99.") }, null);
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-plan-unavailable"]);
+    expect(issues[0]?.severity).not.toBe("error");
+    expect(issues[0]?.skipped).toBe("plan sections cited in rationales");
+  });
+
+  test("with no plan in the tree an unanchored reference still fails", () => {
+    // The anchoring half needs no plan and goes on failing closed without one.
+    const issues = issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Adopted per dossier §24.2.") }, null);
+    expect(issues.map((i) => i.rule)).toEqual(["provenance.rationale-unanchored-section"]);
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("with no plan and no rationale citing a section, nothing is skipped", () => {
+    // Nothing to check is not the same as something unchecked. A skip here
+    // would report an instrument failure on a tree that has no subject for it.
+    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Severity and owner routing.") }, null)).toEqual([]);
+  });
+
+  test("a section reference in a key the merge drops is not this rule's subject", () => {
+    // `conversation_origin_fragments` sits beside `adaptations:` and the merge
+    // takes the adaptations list and nothing else, so its rows never reach the
+    // published record. The adjacent sibling-key rule owns that case; widening
+    // this one to reach it would report a defect on the wrong surface.
+    const doc = [
+      "adaptations: []",
+      "conversation_origin_fragments:",
+      "  - path: protocols/worktree-ownership/PROTOCOL.md",
+      "    locator: G:L1668-1676",
+      "    rationale: Anchored in the plan at §5.3 and §10 scenario 13.",
+      "",
+    ].join("\n");
+    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": doc })).toEqual([]);
   });
 });

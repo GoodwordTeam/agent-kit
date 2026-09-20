@@ -37,22 +37,60 @@ export function parseGLocator(text: string): GLocator | null {
   return { start, end };
 }
 
+/** The document keywords the locator grammar admits. Both name one file; see DOCUMENT_FILE. */
+export type DocumentKeyword = "plan" | "arch";
+
 export type LocatorReference =
   | { kind: "transcript"; start: number; end: number }
-  | { kind: "document"; document: "plan" | "arch"; section: string }
+  | { kind: "document"; document: DocumentKeyword; section: string }
   | { kind: "amalgam"; left: string; right: string };
 
 /**
  * `plan §7.1`, `arch §3`, `plan §9 (Milestone 7)`.
  *
- * A closed set with a real pattern, on purpose. The conversation map's own
- * header names exactly two source documents, and the design's precedence order
- * puts the plan *above* the transcript rather than beneath it, so a document
+ * A closed set with a real pattern, on purpose. The design's precedence order
+ * puts the document *above* the transcript rather than beneath it, so a document
  * reference is a stronger citation than a transcript range, not a weaker one.
  * Anything outside this shape -- a bare `see the discussion above` -- still
  * fails, or widening the grammar would be an escape hatch instead of a parser.
+ *
+ * **`plan` and `arch` are two spellings of one file**, and the file's name is
+ * the trap: `research/sources/engineering-skills-repo-plan.md` is the governing
+ * design document, and its `-repo-plan` suffix is why a second spelling grew for
+ * it. `docs/decisions/0001-kb-document-vocabulary.md` gives that path as its
+ * authority "§1.2, §8", then calls those same sections "the architecture doc
+ * (§1.2, §8)" and cites "arch §8". One document, both names, 676 lines,
+ * registered in the lock as local source `plan`.
+ *
+ * The *implementation* plan is a third document. It is not in this tree and
+ * `plan §N` does not mean it: `policies/resolved-conflicts.yaml` writes
+ * `plan: "§6.3, §11"` for the architecture document's sections, so anyone
+ * reading `plan` as the implementation plan misreads every row that cites one.
  */
-const DOCUMENT_REFERENCE = /^(plan|arch) §(\d+(?:\.\d+)*(?: \([^()]+\))?)$/;
+export const DOCUMENT_REFERENCE = /^(plan|arch) §(\d+(?:\.\d+)*(?: \([^()]+\))?)$/;
+
+/**
+ * Which file each document keyword resolves against.
+ *
+ * Exhaustive over the keywords DOCUMENT_REFERENCE admits, which is the guard
+ * this resolution lacked: `arch` used to reach the plan's index by falling
+ * through a default, so `arch §5` matched the plan's §5 and passed without
+ * either side establishing which document had been named. It was right by
+ * accident. The entries below make it right on purpose.
+ *
+ * The `Record<DocumentKeyword, ...>` annotation is not the enforcement. **This
+ * repository has no typechecker** -- TypeScript is not a dependency, there is no
+ * CI, and `bun` strips types without reading them, so the annotation is a note
+ * to an editor and nothing more. The enforcement is a test that reads the
+ * alternation out of DOCUMENT_REFERENCE and asserts every keyword it admits has
+ * an entry here.
+ *
+ * The record records a decision; it does not supply an index. A keyword that
+ * ever maps to a different file needs its own index built for it, not just a
+ * row added here -- so that test checks the mapped file is one the resolver was
+ * actually given an index for.
+ */
+export const DOCUMENT_FILE: Record<DocumentKeyword, string> = { plan: PLAN, arch: PLAN };
 
 /**
  * `amalgam roles/code-review/frontend-races + roles/doc-review/design-lens`.
@@ -689,6 +727,144 @@ function checkScenarioReferences(root: string, scenarios: Set<number> | null): I
     );
 }
 
+/**
+ * A section number inside a `rationale:`, with the token in front of it.
+ *
+ * Scoped to `§<number>`. "Section 5" and "the table above" are the same defect
+ * in prose and this does not reach them; §8 states the rule and a reader is
+ * what enforces it there. What this owns is the spelling that shipped.
+ */
+const RATIONALE_SECTION = /(?:(\S+)[ \t]+)?§\s*(\d+(?:\.\d+)*)/g;
+
+/**
+ * `plan` and `arch`, the same closed set `DOCUMENT_REFERENCE` accepts, read
+ * through surrounding punctuation so a backticked or parenthesised name counts.
+ */
+function sectionAnchor(token: string | undefined): "plan" | "arch" | null {
+  if (token === undefined) return null;
+  const word = token.replace(/[^A-Za-z]/g, "").toLowerCase();
+  return word === "plan" || word === "arch" ? word : null;
+}
+
+interface RationaleCitation {
+  file: string;
+  path: string;
+  anchor: "plan" | "arch" | null;
+  section: string;
+  text: string;
+}
+
+/**
+ * Every section reference in an adaptation `rationale:`, on both surfaces.
+ *
+ * The fragment is the write surface and the generated file is what `NOTICE`
+ * points a downstream consumer at. The merge copies each row verbatim, so a
+ * dangling reference exists in two files from the moment it is written, and
+ * repairing the fragment leaves the published record still asserting it. Both
+ * are read here rather than one, because a check that read only the write
+ * surface would go green on a half-done repair -- which is the same shape as a
+ * repair that parses as done.
+ *
+ * Only the `adaptations:` list. Keys beside it are dropped by the merge and
+ * never reach the published record, so they are the sibling-key rule's subject
+ * rather than this one's.
+ */
+function rationaleCitations(root: string, rows: ReadonlyArray<Adaptation>): RationaleCitation[] {
+  const out: RationaleCitation[] = [];
+
+  const add = (file: string, entry: Record<string, unknown>): void => {
+    const rationale = entry["rationale"];
+    if (typeof rationale !== "string") return;
+    const path = typeof entry["path"] === "string" ? entry["path"] : "(no path)";
+    for (const match of rationale.matchAll(RATIONALE_SECTION)) {
+      out.push({ file, path, anchor: sectionAnchor(match[1]), section: match[2] ?? "", text: match[0].trim() });
+    }
+  };
+
+  for (const row of rows) add(row.file, row.row);
+
+  const generated = readYaml(root, ADAPTATIONS_FILE);
+  if (generated !== null && !("error" in generated)) {
+    for (const entry of listOf(generated.value, ["adaptations"])) add(ADAPTATIONS_FILE, entry);
+  }
+
+  return out;
+}
+
+/**
+ * §5: a `rationale:` that cites a section names the document, or it cites
+ * nothing.
+ *
+ * `per dossier §24.2` shipped into `provenance/adaptations.yaml` at `ae061b2`
+ * and a reviewer caught it, not a check. It fails twice: it is a cross-document
+ * positional reference, which the dossier renumbers out from under, and it names
+ * no dossier at all, so a reader of the published record cannot tell which
+ * document it was measured against.
+ *
+ * Anchoring is not resolution, and both halves are here. A named `plan §N` is
+ * checked against the plan's own headings, because the reason §8 distrusts a
+ * positional reference into a live document is precisely that it keeps parsing
+ * after the document moves -- accepting the spelling without resolving it would
+ * leave the second half of the defect in place while looking like a gate for it.
+ *
+ * WHAT THIS DOES NOT REACH
+ *   A rationale that names one document and cites another's section. The
+ *   citation resolves, the name is present, and only reading both settles it --
+ *   §8's "a citation that resolves at the wrong authority is caught by nothing",
+ *   which this is an instance of rather than an exception to.
+ */
+function checkAdaptationRationales(root: string, rows: ReadonlyArray<Adaptation>): Issue[] {
+  const citations = rationaleCitations(root, rows);
+  if (citations.length === 0) return [];
+
+  const planIndex = planSections(root);
+  const issues: Issue[] = [];
+  let unresolved = 0;
+
+  for (const citation of citations) {
+    const { file, path, text, section } = citation;
+    if (citation.anchor === null) {
+      issues.push(
+        error(
+          "provenance.rationale-unanchored-section",
+          file,
+          `Rationale for '${path}' cites '${text}' without naming the document that section belongs to. A reader of the generated record cannot tell which document it was measured against, and the section renumbers without this row moving with it. Write 'plan §${section}' where it is the plan, or name the section rather than its position.`,
+        ),
+      );
+      continue;
+    }
+    // Both keywords resolve against the same index because both name the same
+    // file; `DOCUMENT_FILE` above is where that is decided, and a keyword that
+    // ever named a second document would need its own index there rather than a
+    // branch here.
+    if (planIndex === null) {
+      unresolved += 1;
+      continue;
+    }
+    if (planIndex.has(section)) continue;
+    issues.push(
+      error(
+        "provenance.rationale-section-unresolved",
+        file,
+        `Rationale for '${path}' cites '${text}', which is not a numbered section of ${PLAN}. A reference that parses is not a reference that resolves; if the section was renumbered, the row needs re-locating rather than the number nudging.`,
+      ),
+    );
+  }
+
+  if (unresolved > 0) {
+    issues.push(
+      skipped(
+        "provenance.rationale-plan-unavailable",
+        PLAN,
+        "plan sections cited in rationales",
+        `Plan absent; ${unresolved} section reference${unresolved === 1 ? "" : "s"} in adaptation rationales went unresolved. A reference to a section that does not exist reads the same as one that does.`,
+      ),
+    );
+  }
+
+  return issues;
+}
+
 export function checkProvenance(ctx: CheckContext): Issue[] {
   const { root, catalog } = ctx;
   const issues: Issue[] = [];
@@ -700,6 +876,7 @@ export function checkProvenance(ctx: CheckContext): Issue[] {
   const { rows, issues: adaptationIssues } = loadAdaptationFragments(root);
   issues.push(...adaptationIssues);
   issues.push(...checkAdaptationsSync(ctx));
+  issues.push(...checkAdaptationRationales(root, rows));
 
   const donorsPresent = isDir(join(root, ".donors"));
   if (!donorsPresent && rows.length > 0) {
@@ -1065,23 +1242,8 @@ function checkLocatorField(
       continue;
     }
     if (reference.kind !== "document") continue;
-    if (reference.document === "arch") {
-      // Never resolved against the plan's index, which is what this did until the
-      // branch was read: `arch §5` found the plan's §5, matched, and passed --
-      // a reference resolving against a different document than the one it names.
-      // Harmless only because no row has ever used the form. The architecture
-      // document is real design material (ADR-0001 cites its §1.2 and §8) that
-      // this repository does not hold, so there is nothing here to resolve
-      // against and saying so is the only honest answer.
-      issues.push(
-        error(
-          "provenance.document-unavailable",
-          CONVERSATION_MAP,
-          `'${id}' cites ${formatLocatorReference(reference)}, and no architecture document is in this tree to resolve it against. Hold it under research/sources/ and register it in ${LOCK} as a local source, or cite the plan where the claim survives there.`,
-        ),
-      );
-      continue;
-    }
+    // Both keywords resolve here because both name this file; DOCUMENT_FILE is
+    // where that is decided rather than assumed.
     if (planIndex === null) continue;
     // `plan §9 (Milestone 7)` carries a parenthetical for the reader; the heading
     // it resolves against does not, so match on the number alone.
@@ -1091,7 +1253,7 @@ function checkLocatorField(
       error(
         "provenance.document-reference-unresolved",
         CONVERSATION_MAP,
-        `'${id}' cites ${formatLocatorReference(reference)}, which is not a numbered section of ${PLAN}. A reference that parses is not a reference that resolves; if the section was renumbered, the capability needs re-locating rather than the number nudging.`,
+        `'${id}' cites ${formatLocatorReference(reference)}, which is not a numbered section of ${DOCUMENT_FILE[reference.document]}. A reference that parses is not a reference that resolves; if the section was renumbered, the capability needs re-locating rather than the number nudging.`,
       ),
     );
   }

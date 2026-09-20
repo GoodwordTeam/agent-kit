@@ -184,7 +184,15 @@ local_sources:
     # `wc -l` by the person writing the check.
     lines: 2265
   - id: plan
-    description: Repository plan specifying phases, batches, gates and the 24 release scenarios. Cited as `plan §<section>`.
+    description: >-
+      The governing design document: phases, batches, gates and the 24 release
+      scenarios. Cited as `plan §<section>` and as `arch §<section>` -- two
+      spellings of this one file, and the file's name is the trap. The
+      `-repo-plan` suffix is why a second spelling grew: ADR-0001 gives this
+      path as its authority "§1.2, §8", then calls those same sections "the
+      architecture doc" and cites "arch §8". There is no separate architecture
+      document to hold. The *implementation* plan is a third document, is not in
+      this tree, and `plan §N` never means it.
     working_copy: research/sources/engineering-skills-repo-plan.md
     # Anchored for the same reason as the transcript, against a weaker failure
     # mode. A `plan §N` reference resolves against a heading rather than a line,

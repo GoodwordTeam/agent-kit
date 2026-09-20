@@ -9,6 +9,10 @@
 # Sources
 #   G:L<start>-<end>   research/sources/grok-transcript.md — the design brief
 #   plan §N            research/sources/engineering-skills-repo-plan.md — the governing design
+#   arch §N            the same file. `plan` and `arch` are two spellings of one document;
+#                      the `-repo-plan` suffix in its name is why both grew. ADR-0001 cites
+#                      it as `arch §8`. The implementation plan is a third document, is not
+#                      in this tree, and `plan §N` does not mean it.
 #   Precedence: plan > later transcript turns > earlier transcript turns (AGENTS.md).
 #
 # Dispositions
