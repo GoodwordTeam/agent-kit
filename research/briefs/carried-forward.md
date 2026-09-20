@@ -343,3 +343,24 @@ corroboration is what stops the next person checking.
 **`git log --author` cannot distinguish the lanes.** Every commit carries one identity. Authorship
 lives in the commit message and the paths touched, both writer-controlled and neither checked; git
 here records custody and nothing else. Anything routed by author silently returns the whole team.
+
+**Truncating an output truncates the population, and nothing in the result says so.** `git status
+--short --branch | head -3` returned the branch line and two modified files and dropped the two `??`
+rows beneath it. I read the shorter list as the tree and was one step from reporting that another
+lane's untracked work had disappeared — a claim about someone else's files, from a pipe I wrote
+myself. The tell is that the truncation is invisible at the point of reading: `head` succeeds, the
+output is well-formed, and the missing rows leave no mark. This is the third member of the family
+`carried-forward` already names — the narrowed grep pattern, the zsh `$rev:path` parameter modifier,
+and now a pipe that discards the tail. Each one produces a clean, plausible, short answer. **Do not
+put a length limit on a command whose output you are about to treat as a population.** Count first,
+then limit for display if the count warrants it.
+
+**A report names a line; the defect is rarely one line wide.** `d3bfacb` converted the absolute path
+at `research/dossiers/protocols.md:15` because that is the line §5 named. Line 14 of the same file,
+in the same bullet list, carried the same absolute path and survived the repair. A grep over the
+whole tracked tree then closed it: five occurrences, four lines, three files — and note that a line
+count reads 4 where an occurrence count reads 5, because one line carried two. Repaired at
+`7a83f25`. **When a report hands you a locator, the first move is to measure the population that
+locator is an instance of.** The locator tells you a defect exists; it does not tell you how many.
+It is also where the locator's own bound matters — a line-based count and an occurrence-based count
+are different populations, and neither is wrong.
