@@ -742,13 +742,17 @@ stale. And it can be measured correctly by a command that answers about somethin
 revision named beside it: `git ls-files` and `git diff` report on the index and the working tree,
 which this repository contains and which no label converts into a revision. A figure carrying a sha
 and produced by one of those is not mislabelled, it is unanswerable — the label is true and does not
-describe what was counted. A control and a remedy answer to one requirement: each has the same
-extension as the thing it is for — the control as the hypothesis it guards, the remedy as the defect
-it repairs. A control that passes on worlds its hypothesis excludes gives false assurance and nobody
-looks again; one that fires where nothing is wrong gives a false alarm, and a guard that fires every
-day is stepped over. A remedy narrower than its defect is the first kind at one remove — the reader
-sees the label, takes the remedy as applied, and stops — which is the direction this paragraph was
-wrong in.
+describe what was counted. What a complying label licenses is narrower than it reads. It settles
+what was counted and at what revision; it does not reach the cause attached to the figure. A figure
+that is correct, correctly instrumented and correctly labelled can carry a wrong account of why it
+reads as it does, because that is a second claim and its evidence is the constituents rather than
+the totals. Carrying the label makes such an account harder to doubt rather than less likely. A
+control and a remedy answer to one requirement: each has the same extension as the thing it is for —
+the control as the hypothesis it guards, the remedy as the defect it repairs. A control that passes
+on worlds its hypothesis excludes gives false assurance and nobody looks again; one that fires where
+nothing is wrong gives a false alarm, and a guard that fires every day is stepped over. A remedy
+narrower than its defect is the first kind at one remove — the reader sees the label, takes the
+remedy as applied, and stops — which is the direction this paragraph was wrong in.
 
 This section's own author published a wrong one two commits after landing the rule, to the person
 about to act on it: a count of outstanding commits produced from memory of what had been committed
