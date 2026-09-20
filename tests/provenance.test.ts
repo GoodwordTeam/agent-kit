@@ -30,7 +30,7 @@ schemas:
     status: contract
 `;
 
-const TRANSCRIPT = `${"line\n".repeat(2264)}`;
+const TRANSCRIPT = `${"line\n".repeat(2263)}line`;
 
 function ctxFor(files: Record<string, string>) {
   const root = makeTree({
