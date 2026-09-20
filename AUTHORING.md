@@ -618,21 +618,31 @@ moving with it. Inside one file it cannot: renumbering a section and repointing 
 the same edit in the same diff, which is why the cross-references in this file are by number and are
 safe. Into a **donor pin** it cannot: `donor@<sha>:path` names bytes and the sha fixes them. That is
 the only anchor in this package that does, and it is why §5 sends every claim it can to the pin.
-`research/sources/` is not a second one. §5 is the evidence against that reading rather than the
-exemption for it: the lockfile records ranges carried from a recovered copy into the pin's numbering
-that landed on real text saying something else, and concludes *"Both resolve. Both would have been
-wrong."* An in-repo locator binds nothing, because nothing binds that file's content to the number.
-The provenance map's `G:L` form is a declared citation spelling with a validator behind it and is
-not in question; what is in question is the belief that it is *structurally* safe. It is safe
-because nothing has edited those files since the commit that imported them, and
-`git log -- research/sources/` is that claim's check: one command, runnable by someone who was not
-here, and visibly false the day it stops holding. A convention stated without its falsifier is
-indistinguishable from a guarantee within a few months, because nothing ever contradicts it. Nothing
-enforces this one; the check is what keeps it verifiable anyway. Until content is bound to locator,
-a locator into a live in-repo file is the unsafe case, and a section that has a name is cited by it.
-Across a live document boundary it can, because the renumbering and the repointing belong to
-different files, different owners and different commits, and nothing couples them. Name the section
-there. Say what it is called, not where it sits.
+`research/sources/` is now a second one, and was not when this section was first written.
+`provenance.local-source-modified` (`src/validation/provenance.ts`) recomputes the sha256 and the
+line count of both files in `research/sources/` on every run and fails on a mismatch. It needs no
+donor clone, so unlike the donor-pin check it never skips. Editing either file fails the build until
+the locators citing it are re-derived in the same commit. What that replaced is worth keeping: the
+safety of a `G:L` range used to rest on nothing having happened to edit the file, with
+`git log -- research/sources/` as its falsifier, and §5 records what that was worth — ranges carried
+from a recovered copy into the pin's numbering, landing on real text saying something else,
+concluding *"Both resolve. Both would have been wrong."* A convention stated without its falsifier
+is indistinguishable from a guarantee within a few months, because nothing ever contradicts it.
+Across an unanchored document boundary the position moves and the reference stays where it was,
+because the renumbering and the repointing belong to different files, different owners and different
+commits, and nothing couples them. Name the section there. Say what it is called, not where it sits.
+
+**What that anchor proves is narrower than it sounds, and the gap is this section's own subject.** A
+digest says the file is the one the digest was taken against. It says nothing about whether any
+given range points at the right part of it. A `G:L` citation attached to the wrong paragraph of a
+file that never changes passes this check and always will. The anchor closes silent drift under
+edit; it does not make a locator correct. So the claim available is the narrow one — the content is
+fixed, therefore a position taken against it stays meaningful — and whether the position was right
+when it was taken is not in evidence and never was. Reading the check as verifying the reference is
+the wrong-authority defect above, pointed at a gate rather than at a symbol. Read its two failures
+accordingly: a digest mismatch says the file changed, while a line-count mismatch beside a matching
+digest says the file is right and the register misrecords it, which is a defect in the lock and not
+in the tree.
 
 **A sweep that reports itself clean says what would have escaped it.** A grep finds instances; it
 never proves there are none. Every defect this section describes is invisible by construction — a
@@ -855,6 +865,17 @@ only where no probe can exist, and there the sentence to write is that no detect
 why, as this section does for a defect resolved from outside the contract. A probe that cannot run
 is neither 1 nor 0 and says so rather than exiting clean, for the reason this section gives about
 entries: an answer that costs nothing to produce is not evidence.
+
+**Not every probe is a gap record, and the exit code is where the difference is stated.** A probe
+commissioned to report rather than to gate exits 0 on the thing it reports:
+`research/probes/scenario-coverage.py` exits 0 on an uncovered scenario, because coverage there was
+ruled a report. Reading the convention above as reaching that file would convert a ruling into a
+defect. What both kinds owe is the other direction. A probe that has lost its grip on a source — a
+section it can no longer parse, a populated input contributing nothing — exits 1 whatever the tree
+says, because the figures underneath it are not worth reading; that is the probe reporting on itself
+rather than on the tree, and nothing in the output distinguishes the two unless the exit code does.
+Key that guard on the source having members, never on the tally being zero. A guard keyed on the
+tally reproduces the fault it was added to catch.
 
 **A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
 ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
