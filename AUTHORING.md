@@ -704,6 +704,15 @@ measured, reporting one more over-width line than the run before. No pattern wou
 because nobody greps for a line they do not know is there. The same count caught the same slip a
 second time, on a different paragraph, a commit later.
 
+The sharper instance in this file is an absence asserted rather than measured. This contract stated
+that nothing in the tracked tree recorded either candidate pair in §12.2 as examined, and one of the
+two was recorded in four places: a committed bullet in each of the two role bodies, and a reciprocal
+record for each seat in the provenance map. The claim was written from where such a record was
+expected to be rather than from the tree, and a search that comes back empty is exactly the result
+the head of this section says cannot be read as an absence — including when the person reading it
+that way wrote the rule. Naming the sink a record was supposed to land in is not declaring the
+population of places it could have landed, and only the second is checkable.
+
 **An instrument asserts the outcome only its hypothesis predicts, never one both would produce.**
 This is the population rule's companion and neither replaces it: the population question is whether
 you looked at everything, and this one is whether what you looked at could have told you apart. The
@@ -1340,8 +1349,8 @@ way round, which left the reverse naming missing from the two seats that had not
 **Unresolved candidates.** These pairs are suggested by the seats' catalog summaries and have not
 been confirmed. Each is resolved by the writer who authors either seat **while that seat is still
 open**, in one of two ways: promoted into the table as two rows, or recorded in the handback as
-examined and not a family, with the distinction that separates them. Leaving one unresolved is not an option, because an unexamined
-candidate is indistinguishable from a declared non-family.
+examined and not a family, with the distinction that separates them. Leaving one unresolved is not
+an option, because an unexamined candidate is indistinguishable from a declared non-family.
 
 | Candidate pair | Why it is a candidate |
 |---|---|
@@ -1357,14 +1366,22 @@ it. The report names both seats and the distinction the writer believes separate
 batch's fix cycle writes the bullet, because a seat's own writer is the one who can say what that
 seat is not.
 
-**Both rows above are in that state now, and it is this section's defect rather than a writer's.**
-All four seats are `status: authored`, so the window specified above — while that seat is still open
-— has closed for both pairs, and nothing in the tracked tree records either as examined. The
-mechanism was defeated by its choice of sink rather than by anyone ignoring it: a pair resolved in a
+**One of those two rows is in that state now, and it is this section's defect rather than a
+writer's.** All four seats are `status: authored`, so the window specified above — while that seat
+is still open — has closed for both pairs. For `doc-review/design-lens` /
+`code-review/frontend-races` it closed with the work done. `roles/doc-review/design-lens/ROLE.md`
+and `roles/code-review/frontend-races/ROLE.md` each carry a committed bullet opening *"Examined and
+adjacent rather than the same seat,"* naming the other by catalog id and spelling out the
+distinction, and `provenance/conversation-map.yaml` carries the reciprocal records
+`frontend-races-vs-design-lens-boundary` and `design-lens-vs-frontend-races-boundary`. That writer
+took the handback route and left the durable trace as well, unprompted.
+
+`doc-review/feasibility` / `plan-review/architect` is the row with no trace, and there the mechanism
+was defeated by its choice of sink rather than by anyone ignoring it: a pair resolved only in a
 handback and a pair never examined leave a clean checkout the same trace, which is none, and the
 sentence above names that exact equivalence as the reason the rule exists. §10's durable-record rule
-governs the repair. Asking the writers again does not repair it, because what they would produce is
-another record in the same place.
+governs the repair of that row and of no other. Asking the writer again does not repair it, because
+what they would produce is another record in the same place.
 
 **Where the earlier batch has no fix cycle left, the pair escalates instead of routing.** The rule
 above sends a backward-reaching pair to the earlier batch's fix cycle and assumes one is open. Once
