@@ -518,6 +518,20 @@ check that every population reaches a term in the restatement. Comparing topics 
 the sweep that finds instances, which reports and does not gate; this section states what a body
 owes, not how to go looking for breaches of it.
 
+**A claim that contradicts its ruling is not a narrower claim, and citing it makes the defect harder
+to see.** The narrowed case covers part of a ruling's population. This one covers none of it: the
+sentence says the opposite of what the ruling says. `rulings.uncited-restatement` does not name this
+possibility — its message offers *"if the claim is narrower than the ruling, that is the defect
+rather than the citation"*, which is one way a claim can be wrong about its authority and not the
+only one.
+
+The trap is the cheap fix. Faced with an uncited-restatement warning, adding the ruling id to the
+offending sentence clears it, and the sentence then passes the restatement scan, the citation scope
+check and every citation count in the repository — while instructing a writer to do the thing the
+cited ruling forbids. It resolves, it reads as settled, and every instrument agrees with it. A
+citation asserts that the sentence agrees with the ruling, so read the ruling before adding an id to
+silence a warning. Silencing is not the same act as answering.
+
 **A row cites a ruling where it bounds or excepts that ruling — draws an edge, or carves out a case.
 Otherwise the row leaves it bare.** Without the citation a reader cannot tell which rule's edge is
 being drawn, and drawing it is the work the citation does. A row that merely applies a ruling adds
@@ -1561,7 +1575,26 @@ trustworthy** — a hash, a revision, a packet — never a procedure for obtaini
 explains how to fetch its input has started writing a protocol.
 
 It pairs with `## When it has nothing to say`, and that pairing is what earns it a heading: a seat
-whose input no longer binds **returns nothing rather than judging a stale artifact**.
+whose input no longer binds **returns `unavailable` rather than judging a stale artifact**.
+
+**That heading covers two kinds, and writing them as one is what produced the error above.** A seat
+that ran and found nothing returns empty, and empty is the correct answer:
+`roles/doc-review/adversarial-document/ROLE.md` puts it as a deep pass that finds nothing returning
+nothing. A seat that could not be given required context that still binds returns a result which
+blocks, and `required-lane-failure-is-unavailable` governs that case in terms — a lane that could
+not be given its required context returns `unavailable`, which is a result rather than an absence,
+is never downgraded to an empty result and is never backfilled. This contract routed the second kind
+into the word the first kind owns, which is the one thing the ruling forbids.
+
+The vocabulary is not a single token, and the bodies establish the range. Twenty-six of the
+twenty-nine role bodies return `unavailable` under that heading. The three that do not are the core
+roles, and each carries a blocking token of its own with the non-assent guard written out:
+`roles/supervisor/ROLE.md` returns no choice and closes *"An empty return from this seat blocks its
+checkpoint. It is never read as assent"*, `roles/implementer/ROLE.md` returns `BLOCKED`, and
+`roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and all
+three satisfy it, because what it requires is a result that blocks and is never read as assent
+rather than a particular word. What no seat may do is leave the same trace for *found nothing* and
+*was given nothing* — the discriminator §10 applies to records, applied to returns.
 
 It also sits next to `## Evidence it must cite`, and the same artifact routinely belongs under both.
 From `roles/reviewer-spec/ROLE.md`:
