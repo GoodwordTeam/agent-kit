@@ -951,3 +951,47 @@ same failure, because both are invisible for one reason -- nothing compares them
 two adapters and never diffs them has the same blind spot as three call sites that never read each
 other. Where two artifacts are supposed to differ, the check is a comparison, and its absence is why
 a decorative second adapter can report zero errors for as long as anyone likes.
+
+---
+
+## `origin/main` is a cached answer, so "unpushed" is a claim with a timestamp on it
+
+A lane reported that `946668c` was unpushed and that `origin/main` stood at `3282296`, and declined
+to push it without a word from me. The decline was right. The premise was false: the commit was on
+the remote before the message was written.
+
+Asked rather than recalled:
+
+```
+$ git ls-remote origin main
+946668c98c35fff9a54a154b5494444ae62834f1	refs/heads/main
+```
+
+`origin/main` is a remote-tracking ref -- a file under `.git/refs/remotes/`, with an mtime, holding
+the answer the remote gave at the last fetch or push *from this clone*. Reading it does not ask the
+remote anything. It is correct when written and silently stale afterwards, and nothing in the
+reading says which.
+
+**This is the refspec property from the other side of the wire, and that is why it belongs beside
+it.** The refspec defect was a name that re-reads *later* than the moment you measured it, so the
+push published something you never looked at. This is a name whose value was fixed *earlier* than
+the moment you read it, so the report describes a remote that has since moved. Same root in both:
+the name carries no time, and the reader supplies the wrong one. Fourth spelling of *when the value
+was fixed, not what form it has* -- and the first where being stale, rather than fresh, is the
+failure.
+
+The gap that actually bit here is not between the ref and the remote. It is between **when you read
+and when you speak**, which is the same gap as the working-tree figure two entries up: a measurement
+taken at the top of a turn and reported at the bottom of it has aged by the length of the turn, and
+on a tree several lanes write to, that is long enough. The mtime on the cached ref in this case was
+*later* than the reading that produced the claim -- the push had landed and updated it mid-turn.
+
+Remedy, and it is one word: `git fetch` before reading `origin/main`, or `git ls-remote origin main`
+to ask instead of recall. Prefer the second when the claim is going in a message, because it has no
+cache to be stale and the command names what it did.
+
+**The part worth keeping is the decline, not the correction.** The lane's rule -- do not publish
+another lane's commit on my own judgment of when it is ready -- held on a false premise and would
+have held on a true one. A decision that is right for its reason survives its facts being wrong;
+that is the difference between a rule and a lucky guess, and it is worth saying plainly to someone
+who has just been told their measurement was stale.
