@@ -869,6 +869,12 @@ wrong, and no term in the output saying which tree was counted. Quote figures fr
 `research/probes/validate-figure.sh` is the executable form: it extracts a revision, runs the
 validator against it, and prints the figure beside the sha and the command that re-derives it. A
 figure reported without a revision cannot be rechecked by anyone, including the person who took it.
+The rule is about counts, not about that one instrument, and its closest readers fell through the
+gap on a single day: this repository's test total was quoted twice hours apart, `807` and then
+`829`, neither time against a revision, by people who had each just insisted on one for a validator
+figure. Neither number can now be checked, which is the rule predicting itself. A `bun test` total
+measures a tree exactly as a validator summary does — the probe covers one instrument, the rule
+covers any number taken from a tree.
 
 ---
 
