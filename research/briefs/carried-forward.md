@@ -614,3 +614,29 @@ what these searches are usually run to establish. One `wc -l` on the extract bef
 one pattern known to match, kills both of today's artifacts at the point of measurement rather than
 at the point where someone happens to know the answer. It is the same move as `diff --cached` above,
 applied to a failure that is not spatial at all.
+
+**`git push origin HEAD:main` is a moving ref too, and I published another lane's commit ninety
+minutes after being handed the report that names the defect.** `authoring` found it first: they ran
+`git push origin main`, which publishes whatever the branch points at when it runs rather than the
+commit they measured, and it carried an unrelated lane's `021bc47` along with their own. Their
+stated remedy was *push the commit I measured by explicit refspec -- `git push origin <sha>:main` --
+which fails rather than silently widening.* I accepted it, and then used `git push origin HEAD:main`
+on my next two commits. The second one reported `3772d63..5d656af` where I had just committed
+`8fa20df`: `authoring` had committed `5d656af` in the window between my `git commit` and my
+`git push`, and I published it unreviewed and unasked. Additive, measured green afterwards, nothing
+red went out -- and none of that was true because of anything I did.
+
+The lesson is not about git. **A remedy stated as a syntax gets copied as a syntax.** The property
+that makes the fix work is *the left-hand side names a commit that cannot move between measuring
+and publishing*. `HEAD:main` is an explicit refspec, satisfies every word of the remedy as written,
+and violates the property -- because `HEAD` is a name that moves for exactly the same reason `main`
+does, in exactly the window the remedy exists to close. The form I copied was the visible half of a
+fix whose working half was never in the syntax at all.
+
+Two shapes follow, and the second is why this is on the standing page rather than in a commit
+message. A remedy should be written so that its property is checkable on the copy: *the left-hand
+side of the refspec is a literal 40-hex sha you pasted from the commit you measured* is longer than
+`<sha>:main` and cannot be satisfied by `HEAD`. And the failure is silent in the family way -- the
+push succeeds, the range line `A..B` is the only signal, and reading it requires already knowing
+which commit you made. It is the positive-control rule above wearing different clothes: the
+instrument reported truthfully and the reader had no subject to compare it against.
