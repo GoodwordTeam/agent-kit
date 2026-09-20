@@ -324,6 +324,20 @@ the fragment and dangles in the generated file, which is the artifact `NOTICE` p
 consumer at. Write each row to stand alone, and cross-reference only paths and `donor@commit:path`
 sources, which survive.
 
+**A `rationale:` that cites a section names the document, or it cites nothing.** *per dossier §24.2*
+shipped into `provenance/adaptations.yaml` at `ae061b2` and a reviewer caught it, not a check. It
+fails twice. It is a cross-document positional reference, which §8 rules on — the dossier renumbers
+without the row moving with it. And it names no dossier at all, so a reader of the generated file
+cannot tell which document it was measured against. The sibling-key rule above is the adjacent case
+and does not reach this one: that row points at something the merge drops, this one at something the
+merge never had.
+
+**The fragment and the generated artifact are two surfaces, and a repair to one is not a repair to
+both.** The merge copies each row verbatim, so a dangling reference exists in two files from the
+moment it is written, and repairing the fragment leaves the published record still asserting it —
+the artifact `NOTICE` points a downstream consumer at. `53170e9` repaired both. Nothing checks that
+a repair did, which is the same shape as a repair that parses as done.
+
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
 ```bash
@@ -597,6 +611,16 @@ Across a live document boundary it can, because the renumbering and the repointi
 different files, different owners and different commits, and nothing couples them. Name the section
 there. Say what it is called, not where it sits.
 
+**A sweep that reports itself clean says what would have escaped it.** A grep finds instances; it
+never proves there are none. Every defect this section describes is invisible by construction — a
+figure that was true when measured, a paraphrase that stopped matching, a reference that still
+parses — so the pattern a sweep greps for is the spelling its author already had in mind, and what
+survives is what is spelled otherwise. Reporting such a sweep as complete is the defect being swept
+for, one level up. The discharge is not a better pattern: name the population the sweep owns, then
+check that every member of it reaches the output, so that what is unrepresented can be seen instead
+of imagined. A count of hits does not do this. A tally is where members stop being individually
+visible.
+
 ---
 
 ## 9. Evals
@@ -790,6 +814,17 @@ moved. That has already happened: an entry filed against §5 was answered by a c
 elsewhere, with §5 untouched and the check silent. Resolution from outside leaves no fingerprint
 here, so no state check on this file can find it, and the blocking clause and a person are what
 close it. The check is not a reason to leave an entry alone.
+
+**A known gap is recorded as a probe, not as a prose entry.** A gap a check can express is filed
+under `research/probes/` as a probe that exits 1 while it is open and 0 once it closes, the
+convention `research/probes/unowned-template-documents.ts` already follows. A probe is self-retiring
+in the way this section demands of an entry: it cannot be resolved and left standing, and it cannot
+describe a gap that is no longer there. A list of known gaps does both, which is why this package
+has none — a stale survey is read as a current one, and that is worse than silence. Prose is correct
+only where no probe can exist, and there the sentence to write is that no detector is possible and
+why, as this section does for a defect resolved from outside the contract. A probe that cannot run
+is neither 1 nor 0 and says so rather than exiting clean, for the reason this section gives about
+entries: an answer that costs nothing to produce is not evidence.
 
 **A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
 ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
