@@ -62,13 +62,24 @@ sentence saying what that check could not have seen. §8 requires this as of `9e
 
 ## Batch 6 — packs and references
 
-**Add `typescript` and a `typecheck` script at this boundary, with the `v0.1.0` tag.** Deliberately
-not inside a batch: four lanes had dirty trees when this was ruled, so the gate's output could not
-have been attributed to whoever caused it, and a gate whose output cannot be attributed gets turned
-off. Until it lands, the standing rule is that an invariant expressed as a type must also have a
-test — `DOCUMENT_FILE` is the worked example, with a test that reads the alternation out of
-`DOCUMENT_REFERENCE.source` rather than retyping the keyword list, because a copied list agrees with
-its subject by construction.
+**Make `tsc --noEmit` a gate at this boundary, with the `v0.1.0` tag** — not before. Deliberately
+not inside a batch: measured 2026-09-19, `bunx tsc --noEmit` exits **1** with **30 errors, all
+`TS7006` in a single untracked `tests/sideeffects.test.ts`** belonging to a lane mid-flight. That is
+the attribution problem the timing rule exists for, observed rather than predicted. **Pinning is a
+separate question and is not deferred** — see the open commission.
+
+Until it gates, the standing rule is that an invariant expressed as a type must also have a test,
+because the two instruments are blind in complementary directions on the same fact.
+`DOCUMENT_REFERENCE` is a runtime regex and `DocumentKeyword` is a declaration — one fact on two
+surfaces with no link between them:
+
+| mutation | `tsc --noEmit` | the runtime test |
+|---|---|---|
+| widen the regex, leave the type | exit 0 — blind | 2 fail |
+| widen the type, leave the regex | exit 1, TS2741 | 0 fail — blind |
+
+Neither instrument substitutes for the other, and a fact carried on two unlinked surfaces is §5's
+rule appearing inside `src/`.
 
 **Three retroactive edits land with this batch**, each touching a body authored in an earlier,
 now-closed batch:
@@ -160,16 +171,20 @@ saying which mandate governs which, which is why batch 2 had to ask about row 4'
 Plus, for §6: cite where a row **bounds or excepts** a ruling, leave bare where it merely applies one
 the body already cites.
 
-**The type-invariant inventory — `provmap`, list only, do not fix.** `typescript` is not in
-`devDependencies`, `node_modules/.bin` holds one entry (`yaml`), and there is no CI — while
-`@types/bun` and `tsconfig.json` are both present. The repository holds the type definitions and not
-the thing that reads them, so every type annotation in `src/` is documentation. Enumerate which
-invariants are type-only (exhaustive unions, required fields, discriminated kinds, `Record<K,V>`
-completeness) and whether anything at runtime would notice a violation. This precedes the tooling:
-a typechecker added later catches what is still *expressible*, so anything already wrong in a way
-the types no longer describe would stay invisible and green would read as vindication. Some entries
-will want a test rather than `tsc` — `DOCUMENT_FILE`'s index check asserts a relationship between a
-mapping and a resource, which no `tsc` run would produce.
+**Pin `typescript` in `devDependencies` — `cli`, now, not at batch 6.** `bunx` resolves from the
+network, so every "tsc clean" anyone has reported is a claim about whatever `bunx` fetched that
+minute, not about a pinned tool. Pinning changes no behaviour and defers nothing; it makes an
+existing capability reproducible.
+
+**The two-surface inventory — `provmap`, list only, do not fix.** The original framing of this
+commission was wrong and is corrected here rather than quietly dropped: the claim was that this
+repository has no typechecker and every annotation in `src/` is therefore documentation. It is
+reachable via `bunx` and it runs. What is true is narrower and more useful — a fact carried on both
+a runtime surface and a type surface is enforced by neither instrument alone, because each is blind
+to the mutation the other catches. Enumerate those pairs in `src/`: regex-plus-union, parsed-shape-
+plus-interface, catalog-key-plus-`Record`. Some will want a test, some a type, some both, and
+`DOCUMENT_FILE`'s index check is the case no `tsc` run would ever produce, because it asserts a
+relationship between a mapping and a resource rather than a shape.
 
 **Falsifying the mandated-rows gate — `sweep-reviewer`, queued behind the §8 sweep.** First case is
 a body whose row is correct in words but rewrapped.
