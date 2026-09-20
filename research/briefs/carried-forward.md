@@ -14,10 +14,21 @@ disclosure paragraphs.
 
 ---
 
-## Batch 3 — in flight
+## Batch 3 — landed, review in flight
 
-Nothing carried. `research/briefs/batch-03-define.md` is complete and the writer is running against
-it.
+Six entries at `05a431d`: skills `super-align`, `super-bound`, `wayfind`, `doc-review` and
+references `codebase-design`, `domain-modeling`. An independent reviewer is seated against the
+artifacts and writes `research/reviews/batch-03-define.md`.
+
+Two things it produced that outlived it. Its contract defect against §7 is **ruled and retired** at
+`57ea582` — `evals/` is now in `SCAN_DIRS`, and §7 names both symbols that decide whether a tree is
+scanned rather than the one that cannot answer. Its four over-target bodies (168, 175, 168, 188
+against a 150-line target) are the reviewer's to judge, not a finding on their own; four of four is
+a norm to test, not four accidents.
+
+Carried to batch 4 and already written into its brief: write a relative reference once per line,
+because the packager's two-spelling defect (`1afe016`) is unrepaired and raises `links.broken-bundle`
+against the author's source line for a file the packager itself wrote.
 
 ## Batch 5 — review-ship
 
@@ -253,6 +264,18 @@ the absence-claim repaired at `7f159d8`: a search run against where the record w
 rather than against the population of places it could live. Naming one input a fact ought to be in
 is not declaring the set of inputs the consumer gets, and only the second is checkable. For a lead
 about to commission seven more batches, the population is the brief's own inputs table.
+
+**An extract is not the tree until you have shown it reproduces the tree's own figure.** Building
+one by hand with `rsync -a --exclude '.git'` silently removes every donor clone's git directory,
+because the pattern is unanchored and matches at any depth. The result validated at 101 errors
+where the source tree had 0 — all of them `provenance.source-not-at-pin`, a check that was
+answering honestly about a tree I had quietly made different. Anchor root-only excludes as
+`/.git`, and make the extract print the source tree's figure before you read anything else from
+it: `research/probes/validate-figure.sh` avoids the whole class by using `git archive` rather than
+a copy, and is the right tool whenever the figure will be quoted.
+
+The general form is worth more than the flag. A copy made to isolate a measurement is itself an
+instrument, and an instrument nobody calibrated returns numbers that look exactly like results.
 
 **A validator figure taken from the working tree is a timestamp, not a measurement.** Five lanes
 write to one tree; eleven commits landed in one afternoon inside stretches of two or three minutes.
