@@ -343,6 +343,22 @@ moment it is written, and repairing the fragment leaves the published record sti
 the artifact `NOTICE` points a downstream consumer at. `53170e9` repaired both. Nothing checks that
 a repair did, which is the same shape as a repair that parses as done.
 
+**Where a figure is published on more than one surface, repair the surface that enforces it first.**
+The transcript's line count is published in four places: the lock's register, a comment in
+`provenance/conversation-map.yaml`, the `g_locator` pattern in `schemas/common.schema.json`, and
+that pattern's own `description`. Only one of the four rejects anything. Its bound ended at
+`226[0-4]`, so `G:L2265` — the transcript's last line, the line the register exists to make citable
+— was refused outright, in both the single and the range form, while the description beside it
+agreed that the range ended at 2264.
+
+That is the configuration in which nothing catches it: the instrument and its documentation wrong
+together, each corroborating the other. A writer who hit the rejection would have read the
+description, found it confirming, and renumbered a correct citation down to fit — the tree teaching
+a writer to introduce a defect. The ordering follows from what the two kinds of surface do when
+stale. A stale description misleads a reader who can still turn out to be right; a stale pattern
+overrules a reader who already is. So count the enforcing copies before the describing ones, and
+treat a repair that stopped at the prose as unfinished rather than as partial credit.
+
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
 ```bash
