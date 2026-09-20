@@ -9,6 +9,14 @@ A writer that follows this file should never need to ask a question. Where it ge
 because the dossier is silent and no ruling covers it — the answer is to report the gap, not to
 improvise. See §10.
 
+**Which of this binds you.** §1–§11 are the skill contract: a writer authoring a `SKILL.md` reads
+them and stops at §12. The four other body shapes are routed by §12's opening paragraph — protocols
+(§12.1), roles (§12.2), loose doctrine files (§12.3), reference packs (§12.5) — and each of those
+writers reads §1–§11 first, then their own subsection and §12.4. §12.1 and §12.2 apply only to
+amending an existing protocol or role; both populations are complete (7/7 and 29/29 at `85e4d6a`)
+and no batch after batch 3 adds to either, so most readers of this file never need those two
+sections. What each shape inherits from §1–§11 is stated in §12 and not repeated here.
+
 ---
 
 ## 1. Size and progressive disclosure
