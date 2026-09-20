@@ -15,5 +15,26 @@
     "noImplicitOverride": true,
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  // `research/probes/**` is deliberately outside this set, not missed by the glob.
+  // A probe is a one-off argument about a specific revision, often run against an
+  // extract of an older tree whose types no longer match HEAD's; holding them to
+  // HEAD's `strict` would make them fail for being about the past, which is what
+  // they are for. `tests/typecheck.test.ts` asserts that `src/` and `tests/` are
+  // covered in full, so this exclusion cannot quietly widen.
+  //
+  // Measured, not assumed: adding `research/probes/**/*.ts` here today surfaces
+  // exactly one real error, `charter-grant-hash-fixpoint.ts:90` under
+  // `noUncheckedIndexedAccess`. It is reported to that probe's owner rather than
+  // fixed from here.
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  // `tests/fixtures/**` is test *input*, not this project's source. A fixture
+  // repository exists to be broken -- the checkpoint fixture ships a failing
+  // acceptance test and a half-written module on purpose -- so holding it to
+  // HEAD's `strict` asserts the opposite of what it is for. Measured: it
+  // contributes 5 errors today, none of them about this repository's code.
+  //
+  // Narrow on purpose. `tests/*.test.ts` and everything under `src/` stay in the
+  // set, and `tests/typecheck.test.ts` asserts that, so this cannot quietly grow
+  // into an exclusion that hides a real file.
+  "exclude": ["tests/fixtures/**"]
 }
