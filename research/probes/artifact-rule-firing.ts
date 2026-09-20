@@ -277,7 +277,7 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
     to: "path",
     also: [{ path: "searches.3.tool", to: "path" }],
     kind: "value",
-    note: "Both lexical searches have to change: the rule asks whether any search is lexical, so mutating one of two leaves it satisfied. A mutation that reaches the rule only because the document happens to hold one node of its kind is a weaker measurement than it looks.",
+    note: "Both lexical searches have to change: the rule asks whether any search is lexical, so mutating one of two leaves it satisfied. A mutation that reaches the rule only because the document happens to hold one node of its kind is a weaker measurement than it looks. AUTHORING.md section 8 uses this rule as its worked example and depends on that quantifier, and nothing here would notice if it moved: a rule firing per search is still fired by changing both, so this entry stays green while the paragraph quietly goes false. Anyone narrowing src/validation/docrules.ts's `some` owes section 8 a rewrite.",
   },
   { rule: "dossier.stale-or-absent-graph-documents-a-limitation", file: "dossier.example.json", path: "coverage_limits", to: [], kind: "value" },
   {
