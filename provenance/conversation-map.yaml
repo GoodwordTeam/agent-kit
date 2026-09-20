@@ -4,7 +4,10 @@
 # This file is the proof that nothing was silently dropped and nothing was silently
 # invented. `ak validate` reads it: every non-null `destination` must be a live
 # `catalog.yaml` entry, and every `G:L` locator must resolve inside
-# `research/sources/grok-transcript.md` (2264 lines).
+# `research/sources/grok-transcript.md` (2265 lines). That is the count the range
+# check resolves against, and the count the lock records. `wc -l` reports 2264 --
+# it counts newlines and this file ends without one -- so a locator derived from
+# the `wc -l` figure rejects a valid `G:L2265`. Do not re-derive this with `wc -l`.
 #
 # Sources
 #   G:L<start>-<end>   research/sources/grok-transcript.md — the design brief

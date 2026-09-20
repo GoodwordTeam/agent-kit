@@ -78,12 +78,21 @@ export const DOCUMENT_REFERENCE = /^(plan|arch) §(\d+(?:\.\d+)*(?: \([^()]+\))?
  * either side establishing which document had been named. It was right by
  * accident. The entries below make it right on purpose.
  *
- * The `Record<DocumentKeyword, ...>` annotation is not the enforcement. **This
- * repository has no typechecker** -- TypeScript is not a dependency, there is no
- * CI, and `bun` strips types without reading them, so the annotation is a note
- * to an editor and nothing more. The enforcement is a test that reads the
- * alternation out of DOCUMENT_REFERENCE and asserts every keyword it admits has
- * an entry here.
+ * The `Record<DocumentKeyword, ...>` annotation is not the whole enforcement,
+ * and the reason is not that types go unchecked here -- an earlier version of
+ * this comment claimed that and was wrong. `bunx tsc --noEmit` runs clean on
+ * this tree and does catch a widened `DocumentKeyword` with no entry below
+ * (TS2741).
+ *
+ * What it cannot catch is the other half. DOCUMENT_REFERENCE is a runtime regex
+ * and DocumentKeyword is a declaration: two surfaces carrying one fact, with no
+ * link between them, so widening the *grammar* alone typechecks clean. Measured
+ * both ways -- regex widened, type untouched: tsc exits 0 and the test below
+ * fails; type widened, regex untouched: tsc exits 1 and the test below passes.
+ * Each is blind to exactly what the other catches, which is why both are here.
+ *
+ * Nothing runs tsc automatically -- it is not a dependency and there is no CI --
+ * so the test is the half that runs unprompted.
  *
  * The record records a decision; it does not supply an index. A keyword that
  * ever maps to a different file needs its own index built for it, not just a
