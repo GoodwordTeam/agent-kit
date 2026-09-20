@@ -25,11 +25,20 @@
 #       warning, so the sum is conserved. This is a lane mid-batch.
 #
 #   warnings up, notes unchanged
-#       Uncatalogued `.md` at the repository root, one `rulings.doctrine-
-#       unreachable` each. These are usually someone's working files, which the
-#       validator cannot distinguish from repository content. Note that
-#       `looseDoctrineFiles` walks the catalog's directory sections and root
-#       markdown only -- files under `research/` move this count by zero.
+#       Markdown the reachability walker can see but no catalog entry claims,
+#       one `rulings.doctrine-unreachable` each. Usually someone's working
+#       files, which the validator cannot distinguish from repository content.
+#
+#       **This row names a symptom with at least two causes, and the output does
+#       not say which.** `looseDoctrineFiles` walks the catalog's directory
+#       sections *and* root markdown, so 22 loose `.md` at the root and 22 loose
+#       `.md` inside `roles/` produce character-identical summary lines. Both
+#       were measured. Do not read this row as identifying a location -- run
+#       `ak validate | grep doctrine-unreachable` and read the paths, which is
+#       the only thing that distinguishes them.
+#
+#       Files under `research/` move this count by zero: the walker only ever
+#       enumerates catalog sections and the root, at any depth.
 #
 #   notes one high, one check skipped: donor paths at pin
 #       A bare `git archive` with no `.donors/`. The skip is correct behaviour,
