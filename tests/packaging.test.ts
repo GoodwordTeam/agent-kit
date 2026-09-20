@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { loadCatalog } from "../src/catalog/load.ts";
+import { checkCompleteness } from "../src/validation/completeness.ts";
 import { HOST_IDS, RESTRICTIONS, loadHostCapabilities } from "../src/packaging/hosts.ts";
 import { planBundle } from "../src/packaging/plan.ts";
 import { writeBundles, checkBundles } from "../src/packaging/build.ts";
@@ -181,6 +182,129 @@ describe("bundle planning", () => {
     const plan = planBundle(ctx, "claude-code", {});
     expect(plan.issues.some((i) => i.rule === "packaging.skill-body-missing")).toBe(true);
     expect([...plan.files.keys()]).not.toContain("skills/beta/SKILL.md");
+  });
+});
+
+/**
+ * A skill the catalog declares with `status: contract` has no body yet, and
+ * treating that as a packaging error made `ak build` unable to emit anything at
+ * all until the last of 33 skills was written -- a gate that says nothing about
+ * the bundle and blocks every intermediate release. The catalog is the
+ * authority on what exists, so an unauthored skill is excluded from the bundle
+ * rather than failing it.
+ *
+ * Exclusion is the dangerous half of that: a bundle that silently ships without
+ * most of its skills and reports success is the fails-open shape this validator
+ * exists to prevent. So the exclusion is recorded in `.claude-plugin/plugin.json`,
+ * which is inside the byte comparison `ak build --check` performs, and a run
+ * that drops a skill says so in its output. Neither is a courtesy; they are what
+ * make the exclusion checkable rather than invisible.
+ */
+describe("skills the catalog has not authored yet", () => {
+  const WITH_CONTRACT = {
+    "catalog.yaml": CATALOG.replace(
+      "protocols:",
+      `  - id: gamma
+    status: contract
+    invocation: M
+    profiles: [core]
+protocols:`,
+    ),
+    "profiles/core.yaml": "id: core\nskills: [alpha, beta, gamma]\n",
+  };
+
+  test("a contract skill with no body is excluded from the bundle, not an error", () => {
+    const plan = planBundle(ctxFor(WITH_CONTRACT), "claude-code", {});
+    expect(plan.issues.filter((i) => i.rule === "packaging.skill-body-missing")).toEqual([]);
+    expect([...plan.files.keys()].filter((p) => p.startsWith("skills/gamma/"))).toEqual([]);
+  });
+
+  test("an authored skill with no body is still an error", () => {
+    // The gate that had to survive. Exclusion is keyed on what the catalog
+    // says, not on whether a file happens to be there, so a skill declared
+    // `authored` with no body is still a packaging failure and not silently
+    // dropped into the excluded list.
+    const plan = planBundle(ctxFor({}, ["skills/beta/SKILL.md"]), "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.skill-body-missing");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("skills/beta/SKILL.md");
+  });
+
+  test("the manifest records every exclusion and its reason", () => {
+    const plan = planBundle(ctxFor(WITH_CONTRACT), "claude-code", {});
+    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta"]);
+    expect(manifest.ak.excluded).toEqual([{ skill: "gamma", reason: "status: contract" }]);
+  });
+
+  test("a run that excludes a skill says so, not only in the file it writes", () => {
+    // The manifest is the durable record and this is the one a person reads.
+    // Without it the only signal that a third of the catalog is missing from
+    // the bundle is a JSON file nobody opens on a green run.
+    const plan = planBundle(ctxFor(WITH_CONTRACT), "claude-code", {});
+    const note = plan.issues.find((i) => i.rule === "packaging.excluded-unauthored");
+    expect(note?.severity).toBe("note");
+    expect(note?.message).toContain("gamma");
+  });
+
+  test("a bundle with no skills left in it is an error, not a green empty build", () => {
+    // The failure this exclusion would otherwise introduce, and it is the same
+    // one it was meant to remove. With every skill still `contract`, excluding
+    // them all leaves a bundle containing nothing but its own manifest, and
+    // without this the packager reports `0 errors` and exit 0 over it -- a
+    // claim that a releasable artifact was produced, which is worse than the
+    // 33 errors it replaced, because that at least said something was wrong.
+    //
+    // This is what makes the exclusion an unblocking change rather than a
+    // silencing one: the build goes green the moment the *first* skill is
+    // authored, instead of staying red until the last.
+    const noneAuthored = {
+      "catalog.yaml": CATALOG.replace(/status: authored\n    invocation/g, "status: contract\n    invocation"),
+      "profiles/core.yaml": "id: core\nskills: [alpha, beta]\n",
+    };
+    const plan = planBundle(ctxFor(noneAuthored), "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.empty-bundle");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("alpha");
+
+    // And it is gone as soon as one skill is real, which is the whole claim.
+    const oneAuthored = {
+      ...noneAuthored,
+      "catalog.yaml": (noneAuthored["catalog.yaml"] ?? "").replace("id: alpha\n    status: contract", "id: alpha\n    status: authored"),
+    };
+    expect(planBundle(ctxFor(oneAuthored), "claude-code", {}).issues.some((i) => i.rule === "packaging.empty-bundle")).toBe(false);
+  });
+
+  test("an included skill linking an excluded one fails the build rather than dangling", () => {
+    // Exclusion removes the skill from the bundle's namespace, so a link into
+    // it has nowhere to resolve. `packaging.not-bundleable` already carried
+    // this case for profile exclusions and carries it unchanged here: the
+    // alternative is a bundle shipping a link to a directory it does not have.
+    const plan = planBundle(
+      ctxFor({ ...WITH_CONTRACT, "skills/alpha/SKILL.md": `${HEAD("alpha")}\nSee [gamma](../gamma/SKILL.md).\n` }),
+      "claude-code",
+      {},
+    );
+    const issue = plan.issues.find((i) => i.rule === "packaging.not-bundleable");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("skills/alpha/SKILL.md");
+  });
+
+  test("a body present while the catalog still says contract is excluded, and the catalog is why", () => {
+    // The catalog is the authority on what exists; a directory listing is not.
+    // So this is excluded even though the file is right there, and the author
+    // is told by `catalog.status-behind-body` rather than by a silent
+    // inclusion that makes the catalog wrong about its own bundle. Asserted in
+    // both directions so the exclusion cannot become a hole nobody is warned
+    // about.
+    const ctx = ctxFor({
+      ...WITH_CONTRACT,
+      "skills/gamma/SKILL.md": `${HEAD("gamma")}\nWritten already.\n`,
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    expect([...plan.files.keys()].filter((p) => p.startsWith("skills/gamma/"))).toEqual([]);
+    const warned = checkCompleteness(ctx).filter((i) => i.rule === "catalog.status-behind-body");
+    expect(warned.map((i) => i.file)).toContain("skills/gamma/SKILL.md");
   });
 });
 

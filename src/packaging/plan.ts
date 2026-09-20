@@ -5,7 +5,7 @@ import { readTextIfPresent, walkFiles } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../util/links.ts";
 import type { CheckContext } from "../validation/context.ts";
-import { error, type Issue } from "../validation/types.ts";
+import { error, note, type Issue } from "../validation/types.ts";
 import { generateHostFrontmatter, type SkillMode } from "./frontmatter.ts";
 import { loadHostCapabilities, type HostId } from "./hosts.ts";
 import { loadSkillManifest } from "./manifest.ts";
@@ -110,7 +110,71 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
   const membership = resolveProfile(root, catalog, options.profile);
   issues.push(...membership.issues);
-  const included = new Set(membership.skills);
+
+  /**
+   * A skill the catalog has not authored yet is excluded from the bundle, not
+   * a reason the bundle cannot be built.
+   *
+   * Treating a missing body as a packaging error meant `ak build` could emit
+   * nothing until the last of the declared skills was written: 33 errors that
+   * said nothing about the bundle and blocked every release before the final
+   * one. `status` is the catalog's own statement about what exists, so it
+   * decides membership, and a body that is genuinely missing from an
+   * `authored` skill is still an error below.
+   *
+   * Keyed on the catalog rather than on whether a file is present, which is
+   * the difference between an exclusion and a silent drop: a body sitting in
+   * the tree under a `contract` entry is excluded too, and the author hears
+   * about it from `catalog.status-behind-body`. Built in catalog order because
+   * this list reaches `.claude-plugin/plugin.json`, whose bytes `ak build
+   * --check` compares.
+   */
+  const selected = new Set(membership.skills);
+  const included = new Set<string>();
+  const excluded: Array<{ skill: string; reason: string }> = [];
+  for (const entry of catalog.bySection("skills")) {
+    if (!selected.has(entry.id)) continue;
+    if (entry.status === "authored") {
+      included.add(entry.id);
+      continue;
+    }
+    excluded.push({ skill: entry.id, reason: `status: ${entry.status}` });
+  }
+
+  /**
+   * Excluding every skill does not produce a small bundle, it produces no
+   * bundle -- a directory holding its own manifest and nothing to install.
+   * Reporting success over that would be the defect the exclusion was meant to
+   * remove, wearing a green run instead of an error count, so a bundle with
+   * nothing left in it fails.
+   *
+   * This is also what keeps the exclusion an unblocking change: the build goes
+   * green on the first authored skill rather than on the last.
+   */
+  if (included.size === 0 && excluded.length > 0) {
+    issues.push(
+      error(
+        "packaging.empty-bundle",
+        "catalog.yaml",
+        `Every skill selected for this bundle is excluded, so it would contain no skills at all: ${excluded.map((e) => e.skill).join(", ")}. A bundle is emitted once at least one selected skill is authored.`,
+      ),
+    );
+  }
+
+  /**
+   * Said out loud, because the manifest is a file nobody opens on a green run
+   * and a bundle quietly missing most of its skills is exactly the failure
+   * this package keeps finding elsewhere.
+   */
+  if (excluded.length > 0) {
+    issues.push(
+      note(
+        "packaging.excluded-unauthored",
+        ".claude-plugin/plugin.json",
+        `${excluded.length} skill(s) are excluded from this bundle because catalog.yaml does not declare them authored: ${excluded.map((e) => e.skill).join(", ")}. The exclusion and its reason are recorded in .claude-plugin/plugin.json.`,
+      ),
+    );
+  }
 
   const ordered = catalog.bySection("skills").filter((e) => included.has(e.id));
   const emitted: string[] = [];
@@ -183,7 +247,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
   files.set(".claude-plugin/plugin.json", {
     path: ".claude-plugin/plugin.json",
-    contents: pluginManifest(ctx, host, options, emitted, decisions, capabilities.enforces, capabilities.notes),
+    contents: pluginManifest(ctx, host, options, emitted, excluded, decisions, capabilities.enforces, capabilities.notes),
   });
 
   const plan: BundlePlan = { host, files: sortFiles(files), decisions, issues };
@@ -209,6 +273,7 @@ function pluginManifest(
   host: HostId,
   options: PlanOptions,
   skills: ReadonlyArray<string>,
+  excluded: ReadonlyArray<{ skill: string; reason: string }>,
   decisions: ReadonlyArray<HostDecision>,
   enforces: ReadonlySet<string>,
   notes: ReadonlyArray<string>,
@@ -222,6 +287,13 @@ function pluginManifest(
     skills: skills.map((id) => `./skills/${id}`),
     ak: {
       profile: options.profile ?? "all",
+      /**
+       * Emitted even when empty. An absent key would read as "an older build
+       * that did not record this" rather than "nothing was left out", and the
+       * two have to be distinguishable in a file whose job is to say what the
+       * bundle does not contain.
+       */
+      excluded: excluded.map((e) => ({ skill: e.skill, reason: e.reason })),
       host: { id: host, enforces: [...enforces].sort(), notes: [...notes] },
       modes: decisions.map((d) => ({ skill: d.skill, mode: d.mode })),
       autonomy_rejected: decisions
