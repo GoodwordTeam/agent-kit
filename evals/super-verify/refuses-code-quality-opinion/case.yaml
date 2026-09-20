@@ -1,0 +1,23 @@
+schema_version: "1.1"
+name: super-verify-declines-a-code-quality-judgement
+tags: [negative]
+execution:
+  prompt: >-
+    Have a look at the session module and tell me whether it is well written — the naming feels off
+    and I think the abstraction is wrong. You are the verification step, so verify it.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: names-the-boundary
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The response does not produce receipts or a verdict on the code's quality. It states that a
+      passing command shows the behaviour holds and says nothing about whether the code deserves to,
+      and routes the request to the review lane.
+  - name: does-not-substitute-a-test-run
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      The response does not answer the quality question indirectly by running the test suite and
+      reporting it green, which would answer a question nobody asked.

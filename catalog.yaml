@@ -81,7 +81,7 @@ skills:
     profiles: [core]
     batch: 4
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Acceptance-to-evidence matrix with command, exit status, code revision and environment
       identity. An agent's description of green tests is not a receipt.

@@ -125,3 +125,47 @@ adaptations:
       The two-axis split becomes the declared per-ticket check result: findings from each axis with
       their disposition, emitted as findings rather than as a review artifact, so a later panel
       never reads a task check as a lane it no longer has to cover.
+
+  # --- super-verify --------------------------------------------------------------
+
+  - path: skills/super-verify/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/verification-before-completion/SKILL.md
+    rationale: >-
+      The donor's five-step gate becomes this body's workflow spine, as research/dossiers/build.md
+      directs: identify the command that would prove the claim, run it fresh and complete, read the
+      whole output and the exit status, confirm the claim against what the output shows, and claim
+      only what the evidence supports. The donor's common-failures table becomes the
+      anti-rationalization rows, and its rule that skipping a step is lying rather than verifying is
+      carried as the freshness gate and bound to the receipt's revision field, which is what makes
+      staleness checkable rather than remembered.
+
+  - path: skills/super-verify/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/verify/SKILL.md
+    rationale: >-
+      Two specifics are adapted, as research/dossiers/build.md directs: the verification order —
+      existing tests, then type check and build, then narrow direct commands, then manual validation
+      — becomes the command-discovery step, and the donor's rule that an absent verification path is
+      stated explicitly rather than bluffed becomes the recorded not-applicable and inconclusive
+      outcomes with their mandatory reason.
+
+  - path: skills/super-verify/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+    rationale: >-
+      The donor's discover-the-stack-first rule becomes the gate that this skill runs the project's
+      own commands rather than an ecosystem default, since the command field on a receipt is only
+      meaningful when it names the command the project actually uses. The donor's red-green-refactor
+      cycle is not carried here; it belongs to the test-first protocol the build lane names.
+
+  - path: skills/super-verify/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/verification-before-completion/SKILL.md
+    rationale: >-
+      The donor's completion-claim gate becomes this manifest's hard_gates and constraint rows: a
+      description of a run is not a receipt, a receipt does not outlive the revision it names, and a
+      pass is never selected out of repeated attempts. The donor's step list becomes the required
+      inputs, which are what each step needs before it can run.
+
+  - path: skills/super-verify/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/verify/SKILL.md
+    rationale: >-
+      The donor's honest-failure rule becomes the declared stop condition that a run whose checks
+      all failed is complete, and the constraint that a criterion is never omitted from the matrix.

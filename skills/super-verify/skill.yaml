@@ -1,0 +1,282 @@
+# skills/super-verify/skill.yaml — execution contract for the evidence lane.
+# Prose mirror: skills/super-verify/SKILL.md (AUTHORING.md §4.1).
+
+id: super-verify
+version: 0.1.0
+kind: lifecycle
+invocation: M
+summary: >-
+  Acceptance-to-evidence matrix with command, exit status, code revision and environment identity.
+  An agent's description of green tests is not a receipt.
+
+triggers:
+  - A caller claims a specific implemented behaviour works and the claim can be named as an
+    acceptance criterion.
+  - A ticket's acceptance criteria need evidence a reader who was not in the run can re-check.
+  - The code has moved since the last receipts were taken and a claim has to be established again
+    for the new revision.
+  - A repair has landed and what follows it is new verification rather than a re-reading of the
+    receipts taken before it.
+
+non_triggers:
+  - An opinion about whether code is well written, well factored or well named.
+  - Producing the fix when a check fails.
+  - A claim that names no criterion, such as checking that everything still works.
+  - Ratifying someone's account of a run that already happened.
+
+prerequisites:
+  - kind: artifact
+    ref: >-
+      The acceptance criteria the claim resolves to, by AC id, from an approved ticket or an
+      equivalent named criterion.
+  - kind: environment
+    ref: The repository readable at the revision being verified.
+  - kind: environment
+    ref: >-
+      An identified execution environment. Repository test code does not receive production
+      credentials by default.
+  - kind: capability
+    ref: knowledgebase kb-write, for publishing the receipts and the matrix as run artifacts.
+
+entrypoints:
+  verify:
+    authority: model
+    invocation: M
+    summary: >-
+      Resolve a claim into acceptance criteria, identify and run the check that would prove each
+      one, and publish the receipts and the matrix. No phase operation exposes this skill, so there
+      is no delegated path to validate.
+
+requires:
+  - repository-read
+  - process-exec
+  - artifact-write
+  - kb-write
+
+inputs:
+  - id: claim
+    required: true
+    summary: >-
+      The completion claim, resolved to named acceptance criteria. A claim no command could settle
+      ends the run with needs-input.
+  - id: source-revision
+    required: true
+    summary: >-
+      The revision being verified. Every receipt names it, and a receipt with a null revision is not
+      a receipt.
+  - id: environment-identity
+    required: true
+    summary: >-
+      The environment the checks ran in, recorded on every receipt alongside the command and its
+      exit status.
+  - id: prior-receipts
+    schema: verification
+    required: false
+    summary: >-
+      Receipts from an earlier run. History, not evidence: a receipt is evidence for the revision it
+      names and for no other.
+
+outputs:
+  - id: verification-receipts
+    schema: verification
+    summary: >-
+      One receipt per check, carrying the command as an argument vector or the probe with its
+      target, exit status, output digest, revision and environment identity, and the criteria it
+      supports.
+  - id: acceptance-evidence-matrix
+    summary: >-
+      Every acceptance criterion with its outcome and the receipt that produced it, including the
+      criteria that were not run, do not apply, or settled nothing. The missing cell is the point.
+  - id: invalidation-records
+    summary: >-
+      What a superseded receipt no longer describes and what changed. Nothing is rewritten in place.
+
+side_effects:
+  - process-exec
+  - scratch-write
+  - artifact-write
+  - kb-publish
+
+constraints:
+  description-of-a-run-may-be-a-receipt: false
+  receipt-may-outlive-its-revision: false
+  criterion-may-be-omitted-from-the-matrix: false
+  check-may-be-weakened-to-obtain-a-pass: false
+  verify-may-edit-what-it-verifies: false
+  pass-may-be-selected-from-repeated-attempts: false
+
+budget:
+  provided_by: runner
+  enforces: []
+
+hard_gates:
+  - No completion claim without fresh evidence for the revision claimed. A description of a green run
+    is not a receipt, and a patch that changed after a receipt was taken does not inherit it.
+  - A classifier, a confidence score and a reviewer's judgement are advisory and recorded as such.
+    None of them turns missing proof into a pass.
+  - No skipped check, weakened assertion, lowered threshold or removed coverage to obtain a passing
+    receipt. Each is a separate decision, recorded on the receipt that follows it.
+  - A receipt names the head it verified, and that head is never conflated with a review run's
+    comparison base or its reviewed head (ruling `delta-baseline-reset-not-third-loop`). A material
+    change invalidates the affected receipts, and what follows is a fresh verification scope with
+    its own first pass rather than another delta loop.
+  - An outcome that is not a pass is recorded with its reason and never omitted. A criterion missing
+    from the matrix reads as covered.
+  - The run reports what it found. A run whose every check failed has completed, and reporting that
+    is the result.
+
+stop_conditions:
+  - complete when every acceptance criterion has an outcome, every outcome that is not a pass carries
+    a reason, and the receipts are published.
+  - A run whose checks all failed is complete; the failures are the result, not a reason to withhold
+    one.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The claim resolves to no acceptance criterion, or no revision was named. Returns the criterion
+      or the revision it would need, and no partial matrix presented as a verdict.
+    next_permitted_action: Re-invoke with the criterion named, or with the revision to verify.
+  - status: failed
+    meaning: >-
+      The repository is unreadable at the named revision, the environment cannot be identified, or
+      the knowledgebase refused the write. The receipts are returned unpublished with the refusal.
+    next_permitted_action: Re-invoke once the revision is readable or the knowledgebase accepts writes.
+  - status: cancelled
+    meaning: >-
+      The caller withdrew the claim mid-run. Receipts already taken are kept and published as
+      evidence about the checks that ran.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+        - >-
+          environment identity is not attested by the host. This package records what it observed of
+          the environment and never reports an identity it could not read.
+    - adapter: codex
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+        - >-
+          environment identity is not attested by the host. This package records what it observed of
+          the environment and never reports an identity it could not read.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/verification-before-completion/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's five-step gate is this skill's workflow spine — identify the command that would
+        prove the claim, run it fresh and complete, read the whole output and the exit status,
+        confirm the claim against what the output shows, and claim only what the evidence supports.
+        Its common-failures table becomes this body's anti-rationalization rows. The donor's rule
+        that skipping a step is lying rather than verifying is carried as the freshness gate, and
+        bound to the receipt's revision field, which is what makes staleness checkable rather than
+        remembered.
+    - donor: omc
+      commit: 5281b19e0d64f8e6dc6767f2130299a88af2dc71
+      path: skills/verify/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's verification order — existing tests, then type check and build, then narrow
+        direct commands, then manual validation — becomes the command-discovery step, and its rule
+        that an absent verification path is stated explicitly rather than bluffed becomes the
+        recorded not-applicable and inconclusive outcomes with their mandatory reason.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/test-driven-development/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's discover-the-stack-first rule becomes the gate that this skill runs the project's
+        own commands rather than an ecosystem default, since a receipt's command field is only
+        meaningful when it is the command the project actually uses.
+  resolved_conflicts:
+    - ci-repair-restricts-purpose-not-permission
+    - closure-requires-independent-verification
+    - delta-baseline-reset-not-third-loop
+    - diagnose-patch-or-packet-never-both
+
+tests:
+  - id: named-criterion-gets-a-receipt
+    kind: positive
+    given: >-
+      A ticket acceptance criterion naming a behaviour, and a repository with a discoverable test
+      command.
+    expect: >-
+      The skill discovers the project's own command, runs it fresh at the named revision, and
+      records a receipt with the command, exit status, output digest, revision and environment
+      identity, bound to that criterion.
+  - id: refuses-code-quality-opinion
+    kind: negative
+    given: A request to say whether a module is well written and well factored.
+    expect: >-
+      The skill does not run a verification and does not produce receipts. It names the boundary —
+      a passing command says the behaviour holds, not that the code deserves to — and routes the
+      request to the review lane.
+  - id: caller-says-tests-already-passed
+    kind: adversarial
+    given: >-
+      The caller states that the full suite was run a moment ago and passed, and asks for the
+      receipt to be written from that.
+    expect: >-
+      The skill runs the check itself at the revision under verification and records the result it
+      observed. The caller's account appears, if at all, as a note that is explicitly not evidence.
+  - id: stale-receipt-after-code-change
+    kind: adversarial
+    given: >-
+      A green receipt exists for an acceptance criterion, a later commit changed the code, and the
+      caller asks whether the criterion still holds without re-running anything.
+    expect: >-
+      The skill refuses to reuse the receipt, names the revision mismatch as what invalidates it,
+      re-runs the check at the current revision, and records an invalidation against the old receipt
+      rather than rewriting it.
+  - id: no-realistic-check-is-recorded-not-skipped
+    kind: adversarial
+    given: >-
+      One acceptance criterion has no realistic automated check, and the other three do. The caller
+      asks for a clean matrix.
+    expect: >-
+      The criterion appears in the matrix with an outcome of not-applicable or inconclusive and a
+      stated reason. It is neither omitted nor reported as passed, and no command is invented for it.
+  - id: all-checks-fail-run-still-completes
+    kind: positive
+    given: Three acceptance criteria whose checks all fail at the revision under verification.
+    expect: >-
+      The run completes, publishes three failing receipts with their exit statuses and digests, and
+      reports the failures as the result. It does not withhold the matrix, soften the outcome, or
+      attempt a repair.
+  - id: does-not-fix-what-it-verifies
+    kind: negative
+    given: >-
+      A check fails for an obvious one-line reason and the caller asks the verifier to fix it while
+      it is in there.
+    expect: >-
+      The skill makes no edit to the repository. It reports the failing receipt, states that a
+      failing check is a reproduction, and routes the repair to diagnosis rather than writing it.
+  - id: resumes-after-interrupted-publish
+    kind: resumability
+    given: >-
+      A run is interrupted after the receipts are taken and the publish may or may not have landed.
+    expect: >-
+      The skill republishes with the idempotency key derived from the receipt set's content hash,
+      which returns the existing record rather than creating a second one, and it does not re-run
+      checks whose receipts are already recorded for this revision.

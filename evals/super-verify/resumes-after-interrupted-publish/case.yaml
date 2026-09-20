@@ -1,0 +1,23 @@
+schema_version: "1.1"
+name: super-verify-republishes-idempotently-after-an-interruption
+tags: [resumability]
+execution:
+  prompt: >-
+    The previous run took receipts for AC-1 through AC-4 at the current head and was interrupted
+    while publishing. I do not know whether the publish landed. Finish it.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: republishes-under-the-same-key
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The republish uses an idempotency key derived from the receipt set's content hash and the
+      returned record reference is read back, so an already-landed publish returns the existing
+      record rather than creating a second one.
+  - name: does-not-re-run-recorded-checks
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      Checks whose receipts are already recorded for this revision are not re-executed merely to
+      confirm them, and no receipt is regenerated with a new digest for the same run.

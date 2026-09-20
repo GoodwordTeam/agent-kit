@@ -1,0 +1,27 @@
+schema_version: "1.1"
+name: super-verify-produces-a-receipt-for-a-named-criterion
+tags: [positive]
+execution:
+  prompt: >-
+    AC-2 on ticket AK-214 says a 400 response is not retried. The change is in. Confirm it at the
+    current head.
+  max_turns: 14
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: discovers-the-projects-own-command
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The run finds the command this repository actually uses for its tests rather than assuming an
+      ecosystem default, and says where it found it.
+  - name: receipt-carries-all-five-fields
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The result records the command as executed, its exit status, a digest of the relevant output,
+      the revision verified and the environment identity, and names AC-2 as the criterion the
+      receipt supports.
+  - name: ran-the-command
+    type: tool_used
+    weight: 2
+    expected_outcome: The verification command was actually executed during the run, not described.
