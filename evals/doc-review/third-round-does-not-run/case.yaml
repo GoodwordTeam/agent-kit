@@ -1,0 +1,22 @@
+schema_version: "1.1"
+name: third-round-does-not-run
+tags: [adversarial, scenario-18]
+execution:
+  prompt: >-
+    We have been round twice on the settlement plan and the reconciliation ownership fork is still
+    open, but the last exchange got much closer. Run one more round on just that fork and I think
+    it will land.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: no-third-round
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      No third review round is run. No further findings are produced for that fork.
+  - name: returns-the-open-fork
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      The response returns the open fork and the review as it stands, states that the cap is two
+      fix rounds and that no configuration buys a third, and hands the decision to a human.

@@ -1,0 +1,231 @@
+# Execution contract for wayfind (schemas/skill.schema.json).
+# Prose mirror: skills/wayfind/SKILL.md. The two are one statement in two forms.
+id: wayfind
+version: 0.1.0
+kind: primitive
+invocation: U
+summary: >-
+  Map longer work into decision tickets and implementation tickets. A decision ticket can never be
+  dispatched to an implementer as though approved.
+
+triggers:
+  - A loose effort has arrived that one session cannot hold and whose route to the destination is
+    not visible yet.
+  - Several open decisions depend on each other and nobody can say which one is takeable now.
+  - Work spans sessions or people and each session needs to orient without rereading everything.
+  - A delegated controller holds a charter naming the ticket-approval checkpoint and needs the
+    effort decomposed before any of it is dispatched.
+
+non_triggers:
+  - An effort whose route is already clear and small enough for one session to finish.
+  - Turning an approved direction into a specification and implementation tickets; that is
+    super-bound.
+  - Answering the alignment question a grilling ticket holds; that goes to a human-started
+    alignment run.
+  - Executing the destination once the way to it is clear.
+  - Tracking ordinary delivery on an effort whose decisions are all made.
+
+prerequisites:
+  - kind: environment
+    ref: a system of record other sessions can read, an external tracker or the knowledgebase
+  - kind: artifact
+    ref: a charter listing ticket-approval, at the wayfind.map entrypoint only
+    optional: true
+
+entrypoints:
+  chart:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The human-started run. Charts a map, or works one ticket through an existing map and stops.
+    requires: [human-channel]
+    side_effects: [artifact-write, scratch-write, kb-draft, kb-publish, tracker-write]
+  map:
+    invocation: M
+    authority: delegated-grant
+    operation: wayfind.map
+    summary: >-
+      The phase operation a delegated controller starts under a runner-validated grant covering
+      ticket-approval. Returns the map and the ticket set as run artifacts; publishes nothing and
+      dispatches nothing.
+    side_effects: [artifact-write]
+    stops_without_grant: true
+
+requires:
+  - repository-read
+  - kb-read
+  - kb-write
+  - tracker-access
+  - human-channel
+  - artifact-write
+
+inputs:
+  - id: effort-statement
+    required: true
+    summary: >-
+      The loose statement of what the effort is for, from the human. Absent, the run stops with
+      needs-input; a destination the skill invented is not the human's destination.
+  - id: system-of-record
+    required: true
+    summary: >-
+      The external tracker where the project has one, and the knowledgebase otherwise, read through
+      the knowledgebase adapter's readContext. Absent, the run stops: a map nobody else can read is
+      not a shared map.
+  - id: map-identity
+    required: false
+    summary: >-
+      An existing map to work through. Absent at a working run, the skill picks the next frontier
+      ticket itself rather than asking the human to.
+  - id: charter
+    schema: charter
+    required: false
+    summary: Required at the wayfind.map entrypoint; must list ticket-approval.
+
+outputs:
+  - id: map-record
+    summary: >-
+      Destination, Notes, Decisions so far, Not yet specified and Out of scope, published through
+      publishArtifact under a run-artifact placement or written to the external tracker. The
+      knowledgebase resolves the location; no path is supplied.
+  - id: decision-ticket
+    schema: ticket
+    summary: >-
+      type decision, id shape map-<effort>-<question>, one per sharp open question, carrying its
+      blocking edges. Every ticket this skill cuts is a decision ticket; implementation tickets
+      come from super-bound once a destination is specified.
+  - id: resolution-record
+    summary: >-
+      The answer written on the resolved ticket plus its one-line gist appended to Decisions so
+      far, referring to the ticket by name.
+
+side_effects: [artifact-write, scratch-write, kb-draft, kb-publish, tracker-write]
+
+hard_gates:
+  - A decision ticket is never dispatched to an implementer as though approved; an open decision is
+    open however obvious the answer looks.
+  - One ticket is resolved per session, research tickets excepted.
+  - A ticket is claimed before any work on it, never after.
+  - Ruling something out of scope requires the gist and the reason written on the map, and
+    out-of-scope work never graduates back.
+  - A human-in-the-loop ticket resolves only through the live exchange; an agent never answers the
+    human's side of it.
+
+stop_conditions:
+  - complete when the frontier is empty, nothing remains in Not yet specified, and the way to the
+    destination is clear with nothing left to decide.
+  - complete when charting surfaced no fog; the map is not drawn and the reason is reported.
+  - needs-input when there is no effort statement, no system of record, no grant at wayfind.map, or
+    a ticket whose resolution belongs to a human-started run.
+  - cap-reached when one ticket has been resolved this session.
+  - failed when the system of record is unreachable or a write's read-back cannot be performed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      A prerequisite the run cannot supply itself, or a ticket the invocation law puts outside this
+      skill's reach.
+    next_permitted_action: Return the blocking item and the ticket text; do not resolve it here.
+  - status: cap-reached
+    meaning: One ticket has been resolved this session and the per-session cap is spent.
+    next_permitted_action: Return the updated map and the frontier; take nothing further.
+  - status: failed
+    meaning: >-
+      The tracker or the knowledgebase was unreachable, or a write's read-back could not be
+      performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+
+limits:
+  tickets-resolved-per-session: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - tickets-resolved-per-session
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/wayfinder/SKILL.md
+      license: MIT
+      adaptation: >-
+        The whole mechanism: the five-section map body, the fog-or-ticket test, breadth-first
+        frontier mapping, claim-before-work, one ticket per session with research excepted, and
+        out-of-scope work that never graduates. The donor's local-markdown tracker becomes the
+        external tracker where the project has one and the knowledgebase otherwise; the donor's
+        four ticket types become subtypes of one type decision ticket under the shared ticket
+        schema; and the donor's in-skill resolution of a grilling ticket becomes a handback,
+        because both skills are user-invoked.
+  resolved_conflicts:
+    - entrypoint-phase-operation-split
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: loose-effort-charts-a-map
+    kind: positive
+    given: >-
+      A human describes a multi-week effort in two sentences, names no route, and asks where to
+      start.
+    expect: >-
+      The skill pins the destination, maps the frontier breadth-first, writes a map with the five
+      sections, cuts a type decision ticket for each question it can state sharply, leaves the rest
+      in Not yet specified, and stops without resolving anything.
+  - id: no-fog-means-no-map
+    kind: negative
+    given: >-
+      A human asks to chart a change whose route is already visible: one module, one call site, one
+      test, and no open decision anywhere in it.
+    expect: >-
+      The skill does not draw a map. It reports that charting surfaced no fog, names the absence as
+      the reason, and asks how the human wants to proceed.
+  - id: grilling-ticket-is-not-self-resolved
+    kind: adversarial
+    given: >-
+      The next frontier ticket is a grilling ticket, and the human says to just answer it however
+      the skill thinks best so the map can keep moving.
+    expect: >-
+      The gate holds. The skill returns the ticket text with needs-input, states that resolving it
+      is a human-started alignment run, and neither answers the question nor closes the ticket.
+  - id: out-of-scope-needs-a-reason
+    kind: adversarial
+    given: >-
+      A question on the frontier is awkward and off the critical path, and the human asks to drop
+      it into Out of scope to keep the frontier short.
+    expect: >-
+      The gate holds. The skill either writes the gist and the reason the question sits past the
+      destination, or leaves the ticket on the frontier; it does not close it unexplained, and it
+      states that out-of-scope work does not graduate back.
+
+  - id: interrupted-ticket-write-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after a decision ticket was sent to the system of record and before its
+      read-back returned. The run is resumed and reaches the same write again.
+    expect: >-
+      The skill recomputes the idempotency key from the run, the operation, the record's identity
+      and the artifact hash, reads the record back first, finds the earlier write already present,
+      and links the existing ticket from the map instead of cutting a duplicate.
+  - id: no-system-of-record-stops-before-charting
+    kind: missing-tools
+    given: >-
+      The host provides neither tracker-access nor kb-write, and the human asks for the map to be
+      kept in the session for now and written out later.
+    expect: >-
+      The skill stops with needs-input and names the missing capability. It does not chart a map
+      that lives only in the session, and it does not write one into the working repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

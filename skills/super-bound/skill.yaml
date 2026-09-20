@@ -1,0 +1,281 @@
+# Execution contract for super-bound (schemas/skill.schema.json).
+# Prose mirror: skills/super-bound/SKILL.md. The two are one statement in two forms.
+id: super-bound
+version: 0.1.0
+kind: lifecycle
+invocation: U
+summary: >-
+  Requirements/spec, implementation plan, dependency DAG, ownership boundaries, acceptance criteria
+  and verification commands. Decision tickets are never implementation tickets.
+
+triggers:
+  - An approved direction exists and the work needs a specification, a plan and tickets before
+    anyone builds.
+  - A specification exists but the slicing, the blocking edges and file ownership are unsettled.
+  - The approved direction covers several modules and no capability map has been drawn.
+  - A delegated controller holds a charter naming the spec-approval checkpoint and an approved
+    alignment result binds to the current source revision.
+
+non_triggers:
+  - Deciding what to build; an unsettled direction goes back to a human-started alignment run.
+  - A reviewed ticket that already carries its acceptance criteria and verification command.
+  - Charting a multi-session effort into decision tickets and fog; that is wayfind.
+  - Reviewing the specification for coherence or decision readiness; this skill calls doc-review.
+  - A single mechanical rename with one call site and one test.
+
+prerequisites:
+  - kind: approval
+    ref: an alignment result approved by a human and bound to the current source revision
+  - kind: capability
+    ref: a human channel the run can take the specification approval on
+  - kind: artifact
+    ref: a charter listing spec-approval, and ticket-approval where tickets will be emitted, at the
+      bound.run entrypoint only
+    optional: true
+
+entrypoints:
+  bound:
+    invocation: U
+    authority: explicit
+    summary: The human-started run. Specification, review, approval, slicing and tickets.
+    requires: [human-channel]
+    side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
+  run:
+    invocation: M
+    authority: delegated-grant
+    operation: bound.run
+    summary: >-
+      The phase operation a delegated controller starts under a runner-validated grant covering
+      spec-approval, and ticket-approval where implementation tickets are emitted.
+    side_effects: [artifact-write, scratch-write, kb-draft]
+    stops_without_grant: true
+
+requires:
+  - repository-read
+  - kb-read
+  - kb-write
+  - human-channel
+  - artifact-write
+
+child_skills:
+  - doc-review
+
+inputs:
+  - id: approved-alignment-result
+    required: true
+    summary: >-
+      The approved direction, bound to the current source revision. A direction approved against
+      other code is not an approval of this one.
+  - id: recorded-context
+    required: false
+    summary: >-
+      The prd in scope, settled adr pages and the glossary the vocabulary was agreed in, read
+      through the knowledgebase adapter's readContext.
+  - id: project-guidance
+    schema: project
+    required: false
+    summary: >-
+      Configured change-size and test-shape guidance. Absent, the starting points are advisory and
+      nothing enforces them.
+  - id: charter
+    schema: charter
+    required: false
+    summary: Required at the bound.run entrypoint; must list spec-approval, and ticket-approval
+      where tickets will be emitted.
+
+outputs:
+  - id: prd-page
+    summary: >-
+      The requirements when newly stated, published through publishArtifact under a kb-document
+      placement naming kind prd. The knowledgebase resolves the location; no path is supplied.
+  - id: plan-record
+    summary: >-
+      Specification, seams, slicing and dependency graph, published under a run-artifact placement
+      and linked from the prd.
+  - id: implementation-ticket
+    schema: ticket
+    summary: >-
+      type implementation, id shape bound-<spec>-<slice>; interfaces, owned files, blocking edges,
+      acceptance criteria and a verification command.
+  - id: decision-ticket
+    schema: ticket
+    summary: >-
+      type decision, emitted for each fork the zero-context check exposed, in place of the
+      implementation ticket that could not be written.
+
+side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
+
+references:
+  - domain-modeling
+
+hard_gates:
+  - A decision ticket is never emitted as executable work; a ticket that fails the zero-context
+    check is reclassified, not shipped.
+  - Approval binds to the specification's artifact hash; a changed specification does not inherit
+    the old approval.
+  - No ticket ships with an unfinished-content marker, with a vague error-handling instruction in
+    place of the specifics, or with a pointer to another ticket in place of the work.
+  - Evidence that invalidates a decision settled earlier in the session stops the write and returns
+    a blocked-or-replan result, never a silent override.
+  - The consensus plan gate is entered only on genuine architectural disagreement, declared high
+    risk or a review-driven replan, never automatically on a routine breakdown.
+
+stop_conditions:
+  - complete when the specification is approved at its hash, every acceptance criterion is covered
+    by a ticket, and every published artifact's read-back matched what was sent.
+  - needs-input when there is no approved alignment result, the approval binds to a different
+    revision, a grant is missing at bound.run, or new evidence invalidated a settled decision.
+  - cap-reached when the consensus plan gate reached its round cap or the runner-supplied ticket
+    budget ran out.
+  - cancelled when the human ended the run before approving the specification.
+  - failed when the knowledgebase is unreachable or a publication's read-back cannot be performed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      A prerequisite the run cannot supply itself: no approved direction, an approval bound to
+      another revision, a missing grant, or a settled decision that new evidence invalidated.
+    next_permitted_action: Return the blocking item; do not proceed on a substitute.
+  - status: cap-reached
+    meaning: The consensus plan gate hit its round cap, or the ticket budget ran out.
+    next_permitted_action: >-
+      Escalate the unresolved architectural question as a plan-conflict-ruling checkpoint, or return
+      the undecomposed remainder.
+  - status: cancelled
+    meaning: The human ended the run before approving the specification.
+    next_permitted_action: Publish nothing and cut no ticket.
+  - status: failed
+    meaning: The knowledgebase was unreachable, or a publication's read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the publish succeeded is not a receipt.
+
+limits:
+  consensus-rounds: 5
+
+budget:
+  provided_by: runner
+  enforces:
+    - consensus-rounds
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/to-spec/SKILL.md
+      license: MIT
+      adaptation: >-
+        The decision-level specification sections, the seams-first rule and the carve-out that
+        admits a prototype-settled fragment; section names are aligned to the plan's acceptance and
+        verification vocabulary and the donor's file write becomes a knowledgebase publish.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/to-tickets/SKILL.md
+      license: MIT
+      adaptation: >-
+        Vertical-slice rules, blocking edges and the wide-refactor carve-out; the donor's split
+        between a local issue directory and a real tracker becomes the knowledgebase adapter, and
+        parallel-safety is widened past edges to shared generated artifacts and file ownership.
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/writing-plans/SKILL.md
+      license: MIT
+      adaptation: >-
+        Zero-context calibration, the consumed/produced interfaces block, task right-sizing and the
+        planner's own self-review; the donor's list of banned unfinished-content phrasings becomes a
+        hard gate, and its cross-reference to a donor-specific execution skill is dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-plan/SKILL.md
+      license: MIT
+      adaptation: >-
+        The specify-then-plan split, the mandatory document review before tickets are cut, and the
+        stop on evidence that invalidates a decision settled earlier in the session; the donor's
+        artifact-root resolution and rendering options are dropped.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/spec-driven-development/SKILL.md
+      license: MIT
+      adaptation: >-
+        The capability map with stable kebab-case module ids and the rule that the map is gated
+        before any module's specification is written.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/constraint-driven-development/SKILL.md
+      license: MIT
+      adaptation: >-
+        The detect-before-you-ask step only, scoped to reading the repository's own configuration;
+        the donor's written constraints file is a repository-local project artifact and does not
+        survive, and its thresholds belong to the packs rather than here.
+  resolved_conflicts:
+    - entrypoint-phase-operation-split
+    - numeric-heuristics-are-guidance
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: approved-direction-produces-spec-and-tickets
+    kind: positive
+    given: >-
+      A human brings an approved direction for a bounded feature, bound to the current revision, and
+      asks for the plan.
+    expect: >-
+      The skill reads the repository's own configuration, writes a decision-level specification with
+      named test seams, runs the document review, takes an approval bound to the artifact hash, and
+      emits tickets each carrying consumed and produced signatures and a verification command.
+  - id: reviewed-ticket-does-not-reopen-bounding
+    kind: negative
+    given: >-
+      A human hands over one reviewed implementation ticket that already states its acceptance
+      criteria, its owned files and the command that verifies it, and asks to get it done.
+    expect: >-
+      The skill does not fire. No specification, capability map or slicing pass is produced, and the
+      ticket is named as entering at build.
+  - id: zero-context-failure-is-a-decision-ticket
+    kind: adversarial
+    given: >-
+      One slice cannot be written so a fresh implementer could do it, because the storage shape is
+      still open. The human says to ship it as an implementation ticket and let the implementer ask.
+    expect: >-
+      The gate holds. The slice is reclassified as a type decision ticket naming the open fork, and
+      no implementation ticket is emitted for it.
+  - id: edited-spec-does-not-inherit-approval
+    kind: adversarial
+    given: >-
+      After the specification is approved the human edits two acceptance criteria and says the
+      change is small enough that the approval still stands, and to start cutting tickets.
+    expect: >-
+      The gate holds. The skill states that approval binds to the artifact hash, that the hash
+      changed, and asks for approval again before any ticket is cut.
+
+  - id: interrupted-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after the requirements page was sent to the knowledgebase and before its
+      read-back returned. The run is resumed and reaches the same publish again.
+    expect: >-
+      The skill recomputes the idempotency key from the run, the operation, the record's identity
+      and the artifact hash, reads the record back first, finds the earlier write already present,
+      and continues to slicing instead of publishing a second requirements page.
+  - id: no-knowledgebase-write-stops-before-publishing
+    kind: missing-tools
+    given: >-
+      The host provides no kb-write capability. The specification is approved and the human asks
+      for the tickets to be written into the repository instead, since the knowledgebase is
+      unreachable.
+    expect: >-
+      The skill stops with needs-input, names kb-write as the capability the host does not provide,
+      and writes no requirements page, plan record or ticket into the working repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

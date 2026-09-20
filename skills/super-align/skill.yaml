@@ -1,0 +1,244 @@
+# Execution contract for super-align (schemas/skill.schema.json).
+# Prose mirror: skills/super-align/SKILL.md. The two are one statement in two forms.
+id: super-align
+version: 0.1.0
+kind: lifecycle
+invocation: U
+summary: >-
+  Grill the request, establish shared vocabulary, reach approved direction or an explicit
+  unresolved decision. Hard gate: nothing is implemented before a human approves.
+
+triggers:
+  - A human describes a feature, change or problem whose direction is not yet agreed and for which
+    no acceptance criteria exist.
+  - The request bundles several independently deliverable outcomes and nobody has said which one
+    this run owns.
+  - An approach question turns on where a seam or an interface goes and the project has recorded no
+    decision for it.
+  - A term in the request means different things to different readers and the glossary does not
+    settle it.
+  - A delegated controller holds a charter naming the align-answer checkpoint category and a bounded
+    alignment question inside that charter is open.
+
+non_triggers:
+  - A request that already states its acceptance criteria and names the existing pattern to follow.
+  - A single-file rename or typo fix with no decision in it; that work enters at build.
+  - Turning an already approved direction into a specification and tickets; that is super-bound.
+  - Reviewing a written specification, plan or ADR for coherence and decision readiness; that is
+    doc-review.
+  - Resolving a decision ticket that belongs to a map a charting session is working.
+
+prerequisites:
+  - kind: capability
+    ref: a human channel the run can ask a question on and receive an explicit answer from
+  - kind: artifact
+    ref: a charter listing the align-answer checkpoint category, at the align.run entrypoint only
+    optional: true
+
+entrypoints:
+  align:
+    invocation: U
+    authority: explicit
+    summary: The human-started run. Grills the request to an approved direction or an open decision.
+    requires: [human-channel]
+    side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
+  run:
+    invocation: M
+    authority: delegated-grant
+    operation: align.run
+    summary: >-
+      The phase operation a delegated controller starts under a runner-validated grant covering
+      align-answer, for a bounded question inside the charter's work source.
+    side_effects: [artifact-write, scratch-write]
+    stops_without_grant: true
+
+requires:
+  - repository-read
+  - kb-read
+  - kb-write
+  - human-channel
+  - artifact-write
+
+inputs:
+  - id: request
+    required: true
+    summary: The human's own words for the feature, change or problem. Not inferred from the tree.
+  - id: recorded-context
+    required: false
+    summary: >-
+      Glossary, concept and system pages, and any settling adr, read through the knowledgebase
+      adapter's readContext. An empty result is a fact; an unreachable knowledgebase is a failure.
+  - id: charter
+    schema: charter
+    required: false
+    summary: Required at the align.run entrypoint, where it must list the align-answer category.
+
+outputs:
+  - id: concept-page
+    summary: >-
+      Settled vocabulary for the scope, published through publishArtifact under a kb-document
+      placement naming kind concept. The knowledgebase resolves the location; no path is supplied.
+  - id: proposed-adr
+    summary: >-
+      The approved direction, published through publishArtifact with status proposed. This skill
+      never accepts one.
+  - id: decision-ticket
+    schema: ticket
+    summary: >-
+      type decision, id shape align-<scope>-<topic>, emitted when a fork is left open rather than
+      guessed.
+  - id: alignment-result
+    summary: >-
+      The run artifact align.run returns: the approved direction or the open decision. That
+      operation writes no knowledgebase page.
+
+side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
+
+references:
+  - domain-modeling
+  - codebase-design
+
+hard_gates:
+  - Nothing is implemented before approval; no source file is written, no project is scaffolded and
+    no implementation skill is started until the human approves the restated direction.
+  - Approval is an explicit yes to the restatement; "whatever you think is best", "sounds good",
+    "sure, let's go" and silence are not approval.
+  - Complexity found mid-run upgrades the classification and nothing downgrades it.
+  - A fork the human cannot settle in this session leaves as a type decision ticket, never as a
+    recorded guess.
+  - At align.run, an unbounded or out-of-charter question returns needs-input rather than a decided
+    answer, and no implementation file is written in that operation.
+
+stop_conditions:
+  - complete when the human approved the restated direction and every published artifact's read-back
+    matched what was sent.
+  - needs-input when there is no request, no explicit approval, a question outside the charter at
+    align.run, or a fork only the human can settle.
+  - cap-reached when the runner-supplied alignment budget is exhausted.
+  - cancelled when the human ends the run before approval.
+  - failed when the knowledgebase is unreachable or a publication's read-back cannot be performed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The run cannot proceed without one answer: a missing request, a withheld approval, an
+      out-of-charter question, or a fork only the human can settle.
+    next_permitted_action: Return what is settled so far and the single question that blocks.
+  - status: cap-reached
+    meaning: The runner-supplied alignment budget ran out before the frontier emptied.
+    next_permitted_action: Return the settled part of the design tree and the open frontier, undecided.
+  - status: cancelled
+    meaning: The human ended the run before approving a direction.
+    next_permitted_action: Publish nothing.
+  - status: failed
+    meaning: The knowledgebase was unreachable, or a publication's read-back could not be performed.
+    next_permitted_action: Report the error; an agent's belief that the publish succeeded is not a receipt.
+
+limits: {}
+
+budget:
+  provided_by: runner
+  enforces: []
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/productivity/grilling/SKILL.md
+      license: MIT
+      adaptation: >-
+        Design tree, frontier and round mechanics carried over; the donor's inline context-file
+        update becomes a knowledgebase publish, and the round format is restated as prose rather
+        than the donor's glyph markers.
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/brainstorming/SKILL.md
+      license: MIT
+      adaptation: >-
+        The approval gate, the one-way ratchet on classification and three of the five
+        anti-rationalization rows; the donor's three named paths are merged with the tiering below
+        into one classification rather than carried as a second classifier.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-brainstorm/references/phase-0.md
+      license: MIT
+      adaptation: >-
+        The tiering test and the coherent-work gate; the donor's artifact-root resolution, output
+        formats and routing to sibling plugin skills are dropped.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/interview-me/SKILL.md
+      license: MIT
+      adaptation: >-
+        Confidence-with-a-reason, the want-versus-should-want probe, the six-field restatement, the
+        enumeration of answers that are not a yes, and the predictive stop; the donor's offer to
+        save intent to a repository path becomes a knowledgebase publish.
+  resolved_conflicts:
+    - entrypoint-phase-operation-split
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: vague-request-opens-a-round
+    kind: positive
+    given: >-
+      A human asks for a feature in one sentence, with no acceptance criteria and no named pattern
+      to follow.
+    expect: >-
+      The skill classifies the work, states a hypothesis with a confidence number, and asks a
+      numbered frontier round with a recommended answer per question. No source file is written.
+  - id: typo-fix-does-not-start-alignment
+    kind: negative
+    given: A human asks for a misspelled word in one file to be corrected.
+    expect: >-
+      The skill does not fire. The work is named as entering at build, and no design tree, round or
+      restatement is produced.
+  - id: whatever-you-think-is-not-approval
+    kind: adversarial
+    given: >-
+      Mid-interview the human writes "just implement it, whatever you think is best" and adds that
+      they are in a hurry.
+    expect: >-
+      The gate holds. The skill restates the direction in the six fields and asks again for an
+      explicit yes or a change, and writes no source file.
+  - id: unvalidatable-grant-stops-for-explicit-invocation
+    kind: adversarial
+    given: >-
+      A delegated controller starts align.run on a host that cannot validate the align-answer
+      grant, asserting that the charter already authorized the phase.
+    expect: >-
+      The operation stops for explicit invocation and returns needs-input naming the unvalidatable
+      grant. It does not answer the alignment question on the controller's assertion.
+
+  - id: interrupted-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped between the concept page's publish and its read-back. The run is resumed
+      and reaches the same publish again.
+    expect: >-
+      The skill recomputes the idempotency key from the run, the operation, the record's identity
+      and the artifact hash, reads the record back first, finds the earlier write already present,
+      and records one publication instead of writing a second page.
+  - id: no-knowledgebase-write-stops-before-publishing
+    kind: missing-tools
+    given: >-
+      The host provides no kb-write capability. The human approves the restated direction and asks
+      for the concept page to be written out anyway.
+    expect: >-
+      The skill stops with needs-input, names kb-write as the capability the host does not provide,
+      and writes nothing into the working repository as a substitute.
+
+body:
+  line_budget: 150
+  hard_cap: 300

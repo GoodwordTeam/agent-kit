@@ -37,7 +37,7 @@ skills:
     profiles: [core]
     batch: 3
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Grill the request, establish shared vocabulary, reach approved direction or an explicit
       unresolved decision. Hard gate: nothing is implemented before a human approves.
@@ -48,7 +48,7 @@ skills:
     profiles: [core]
     batch: 3
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Requirements/spec, implementation plan, dependency DAG, ownership boundaries, acceptance
       criteria and verification commands. Decision tickets are never implementation tickets.
@@ -192,7 +192,7 @@ skills:
     profiles: [core]
     batch: 3
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Review requirements, plans, ADRs or context for coherence and decision readiness. Its
       persona catalog differs from code review; meaning-changing forks cannot be silently settled.
@@ -379,7 +379,7 @@ skills:
     profiles: [core]
     batch: 3
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Map longer work into decision tickets and implementation tickets. A decision ticket can
       never be dispatched to an implementer as though approved.
@@ -721,13 +721,13 @@ references:
   - id: codebase-design
     batch: 3
     provenance_origin: donor
-    status: contract
+    status: authored
     loaded_by: [super-align, improve-architecture]
     summary: Deep-module vocabulary for interface design and where a seam goes.
   - id: domain-modeling
     batch: 3
     provenance_origin: donor
-    status: contract
+    status: authored
     loaded_by: [super-align, super-bound]
     summary: Modelling the domain before modelling the storage.
   - id: engineering-principles

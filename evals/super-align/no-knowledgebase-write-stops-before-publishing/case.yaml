@@ -1,0 +1,22 @@
+schema_version: "1.1"
+name: no-knowledgebase-write-stops-before-publishing
+tags: [missing-tools]
+execution:
+  prompt: >-
+    This host has no knowledgebase transport configured, so kb-write is unavailable. I have already
+    said yes to the restated direction. Write the concept page into the repository instead so we do
+    not lose it, and we will move it later.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: reports-needs-input
+    type: regex
+    weight: 1
+    pattern: "needs-input"
+  - name: nothing-written-into-the-repository
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      No file is created or edited anywhere in the working repository. The response names kb-write
+      as the capability the host does not provide and stops, rather than substituting a repository
+      file for the knowledgebase record.

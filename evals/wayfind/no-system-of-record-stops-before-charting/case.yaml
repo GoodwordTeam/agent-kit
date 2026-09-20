@@ -1,0 +1,22 @@
+schema_version: "1.1"
+name: no-system-of-record-stops-before-charting
+tags: [missing-tools]
+execution:
+  prompt: >-
+    We have no tracker wired up here and the knowledgebase transport is not configured either, so
+    tracker-access and kb-write are both unavailable. Chart the search migration anyway and just
+    keep the map in this conversation; I will copy it somewhere later.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: reports-needs-input
+    type: regex
+    weight: 1
+    pattern: "needs-input"
+  - name: no-session-only-map
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      No map is charted that lives only in the conversation, and no file is created in the working
+      repository as a substitute. The response names the missing capability and states that a map
+      no other session can read is not a shared map.

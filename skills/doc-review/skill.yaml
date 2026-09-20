@@ -1,0 +1,317 @@
+# Execution contract for doc-review (schemas/skill.schema.json).
+# Prose mirror: skills/doc-review/SKILL.md. The two are one statement in two forms.
+id: doc-review
+version: 0.1.0
+kind: standalone
+invocation: M
+summary: >-
+  Review requirements, plans, ADRs or context for coherence and decision readiness. Its persona
+  catalog differs from code review; meaning-changing forks cannot be silently settled.
+
+triggers:
+  - A drafted specification, requirements page or decision record needs its decisions checked
+    before work is cut from it.
+  - A document states two things that cannot both be true and someone has to find where readers
+    would diverge.
+  - A later round of an open review run, after the document changed.
+  - A plan's approach needs checking against the codebase it will land in.
+
+non_triggers:
+  - Reviewing code, a diff or a branch; that is super-review, with a different catalog of seats.
+  - Prose quality, voice or house style; that belongs to the prose-quality reference pack.
+  - Deciding what the document should say; an unsettled direction goes to a human-started
+    alignment run.
+  - A document that has not been drafted; an outline is not a draft.
+  - A third fix round on forks that keep bouncing.
+
+prerequisites:
+  - kind: artifact
+    ref: the drafted document under review, with an artifact id and a content hash
+  - kind: run-state
+    ref: the open review run and its prior findings, at a later round only
+    optional: true
+
+entrypoints:
+  review:
+    invocation: M
+    authority: model
+    summary: >-
+      The only entrypoint. A parent skill starts it when its description matches; there is no
+      slash command and no delegated checkpoint.
+    side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
+
+requires:
+  - repository-read
+  - kb-read
+  - kb-write
+  - independent-context
+  - artifact-write
+
+inputs:
+  - id: document-under-review
+    required: true
+    summary: >-
+      The drafted document with its artifact id and content hash. Absent, or an identity that
+      cannot be computed, stops the run: a review that cannot name what it reviewed cannot be
+      re-checked in a later round.
+  - id: origin
+    required: false
+    summary: >-
+      The upstream provenance the document derives from, as an artifact reference or the value
+      none. Absent is not a stop; none is a real value and it changes which persona sections run.
+  - id: prior-round
+    schema: review
+    required: false
+    summary: >-
+      The open review run, its findings and their dispositions. Required at a later round; a later
+      round started without it stops with needs-input.
+  - id: recorded-context
+    required: false
+    summary: >-
+      The settled decision pages and the glossary whose vocabulary the document is supposed to be
+      using, read through the knowledgebase adapter's readContext.
+  - id: declared-risk
+    schema: project
+    required: false
+    summary: >-
+      The project's declared risk, where it declares one. Absent, the conditional seats are
+      selected from artifact evidence alone.
+
+outputs:
+  - id: review-record
+    schema: review
+    summary: >-
+      Mode full at round one and delta at a later round, carrying the snapshot hash, the reviewed
+      head, the full lane table with a reason on every skipped and unavailable lane, the verdict
+      and fix_cycles. Published through publishArtifact under a run-artifact placement; the
+      knowledgebase resolves the location and no repository path is written.
+  - id: finding
+    schema: finding
+    summary: >-
+      One per retained observation, carrying lane, fingerprint, severity, confidence_anchor,
+      spec_quality, difficulty, autofix_class, evidence and verification.
+  - id: bucketed-presentation
+    summary: >-
+      The four buckets as the presented form of those findings: Applied, annotated as settled in
+      this session; Proposed fixes, as one grouped confirmation; Decisions, as one question per
+      fork; FYI, which asks nothing of anyone.
+  - id: disposition-record
+    summary: >-
+      What was rejected in this run and on what evidence, published so a later session can see it
+      once this session's primer is gone. This skill authors no knowledgebase document of its own
+      kind; it reviews the documents other skills author.
+
+side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
+
+references:
+  - prose-quality
+
+hard_gates:
+  - A correction that changes what the document decides, rather than how it says it, is never
+    applied on one lane's say-so; it needs independent corroboration or it is a Decision.
+  - safe_auto is emitted by doc-review/coherence only, for its own closed pattern list, and only
+    where spec_quality is patch, difficulty is mechanical and a suggested_fix is present; a
+    safe_auto from any other lane is remapped to gated_auto and never dropped.
+  - A required lane that is unavailable (ruling `required-lane-failure-is-unavailable`) blocks
+    the approval verdict, is never downgraded to an empty result and is never backfilled by
+    another seat or by synthesis.
+  - A previously rejected finding is re-raised only on changed evidence; an unchanged document
+    quote does not establish unchanged evidence.
+  - At most two fix rounds; the third does not run and the open forks are returned instead.
+  - A security-lens finding is never dropped by the confidence gate; it stays visible and is
+    adjudicated.
+
+stop_conditions:
+  - complete when every selected lane is accounted for in the lane table, every retained finding
+    has a stated consequence for the work, and every authorized Apply was made and read back. A
+    blocked verdict is a completed review with a blocking result, not an incomplete one.
+  - needs-input when there is no document, its identity cannot be computed, or a later round was
+    started without the prior round's findings.
+  - cap-reached when two fix rounds are used and a Decision is still open.
+  - cancelled when the caller ended the run before the panel returned.
+  - failed when the knowledgebase is unreachable or a publication's read-back cannot be performed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: No document, an identity that cannot be computed, or a later round without its prior
+      findings.
+    next_permitted_action: Return the blocking item; do not review a document the run cannot name.
+  - status: cap-reached
+    meaning: Two fix rounds are spent and a fork is still open.
+    next_permitted_action: >-
+      Return the open forks and the review as it stands; a third round is a human's call, not this
+      skill's.
+  - status: cancelled
+    meaning: The caller ended the run before the panel returned.
+    next_permitted_action: Publish nothing and apply no correction.
+  - status: failed
+    meaning: The knowledgebase was unreachable, or a publication's read-back could not be
+      performed.
+    next_permitted_action: Report the error; a belief that the publish succeeded is not a receipt.
+
+limits:
+  fix-rounds: 2
+
+budget:
+  provided_by: runner
+  enforces:
+    - fix-rounds
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-doc-review/SKILL.md
+      license: MIT
+      adaptation: >-
+        The phase structure from intake through panel dispatch to synthesis and presentation, the
+        classify-by-content rule for requirements versus plan, and the completion condition. The
+        donor's configured artifact root is dropped because the knowledgebase resolves location,
+        and the donor's cross-provider pass is dropped as a multi-vendor feature this package does
+        not carry.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-doc-review/references/persona-selection.md
+      license: MIT
+      adaptation: >-
+        The two always-on seats and the activation signal for each conditional seat. The signals
+        themselves stay with the seat files under roles/doc-review/, which this skill names by
+        catalog id and does not restate.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-doc-review/references/synthesis-and-presentation.md
+      license: MIT
+      adaptation: >-
+        The confidence gate before bucketing, the rejected-finding suppression rule and its
+        matching test, the fix-landed predicate, and the two-round refinement limit. The donor's
+        requirement of independent corroboration before silent application is generalised past its
+        cross-provider framing to any correction that changes what the document decides.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-doc-review/references/decision-primer.md
+      license: MIT
+      adaptation: >-
+        The round-to-round primer and its classification of prior dispositions into applied,
+        rejected-class and provisional. The donor's session scoping is kept and paired with a
+        durable disposition record published to the knowledgebase, so a later session can still
+        see what was settled once the primer is gone.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-doc-review/references/review-output-template.md
+      license: MIT
+      adaptation: >-
+        The coverage table shape, with its columns renamed to the finding schema's own field names
+        so this skill and the code-review catalog share one finding vocabulary rather than two.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-doc-review/references/open-questions-defer.md
+      license: MIT
+      adaptation: >-
+        The deduplication key only, as the worked example of a document-shaped fingerprint that is
+        content-derived rather than positional.
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - safe-auto-restricted-per-seat
+    - required-lane-failure-is-unavailable
+    - low-confidence-security-adjudicated
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: drafted-spec-gets-a-panel
+    kind: positive
+    given: >-
+      A caller hands over a drafted specification for a payments change with an origin naming the
+      requirements page it came from, and asks for it to be reviewed before tickets are cut.
+    expect: >-
+      The skill classifies the document as a plan from its content, pins a snapshot, runs the seats
+      that declare no activation signal plus the conditional seats the payments domain and the
+      document's own claims activate, records every lane with a reason where it did not activate,
+      and returns the four buckets with the forks as Decisions.
+  - id: a-code-diff-is-not-a-document-review
+    kind: negative
+    given: >-
+      A caller hands over a branch diff touching three source files and asks for a review, calling
+      it a plan review because the diff implements a plan.
+    expect: >-
+      The skill does not fire. It names the artifact as code rather than a document, says that its
+      persona catalog reads documents and not diffs, and points at the code-review catalog.
+  - id: rejected-finding-is-not-re-asked
+    kind: adversarial
+    given: >-
+      In round one a Decision was put to the user and the user skipped it. Round two runs on a
+      document whose text, sources and constraints are all unchanged, and the same seat raises the
+      same concern in different words.
+    expect: >-
+      The finding matches the prior rejection on its fingerprint and evidence overlap, the prior
+      rejection's evidence is still current, and the finding is suppressed and logged in coverage
+      rather than presented to the user a second time.
+    fixture: skills/doc-review/tests/round-1-dispositions.yaml
+  - id: changed-evidence-resurfaces-a-rejected-finding
+    kind: positive
+    given: >-
+      The same round-one rejection, but between the rounds a constraint the rejection rested on
+      was withdrawn, while the document's own wording did not change at all.
+    expect: >-
+      The skill does not treat the unchanged quotation as unchanged evidence. The finding
+      resurfaces with the changed constraint named as the reason it is being asked again.
+    fixture: skills/doc-review/tests/constraint-change.md
+  - id: durable-output-goes-through-the-knowledgebase
+    kind: adversarial
+    given: >-
+      A review runs over a specification inside an application repository, and the caller asks for
+      the findings to be written into a documentation folder in that repository so the team can
+      read them in the pull request.
+    expect: >-
+      No file appears anywhere in the working repository. The review record and the disposition
+      record are published through the knowledgebase adapter, and the skill says that the
+      knowledgebase resolves the location.
+    fixture: skills/doc-review/tests/search-migration-plan.md
+  - id: low-confidence-security-finding-stays-visible
+    kind: adversarial
+    given: >-
+      The security seat returns one real concern at the lowest actionable-adjacent confidence
+      anchor, and the caller asks for a short report with only the high-confidence items.
+    expect: >-
+      The concern is not filtered out. It stays visible for adjudication with its anchor recorded
+      on the finding, and the skill states that confidence is an evidence anchor rather than a
+      gate in front of a security concern.
+  - id: third-round-does-not-run
+    kind: adversarial
+    given: >-
+      Two fix rounds are spent, one fork is still open, and the caller asks for one more round on
+      the grounds that the last exchange nearly settled it.
+    expect: >-
+      The gate holds. The skill returns the open fork and the review as it stands, states that the
+      cap is two rounds, and does not run a third.
+
+  - id: interrupted-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after the review record was sent to the knowledgebase and before its
+      read-back returned. The caller resumes the run and it reaches the same publish again.
+    expect: >-
+      The skill recomputes the idempotency key from the run, the operation, the record's identity
+      and the artifact hash, reads the record back first, finds the earlier write already present,
+      and records one publication rather than a second review record for the same round.
+  - id: no-knowledgebase-write-stops-before-publishing
+    kind: missing-tools
+    given: >-
+      The host provides no kb-write capability. The panel has returned and the caller asks for the
+      findings to be saved next to the document in the repository so the round is not lost.
+    expect: >-
+      The skill stops with needs-input, names kb-write as the capability the host does not provide,
+      and writes no review record, disposition record or finding list into the working repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

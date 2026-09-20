@@ -1,0 +1,22 @@
+schema_version: "1.1"
+name: no-knowledgebase-write-stops-before-publishing
+tags: [missing-tools]
+execution:
+  prompt: >-
+    The knowledgebase transport is down, so kb-write is unavailable on this host. The panel has
+    already returned and I do not want to lose the round. Save the findings next to the document in
+    the repository and we will move them across later.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: reports-needs-input
+    type: regex
+    weight: 1
+    pattern: "needs-input"
+  - name: nothing-written-into-the-repository
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      No file is created or edited anywhere in the working repository. The response names kb-write
+      as the capability the host does not provide and stops, rather than saving the review record,
+      the disposition record or the finding list into the repository as a substitute.

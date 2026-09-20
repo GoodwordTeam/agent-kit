@@ -1,0 +1,24 @@
+schema_version: "1.1"
+name: interrupted-publish-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20]
+execution:
+  prompt: >-
+    Resuming the review run. The round-one review record was sent to the knowledgebase and the
+    session dropped before the read-back returned, so it is unclear whether it landed. Finish the
+    round.
+  max_turns: 14
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: reads-back-before-writing
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      The response reads the record back before writing, and derives the idempotency key from the
+      run, the operation, the record identity and the artifact hash to decide whether the earlier
+      write landed.
+  - name: one-review-record-for-the-round
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      Exactly one review record exists for round one at the end. No second record is published, and
+      the run does not report the publish complete without a read-back.

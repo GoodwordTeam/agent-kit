@@ -77,6 +77,24 @@ adaptations:
   - path: protocols/worktree-ownership/PROTOCOL.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/using-git-worktrees/SKILL.md
     rationale: Detect existing isolation by comparing resolved git dir against resolved common git dir with a superproject guard; prefer the native worktree capability; verify the gitignore entry; the rationalization rows behind this protocol's Hard gates table. Deliberate divergence on the gitignore probe. The donor runs `git check-ignore -q` on the bare directory name, which is correct for its own ordering because it verifies a directory that already exists. This protocol probes before creating anything, so it uses the trailing-slash form. The two forms agree in every case but one, a directory-only rule probed before the directory exists, where git tests the bare name as a file and returns a false negative. The donor is authority for what the donor does, not for what is correct under a different ordering.
+  - path: references/codebase-design/DEEPENING.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/DEEPENING.md
+    rationale: The deepening procedure and the dependency categories, kept as a separate file because one of this pack's two loaders needs the procedure and the other needs only the vocabulary.
+  - path: references/codebase-design/DESIGN-IT-TWICE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/DESIGN-IT-TWICE.md
+    rationale: The design-it-twice procedure, kept as a separate file for the same reason as the deepening material.
+  - path: references/codebase-design/REFERENCE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/SKILL.md
+    rationale: The glossary with its exact avoided synonyms, the deletion test, the one-adapter versus two-adapters rule, and the rejected-framings section defending the vocabulary choices. The donor's Seam entry credits Michael Feathers and that attribution is kept. The donor's framing as a skill becomes a reference pack loaded by the skills that need the vocabulary.
+  - path: references/domain-modeling/REFERENCE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/ADR-FORMAT.md
+    rationale: The three-part test for whether a decision is worth recording, the list of what qualifies, and the minimal template. The donor's file-based decision log becomes a proposed decision record published through the knowledgebase.
+  - path: references/domain-modeling/REFERENCE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/CONTEXT-FORMAT.md
+    rationale: The glossary entry format with its avoided synonyms, the be-opinionated rule, and the filter that admits only terms specific to the project's own domain. The donor's multi-context map format is noted as a convention rather than carried as a required shape.
+  - path: references/domain-modeling/REFERENCE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/domain-modeling/SKILL.md
+    rationale: The glossary-challenge move, the cross-reference-with-code move, and the create-only- when-there-is-something-to-write rule. The donor's inline file update becomes a knowledgebase call, and the donor's repository-local glossary file is not carried, because project artifacts are owned centrally in this package.
   - path: roles/code-review/adversarial/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/personas/adversarial-reviewer.md
     rationale: Constructing concrete failure scenarios against the diff rather than checking it against known patterns, and the rule that a scenario not traceable to real lines is not admissible.
@@ -185,3 +203,105 @@ adaptations:
   - path: roles/reviewer-standards/ROLE.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/task-reviewer-prompt.md
     rationale: Code-quality half of the same reviewer template.
+  - path: skills/doc-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/decision-primer.md
+    rationale: The round-to-round primer and its classification of prior dispositions into applied, rejected-class and provisional. The donor's session scoping is kept and paired with a durable disposition record published to the knowledgebase, so a later session can still see what was settled once the primer is gone.
+  - path: skills/doc-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/open-questions-defer.md
+    rationale: The deduplication key only, taken as the worked example of a document-shaped fingerprint that is derived from content rather than from position.
+  - path: skills/doc-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/persona-selection.md
+    rationale: The two always-on seats and the existence of an activation signal per conditional seat. The signal text itself stays with the seat bodies under roles/doc-review/, which this body names by catalog id and does not restate.
+  - path: skills/doc-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/review-output-template.md
+    rationale: The coverage table shape, with its columns renamed to the field names in schemas/finding.schema.json so this skill and the code-review catalog share one finding vocabulary rather than two dialects.
+  - path: skills/doc-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/synthesis-and-presentation.md
+    rationale: The confidence gate before bucketing, the rejected-finding suppression rule with its matching test, the fix-landed predicate, and the two-round refinement limit. The donor's requirement of independent corroboration before silent application is generalised past its cross-provider framing to any correction that changes what the document decides.
+  - path: skills/doc-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md
+    rationale: The phase structure from intake through panel dispatch to synthesis and presentation, the classify-by-content rule for requirements versus plan, and the completion condition. The donor's configured artifact root is dropped because the knowledgebase resolves location, and the donor's cross-provider pass is dropped as a multi-vendor feature this package does not carry.
+  - path: skills/doc-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/decision-primer.md
+    rationale: The prior-round input and the disposition record output, declared as the two layers the primer and the durable record occupy.
+  - path: skills/doc-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/open-questions-defer.md
+    rationale: The fingerprint element of the finding output, which is what the suppression gate is declared against.
+  - path: skills/doc-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/persona-selection.md
+    rationale: The declaration that two seats are unconditional and the rest are selected, which is what the panel-composition gate is stated against.
+  - path: skills/doc-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/review-output-template.md
+    rationale: The bucketed presentation output, declared alongside the review and finding artifacts it is the presented form of.
+  - path: skills/doc-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/synthesis-and-presentation.md
+    rationale: The hard gates for suppression on unchanged evidence and for the two-round cap, and the behavioral cases that exercise both.
+  - path: skills/doc-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md
+    rationale: The triggers and the classify-by-content input, and the completion condition restated as this skill's complete stop condition.
+  - path: skills/super-align/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/interview-me/SKILL.md
+    rationale: The explicit-yes approval gate, the six-field restatement put in front of the human before anything is written, the want-versus-should-want probe, and the rationalization table the gate rows are drawn from.
+  - path: skills/super-align/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-brainstorm/references/phase-0.md
+    rationale: The coherent-work gate and the classification of a request as bounded, standard or architectural before any round opens. The donor's configured artifact root is dropped because the knowledgebase resolves location.
+  - path: skills/super-align/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/grilling/SKILL.md
+    rationale: The round-based questioning loop, one question at a time, and the refusal to proceed on an answer the questioner supplied. The donor's standalone framing becomes this skill's alignment phase.
+  - path: skills/super-align/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/brainstorming/SKILL.md
+    rationale: The design tree, the frontier of open questions recomputed after each answer, and the Red Flags list this body's anti-rationalization table is drawn from. The donor's file writes become knowledgebase publishes.
+  - path: skills/super-align/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/interview-me/SKILL.md
+    rationale: The approval gate and the behavioral cases that exercise it, including the case in which deference is offered in place of an explicit yes.
+  - path: skills/super-align/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-brainstorm/references/phase-0.md
+    rationale: The prerequisites and the classification input the coherent-work gate reads.
+  - path: skills/super-align/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/grilling/SKILL.md
+    rationale: The trigger conditions that open a round and the non-trigger for a request that is already specific, stated as declarations.
+  - path: skills/super-align/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/brainstorming/SKILL.md
+    rationale: The hard gates and stop conditions derived from the donor's Red Flags, declared as this skill's gates rather than as advice.
+  - path: skills/super-bound/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/constraint-driven-development/SKILL.md
+    rationale: The detect-before-you-ask step only, scoped to reading the repository's own configuration. The donor's written constraints file is a repository-local project artifact and does not survive, and its thresholds belong to the packs rather than here.
+  - path: skills/super-bound/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/spec-driven-development/SKILL.md
+    rationale: The capability map with stable kebab-case module ids, and the rule that the map is gated before any module's specification is written.
+  - path: skills/super-bound/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-plan/SKILL.md
+    rationale: The specify-then-plan split, the mandatory document review before tickets are cut, and the stop on evidence that invalidates a decision settled earlier in the session. The donor's artifact-root resolution and rendering options are dropped.
+  - path: skills/super-bound/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-spec/SKILL.md
+    rationale: The decision-level specification sections, the seams-first rule and the carve-out that admits a prototype-settled fragment. Section names are aligned to this package's acceptance and verification vocabulary and the donor's file write becomes a knowledgebase publish.
+  - path: skills/super-bound/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md
+    rationale: Vertical-slice rules, blocking edges and the wide-refactor carve-out. The donor's split between a local issue directory and a real tracker becomes the knowledgebase adapter, and parallel-safety is widened past edges to shared generated artifacts and file ownership.
+  - path: skills/super-bound/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md
+    rationale: Zero-context calibration, the consumed and produced interfaces block, task right-sizing and the planner's own self-review. The donor's list of banned unfinished-content phrasings becomes a hard gate, and its cross-reference to a donor-specific execution skill is dropped.
+  - path: skills/super-bound/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/constraint-driven-development/SKILL.md
+    rationale: The project-guidance input the detect-before-you-ask step reads, declared as optional because absent configuration leaves the starting points advisory.
+  - path: skills/super-bound/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/spec-driven-development/SKILL.md
+    rationale: The trigger for an approved direction spanning several modules with no capability map drawn.
+  - path: skills/super-bound/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-plan/SKILL.md
+    rationale: The child_skills declaration of the document review, and the stop condition for evidence that invalidates a decision settled earlier in the session.
+  - path: skills/super-bound/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-spec/SKILL.md
+    rationale: The trigger conditions for an approved direction that needs a specification, and the gate that keeps the specification decision-level.
+  - path: skills/super-bound/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md
+    rationale: The implementation-ticket and decision-ticket outputs and their id shapes, declared against this package's shared ticket schema rather than the donor's two vocabularies.
+  - path: skills/super-bound/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md
+    rationale: The hard gate against unfinished-content markers and vague instructions in a shipped ticket, and the behavioral case that exercises the zero-context check.
+  - path: skills/wayfind/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md
+    rationale: The whole mechanism, this item's only donor. The five-section map body, the fog-or-ticket test, breadth-first frontier mapping, claim-before-work, one ticket per session with research excepted, and out-of-scope work that never graduates. The donor's local-markdown tracker becomes the external tracker where the project has one and the knowledgebase otherwise; the donor's four ticket types become subtypes of one decision ticket under this package's shared ticket schema; and the donor's in-skill resolution of a grilling ticket becomes a handback, because both skills are user-invoked.
+  - path: skills/wayfind/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md
+    rationale: The triggers, the no-fog non-trigger, the hard gates, and the one-ticket-per-session limit with its research exception, declared as the skill's own enforced cap.
