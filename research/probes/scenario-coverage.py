@@ -58,6 +58,7 @@ NUMBERED = re.compile(r"^\s*(\d+)\.\s+\S")
 # Both spellings, singular and plural, with the number run captured whole so
 # `scenarios 19 and 20` yields two scenarios rather than one.
 MENTION = re.compile(r"release scenarios?\s+([0-9][0-9,\s]*(?:and\s+\d+)?)")
+ROW = re.compile(r"^  - id:", re.M)
 
 
 def scenarios(path):
@@ -76,31 +77,45 @@ def scenarios(path):
 
 
 def ruled(path):
-    """Scenario numbers named by a ruling's `scenario:` field."""
+    """Scenario numbers named by a ruling's `scenario:` field, and how many rulings exist.
+
+    The denominator is returned because without it `0 named by a ruling` is two
+    states wearing one line: no rulings at all, and rulings none of which names a
+    scenario. The second is a finding; the first is a vacuous run.
+    """
     doc = yaml.safe_load(io.open(path, encoding="utf8").read())
-    out = set()
+    out, total = set(), 0
     for group in doc.values():
         if not isinstance(group, list):
             continue
         for ruling in group:
-            if isinstance(ruling, dict) and isinstance(ruling.get("scenario"), int):
+            if not isinstance(ruling, dict) or "id" not in ruling:
+                continue
+            total += 1
+            if isinstance(ruling.get("scenario"), int):
                 out.add(ruling["scenario"])
-    return out
+    return out, total
 
 
 def mapped(path):
-    """Scenario numbers named in prose by any map row. Every spelling, on purpose."""
+    """Scenario numbers named in prose by any map row, and how many rows exist.
+
+    Same reason as `ruled`. These are prose mentions rather than a field, so a
+    changed house spelling makes every row stop contributing at once -- and
+    without the row count that prints as a coverage gap rather than as this
+    probe having lost its grip on the file.
+    """
     text = io.open(path, encoding="utf8").read()
     out = set()
     for m in MENTION.finditer(text):
         out.update(int(n) for n in re.findall(r"\d+", m.group(1)))
-    return out
+    return out, len(ROW.findall(text))
 
 
 def main():
     plan = scenarios(PLAN)
     known = set(plan)
-    in_rulings, in_map = ruled(RULINGS), mapped(MAP)
+    (in_rulings, n_rulings), (in_map, n_rows) = ruled(RULINGS), mapped(MAP)
 
     # Without this, a renumbered or retitled §10 parses to nothing and every
     # reference in both indexes reads as dangling -- 24 confident accusations
@@ -126,9 +141,18 @@ def main():
     uncovered = sorted(known - covered)
     print()
     print(
-        f"{len(known)} scenarios, {len(in_rulings & known)} named by a ruling, "
-        f"{len(in_map & known)} named by a map row, {len(covered)} by at least one."
+        f"{len(known)} scenarios. {len(in_rulings & known)} named by a ruling "
+        f"(of {n_rulings} rulings), {len(in_map & known)} named by a map row "
+        f"(of {n_rows} rows), {len(covered)} by at least one."
     )
+    # A populated source contributing nothing is this probe losing its grip, not
+    # a gap in the tree, and the two read identically without the denominators
+    # above. Keyed on the source having members rather than on the tally being
+    # zero, because a guard that keys on the wrong term reproduces the fault it
+    # was added to prevent.
+    for name, total, named in (("rulings", n_rulings, in_rulings), ("map rows", n_rows, in_map)):
+        if total > 0 and not named:
+            print(f"SILENT    all {total} {name} exist and none names a scenario; suspect this probe, not the tree.")
     if uncovered:
         print(f"Named by neither: {', '.join(str(n) for n in uncovered)}.")
     # Do not soften this into a summary line. It is load-bearing at the batch-5
