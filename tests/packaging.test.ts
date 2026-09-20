@@ -66,6 +66,11 @@ function ctxFor(overrides: Record<string, string> = {}, drop: string[] = []) {
   return { root, catalog };
 }
 
+/** What this build decided, in the file beside the host's manifest. */
+function recordOf(plan: ReturnType<typeof planBundle>) {
+  return JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
+}
+
 describe("host capability honesty", () => {
   test("both hosts are declared and the restriction vocabulary is closed", () => {
     expect([...HOST_IDS]).toEqual(["claude-code", "codex"]);
@@ -124,6 +129,27 @@ describe("bundle planning", () => {
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
     expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta"]);
     expect(JSON.stringify(manifest)).not.toContain("*");
+  });
+
+  /**
+   * `plugin.json` belongs to the host, and the host checks it. `claude plugin
+   * validate dist/claude-code --strict` reports `Unknown field 'ak'. Claude Code
+   * ignores it at load time.` and fails, so the build's own provenance -- which
+   * profile was applied, what was excluded and why -- was making the bundle
+   * unshippable by the tool that decides whether it ships.
+   *
+   * It moves to `.claude-plugin/ak.json` beside it. The validator reads the
+   * manifest, not the directory, and passes with the sibling present. The
+   * assertion is on the exact key set rather than on the absence of `ak`,
+   * because the next field added out of place fails this the same way.
+   */
+  test("plugin.json carries host keys only; the build's own record sits beside it", () => {
+    const plan = planBundle(ctxFor(), "claude-code", {});
+    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    expect(Object.keys(manifest)).toEqual(["name", "version", "description", "skills"]);
+
+    const record = JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
+    expect(Object.keys(record).sort()).toEqual(["autonomy_rejected", "excluded", "host", "modes", "profile"]);
   });
 
   test("transitive shared dependencies are copied under references/shared/", () => {
@@ -188,8 +214,7 @@ describe("bundle planning", () => {
 
     test("records the profile it applied, so the bundle does not have to be re-derived to know", () => {
       const plan = planBundle(ctxFor(gamma), "claude-code", {});
-      const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
-      expect(manifest.ak.profile).toBe("core");
+      expect(recordOf(plan).profile).toBe("core");
       expect(plan.profile).toBe("core");
     });
 
@@ -208,7 +233,7 @@ describe("bundle planning", () => {
       );
       const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
       expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta", "./skills/gamma"]);
-      expect(manifest.ak.profile).toBe("all");
+      expect(recordOf(plan).profile).toBe("all");
       expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(false);
     });
 
@@ -219,7 +244,7 @@ describe("bundle planning", () => {
       const plan = planBundle(ctxFor({ ...gamma, "catalog.yaml": gamma["catalog.yaml"].replace("  default_profile: core\n", "") }), "claude-code", {});
       const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
       expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta", "./skills/gamma"]);
-      expect(manifest.ak.profile).toBe("all");
+      expect(recordOf(plan).profile).toBe("all");
     });
   });
 
@@ -296,11 +321,11 @@ protocols:`,
     expect(issue?.file).toBe("skills/beta/SKILL.md");
   });
 
-  test("the manifest records every exclusion and its reason", () => {
+  test("the build record names every exclusion and its reason", () => {
     const plan = planBundle(ctxFor(WITH_CONTRACT), "claude-code", {});
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
     expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta"]);
-    expect(manifest.ak.excluded).toEqual([{ skill: "gamma", reason: "status: contract" }]);
+    expect(recordOf(plan).excluded).toEqual([{ skill: "gamma", reason: "status: contract" }]);
   });
 
   test("a run that excludes a skill says so, not only in the file it writes", () => {
@@ -389,11 +414,11 @@ describe("host-capability decisions at build time", () => {
     expect(plan.files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
   });
 
-  test("the rejection is recorded in the bundle manifest, not only in the log", () => {
+  test("the rejection is recorded in the bundle, not only in the log", () => {
     const plan = planBundle(ctxFor(autonomous), "claude-code", {});
-    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
-    expect(manifest.ak.host.enforces).toContain("no-model-invocation");
-    expect(manifest.ak.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["filesystem-sandbox"] }]);
+    const record = recordOf(plan);
+    expect(record.host.enforces).toContain("no-model-invocation");
+    expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["filesystem-sandbox"] }]);
   });
 
   test("a host that does enforce the restriction keeps autonomous mode", () => {

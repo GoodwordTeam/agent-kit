@@ -248,7 +248,11 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
   files.set(".claude-plugin/plugin.json", {
     path: ".claude-plugin/plugin.json",
-    contents: pluginManifest(ctx, host, membership.profile, emitted, excluded, decisions, capabilities.enforces, capabilities.notes),
+    contents: pluginManifest(ctx, emitted),
+  });
+  files.set(".claude-plugin/ak.json", {
+    path: ".claude-plugin/ak.json",
+    contents: buildRecord(host, membership.profile, excluded, decisions, capabilities.enforces, capabilities.notes),
   });
 
   return { host, profile: membership.profile, files: sortFiles(files), decisions, issues };
@@ -267,17 +271,14 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
   return new Map([...files.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
 
-function pluginManifest(
-  ctx: CheckContext,
-  host: HostId,
-  /** Passed in, not re-derived: the manifest records the selection that was made. */
-  profile: string,
-  skills: ReadonlyArray<string>,
-  excluded: ReadonlyArray<{ skill: string; reason: string }>,
-  decisions: ReadonlyArray<HostDecision>,
-  enforces: ReadonlySet<string>,
-  notes: ReadonlyArray<string>,
-): string {
+/**
+ * The host's manifest, carrying host keys only.
+ *
+ * `claude plugin validate --strict` treats a key it does not define as an error
+ * ("Unknown field 'ak'. Claude Code ignores it at load time."), so anything this
+ * package wants to record about its own build goes in `buildRecord` instead.
+ */
+function pluginManifest(ctx: CheckContext, skills: ReadonlyArray<string>): string {
   const pkg = ctx.catalog.package;
   const manifest = {
     name: pkg.id,
@@ -285,21 +286,37 @@ function pluginManifest(
     description: pkg.name,
     // Explicit enumeration, in catalog order, so load order is controlled rather than glob-dependent.
     skills: skills.map((id) => `./skills/${id}`),
-    ak: {
-      profile,
-      /**
-       * Emitted even when empty. An absent key would read as "an older build
-       * that did not record this" rather than "nothing was left out", and the
-       * two have to be distinguishable in a file whose job is to say what the
-       * bundle does not contain.
-       */
-      excluded: excluded.map((e) => ({ skill: e.skill, reason: e.reason })),
-      host: { id: host, enforces: [...enforces].sort(), notes: [...notes] },
-      modes: decisions.map((d) => ({ skill: d.skill, mode: d.mode })),
-      autonomy_rejected: decisions
-        .filter((d) => d.rejected.length > 0)
-        .map((d) => ({ skill: d.skill, unenforceable: d.unenforceable })),
-    },
   };
   return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+/**
+ * What this build decided, written beside the host's manifest rather than
+ * inside it. Read by people and by the release checks, never by the host.
+ */
+function buildRecord(
+  host: HostId,
+  /** Passed in, not re-derived: the record states the selection that was made. */
+  profile: string,
+  excluded: ReadonlyArray<{ skill: string; reason: string }>,
+  decisions: ReadonlyArray<HostDecision>,
+  enforces: ReadonlySet<string>,
+  notes: ReadonlyArray<string>,
+): string {
+  const record = {
+    profile,
+    /**
+     * Emitted even when empty. An absent key would read as "an older build
+     * that did not record this" rather than "nothing was left out", and the
+     * two have to be distinguishable in a file whose job is to say what the
+     * bundle does not contain.
+     */
+    excluded: excluded.map((e) => ({ skill: e.skill, reason: e.reason })),
+    host: { id: host, enforces: [...enforces].sort(), notes: [...notes] },
+    modes: decisions.map((d) => ({ skill: d.skill, mode: d.mode })),
+    autonomy_rejected: decisions
+      .filter((d) => d.rejected.length > 0)
+      .map((d) => ({ skill: d.skill, unenforceable: d.unenforceable })),
+  };
+  return `${JSON.stringify(record, null, 2)}\n`;
 }
