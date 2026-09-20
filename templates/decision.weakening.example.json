@@ -1,0 +1,146 @@
+{
+  "schema": "decision",
+  "schema_version": 1,
+  "id": "example-decision-3",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "runner"
+  },
+  "inputs": [
+    {
+      "id": "example-verification-1",
+      "schema": "verification",
+      "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "ruled",
+  "checkpoint": "ci-repair",
+  "question": "May the suite's coverage floor be lowered for this run so the loader fix can land without the test that would cover its new branch?",
+  "options": [
+    {
+      "id": "lower-floor",
+      "summary": "Lower the coverage floor for this run and record the weakening on the receipt.",
+      "consequence": "The fix lands with one branch uncovered; the receipt reports the run as failed, so nothing downstream reads it as a pass."
+    },
+    {
+      "id": "write-the-test",
+      "summary": "Keep the floor and spend a fix cycle writing the missing test.",
+      "consequence": "The last fix cycle is spent on a test rather than on the finding, and the run may reach its cap."
+    }
+  ],
+  "evidence": [
+    {
+      "ref": "projects/example-project/runs/example-run-1/verification.json",
+      "kind": "receipt",
+      "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    },
+    {
+      "ref": "projects/example-project/runs/example-run-1/ticket.json",
+      "kind": "artifact",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "required_evidence": [
+    "projects/example-project/runs/example-run-1/verification.json",
+    "projects/example-project/runs/example-run-1/ticket.json"
+  ],
+  "affected_artifacts": [
+    {
+      "id": "example-verification-2",
+      "schema": "verification",
+      "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    }
+  ],
+  "charter": {
+    "hash": "sha256:fd1d73c884f27268954704a9a1a850929e58c50c9ba5f32f99bd5b8c076c50c0",
+    "rule": "charter:checkpoints/ci-repair",
+    "grant": {
+      "charter_hash": "sha256:f3997ae1edfe6473d77c4cb8ee42484ca1d66316c15a0fc4a57160749d159c84",
+      "covers": "ci-repair",
+      "decision": "example-decision-3"
+    }
+  },
+  "seats": [
+    {
+      "id": "seat-one",
+      "filled_by": "supervisor",
+      "independent": true,
+      "may_implement": false
+    },
+    {
+      "id": "seat-two",
+      "filled_by": "reviewer-standards",
+      "independent": true,
+      "may_implement": false
+    }
+  ],
+  "judgments": [
+    {
+      "seat": "seat-one",
+      "by": "supervisor",
+      "choice": "lower-floor",
+      "rationale": "The uncovered branch is the one the finding is about and the receipt will say so. Spending the last cycle on a test would leave the finding itself unfixed.",
+      "unresolved_assumptions": [],
+      "escalate": false,
+      "at": "2026-09-19T09:00:00Z",
+      "saw_other_judgment": false
+    },
+    {
+      "seat": "seat-two",
+      "by": "reviewer-standards",
+      "choice": "lower-floor",
+      "rationale": "Acceptable only because the weakening is recorded and the receipt still reports a failed run. A lowered floor that produced a passing receipt would be the case this checkpoint exists to refuse.",
+      "unresolved_assumptions": [
+        "Whether the missing test lands before the floor is restored."
+      ],
+      "escalate": false,
+      "at": "2026-09-19T09:00:00Z",
+      "saw_other_judgment": false
+    }
+  ],
+  "agreement": true,
+  "authority_check": {
+    "deterministic": true,
+    "charter_permits": true,
+    "required_evidence_present": true,
+    "seats_independent": true,
+    "checkpoint_in_charter": true,
+    "both_judgments_returned": true,
+    "result": "pass"
+  },
+  "ruling": {
+    "outcome": "decided",
+    "chosen_option": "lower-floor",
+    "at": "2026-09-19T09:00:00Z",
+    "recorded_by": "policy",
+    "note": "Decided under the amended charter, which opens the ci-repair checkpoint. The superseded charter did not list it, so this decision could not have been taken under it."
+  },
+  "grants_issued": [
+    {
+      "charter_hash": "sha256:f3997ae1edfe6473d77c4cb8ee42484ca1d66316c15a0fc4a57160749d159c84",
+      "covers": "ci-repair",
+      "decision": "example-decision-3"
+    }
+  ],
+  "result": {
+    "operation": "decision.ci-repair",
+    "status": "complete",
+    "next_permitted_action": "Record the weakening on the receipt and report the run's real outcome.",
+    "outputs": [
+      {
+        "id": "example-decision-3",
+        "schema": "decision",
+        "hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ]
+  }
+}

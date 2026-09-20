@@ -238,9 +238,7 @@
       }
     },
     {
-      "description": "A charter is never edited in place. A change produces a new charter, with a new hash, whose envelope 'supersedes' names the old one; grants bound to the old hash do not carry over (plan 5.2, 7.2).",
-      "if": { "properties": { "status": { "const": "superseded" } }, "required": ["status"] },
-      "then": { "required": ["supersedes"] },
+      "description": "A charter is never edited in place. A change produces a new charter, with a new hash, whose envelope 'supersedes' names the old one; grants bound to the old hash do not carry over (plan 5.2, 7.2). That is a relationship between two documents and this schema sees one, so it is stated here and checked by ak validate, which can hold both. The constraint this entry used to carry required 'supersedes' on a charter whose status was 'superseded' -- binding the field to the old charter, where the sentence above puts it on the new one. A charter could then only be retired if it had retired something first, so a project's first charter became unrepresentable the moment it was amended. A single-document schema writing about a two-document relationship will bind it to whichever document is in front of it, which is how that happened; the enforcement belongs one layer up and the annotation below is the pointer to it.",
       "x-validator-rule": "charter.amendment-creates-a-new-hash-and-invalidates-old-grants"
     },
     {

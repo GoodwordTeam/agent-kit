@@ -939,10 +939,30 @@ function verificationRules(rc: RuleContext): void {
 
   const RULE_WEAK = "verification.weakened-check-requires-its-own-decision";
   const weakened = arr(doc["weakened_checks"]).map(obj);
+  // The schema already requires `decision` on every entry, so a check for its
+  // absence here was unreachable: nothing without it got past ajv to be tested.
+  // What ajv cannot see is whether the decision named exists and decided
+  // anything. An unauthorized weakening, one citing an id nobody wrote, and one
+  // citing a checkpoint that blocked are the same document to a shape check,
+  // and the third is the one a run actually produces -- the weakening happens,
+  // the escalation it depends on never comes back, and the reference stays.
   for (const [i, entry] of weakened.entries()) {
     if (entry === null) continue;
-    if (obj(entry["decision"]) === null) {
-      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${str(entry["what"]) ?? "?"}) carries no decision; this is never something CI repair may do on its own`);
+    const what = str(entry["what"]) ?? "?";
+    const decisionId = str(at(entry, "decision.id"));
+    if (decisionId === null) continue;
+    const named = rc.index.byId.get(decisionId);
+    if (named === undefined) {
+      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${what}) names decision ${decisionId}, which matches no artifact; the authorization is the whole of what makes this entry permissible`);
+      continue;
+    }
+    if (named.schema !== "decision") {
+      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${what}) names ${decisionId}, which is a ${named.schema} rather than a decision`);
+      continue;
+    }
+    const outcome = str(at(named.doc, "ruling.outcome"));
+    if (outcome !== "decided") {
+      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${what}) is authorized by ${decisionId}, whose ruling is ${outcome ?? "unrecorded"}; a checkpoint that did not decide authorizes nothing`);
     }
   }
   if (weakened.length > 0 && status === "passed") {

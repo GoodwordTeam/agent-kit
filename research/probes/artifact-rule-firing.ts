@@ -40,12 +40,14 @@
  *     about the axes no mutation here touches.
  *   - That `exercised` means fully exercised. Several rules hold more than one
  *     clause; a rule is counted exercised when any clause compares a shipped
- *     value. Where a second clause stays inert, `note` says so.
+ *     value. Where a rule carries one entry per clause, each is labelled and
+ *     each is measured on its own. Where a second clause stays inert, `note`
+ *     says so.
  *   - That the example set is the right set. It grew from ten documents to
- *     eighteen by adding exactly the states these rules guard -- a blocked
+ *     nineteen by adding exactly the states these rules guard -- a blocked
  *     decision, an amended charter, a smell, a decision ticket, a review with
  *     an unavailable required lane, a second lesson, a regraded finding, a
- *     receipt for a weakened check. A document added to move a count would be
+ *     receipt for a weakened check and the decision that authorized it. A document added to move a count would be
  *     worth nothing here, and the way to tell the two apart is to ask whether
  *     a real run would emit it.
  *   - That anything outside these three modules ran. `checkSchemas` validates
@@ -96,6 +98,8 @@ interface Mutation {
   /** Further edits applied with the first, for rules holding several clauses. */
   readonly also?: ReadonlyArray<{ path: string; to: unknown }>;
   readonly kind: Kind;
+  /** Which clause this entry aims at, when a rule holds more than one. */
+  readonly clause?: string;
   readonly note?: string;
 }
 
@@ -391,11 +395,20 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   { rule: "verification.prose-never-substitutes-for-exit-status-and-digest", file: "verification.example.json", path: "exit_status", to: 1, kind: "value" },
   {
     rule: "verification.weakened-check-requires-its-own-decision",
+    clause: "the named decision must resolve and must have decided",
+    file: "verification.weakened.example.json",
+    path: "weakened_checks.0.decision.id",
+    to: "example-decision-2",
+    kind: "value",
+    note: "example-decision-2 is the blocked decision: it exists, it is a decision, and its ruling is `blocked`. That is the shape a real run produces -- the weakening happens, the escalation it waited on never comes back, and the reference stays -- and it is indistinguishable from an authorized weakening to a shape check. This clause used to restate a schema `required` on the same field and so could not be reached; it now resolves the reference instead.",
+  },
+  {
+    rule: "verification.weakened-check-requires-its-own-decision",
+    clause: "a receipt carrying a weakening is not a pass",
     file: "verification.weakened.example.json",
     path: "status",
     to: "passed",
     kind: "value",
-    note: "Only the second clause is the rule's own. The first -- that each entry names a decision -- restates a schema `required`, so no document reaches it without failing ajv first.",
   },
   {
     rule: "verification.receipt-stale-when-revision-differs-from-head",
@@ -420,6 +433,13 @@ function issuesFor(root: string): Issue[] {
   return [...checkArtifacts(ctx), ...checkDocumentRules(ctx), ...checkPackManifests(ctx)];
 }
 
+const KIND_RANK: Record<Kind, number> = { absent: 0, guard: 1, value: 2 };
+
+function rank(into: Map<string, Kind>, rule: string, kind: Kind): void {
+  const held = into.get(rule);
+  if (held === undefined || KIND_RANK[kind] > KIND_RANK[held]) into.set(rule, kind);
+}
+
 function main(): number {
   const root = newRoot();
   const pristine = new Map<string, string>();
@@ -433,14 +453,19 @@ function main(): number {
   // severity before any mutation would make every "did it fire" answer trivially
   // yes, and the counts would describe the harness rather than the documents.
   const baseline = issuesFor(root);
-  const counts: Record<Kind, number> = { value: 0, guard: 0, absent: 0 };
+  // A rule's classification is the strongest of its entries: one clause that
+  // compares a shipped value makes the rule exercised even where another stays
+  // inert. Counting per mutation instead would let a rule with two entries
+  // outvote a rule with one.
+  const kindByRule = new Map<string, Kind>();
   const wrong: string[] = [];
   const lines: string[] = [];
 
   for (const m of MUTATIONS) {
+    const label = m.clause === undefined ? m.rule : `${m.rule}  [${m.clause}]`;
     if (m.file === null) {
-      counts.absent += 1;
-      lines.push(`  unreached  ${m.rule}`);
+      rank(kindByRule, m.rule, "absent");
+      lines.push(`  unreached  ${label}`);
       continue;
     }
     const original = pristine.get(m.file)!;
@@ -452,14 +477,17 @@ function main(): number {
     const fired = issuesFor(root).some((i) => i.rule === m.rule);
     writeFileSync(join(root, "templates", m.file), original);
 
-    if (!fired) wrong.push(`${m.rule} did not report under its own id after its mutation`);
-    counts[m.kind] += 1;
-    lines.push(`  ${m.kind === "value" ? "exercised" : "inert    "}  ${m.rule}`);
+    if (!fired) wrong.push(`${label} did not report under its own id after its mutation`);
+    rank(kindByRule, m.rule, m.kind);
+    lines.push(`  ${m.kind === "value" ? "exercised" : "inert    "}  ${label}`);
   }
+
+  const counts: Record<Kind, number> = { value: 0, guard: 0, absent: 0 };
+  for (const kind of kindByRule.values()) counts[kind] += 1;
 
   rmSync(root, { recursive: true, force: true });
 
-  console.log(`rules measured: ${MUTATIONS.length}`);
+  console.log(`rules measured: ${kindByRule.size} (${MUTATIONS.length} mutations)`);
   console.log(`baseline issues of any severity from the three gated check groups: ${baseline.length}`);
   for (const issue of baseline) console.log(`  ${issue.severity} ${issue.rule} ${issue.file}`);
   console.log();

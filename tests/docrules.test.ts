@@ -693,18 +693,41 @@ describe("verification rules", () => {
     );
   });
 
-  test("verification.weakened-check-requires-its-own-decision catches a weakened check with no decision", () => {
-    const doc = verification({ weakened_checks: [{ what: "assertion-weakened", detail: "dropped an assert" }] });
+  // The rule's first clause used to ask whether an entry named a decision at
+  // all, which the schema already requires of every entry, so no document could
+  // reach it without failing ajv first. It now resolves the reference, and these
+  // are the three ways that resolution fails. A weakening authorized by nobody,
+  // one citing an id nobody wrote, and one citing a checkpoint that blocked are
+  // the same document to a shape check.
+  const weakened = (id: string) => [
+    { what: "assertion-weakened", detail: "dropped an assert", decision: { id, hash: `sha256:${"a".repeat(64)}` } },
+  ];
+
+  test("verification.weakened-check-requires-its-own-decision catches a decision that matches no artifact", () => {
+    const doc = verification({ status: "failed", weakened_checks: weakened("decision-99") });
     expect(rulesOf(run(doc))).toContain("verification.weakened-check-requires-its-own-decision");
   });
 
+  test("verification.weakened-check-requires-its-own-decision catches a reference to something that is not a decision", () => {
+    const doc = verification({ status: "failed", weakened_checks: weakened("ticket-1") });
+    const other = envelope("ticket", "ticket-1", { status: "done" });
+    expect(rulesOf(run(doc, [other]))).toContain("verification.weakened-check-requires-its-own-decision");
+  });
+
+  test("verification.weakened-check-requires-its-own-decision catches a decision that did not decide", () => {
+    const doc = verification({ status: "failed", weakened_checks: weakened("decision-1") });
+    const blocked = decision({ ruling: { outcome: "blocked", at: "2026-09-19T00:00:00Z", recorded_by: "policy" } });
+    expect(rulesOf(run(doc, [blocked]))).toContain("verification.weakened-check-requires-its-own-decision");
+  });
+
+  test("verification.weakened-check-requires-its-own-decision accepts a failed receipt whose weakening was decided", () => {
+    const doc = verification({ status: "failed", weakened_checks: weakened("decision-1") });
+    expect(rulesOf(run(doc, [decision()]))).not.toContain("verification.weakened-check-requires-its-own-decision");
+  });
+
   test("verification.weakened-check-requires-its-own-decision catches a pass obtained by weakening", () => {
-    const doc = verification({
-      weakened_checks: [
-        { what: "assertion-weakened", detail: "dropped an assert", decision: { id: "decision-1", hash: `sha256:${"a".repeat(64)}` } },
-      ],
-    });
-    expect(rulesOf(run(doc))).toContain("verification.weakened-check-requires-its-own-decision");
+    const doc = verification({ weakened_checks: weakened("decision-1") });
+    expect(rulesOf(run(doc, [decision()]))).toContain("verification.weakened-check-requires-its-own-decision");
   });
 
   test("verification.receipt-stale-when-revision-differs-from-head catches an unmarked stale receipt", () => {
