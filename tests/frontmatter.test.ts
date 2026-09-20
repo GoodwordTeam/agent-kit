@@ -165,3 +165,79 @@ describe("the line budget reaches every body §1 governs", () => {
     expect(checkBudget(bodyCtx({ "protocols/alpha/PROTOCOL.md": "line\n".repeat(20) }))).toEqual([]);
   });
 });
+
+/**
+ * A body is measured in lines, and every budget fixture above hides the
+ * difference between a line and a newline.
+ *
+ * `lineCount` corrects for a trailing newline: `split("\n")` over text that
+ * ends in one yields a final empty element that is not a line. Delete the
+ * correction -- `return lines.length - 1`, which is what `wc -l` counts -- and
+ * all six tests above stay green, because `"line\n".repeat(n)` ends in a
+ * newline and that is the single shape where the two spellings agree.
+ *
+ * The fixtures below are the other shape. n lines with no final newline split
+ * into n elements, none of them empty, so the corrected count is n and the
+ * uncorrected count is n - 1. At the target that is the difference between a
+ * row and no row: not a wrong severity and not a wrong number, the finding
+ * simply absent, which is the failure mode nobody goes looking for. At the cap
+ * it is quieter still -- the body lands back in the warn band and an error
+ * downgrades to a warning.
+ *
+ * This is not hypothetical arithmetic. `protocols/review-delta/PROTOCOL.md` is
+ * 151 lines at fef4709, one line over the target, and is reported today.
+ * Measured on a clean extract at that revision over both spellings and both
+ * body shapes: the correct spelling reports it whether or not the file ends in
+ * a newline -- that insensitivity is the entire job of the correction -- while
+ * `lines.length - 1` reports it with the newline and goes silent without it.
+ * Three of those four cells print the row; the silent one is the defect meeting
+ * a file that lost its last byte, and nothing here requires a file to end in one.
+ *
+ * So these fixtures deliberately omit the final newline, and the first test
+ * asserts the omission. Restoring it to match the style above would leave two
+ * tests that pass under both spellings and guard nothing.
+ */
+describe("a body is measured by its lines, not by its newlines", () => {
+  /** n lines, the last one unterminated. */
+  function unterminated(n: number): string {
+    return `${"line\n".repeat(n - 1)}line`;
+  }
+
+  function ctx(files: Record<string, string>) {
+    const root = makeTree({
+      "catalog.yaml": `schema_version: 1\npackage:\n  id: ak\n  name: agent-kit\n  version: 0.1.0\n  namespace: "/ak:"\n  default_profile: core\nprotocols:\n  - id: alpha\n    status: authored\nroles:\n  - id: beta\n    status: authored\n`,
+      ...files,
+    });
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    return { root, catalog };
+  }
+
+  test("the fixtures are the shape under test: n lines, no trailing newline", () => {
+    // The positive control. Both assertions below are about what the check
+    // does with an unterminated body, and neither can discriminate if the
+    // fixture quietly stops being unterminated.
+    const body = unterminated(SKILL_LINE_WARN + 1);
+    expect(body.endsWith("\n")).toBe(false);
+    expect(body.split("\n")).toHaveLength(SKILL_LINE_WARN + 1);
+    expect(body.split("\n").at(-1)).toBe("line");
+  });
+
+  test("one line over the target is reported even with no final newline", () => {
+    const issues = checkBudget(ctx({ "protocols/alpha/PROTOCOL.md": unterminated(SKILL_LINE_WARN + 1) }));
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.rule).toBe("budget.body-over-target");
+    // The count, not just the row: a check that fires on the right file for
+    // the wrong number is the same defect one step further along.
+    expect(issues[0]?.message).toContain(`${SKILL_LINE_WARN + 1} lines`);
+  });
+
+  test("one line over the cap stays an error and does not decay to a warning", () => {
+    const issues = checkBudget(ctx({ "roles/beta/ROLE.md": unterminated(SKILL_LINE_FAIL + 1) }));
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.rule).toBe("budget.body-over-cap");
+    expect(issues[0]?.message).toContain(`${SKILL_LINE_FAIL + 1} lines`);
+  });
+});
