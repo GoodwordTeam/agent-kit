@@ -25,20 +25,51 @@
 #       warning, so the sum is conserved. This is a lane mid-batch.
 #
 #   warnings up, notes unchanged
-#       Markdown the reachability walker can see but no catalog entry claims,
-#       one `rulings.doctrine-unreachable` each. Usually someone's working
+#       **At least three causes, and the summary line names none of them.** Read
+#       the check name before reading anything into the delta: diff the WARNING
+#       rows between the two revisions, never the totals.
+#
+#       `rulings.doctrine-unreachable` -- markdown the reachability walker can
+#       see but no catalog entry claims, one per file. Usually someone's working
 #       files, which the validator cannot distinguish from repository content.
+#       `looseDoctrineFiles` walks the catalog's directory sections *and* root
+#       markdown, so 22 loose `.md` at the root and 22 loose `.md` inside
+#       `roles/` produce character-identical summary lines. Both were measured.
+#       Do not read this row as identifying a location -- grep the paths, which
+#       is the only thing that distinguishes them. Files under `research/` move
+#       this count by zero: the walker only ever enumerates catalog sections and
+#       the root, at any depth.
 #
-#       **This row names a symptom with at least two causes, and the output does
-#       not say which.** `looseDoctrineFiles` walks the catalog's directory
-#       sections *and* root markdown, so 22 loose `.md` at the root and 22 loose
-#       `.md` inside `roles/` produce character-identical summary lines. Both
-#       were measured. Do not read this row as identifying a location -- run
-#       `ak validate | grep doctrine-unreachable` and read the paths, which is
-#       the only thing that distinguishes them.
+#       `rulings.uncited-restatement` -- and this cause does not require that
+#       anything the warning points at changed. The check scores a window
+#       against the rulings with cosine over a corpus, and the corpus is the
+#       whole tree: adding text anywhere shifts the term weights, so a window
+#       crosses the threshold untouched. Measured across eleven commits in one
+#       afternoon: a warning on AUTHORING.md appeared at 7f159d8 and was gone by
+#       daef077, with the window it named byte-identical at all three revisions
+#       (12 lines, diffed each time) and its ruling byte-identical (md5 equal).
+#       Corpus 18605 -> 18752 windows. Nothing beneath the warning ever changed.
 #
-#       Files under `research/` move this count by zero: the walker only ever
-#       enumerates catalog sections and the root, at any depth.
+#       That is stronger than the coverage NOTE's own caveat, which says a clean
+#       run is evidence about the instrument rather than the tree. This says a
+#       passage clean when it landed can be flagged later, and flagged text can
+#       clear itself, with nothing done to either -- so neither "it passed when
+#       I wrote it" nor "it stopped warning" is a claim about that passage. Diff
+#       the flagged text across the revisions before crediting an author with
+#       introducing it or with fixing it.
+#
+#       **The locator is the window's first line and the claim runs forward from
+#       it.** `window.line` in `src/validation/restatement.ts` is the start, not
+#       a midpoint. Reading it as a midpoint puts a sentence two lines above the
+#       locator inside the window, and if that sentence happens to be about the
+#       named ruling the report looks like corroboration from a second
+#       instrument. I did that here and was one step from reporting that a
+#       lexical scanner and a reviewer had independently converged on one
+#       ruling. They had not: the scanner was pointed at the four lines below,
+#       which are about reviewer continuity, and the row was the wrong-sibling
+#       false positive its own warning text predicts. A manufactured convergence
+#       is worse than no convergence, because corroboration is exactly what
+#       stops the next person checking.
 #
 #   notes one high, one check skipped: donor paths at pin
 #       A bare `git archive` with no `.donors/`. The skip is correct behaviour,
@@ -68,7 +99,10 @@ INSTALL=0
 for arg in "$@"; do
   case "$arg" in
     --install) INSTALL=1 ;;
-    -h|--help) sed -n '2,50p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    # The header runs from line 2 to the line before `set -euo pipefail`, and is
+    # printed by that relation rather than by a line count: `2,50p` was correct
+    # when written and silently truncated the moment the header grew past it.
+    -h|--help) sed -n '2,/^set -euo pipefail$/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) REV="$arg" ;;
   esac
 done
