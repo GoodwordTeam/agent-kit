@@ -22,6 +22,7 @@ import { checkEvals } from "./evals.ts";
 import { checkFrontmatter } from "./frontmatter.ts";
 import { checkInvocation } from "./invocation.ts";
 import { checkBundleLinks, checkLoaderLinks, checkSourceLinks } from "./links.ts";
+import { checkInvocationPartition } from "./partition.ts";
 import { checkPolicies } from "./policies.ts";
 import { checkSchemaRuleCoverage } from "./rulemap.ts";
 import { checkProvenance } from "./provenance.ts";
@@ -63,6 +64,7 @@ export const CHECKS: readonly Check[] = [
   { name: "budget", run: checkBudget },
   { name: "invocation", run: checkInvocation },
   { name: "policies", run: checkPolicies },
+  { name: "invocation-partition", run: checkInvocationPartition },
   { name: "side-effects", run: checkSideEffects },
   { name: "skill-manifests", run: checkSkillManifests },
   { name: "pack-manifests", run: checkPackManifests },
