@@ -502,6 +502,18 @@ worklist costing a minute to clear is worth more than a gate that cannot exist. 
 population rule one level up, with the ruling's sentences as the population and a paragraph that
 answers on topic as the place members stop being individually visible.
 
+**In a table row, cite where the row bounds or excepts a ruling; leave it bare where the row merely
+applies one the body already cites.** A bounding row carries load a reader cannot recover without
+the id, because which rule's edge is being drawn is the whole content of the row. An applying row
+restates a rule the body has already attributed at its point of use, so a citation there is a second
+attribution of the same rule rather than a new one.
+
+The rows that produced this rule were sorted correctly, for a reason that does not reproduce the
+sort. Measured against each other the three were structurally identical, so the criterion offered
+for citing one and leaving two bare would equally have justified any other split of them. A correct
+decision reached by a criterion that does not reproduce it is not yet a rule, and recording the
+decision instead of the criterion is how the next writer gets it wrong while following the contract.
+
 **A quoted specimen is not a body, and this rule does not reach it.** The examples in §3 state rules
 without citing them, deliberately: nothing loads a specimen. No agent arrives at one through
 progressive disclosure, and the writer reading it has the governing section in front of them, so the
@@ -1493,7 +1505,10 @@ table. Two things differ for a role:
   option and we are both confident, so this proceeds", "I can see the fix is correct, so the finding
   is closed", "the standard is not written down but everyone knows it". The third column sends the
   seat somewhere deterministic; it never tells the seat to try harder.
-- **A row naming a ruling cites it in §6's markdown form**, inline in the "Why it is wrong" column.
+- **A row naming a ruling cites it in §6's markdown form**, at the sentence that invokes it,
+  wherever in the row that sentence sits. Naming a column stated a position where a relation was
+  meant: a row whose ruling sentence stands in `Do this instead` while `Why it is wrong` says
+  something else would, followed literally, credit that ruling with a rule it does not state.
 
 This heading is **required, not optional**. A seat with no rationalizations to name has not been
 thought about hard enough, so an empty table is a signal to revisit the seat rather than a section to
