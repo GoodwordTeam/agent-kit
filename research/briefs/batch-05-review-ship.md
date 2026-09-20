@@ -124,6 +124,63 @@ or not, which makes it no evidence about `super-ship`.
 **Write a scenario-20 case on `super-ship` even though 20 already reads as covered.** Nothing will
 ask you for it.
 
+**Those figures are at `b9fa424` and the corpus has grown past them. Re-derive; do not quote.**
+At `f23b81d` there are **42 cases carrying 11 distinct scenarios**, because batch 4 landed
+`super-scout` and `super-build` with cases of their own. The argument above does not move with the
+count -- four of the covered scenarios are still covered by cases testing something else -- but the
+numbers in it are a reading of a tree that is two batches old. Re-derive with
+`git ls-tree -r HEAD`, never `git ls-files`: the second reads the **index**, and in a tree several
+lanes are staging into it answers about no revision at all. A reviewer reported 42 against a tree
+holding 33 that way and caught it only by chance.
+
+**And the converse of the rule above is true and nothing guards it.** This brief tells you an
+untagged case counts for nothing because the check reads tags rather than intent. What it has not
+told you until now is the other direction: **a tag counts for everything, and nothing checks that
+there is a case underneath it.** Measured on a clean extract at `0f59f5c`, each mutation applied to
+one real `case.yaml` and restored:
+
+| mutation | uncovered | eval errors |
+|---|---|---|
+| control -- 18 lines, prompt and two graders | 16 | 0 |
+| `graders:` block deleted | 16 | 0 |
+| `execution:` deleted as well | 16 | 0 |
+| reduced to one line, `tags: [scenario-18]` | 16 | 0 |
+| **emptied to zero bytes** | 17 | **0** |
+
+A three-line file with no prompt and no grader validates identically to the real case and still
+reports its scenario as covered. A zero-byte file is a *valid* case: it satisfies
+`evals.declaration-without-case`, counts toward the three-case floor, and raises no error of any
+kind. It only stops claiming a scenario.
+
+Three independent reasons, each checkable in a minute. Nothing in this repository executes a case --
+`caseDoc["tags"]` at `src/validation/evals.ts:84` is the only key read off a parsed case document,
+and `graders`, `expected_outcome` and `max_turns` have zero occurrences in `src/`. There is no
+schema for `evals/**/case.yaml`; `documentTargets` reaches `catalog.yaml`, `skills/*/skill.yaml` and
+`packs/*/{pack,manifest}.yaml` and nothing else, while all 42 cases declare
+`schema_version: "1.1"` that nothing reads. And the three-case floor and the one-of-each-kind rule
+both count `skill.yaml`'s `tests[]`, so they are properties of your manifest rather than of the
+corpus.
+
+**What follows for you, and it is not cynicism about the corpus.** The runner is external by design:
+`adapters/runner-contract/CONTRACT.md:3` says the contract carries no implementation, and the host
+supplies execution, isolation and credentials. So your grader text will not be executed *here*, and
+that is correct. It also means your grader text is the entire artifact -- there is no run to fall
+back on and no schema to catch a missing field, so a grader that does not name the behaviour it
+claims to test is indistinguishable from one that does, by any instrument that exists today. Write
+every `prompt` and every grader as though a human will read it against the scenario, because for
+now that is the only thing that can.
+
+One mechanical trap while you tag. `SCENARIO_TAG` is `\d{1,2}` and the release scenarios are 1--24,
+so `scenario-31` parses, enters the covered set, and is never mentioned by anything -- you silently
+lose the scenario you meant and the run reports nothing. A fix is commissioned; until it lands,
+check your own tags are in range.
+
+**None of this touches the checkpoint.** The batch-5 checkpoint is the vertical-slice drive on the
+fixture at `tests/fixtures/checkpoint/`: a bounded approved ticket through scout, build, verify,
+full review, apply-findings, delta review and a `super-ship` dry-run, gated on receipts from that
+run. It never reads a `case.yaml`. Nothing you write into `evals/` can turn it green and nothing
+above weakens it.
+
 ### The checkpoint arithmetic, so you can see which squares are yours
 
 The slice gates on scenarios **1, 3, 4, 6, 7, 8, 10, 18, 20** (plan verification step 6).
