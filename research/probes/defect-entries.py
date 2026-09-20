@@ -192,8 +192,16 @@ def self_test() -> int:
     # A section named after a blockquote is not that quotation's section. This was a
     # real defect in this probe: `sec` was updated from the closing line before the
     # quotation was flushed, so a trailing mention silently re-scoped the match.
+    #
+    # The citing line is ADJACENT to the blockquote, and that is the whole case.
+    # An earlier fixture put a blank line between them, which flushes the quotation
+    # on the blank line before the trailing mention is ever read -- so the ordering
+    # this case exists to hold was never reached, and inverting the flush left the
+    # whole self-test green. `cli` found the same defect in their own port of this
+    # case before anyone had run it here. A test for an ordering has to put the two
+    # things in the order it is about.
     print("=== scoping: a trailing mention must not re-scope the quotation ===")
-    trailing = (f"### trailing mention\n\n\u00a75 requires:\n\n> {quotable}\n\n"
+    trailing = (f"### trailing mention\n\n\u00a75 requires:\n\n> {quotable}\n"
                 "Unrelated, and it mentions \u00a712.\n")
     pairs = quotes_with_section(trailing.split("\n\n", 1)[1])
     if [sec for sec, _ in pairs] != ["5"]:
