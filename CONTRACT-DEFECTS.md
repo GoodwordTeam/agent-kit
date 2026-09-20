@@ -69,3 +69,39 @@ because a shape that attributes the wrong sentence is not a working shape. The a
 is that the inline form is illegal in a YAML file, in which case `policies/invocation.yaml:213` is
 a defect and the scanner accepts something it should not. This writer cannot tell which, and took
 the fourth shape at `0945b4c` while reporting it here.
+
+### §4's `packaging.hosts[].mode` is declared by every manifest and read by nothing
+
+**The instruction followed.** §4 assigns the host-mode declaration to the manifest:
+
+> `packaging.hosts[]` declares, per adapter, the `mode` the skill runs in there (`autonomous` / `guided` / `manual`) and the `unsupported` semantics that host cannot enforce. That is where a skill records the degradation its adapter contract describes — a skill needing a restriction a host lacks lists it in `unsupported` and drops to `guided` or `manual`, rather than claiming a guarantee nothing enforces (`adapters/claude-code/CONTRACT.md` §4).
+
+**What following it produced.** Writing batch 4's `diagnose` manifest, both host blocks declare
+`mode: autonomous` with three `unsupported` entries each, and `ak build` emitted
+`metadata.ak.mode: manual` into both bundles. So does every other skill in the tree: all eight
+bodies in `dist/claude-code/skills/` carry `mode: manual`, including the ones whose manifests ask
+for `autonomous`.
+
+The packager reads a different key. `src/packaging/manifest.ts` takes `autonomyModes` from
+`autonomy.modes` and `requiresEnforced` from `autonomy.requires_enforced`, and
+`src/packaging/plan.ts` computes the mode from those two alone: `autonomous` when the first contains
+`autonomous` and the second leaves nothing unenforceable, `guided` when something is unenforceable,
+`manual` otherwise. No manifest can carry an `autonomy` key: `schemas/skill.schema.json` sets
+`additionalProperties: false` and has no such property, so the read returns empty for every skill in
+the package and the expression has one reachable branch. `autonomous` and `guided` are unreachable,
+and with them the `rejected` list and the whole `unsupported`-driven degradation §4 describes. A
+skill that declares a guarantee its host cannot enforce, and a skill that declares nothing, produce
+the same bundle.
+
+This is the §10 direction: a rule in the contract that specifies a declaration nothing performs. It
+is invisible from the writing side, because the manifest validates, the build reports zero errors
+and zero warnings, and the declared mode never appears in a diff a writer reads.
+
+**What the correct behavior appears to be.** `src/packaging/manifest.ts` reads
+`packaging.hosts[]`, selecting the block whose `adapter` matches the bundle being built, and takes
+its `mode` and `unsupported`. The alternative reading is that `autonomy.modes` is the intended shape
+and §4 and `schemas/skill.schema.json` both name the wrong field, in which case the schema's closure
+is what makes it unwritable and the fix belongs there. This writer reads the first as correct —
+§4 and the schema agree with each other and the code disagrees with both — but which file is amended
+is not the writer's to decide. Batch 4's four manifests declare `autonomous` on both adapters and
+will need no change under the first reading.
