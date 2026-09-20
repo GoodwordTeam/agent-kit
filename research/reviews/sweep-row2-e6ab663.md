@@ -5,10 +5,20 @@ commissioned reviewer "never returned a verdict," and that is false. The verdict
 was chased, and did not arrive. A commit message cannot be edited once pushed, so the correction
 lives where someone reading the repo will find it.
 
-This file is narrow on purpose. It corrects one false statement and records one verdict. It is **not**
-a ruling on where handbacks or review records live in general — that question is open with the
-contract owner, and §10/§12.2 currently route six durable obligations to a destination they never
-name.
+This file is narrow on purpose: it corrects one false statement and records one verdict. It was
+written while the general question of where durable records live was still open, and said so.
+
+**That question is now ruled, and this directory is the answer for one of the three obligations.** A
+prior-findings packet goes here, because its consumer is a replacement reviewer arriving after the
+batch closed with nothing but a clean checkout. Candidate-pair examinations go to
+`provenance/conversation-map.yaml` and an unnamed donor file to the provenance fragment; three
+destinations rather than one, because §10's original defect was routing every durable obligation to
+a single sink, so one bad choice of sink lost all of them at once.
+
+The ruling is recorded here because this file's own existence was the trap: a directory created for
+a narrow reason becomes the convention if nobody writes down that it isn't one, which is how `.omc/`
+became the sink. Deciding it deliberately is a different act from letting it accumulate, and the
+distinction only survives if both are written down.
 
 ## What was reviewed
 

@@ -62,6 +62,14 @@ sentence saying what that check could not have seen. §8 requires this as of `9e
 
 ## Batch 6 — packs and references
 
+**Add `typescript` and a `typecheck` script at this boundary, with the `v0.1.0` tag.** Deliberately
+not inside a batch: four lanes had dirty trees when this was ruled, so the gate's output could not
+have been attributed to whoever caused it, and a gate whose output cannot be attributed gets turned
+off. Until it lands, the standing rule is that an invariant expressed as a type must also have a
+test — `DOCUMENT_FILE` is the worked example, with a test that reads the alternation out of
+`DOCUMENT_REFERENCE.source` rather than retyping the keyword list, because a copied list agrees with
+its subject by construction.
+
 **Three retroactive edits land with this batch**, each touching a body authored in an earlier,
 now-closed batch:
 
@@ -130,6 +138,39 @@ against the parser does by construction. Two exits: produce a real instance (bet
 genuinely wants the form) or drop support so it fails loudly instead of misparsing. **A third
 synthetic fixture is not an exit** — it adds no information about whether the parser is right.
 
+**Writing the durable-record ruling into §10 and §12.2 — `authoring`.** Ruled: three destinations,
+not one, because §10's defect was routing every durable obligation to a single sink, so one bad
+choice lost all of them at once. Candidate-pair examinations go to `provenance/conversation-map.yaml`
+(already working — batch 2 recorded both boundary rows there); an unnamed donor file goes to the
+provenance fragment; the prior-findings packet goes to `research/reviews/`, whose consumer is a
+replacement reviewer holding nothing but a clean checkout. **The test goes in above the three, not
+under them** — three paths without the rule that produced them is a list someone extends by
+resemblance. The test is `authoring`'s own: a record that discharges an obligation must be
+distinguishable from the obligation never having been discharged. The decisive fact is that
+`reviewer-continuity-not-amnesia` uses the word *durable* itself, so the contract routed to a
+gitignored path a record its own ruling calls durable.
+
+**The §6/§8 split and two §12.2 repairs — `authoring`.** The wrong-authority rule goes in §6 (it
+constrains the artifact); the method for finding instances goes in §8 (it constrains the reader).
+§12.2's placement clause states a position — "inline in the Why it is wrong column" — where it means
+a relation, and batch 2 hit a row where obeying the letter would have credited a ruling with a
+suppression rule it does not state; same class as §10's "last sentence", repaired at `21607c5`.
+§12.2 also states some mandated rows as verbatim blocks and others as prose quotations without
+saying which mandate governs which, which is why batch 2 had to ask about row 4's punctuation.
+Plus, for §6: cite where a row **bounds or excepts** a ruling, leave bare where it merely applies one
+the body already cites.
+
+**The type-invariant inventory — `provmap`, list only, do not fix.** `typescript` is not in
+`devDependencies`, `node_modules/.bin` holds one entry (`yaml`), and there is no CI — while
+`@types/bun` and `tsconfig.json` are both present. The repository holds the type definitions and not
+the thing that reads them, so every type annotation in `src/` is documentation. Enumerate which
+invariants are type-only (exhaustive unions, required fields, discriminated kinds, `Record<K,V>`
+completeness) and whether anything at runtime would notice a violation. This precedes the tooling:
+a typechecker added later catches what is still *expressible*, so anything already wrong in a way
+the types no longer describe would stay invisible and green would read as vindication. Some entries
+will want a test rather than `tsc` — `DOCUMENT_FILE`'s index check asserts a relationship between a
+mapping and a resource, which no `tsc` run would produce.
+
 **Falsifying the mandated-rows gate — `sweep-reviewer`, queued behind the §8 sweep.** First case is
 a body whose row is correct in words but rewrapped.
 
@@ -142,12 +183,6 @@ debt rather than a defect. Whoever restores it inherits one specific obligation 
 `invocation-lesson-publish-ship-clause` was **re-scored by hand** when YAML citation scope narrowed
 from the file to the mapping, by running the same scan the generator would have run. That one
 number is to be verified, not trusted.
-
-**Where handbacks and review records live.** Open with `authoring`. `AUTHORING.md` says "handback"
-ten times; six assign a durable obligation (§10:912, §12.2:1170, §12.2:1183, §12.2:1207, §12.4:979,
-§12.5:1369); **none of the ten names a path, directory or filename.** `research/reviews/` exists as
-of `7683fd9` but was created to correct one false commit message and is explicitly **not** a ruling
-on the general question — do not cite it as precedent while the question is still with `authoring`.
 
 ## Standing traps — not batch-scoped
 
