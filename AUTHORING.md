@@ -345,10 +345,9 @@ a repair did, which is the same shape as a repair that parses as done.
 
 **Where a figure is published on more than one surface, repair the surface that enforces it first.**
 The transcript's line count is published in the lock's register, a comment in
-`provenance/conversation-map.yaml`, the `g_locator` pattern in `schemas/common.schema.json`, that
-pattern's own `description`, two research documents, and twice more in
-`src/validation/provenance.ts`, which derives it rather than recording it. The pattern's bound ended
-at `226[0-4]`, so `G:L2265` — the transcript's last line, the line the register exists to make
+`provenance/conversation-map.yaml`, the `g_locator` pattern in `schemas/common.schema.json`, and
+that pattern's own `description`. Of those four the pattern alone rejects anything, and its bound
+ended at `226[0-4]`, so `G:L2265` — the transcript's last line, the line the register exists to make
 citable — was refused outright, in both the single and the range form, while the description beside
 it agreed that the range ended at 2264.
 
@@ -360,19 +359,22 @@ stale. A stale description misleads a reader who can still turn out to be right;
 overrules a reader who already is. So count the enforcing copies before the describing ones, and
 treat a repair that stopped at the prose as unfinished rather than as partial credit.
 
-**That sentence counted the copies and got both kinds wrong.** This contract said four places and
-named four. The two describing copies it missed — `research/dossiers/protocols.md` and
-`research/dossiers/review-personas.md` — are the two that still say 2264, which is not a
-coincidence: the list had been assembled from the copies someone repaired, and such a list is
-consistent by construction, every item on it correct, so re-reading it finds nothing. And it said
-one surface rejects anything, when `src/validation/provenance.ts` enforces the figure twice more —
-once to bound `G:L` ranges, once to hold the register against the file. A search for the digits
-finds neither, because both compute the figure from the file rather than storing it. A figure is
-published where it is written and where it is derived, and only the first kind greps.
+**That list was four items long and was read as complete, which it is not.** At `76e57ba` nine
+tracked files carry the digits, and `src/validation/provenance.ts` derives them twice more — once to
+bound `G:L` ranges, once to hold the register against the file. Two of the nine are wrong,
+`research/dossiers/protocols.md` and `research/dossiers/review-personas.md`, both still saying 2264,
+and they are absent from the list for the reason they are still wrong: it was assembled from the
+copies someone had repaired. Such a list is consistent by construction, every item on it correct, so
+re-reading it finds nothing. The two derivations are absent for a different reason — a search for
+the digits cannot find a copy that computes them. A figure is published where it is written and
+where it is derived, and only the first kind greps.
 
-The corrected list is `git grep '226[0-9]'` at `76e57ba` together with those two derivations, and it
-is not offered as complete either. Which surfaces carry a figure is a question for a search over a
-named revision; the memory of whoever last repaired them returns the repaired ones.
+Nor is that count safe to quote. *Published* was never defined, and the nine include a test fixture,
+this contract's own narration of the defect, and a brief recording the repair. The first attempt at
+this correction undercounted again and in the same direction, saying *two research documents* after
+looking at the two that were wrong (`30cb3ed`). Which surfaces carry a figure is a question for a
+search over a named revision against a population someone has written down; memory returns the
+copies its owner repaired.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
