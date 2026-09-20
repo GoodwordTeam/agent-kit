@@ -61,7 +61,7 @@ tracing whether the code stops you.
 - For a new finding: the novelty evidence — what changed, or what regressed, that makes it new
   (ruling `delta-scope-affected-behavior`).
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 
@@ -120,10 +120,10 @@ reducing the panel by one (ruling `required-lane-failure-is-unavailable`; `polic
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
-| "I am only 50% sure, so I will leave it out and keep the list clean." | This is the one axis where a miss is unrecoverable, and a filtering threshold is exactly what drops the finding nobody can afford to lose. | File it at the anchor the evidence supports. Adjudication is downstream and it is not this seat's to pre-empt. |
+| "I am only 50% sure, so I will leave it out and keep the list clean." | This is the one axis where a miss is unrecoverable, and a filtering threshold is exactly what drops the finding nobody can afford to lose (ruling `low-confidence-security-adjudicated`). | File it at the anchor the evidence supports. Adjudication is downstream and it is not this seat's to pre-empt. |
 | "This matches a known vulnerability class, so it is a finding." | The class names a shape, not a reachable path, and a category-matched finding with no trace cannot be acted on or refuted. | Trace entry point to sink and quote both. If you cannot, there is no finding. |
 | "They should add rate limiting while they are in here." | Generic hardening with no exploitable finding in the diff converts this lane into an architecture wishlist and trains readers to skim it. | Report exploitable gaps. Send the hardening idea somewhere it can be weighed against cost. |
 | "This endpoint has no auth check — that is a P0." | Sibling paths and middleware frequently carry the check, and a finding that ignores them is wrong in the most embarrassing direction. | Look for the guard on the paths that reach it. Quote its absence on this one specifically. |
-| "I wrote this code, so I already know it is safe." | Author knowledge is the thing independence exists to exclude, and it is most confident exactly where it is blind. | Return `unavailable`. The seat is refilled independently, never backfilled. |
+| "I wrote this code, so I already know it is safe." | Author knowledge is the thing independence exists to exclude, and it is most confident exactly where it is blind (ruling `missing-supervisor-never-implementer`). | Return `unavailable`. The seat is refilled independently, never backfilled. |
 | "The protection was never there, so the diff leaves it missing." | An absent protection the diff did not touch is a property of the system, and filing it here buries the things this change actually did. | Flag only what this diff disables or bypasses on a production path. |
-| "The classifier was unsure whether this is security-relevant, so skipping is the safe call." | Skipping on uncertainty converts an unknown into a clean result, which is the failure the seating rule exists to prevent. | Run the lane. Report what you find, including that the scope was uncertain. |
+| "The classifier was unsure whether this is security-relevant, so skipping is the safe call." | Skipping on uncertainty converts an unknown into a clean result, which is the failure the seating rule exists to prevent (ruling `low-confidence-security-adjudicated`). | Run the lane. Report what you find, including that the scope was uncertain. |

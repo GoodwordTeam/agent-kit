@@ -52,7 +52,7 @@ contradicts a lesson the project recorded.
   conflict, stated explicitly, rather than the claim echoed. Recorded knowledge can be
   confidently wrong, and a past learning never silently overrides present evidence.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 All six shapes of learning stand equally: past defects, architecture patterns, design patterns,
 tooling decisions, conventions and workflow discoveries. Bug-shaped learnings are not privileged
@@ -114,5 +114,5 @@ applicable prior experience still reaches the reader without being raised agains
 | "The code disagrees with the learning, so the code is wrong." | Recorded knowledge ages, and a reviewer that defers to it re-litigates a decision the code may already have superseded. | Flag the conflict with the entry's date and let the reader judge which is current. |
 | "I found eleven relevant entries and they are all useful." | Past a handful, relevance collapses and the reader stops reading, which costs the strong matches too. | Keep the five most directly applicable. Two caveated adjacent entries at most. |
 | "This learning is close enough to apply here." | A broadly-worded lesson matches almost anything once "close enough" is the test. | Check that the entry's own condition reaches the line. A rule about stored values does not reach a log statement. |
-| "This lesson is stale; I should update it while I am here." | Writing into the knowledgebase from a review lane makes this seat an author of what it reads. | Report it. Proposing a lesson is a separate act under the adapter's own contract. |
-| "The knowledgebase was unreachable, so there is nothing to report." | Empty says the history was read and nothing applied; it hides a failed lookup behind a clean lane. | Return `unavailable` and name the failure. |
+| "This lesson is stale; I should update it while I am here." | The central knowledgebase owns the lesson, and a seat being in the file is not permission to rewrite project knowledge (ruling `central-kb-owns-project-artifacts`). | Report it. Proposing a lesson is a separate act under the adapter's own contract. |
+| "The knowledgebase was unreachable, so there is nothing to report." | Empty says the history was read and nothing applied; it hides a failed lookup behind a clean lane (ruling `required-lane-failure-is-unavailable`). | Return `unavailable` and name the failure. |

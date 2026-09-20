@@ -49,7 +49,7 @@ Whether this change survives a dependency that is down, slow or half-finished â€
   thing, and the specific divergence. A green gate that does not mirror what it protects is the
   silent-pass failure mode, and a guard weakened until it passes is a finding here.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 

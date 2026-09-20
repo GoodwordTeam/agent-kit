@@ -53,7 +53,7 @@ who makes them or when.
 - Every finding quotes the passage that is incomplete, or names the decision point the document
   passes over without deciding.
 - At `confidence_anchor` 75 or 100 a quoted passage from the document is the first evidence item
-  (`schemas/finding.schema.json` `confidence_anchor`).
+  (`policies/review.yaml` `evidence.quote_the_line.doc_review_bar`).
 
 **The generic-interface check.** Flag a plan that would produce an interface indistinguishable
 from any other: three-column feature grids, gradient washes, icons in coloured circles, uniform

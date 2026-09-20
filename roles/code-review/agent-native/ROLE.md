@@ -53,7 +53,7 @@ a capability that only a human can reach.
   external system the agent should not drive step by step. Report those for review; do not treat
   a justified encapsulation as a defect.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 

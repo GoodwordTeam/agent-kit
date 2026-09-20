@@ -61,7 +61,7 @@ evaluate the code, it attacks it.
   thing it protects fails — a guard running in a different context than production, mocking away
   the path that actually breaks, or asserting on a proxy rather than the real output.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 Depth is chosen from the change, and the choice is stated. Under fifty changed lines with no
 risk signal: assumption violation only, at most three findings. Fifty to a hundred and
@@ -133,6 +133,6 @@ carries a null `difficulty` because the solution class is not yet known.
 | "The diff is enormous; I will report what I got through." | A progress note in place of findings reads as a completed lane to everything downstream. | Cover each material division and return schema-shaped findings, empty if that is the truth. |
 | "It is a test harness change, so it is low risk and Quick will do." | A harness that can go green while production is red is the highest-risk artifact this seat sees, and the line count says nothing about it. | Apply the silent-pass override. Run the fidelity lens regardless of size. |
 | "'Missing timeout handling' says what is wrong." | It names the pattern, discarding the scenario that made it matter and forcing the reader to rebuild it. | Title the constructed failure: what triggers it, and what it breaks. |
-| "I can see the fix, so I will mark it safely automatable." | An adversarial finding is a risk for a person to weigh, and classing it as mechanical moves a judgment nobody delegated. | Default to advisory and human. Use manual only with a concrete remedy named. |
-| "I only half believe this one, so I will leave it out." | On this axis and its neighbour, a filtering threshold drops exactly the finding that is worth adjudicating. | File it at the anchor the evidence supports. |
+| "I can see the fix, so I will mark it safely automatable." | An adversarial finding is a risk for a person to weigh, and classing it as mechanical moves a judgment nobody delegated (ruling `safe-auto-restricted-per-seat`). | Default to advisory and human. Use manual only with a concrete remedy named. |
+| "I only half believe this one, so I will leave it out." | On this axis and its neighbour, a filtering threshold drops exactly the finding that is worth adjudicating (ruling `low-confidence-security-adjudicated`). | File it at the anchor the evidence supports. |
 | "I already have three findings, which is what Quick allows." | The cap bounds a shallow pass; it is not permission to stop once the count is met at a depth the change did not earn. | Choose depth from the change first, then work the techniques that depth selects. |

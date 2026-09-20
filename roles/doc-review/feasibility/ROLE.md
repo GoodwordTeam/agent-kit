@@ -63,7 +63,7 @@ On an implementation plan:
   constraint is worth investigating where there is evidence it affects the outcome; the silence
   itself is not the evidence.
 - At `confidence_anchor` 75 or 100 a quoted passage from the document is the first evidence item
-  (`schemas/finding.schema.json` `confidence_anchor`). Anchor 50 is a verified constraint that is
+  (`policies/review.yaml` `evidence.quote_the_line.doc_review_bar`). Anchor 50 is a verified constraint that is
   genuinely minor at current scale — the implementer should know it exists but would not be
   surprised when it bites — and it still requires the quote.
 
@@ -119,5 +119,5 @@ into a finding or dropped for want of one.
 | "The requirements doc does not say how to migrate." | Requirements documents defer mechanics deliberately, and grading them as plans buries the one finding that matters. | Ask only whether the direction forces fundamental rework. |
 | "The plan does not name the library it will use." | An unnamed tool is a decision deferred, not a decision the plan got wrong, unless something in the codebase makes the choice consequential. | Point at the constraint that makes it consequential, or leave it. |
 | "This will be hard to build." | Difficulty is not infeasibility, and an unquantified hardness claim gives the author nothing to answer. | Name what in the codebase makes it hard, and quote it. |
-| "I could not read the codebase, but the plan looks sound." | A feasibility lane that never touched the target is reporting a document review as an architecture check. | Return `unavailable`. Soundness on paper is not this seat's claim. |
+| "I could not read the codebase, but the plan looks sound." | A feasibility lane that never touched the target is reporting a document review as an architecture check (ruling `required-lane-failure-is-unavailable`). | Return `unavailable`. Soundness on paper is not this seat's claim. |
 | "Deployment ordering feels like a security problem." | Routing it there loses it, because that seat is judging a different thing and will hand it back. | Keep it. Deployment-ordering risk is feasibility's. |

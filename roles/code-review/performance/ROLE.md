@@ -40,7 +40,7 @@ through "what happens when this runs ten thousand times, or when this table has 
 - Whether the path is hot or cold. Startup code, migration scripts, administrative tools and
   one-time initialization are cold by default and this seat does not optimize them.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 

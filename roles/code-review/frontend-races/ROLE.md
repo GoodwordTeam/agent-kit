@@ -53,7 +53,7 @@ it.
   interface is the finding; explicit state constants with a transition function is the shape that
   fixes it.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`). Anchor 50 is the band this
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`). Anchor 50 is the band this
   seat lives in most honestly: the race depends on runtime timing that cannot be fully forced
   from the diff, but the code clearly lacks the guardrails that would prevent it. Below 25 is
   frontend superstition and is not filed.

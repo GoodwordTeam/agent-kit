@@ -57,7 +57,7 @@ with it.
   comments, type-only annotations and configuration metadata that does not alter runtime
   behavior are excluded from this category.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 
@@ -118,7 +118,7 @@ clearing the bar for a finding.
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
-| "The author says this path is tested." | The implementer's account is not this seat's context, and a claim that something was tested is not a test result. | Find the test. If you cannot find it in the snapshot, the coverage is not there. |
+| "The author says this path is tested." | The implementer's account is not this seat's context, and a claim that something was tested is not a test result (ruling `closure-requires-independent-verification`). | Find the test. If you cannot find it in the snapshot, the coverage is not there. |
 | "Coverage is at 61%, which is clearly too low." | An aggregate names no branch, so the person receiving it has to redo the whole analysis to act. | Name the uncovered branch that matters and why it matters. Drop the percentage. |
 | "This test might be flaky." | An unattributed flake warning is unactionable and ages into noise that people learn to skip. | Name the dependency — the clock, the shared fixture, the ordering — or do not file it. |
 | "I will just edit the file to see whether the suite catches it." | Mutating the shared checkout corrupts every other seat's snapshot mid-review, and the corruption is invisible to them. | Verify an isolated copy against the reviewed commit first, mutate there, and never in place. |

@@ -56,7 +56,7 @@ is where how is decided, and reopening the first on the second re-litigates a de
   surface this adds, and the risk that users who find the tool too complex or too opinionated
   build their own way around it.
 - At `confidence_anchor` 75 or 100 a quoted passage from the document is the first evidence item
-  (`schemas/finding.schema.json` `confidence_anchor`).
+  (`policies/review.yaml` `evidence.quote_the_line.doc_review_bar`).
 
 **Premise critiques cap at anchor 75 for most concerns**, because "is the motivation valid?"
 cannot be verified against ground truth without business context the document may not supply.

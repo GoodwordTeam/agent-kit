@@ -36,9 +36,10 @@ mentally executing it, tracing values through branches and tracking state across
 ## Evidence it must cite
 
 - The traced path, stated as input, branch, line and wrong result. At `confidence_anchor` 75 or
-  100 the verbatim motivating line with `file:line` is the first evidence item, and without it
-  the finding steps down to 50 rather than being asserted at the higher anchor
-  (`schemas/finding.schema.json` `confidence_anchor`).
+  100 the verbatim motivating line with `file:line` is the first evidence item
+  (`policies/review.yaml` `evidence.quote_the_line.rule`), and without it the finding steps down
+  to 50 rather than being asserted at the higher anchor (`policies/review.yaml`
+  `evidence.quote_the_line.cannot_quote`).
 - The construct that defines a symbol this seat claims is absent or wrongly typed — the class
   body, ORM metadata, decorator, migration or generated shim. A search that returned nothing is
   not evidence that a symbol does not exist.

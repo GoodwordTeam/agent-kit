@@ -51,7 +51,7 @@ before implementation begins.
   the most likely, the highest impact, and the most subtle — one sentence each, with the
   mitigation each needs.
 - At `confidence_anchor` 75 or 100 a quoted passage from the document is the first evidence item
-  (`schemas/finding.schema.json` `confidence_anchor`). Anchor 50 here is the advisory band: a
+  (`policies/review.yaml` `evidence.quote_the_line.doc_review_bar`). Anchor 50 here is the advisory band: a
   verified defence-in-depth or incident-response gap that the committed threat model does not
   require, and it still carries its quote.
 
@@ -103,7 +103,7 @@ three-exploit threat model, plus one lane result of `complete`, `empty` or `unav
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
 | "I listed twelve surface elements, so I have twelve findings." | The inventory is analysis, and returning it as findings buries the two that are actually exploitable. | Report only the elements whose missing consideration is exploitable under this design. |
-| "There might be a timing side channel here." | Speculating about a system that does not exist yet produces noise nobody can refute or fix. | Suppress it. A low anchor is for thin evidence on a real concern, not for an unfalsifiable one. |
+| "There might be a timing side channel here." | Speculating about a system that does not exist yet produces noise nobody can refute or fix. | Suppress it. A low anchor is for thin evidence on a real concern, not for an unfalsifiable one (ruling `low-confidence-security-adjudicated`). |
 | "The code-review security seat files low-confidence findings, so I should too." | That seat has a diff and can be wrong about a real line; this seat would be wrong about a design that has not been written. | Keep the asymmetry. File verified gaps; suppress speculation. |
 | "The plan does not mention encryption, so that is a gap." | Absence alone is not evidence; the question is whether the described design exposes something without deciding who may reach it. | Name the element, the actor and the exposure. Otherwise say nothing. |
 | "This deployment order could leak data during the window." | It is a real concern and it has an owner, and filing it here produces a duplicate that comes straight back. | Route it to `doc-review/feasibility`. |

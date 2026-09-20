@@ -55,7 +55,7 @@ request to today's server — and whether anyone would find out before productio
 - For a new finding: the novelty evidence — what changed, or what regressed, that makes it new
   (ruling `delta-scope-affected-behavior`).
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 

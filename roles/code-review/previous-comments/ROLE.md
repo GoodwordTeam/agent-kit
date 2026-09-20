@@ -54,7 +54,7 @@ institutional memory of the review cycle.
   number moved. Independence from the author is required; ignorance of prior feedback is not
   (ruling `reviewer-continuity-not-amnesia`).
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 
@@ -105,8 +105,8 @@ state of the code, plus one lane result of `complete`, `empty` or `unavailable`
 |---|---|---|
 | "There are no prior comments, but I can see things worth saying." | Fresh observations from this seat arrive attached to an obligation that does not exist, which is how invented continuity enters the record. | Return empty immediately. The other seats are reading the same diff. |
 | "The author said this was fixed in the next commit." | The author's account is not this seat's context, and "fixed later" is the specific claim this lane exists to check. | Read the later revision. Cite what is there now. |
-| "The comment's line number no longer exists, so the thread is stale." | Code moves, and treating a moved line as a resolved comment is amnesia with extra steps. | Follow the subject, not the line. Drop the thread only when the code it referenced is gone. |
+| "The comment's line number no longer exists, so the thread is stale." | Code moves, and treating a moved line as a resolved comment is amnesia with extra steps (ruling `reviewer-continuity-not-amnesia`). | Follow the subject, not the line. Drop the thread only when the code it referenced is gone. |
 | "They fixed the crash the reviewer mentioned, so the thread is done." | A reviewer who named a cause and received a symptom fix got the opposite of what they asked for, and the thread closes over the gap. | Compare what was asked with what landed. Partial is a finding. |
 | "The reviewer prefixed it with 'nit', but they were right." | Optional feedback that becomes mandatory here turns every future aside into a blocking comment. | Leave it. The author was entitled to decline it. |
 | "This prior comment was wrong, so I will say so." | Re-litigating the comment's merits is a different seat's judgment and it converts a tracking lane into a second review. | Record what happened to it. Its validity is not this seat's question. |
-| "I will confirm the fix myself and close the thread." | Reading a patch is not a receipt, and a seat that closes what it checked has merged two roles. | Report the disposition and the evidence. Closure happens elsewhere. |
+| "I will confirm the fix myself and close the thread." | Reading a patch is not a receipt, and a seat that closes what it checked has merged two roles (ruling `closure-requires-independent-verification`). | Report the disposition and the evidence. Closure happens elsewhere. |

@@ -59,7 +59,7 @@ concurrency — the three categories where these bugs are hardest to diagnose on
   such as optimization level, language version or a flag that relaxes strict concurrency,
   embedded framework or linker flag changes, and code-signing or provisioning changes.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 
 ## Never
 

@@ -55,7 +55,7 @@ Three layers, in order, and a finding names which one it belongs to:
   check in `suggested_fix`. Illustrations are illustrations: the project's own data shapes
   decide what the real check is.
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
-  evidence item (`schemas/finding.schema.json` `confidence_anchor`).
+  evidence item (`policies/review.yaml` `evidence.quote_the_line.rule`).
 - For a serious issue in an untouched but affected reader or writer of the changed data: the
   impact path from the migration to it. The delta is bounded by affected behavior, not by changed
   lines, and an unrelated low-priority discovery does not restart it (ruling

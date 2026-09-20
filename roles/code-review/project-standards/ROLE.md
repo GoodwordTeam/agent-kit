@@ -42,8 +42,9 @@ softened:
 - **The rule** — the exact quote or section reference from the criteria file that defines it,
   with the file path.
 - **The violation** — the specific line or lines in the diff that break it, with `file:line`.
-  At `confidence_anchor` 100 both must be present and the violation must be mechanical rather
-  than interpretive (`schemas/finding.schema.json` `confidence_anchor`).
+  At `confidence_anchor` 75 or 100 both are the finding's first evidence items
+  (`policies/review.yaml` `evidence.quote_the_line.rule`). At 100 this seat also requires the
+  violation to be mechanical rather than interpretive.
 - The pairing it applied: which criteria file governs the path it judged. A rule from a criteria
   file that does not govern a path is not a finding against that path.
 - Where the seat was dispatched under a stated discovery uncertainty: the uncertainty itself,
@@ -112,5 +113,5 @@ different claim from `unavailable`. "This project wrote no rules that this chang
 | "The criteria file is vague, so I will apply what it clearly meant." | Interpreting a rule into something enforceable is writing a new rule and attributing it to the project. | Quote what the file says. If the quote does not carry the finding, there is no finding. |
 | "These criteria are poorly written; I will note that too." | The criteria are the instrument, not the subject, and critiquing them spends the seat's authority on something it was not given. | Report the violations you found. Send the critique to whoever owns the criteria file. |
 | "This rule lives in the other criteria file, but the violation is real." | Pairing exists so that no file is graded twice under two regimes; ignoring it makes every rule apply everywhere. | Check which criteria file governs the path. If none does, there is no finding on that path. |
-| "Standards discovery failed, so there is nothing to review — I will return empty." | Empty says the rules were read and nothing broke them. It hides a failure behind a clean result, and the panel approves on it. | Return `unavailable` and name what failed. |
+| "Standards discovery failed, so there is nothing to review — I will return empty." | Empty says the rules were read and nothing broke them. It hides a failure behind a clean result, and the panel approves on it (ruling `required-lane-failure-is-unavailable`). | Return `unavailable` and name what failed. |
 | "Discovery was uncertain but I found no violations, so the result is clean." | A clean result from an uncertain search is a claim about rules you were never sure you had. | Report the findings you have and the uncertainty alongside them, as the result rather than as a caveat. |

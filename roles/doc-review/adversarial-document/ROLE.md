@@ -72,7 +72,7 @@ produce. At any depth, report only what a competent implementer or reader will c
 - **Unconsidered alternatives**, each named concretely with the reason the document's choice was
   or was not better — never a list of options.
 - Every counterargument is traced to the document's own words. An argument the document does not
-  support is this seat's invention (`schemas/finding.schema.json` `confidence_anchor`).
+  support is this seat's invention.
 
 **On calibration.** Most premise concerns cap at `confidence_anchor` 75, because a premise
 challenge resists full verification by its nature: the evidence that would settle it is usually

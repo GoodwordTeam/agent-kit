@@ -61,8 +61,9 @@ Five steps, in order, and the first is not optional:
   items are top priority is one where prioritization is not doing work; and higher-priority items
   that cannot ship without lower-priority ones are not independently deliverable. Each is cited
   against the document's own priority labels.
-- At `confidence_anchor` 100 the finding quotes **both** the goal statement and the mismatched
-  scope item (`schemas/finding.schema.json` `confidence_anchor`).
+- At `confidence_anchor` 75 or 100 the first evidence item is the quoted line or lines that make
+  the claim true, which for this seat is **both** the goal statement and the mismatched scope
+  item (`policies/review.yaml` `evidence.quote_the_line.doc_review_bar`).
 
 **The completeness principle.** Where implementation is assisted, the cost gap between a shortcut
 and a complete solution is far smaller than it used to be. Where the document proposes a partial
