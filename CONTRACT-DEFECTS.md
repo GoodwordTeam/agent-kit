@@ -93,6 +93,13 @@ and with them the `rejected` list and the whole `unsupported`-driven degradation
 skill that declares a guarantee its host cannot enforce, and a skill that declares nothing, produce
 the same bundle.
 
+The one reachable branch is `manual`, which reads as a safe failure without being one. `manual` is
+the falsy arm of the ternary at `src/packaging/plan.ts:218`, reached because `wantsAutonomous` is
+always false; nothing selected it. Written the other way round, the same dead read would have
+shipped every skill claiming an autonomy nothing checks. A dead branch fails safe or unsafe by
+accident, so "it currently fails closed" is a second thing to check here rather than a reassurance
+to record beside the defect.
+
 This is the §10 direction: a rule in the contract that specifies a declaration nothing performs. It
 is invisible from the writing side, because the manifest validates, the build reports zero errors
 and zero warnings, and the declared mode never appears in a diff a writer reads.
