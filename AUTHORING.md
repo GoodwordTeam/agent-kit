@@ -1021,12 +1021,29 @@ says that in one line, because the record is worth little if a reader has to alr
 exists: whether a writer who reports a contract defect gets a contract fix rather than a workaround
 is the one thing this mechanism has to demonstrate, and an empty list demonstrates the opposite.
 
-**An open entry blocks the batch commit until the contract owner rules on it.** Without that clause
-the file degrades into a suggestions box, which is the failure it exists to prevent: the defect that
-prompted this rule was reported correctly and nothing was obliged to read it. Ruling may mean
-amending the contract, or recording that the instruction is right and the writer misread it — both
-close the entry. Neither is the writer's to decide, and a writer that filed one is not waiting on
-its own judgment.
+**An open entry blocks the next dispatch, not the batch commit.** Without a block the file degrades
+into a suggestions box, which is the failure it exists to prevent: the defect that prompted this
+rule was reported correctly and nothing was obliged to read it. Ruling may mean amending the
+contract, or recording that the instruction is right and the writer misread it — both close the
+entry. Neither is the writer's to decide, and a writer that filed one is not waiting on its own
+judgment.
+
+The clause blocked the batch commit until `05a431d`, which landed 45 files with an entry open at
+`05a431d^`, and nothing noticed. It lost three ways. It obliged no one to read, because a writer
+unable to commit is not a reader. It held the batch's work in a working tree, which is the state the
+filing rule above spends its length arguing against — the same harm one level over. And it contested
+`commit early`, the run's resume model and an explicit line in a batch brief, which is the collision
+this section already describes: a writer holding both follows the more specific, and a clause that
+loses that contest every time is not a rule. Dispatch is where the cost lands, and this section had
+said so before the clause was written — the stale reference-pack entry above cost nothing *only
+because that batch had not been dispatched*.
+
+**Dispatch is not the brief.** Batch 4's brief was written at `76e57ba`, before batch 3 handed back
+and saying so; the dispatch was `76099ab`, nineteen minutes later. The block attaches to the act
+that starts a downstream writer, not to preparing that writer's instructions, or it either forbids
+writing a brief in advance or is discharged by one that predates the entry. The reconciled rule is
+the one that held: `57ea582` ruled eighty-eight seconds before `76099ab` dispatched, with nobody
+aware the written clause said something else.
 
 **The retirement rule has no detector, and it has already failed.** The commit that resolved the
 reference-pack entry wrote §12.5, which answered it, and left the entry standing; the entry then
