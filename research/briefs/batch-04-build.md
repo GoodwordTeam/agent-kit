@@ -137,5 +137,33 @@ each body cites and which it deliberately does not, and anything you could not r
 
 ## What batch 3 learned
 
-Empty until batch 3 commits. If it is still empty when you begin, that is a fact to report, not a
-gap to fill.
+Batch 3 landed at `05a431d`. Four things it paid for, so you do not pay for them again.
+
+**Do not write a relative reference twice on one line.** The form that does this by construction is
+a markdown link whose display text is the same path, backticked. `ak build` relocates shared
+dependencies and rewrites the referring body, and its extractor deduplicates per `(line, path)` --
+so it sees one of the two spellings, rewrites that one, and leaves the other pointing at the
+pre-move path. The two spellings are identical before the move, which is what hides it. Afterwards
+the bundle check re-reads the file the packager itself wrote, finds the stale spelling, and raises
+`links.broken-bundle` against *your* source line with remedy text that is wrong in both halves.
+Batch 3 had four such lines and they produced eight errors across two hosts the moment its entries
+went to `status: authored`. Diagnosed at `1afe016`, owned by the packaging lane, **still unrepaired
+as of this brief** -- so write one spelling per line and the defect cannot reach you.
+
+**Your eval files are scanned now; they were not when batch 3 wrote its own.** `evals/` was in
+neither `SCAN_DIRS` nor the exempt list, so `ak validate` could not see a model name in an
+`execution.prompt` at all -- batch 3's writer found this, filed it, and had to scan its own 27 files
+by hand. Ruled and repaired at `57ea582`. The consequence for you is only this: `execution.prompt`
+is free prose but it is not unscanned prose, and a routing phrase there now fails the build like
+anywhere else.
+
+**§12's length rule bit every body, and none of them was wrong to go over.** Batch 3's four bodies
+came in at 168, 175, 168 and 188 lines against a 150-line target and a 300-line cap. Four out of
+four is not four accidents. Read the target as the point where you owe a reason, not as a number to
+hit -- and put the reason in the handback rather than cutting a hard gate to get under it.
+
+**Filing a contract defect worked, and it worked because it was filed where §10 says.** The entry
+went to `CONTRACT-DEFECTS.md` at the root, in its own commit, and was ruled on the same day. Batch
+1's counter-example is in §10: the same class of correct diagnosis, filed inside a commissioned
+artifact, sat asserting something untrue about the contract until a reviewer stumbled on it. If
+this contract tells you to do something that produces a wrong result, that is the destination.
