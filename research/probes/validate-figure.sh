@@ -25,9 +25,16 @@
 #       warning, so the sum is conserved. This is a lane mid-batch.
 #
 #   warnings up, notes unchanged
-#       **At least three causes, and the summary line names none of them.** Read
-#       the check name before reading anything into the delta: diff the WARNING
-#       rows between the two revisions, never the totals.
+#       At least three causes. The summary line names none of them, but it does
+#       narrow them, and this is the one term of it worth reading. Notes
+#       unchanged rules out every body that landed under an entry still at
+#       `status: contract`, because that pairing is exact: six bodies measured
+#       against a clean HEAD extract gave six `catalog.status-behind-body`
+#       warnings and moved notes 49 -> 43, no slack either way. So a
+#       notes-unchanged figure says that count was zero, and only the causes
+#       below remain. Still read the check name before reading anything into
+#       the delta: diff the WARNING rows between the two revisions, never the
+#       totals.
 #
 #       `rulings.doctrine-unreachable` -- markdown the reachability walker can
 #       see but no catalog entry claims, one per file. Usually someone's working
@@ -39,6 +46,15 @@
 #       is the only thing that distinguishes them. Files under `research/` move
 #       this count by zero: the walker only ever enumerates catalog sections and
 #       the root, at any depth.
+#
+#       `budget.skill-over-target` -- a skill body over the 150-line target, one
+#       warning per file, and `budget.body-over-target` for protocols and roles.
+#       It sits in this signature only when the catalog entry already says
+#       `authored`. Under an entry still at `contract` the same body also emits
+#       `status-behind-body` and converts a note, which puts the figure in the
+#       signature above instead. `completeness.ts:113` and `:163` are where that
+#       turns. At HEAD, `protocols/review-delta/PROTOCOL.md` is over target with
+#       nothing paired to it: a tracked body whose status caught up.
 #
 #       `rulings.uncited-restatement` -- and this cause does not require that
 #       anything the warning points at changed. The check scores a window
