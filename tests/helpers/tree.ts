@@ -16,6 +16,78 @@ export function makeTree(files: Record<string, string>): string {
 }
 
 /**
+ * A `SKILL.md` that satisfies AUTHORING.md §3, for trees whose subject is
+ * something else.
+ *
+ * Scaffolding, not a fixture under test: these are the bodies in trees asserted
+ * to validate clean, so every one of them has to carry the ten headings in order
+ * and §3.1's table under `## Hard gates` for the tree to be clean for the reason
+ * the test means.
+ *
+ * The headings are spelled out here rather than built from `SKILL_SECTIONS`. A
+ * body generated from the constant the check reads is clean under any value of
+ * that constant, including a wrong one, so deriving it would make every tree
+ * below agree with the implementation instead of with §3.
+ */
+export function wellFormedSkill(name: string, description: string, preamble: string): string {
+  return `---
+name: ${name}
+description: ${description}
+---
+
+# ${name}
+
+${preamble}
+
+## When to use
+
+When a human asks for the ${name} workflow on a ticket that already exists.
+
+## Not for
+
+Not for a request that names no ticket. Not for a second run against a ticket that already carries
+a receipt. Not for a request to edit a file.
+
+## Authority
+
+Authority: \`explicit\`. A human starts it.
+
+## Inputs
+
+The ticket the request names. Absent: stop and report \`needs-input\`.
+
+## Workflow
+
+1. Read the named ticket and record its id.
+2. Produce the receipt and return it.
+
+## Hard gates
+
+Gate: no ticket, no run.
+
+| The thought | Why it is wrong | Do this instead |
+|---|---|---|
+| "The ticket is obviously the one just discussed." | A ticket named in conversation is not a ticket that exists. | Stop and report \`needs-input\`. |
+
+## Outputs
+
+One receipt, published through the knowledgebase adapter.
+
+## Side effects
+
+\`artifact-write\`.
+
+## Stop conditions
+
+Stop when the workflow has produced its receipt.
+
+## Limits
+
+Runs per ticket: 1 (gate).
+`;
+}
+
+/**
  * The denied strings used by the invalid fixtures.
  *
  * Committed fixture files carry the markers `__DENY_MODEL_TERM__` and

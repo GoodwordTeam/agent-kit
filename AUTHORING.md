@@ -1146,10 +1146,12 @@ one. Run the argument with the polarity reversed and it reaches §11's *Decided 
 above*: a hand-maintained list of positive claims about what `ak validate` performs, kept in prose,
 beside the enforcement rather than derived from it, updated by whoever remembers. It has already
 produced the failure that shape produces. Four ids sat in it — the ten required sections, their
-order, insertions between them, the anti-rationalization table — and nothing under `src/` performs
-any of them for a skill body: `src/validation/bodies.ts:1135` seats the check that emits them over
-`protocols` and `roles`, and `SKILL_SECTIONS` occurs nowhere in the tree. They sit in the other half
-now. The list that put them in the wrong half is still hand-maintained.
+order, insertions between them, the anti-rationalization table — and for a skill body nothing under
+`src/` performed any of them: `checkBodyShapes` seated the check that emits them over `protocols`
+and `roles` only, and `SKILL_SECTIONS` occurred nowhere in the tree. They moved to the other half,
+the seating landed, and they moved back. That round trip is the shape working as designed and it
+left the shape unchanged: the list that put them in the wrong half is still hand-maintained, and the
+next claim to go stale in it will go stale the same way.
 
 **The gate is coverage, not existence, and the existence version reads green on exactly the claims
 that are wrong.** Those four ids are all emitted under `src/` — three of them fire for role bodies
@@ -1394,6 +1396,10 @@ need it.
 
 **Decided by the commands above.** Read these when one of them reports, not before.
 
+- The ten required sections are present, in order, with nothing inserted between them, and
+  `## Hard gates` carries an anti-rationalization table — `body.missing-section`,
+  `body.sections-out-of-order`, `body.section-inserted`,
+  `body.missing-anti-rationalization-table`.
 - `SKILL.md` ≤150 lines, hard cap 300 — `budget.skill-over-target` warns, `budget.skill-over-cap`
   fails.
 - Frontmatter carries spec keys only and `name` equals the directory — `frontmatter.unknown-key`,
@@ -1410,22 +1416,6 @@ unreachable by any instrument there could be. Where an entry is instead waiting 
 the condition that retires it, and an entry here naming none is claiming there is nothing to wait
 for.
 
-- **The ten required sections are present, in order, with nothing inserted between them, and
-  `## Hard gates` carries an anti-rationalization table.** This sat in the half above until it was
-  checked. `body.missing-section`, `body.sections-out-of-order`, `body.section-inserted` and
-  `body.missing-anti-rationalization-table` are real rules that really fail, but `checkBodyShapes`
-  (`src/validation/bodies.ts:1116`) seats them over `protocols` and `roles`, and `SKILL_SECTIONS`
-  occurs nowhere in the tree. No skill body is read for its headings, so a clean run says nothing
-  about them. **The condition that retires this entry is `checkBodyShapes` seating `skills`**, and
-  it moves back into the half above in that same commit rather than in a later tidy-up, for §10's
-  reason: an entry that outlives the gap it records is the same artifact as a stale disclosure,
-  whichever direction it is stale in. Whoever lands that seating is reading four rules, not a set.
-  `body.missing-section` and `body.sections-out-of-order` come from `checkSections` and already
-  reach both kinds; `body.missing-anti-rationalization-table` has two sites, `:726` under
-  `## Hard gates` and `:742` under `## Rationalizations this seat makes`; `body.section-inserted`
-  has one, gated on `noInsertions`, true for protocols and false for roles. That last is the one a
-  seating can drop while every other check in the group reports as expected. §10 states the gate
-  that would have caught this entry sitting in the wrong half.
 - **The table's rows come from recorded failures.** The gate sees that a table exists. Whether its
   rows were invented to fill it is §3.1's question, and no tool can reach it.
 - **Every artifact in `## Outputs` names a schema and a KB operation, not a repository path.** The

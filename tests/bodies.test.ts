@@ -11,6 +11,7 @@ import {
   PROTOCOL_SECTIONS,
   ROLE_FORBIDDEN_SECTIONS,
   ROLE_SECTIONS,
+  SKILL_SECTIONS,
   STANDARDS_GATE_TIER,
   STANDARDS_GROUNDING_ROW,
   COUNTERPART_TABLE_HEADER,
@@ -143,6 +144,136 @@ describe("protocol body shape (AUTHORING 12.1)", () => {
     );
     expect(issue?.file).toBe("protocols/alpha/protocol.yaml");
     expect(issue?.message).toContain("no execution contract of its own");
+  });
+});
+
+/**
+ * §3's ten headings, seated the way §12.1 seats a protocol's.
+ *
+ * Every authored body in the tree already satisfies this, so a green run over
+ * the repository is not evidence the check exists -- that silence is what §10's
+ * batch-4 entry reported, and it read identically before and after. These tests
+ * are the evidence instead: each one removes the thing under test from a fixture
+ * and asserts the rule fires, and the two paired controls below assert that
+ * seating skills did not reach across into the other two shapes.
+ */
+const SKILL_FRONTMATTER = ["---", "name: alpha", "description: Does the one thing.", "license: MIT", "---", ""].join("\n");
+
+const skillBody = (sections: ReadonlyArray<string> = SKILL_SECTIONS): string => `${SKILL_FRONTMATTER}${body("Alpha", sections)}`;
+
+function skillTree(extra: Record<string, string> = {}, sections?: ReadonlyArray<string>) {
+  return ctxFor({
+    "catalog.yaml": `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\n`,
+    "skills/alpha/SKILL.md": skillBody(sections),
+    ...extra,
+  });
+}
+
+describe("skill body shape (AUTHORING 3)", () => {
+  test("a skill carrying the ten sections and its spec frontmatter passes", () => {
+    expect(errors(checkBodyShapes(skillTree()))).toEqual([]);
+  });
+
+  test("the ten headings are §3's, with ## Authority and not the protocol substitution", () => {
+    // Reading the list off the contract rather than off `PROTOCOL_SECTIONS`:
+    // §12.1 derives the protocol set *from* this one by replacing a single
+    // heading, so a seating that reused the protocol list would pass every
+    // other test in this block and demand `## Invoked by` from a skill.
+    expect(SKILL_SECTIONS).toContain("## Authority");
+    expect(SKILL_SECTIONS).not.toContain("## Invoked by");
+    expect(SKILL_SECTIONS).toHaveLength(10);
+    const issues = errors(checkBodyShapes(skillTree({}, PROTOCOL_SECTIONS)));
+    expect(issues.find((i) => i.rule === "body.missing-section")?.message).toContain("## Authority");
+  });
+
+  test("a skill missing ## Stop conditions is an error naming the heading and the file", () => {
+    const ctx = skillTree({}, SKILL_SECTIONS.filter((h) => h !== "## Stop conditions"));
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
+    expect(issue?.file).toBe("skills/alpha/SKILL.md");
+    expect(issue?.message).toContain("## Stop conditions");
+  });
+
+  test("the ten sections must appear in §3's order", () => {
+    const swapped = [...SKILL_SECTIONS];
+    const a = swapped[2] as string;
+    swapped[2] = swapped[3] as string;
+    swapped[3] = a;
+    const issue = errors(checkBodyShapes(skillTree({}, swapped))).find((i) => i.rule === "body.sections-out-of-order");
+    expect(issue?.message).toContain("## Authority");
+  });
+
+  test("an extra section between two required ones is an error; after ## Limits it is allowed", () => {
+    const inserted = [...SKILL_SECTIONS.slice(0, 6), "## Notes", ...SKILL_SECTIONS.slice(6)];
+    const issue = errors(checkBodyShapes(skillTree({}, inserted))).find((i) => i.rule === "body.section-inserted");
+    expect(issue?.message).toContain("## Notes");
+    expect(errors(checkBodyShapes(skillTree({}, [...SKILL_SECTIONS, "## Notes"])))).toEqual([]);
+  });
+
+  test("a skill whose ## Hard gates carries no anti-rationalization table is an error", () => {
+    const withoutTable = skillBody().replace(TABLE, "Prose instead of the table.\n");
+    const ctx = skillTree({ "skills/alpha/SKILL.md": withoutTable });
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-anti-rationalization-table");
+    expect(issue?.file).toBe("skills/alpha/SKILL.md");
+    expect(issue?.message).toContain("## Hard gates");
+  });
+
+  test("frontmatter on a skill is required, not forbidden -- and a protocol's still is", () => {
+    // The paired control. `body.frontmatter-forbidden` says "neither a protocol
+    // nor a role carries frontmatter", and a skill carries the Agent Skills spec
+    // keys by §4. Exempting skills must not switch the rule off, so both bodies
+    // are in one tree and the assertion is about which one it names.
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\nprotocols:\n  - id: alpha\n    status: authored\n`,
+      "skills/alpha/SKILL.md": skillBody(),
+      "protocols/alpha/PROTOCOL.md": `---\nname: alpha\n---\n${protocolBody()}`,
+    });
+    const named = errors(checkBodyShapes(ctx))
+      .filter((i) => i.rule === "body.frontmatter-forbidden")
+      .map((i) => i.file);
+    expect(named).toEqual(["protocols/alpha/PROTOCOL.md"]);
+  });
+
+  test("the sections behind the frontmatter are the ones checked", () => {
+    // Without this the exemption above could be read as "skip the frontmatter",
+    // and a body whose headings live after a `---` block would go unsplit.
+    const ctx = skillTree({}, SKILL_SECTIONS.filter((h) => h !== "## When to use"));
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
+    expect(issue?.message).toContain("## When to use");
+  });
+
+  test("a skill.yaml sidecar is legitimate; protocol.yaml beside a protocol is not", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\nprotocols:\n  - id: alpha\n    status: authored\n`,
+      "skills/alpha/SKILL.md": skillBody(),
+      "skills/alpha/skill.yaml": "id: alpha\n",
+      "protocols/alpha/PROTOCOL.md": protocolBody(),
+      "protocols/alpha/protocol.yaml": "id: alpha\n",
+    });
+    const named = errors(checkBodyShapes(ctx))
+      .filter((i) => i.rule === "body.sidecar-forbidden")
+      .map((i) => i.file);
+    expect(named).toEqual(["protocols/alpha/protocol.yaml"]);
+  });
+
+  test("a skill is not counted into §12.2's role-row population", () => {
+    // `population.bodies` drives the row gate's census and its blocking skip.
+    // Counting skills there would make a skill-only tree with no AUTHORING.md
+    // report that role rows went unread -- a blocking `unavailable` over a
+    // population of zero seats.
+    const skillsOnly = checkBodyShapes(skillTree());
+    expect(skillsOnly.filter((i) => i.rule.startsWith("role.mandated-row"))).toEqual([]);
+    expect(skillsOnly.some((i) => i.blocking === true)).toBe(false);
+
+    const withSeat = checkBodyShapes(
+      ctxFor({
+        "catalog.yaml": `${CATALOG_HEAD}skills:\n  - id: alpha\n    status: authored\nroles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+        "AUTHORING.md": CONTRACT,
+        "skills/alpha/SKILL.md": skillBody(),
+        "roles/seat/ROLE.md": roleBody(),
+      }),
+    );
+    const census = withSeat.find((i) => i.rule === "role.mandated-row-population");
+    expect(census?.message).toContain("across 1 role body");
   });
 });
 

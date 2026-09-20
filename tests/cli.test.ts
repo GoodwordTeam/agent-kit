@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
 import { ADAPTATIONS_FILE, ADAPTATIONS_FRAGMENT_DIR } from "../src/validation/provenance.ts";
-import { makeTree, DENY_MARKER, sampleModelTerm } from "./helpers/tree.ts";
+import { makeTree, wellFormedSkill, DENY_MARKER, sampleModelTerm } from "./helpers/tree.ts";
 
 const CATALOG = `schema_version: 1
 package:
@@ -29,15 +29,7 @@ profiles:
     default: true
 `;
 
-const SKILL = `---
-name: triage
-description: Sort incoming work into the smallest next action.
----
-
-# triage
-
-Read the queue and pick one item.
-`;
+const SKILL = wellFormedSkill("triage", "Sort incoming work into the smallest next action.", "Read the queue and pick one item.");
 
 function capture() {
   const out: string[] = [];

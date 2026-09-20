@@ -21,6 +21,20 @@ import { parseFrontmatter } from "../util/frontmatter.ts";
 import type { CheckContext } from "./context.ts";
 import { error, note, unavailable, type Issue } from "./types.ts";
 
+/** §3's ten headings, in §3's order. The set the other two are described against. */
+export const SKILL_SECTIONS: ReadonlyArray<string> = [
+  "## When to use",
+  "## Not for",
+  "## Authority",
+  "## Inputs",
+  "## Workflow",
+  "## Hard gates",
+  "## Outputs",
+  "## Side effects",
+  "## Stop conditions",
+  "## Limits",
+];
+
 /** §3's ten headings with `## Authority` replaced by `## Invoked by` (§12.1). */
 export const PROTOCOL_SECTIONS: ReadonlyArray<string> = [
   "## When to use",
@@ -46,6 +60,23 @@ export const ROLE_SECTIONS: ReadonlyArray<string> = [
   "## When it has nothing to say",
   "## Rationalizations this seat makes",
 ];
+
+/**
+ * Empty, and deliberately so: §3 and §7 forbid a skill body no heading by name.
+ *
+ * §3 fixes the ten and says extra `##` sections may follow `## Limits`, which
+ * the insertion law already enforces -- a heading the contract does not have is
+ * either trailing and allowed or inserted and reported, and neither outcome
+ * needs a named entry. §7's prohibitions are all on content and behavior
+ * (routing terms, placeholders, a second lifecycle entrypoint, repo-local
+ * project docs), not on what a section may be called.
+ *
+ * The other two maps are populated because §12.1 and §12.2 each *reject a named
+ * heading with a reason* -- `## Authority` from a protocol, six from a role.
+ * §3 has no such sentence. An entry here invented for symmetry would be this
+ * file legislating, which is the §10 failure the seating exists to close.
+ */
+export const SKILL_FORBIDDEN: Readonly<Record<string, string>> = {};
 
 /** Each rejection carries §12's reason, because the heading is a symptom of the wrong model. */
 export const PROTOCOL_FORBIDDEN: Readonly<Record<string, string>> = {
@@ -705,7 +736,11 @@ function checkOneBody(
   if (text === null) return issues; // completeness owns "this body does not exist".
 
   const front = parseFrontmatter(text);
-  if (front.present) {
+  // A skill is the one shape that must carry frontmatter: §4 gives a `SKILL.md`
+  // the Agent Skills spec keys, and the host loader reads them. Its absence is
+  // `frontmatter.missing`, owned by the frontmatter check; only the other two
+  // shapes are wrong for having it at all.
+  if (front.present && section !== "skills") {
     issues.push(
       error(
         "body.frontmatter-forbidden",
@@ -717,8 +752,15 @@ function checkOneBody(
   }
 
   const sections = splitSections(front.present ? front.body : text);
-  if (section === "protocols") {
-    issues.push(...checkSections(file, sections, PROTOCOL_SECTIONS, PROTOCOL_FORBIDDEN, true));
+  // §3's law and §12.1's inherit it: ten headings in order, extras only after the
+  // last one, and §3.1's table under `## Hard gates`. The two differ by their
+  // section list and by what each rejects by name, which is what §12.1 describes
+  // itself as -- §3's set with one heading substituted.
+  if (section === "skills" || section === "protocols") {
+    const skill = section === "skills";
+    issues.push(
+      ...checkSections(file, sections, skill ? SKILL_SECTIONS : PROTOCOL_SECTIONS, skill ? SKILL_FORBIDDEN : PROTOCOL_FORBIDDEN, true),
+    );
     const gates = sections.find((s) => s.heading === "## Hard gates");
     if (gates !== undefined && !hasAntiRationalizationTable(gates.text)) {
       issues.push(
@@ -1132,7 +1174,10 @@ export function checkBodyShapes(ctx: CheckContext): Issue[] {
   const mandated = mandatedRows(ctx.root);
   const population: RowPopulation = { bodies: 0, universal: 0, plain: 0, converse: 0, standards: 0 };
 
-  for (const section of ["protocols", "roles"] as const) {
+  // Skills join the loop, and `checkOneBody` returns before `population.bodies`
+  // for them: that counter is §12.2's role-row census and a skill carries no
+  // `## Never` row to compare. Counting them would report seats this never read.
+  for (const section of ["skills", "protocols", "roles"] as const) {
     for (const entry of ctx.catalog.bySection(section)) {
       issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats, families, mandated, population));
     }

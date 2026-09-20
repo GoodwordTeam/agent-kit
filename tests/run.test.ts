@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { CHECKS, runValidation } from "../src/validation/run.ts";
-import { makeTree, DENY_MARKER, sampleModelTerm } from "./helpers/tree.ts";
+import { makeTree, wellFormedSkill, DENY_MARKER, sampleModelTerm } from "./helpers/tree.ts";
 
 const CATALOG = `schema_version: 1
 package:
@@ -21,15 +21,7 @@ profiles:
     default: true
 `;
 
-const SKILL = `---
-name: triage
-description: Sort incoming work into the smallest next action.
----
-
-# triage
-
-Read the queue and pick one item.
-`;
+const SKILL = wellFormedSkill("triage", "Sort incoming work into the smallest next action.", "Read the queue and pick one item.");
 
 describe("the validation run", () => {
   test("every check is named and runs in a fixed order", () => {
