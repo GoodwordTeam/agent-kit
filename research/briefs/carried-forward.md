@@ -138,12 +138,12 @@ Recorded because a commission that lives only in a message has exactly the defec
 to fix: an issued one and a completed one are indistinguishable to anyone reading the repo. Each
 entry is deleted when its lane reports and the result lands.
 
-**The §8 sweep — `sweep-reviewer`, four findings landed, three members still owed.** Findings 1–4
-are with `authoring` to edit: §12.2 says "verbatim" twice while the gate enforces a two-substring
-floor (the converse of §9's direction, and the dangerous one); §12.2 calls the active `BUDGETED` gate
-hypothetical seventy lines after stating it correctly; §11 hand-checks six items the two commands
-above it already gate; §1 owns the length rule and names no symbol while §12.2, which borrows it,
-does. **§10's register half, §12.1 and §12.5 are declared-not-cleared** — the sweep is not discharged
+**The §8 sweep — `sweep-reviewer`, four findings edited and landed, three members still owed.**
+Findings 1–4 are discharged and verified at `82b663f`: §12.2's doubled "verbatim" and the live
+`BUDGETED` gate described as hypothetical, both at `2e3b091` — "hypothetical" now occurs zero times
+in the file; §11's six hand-checks at `1b28463`; and §1, which owned the length rule while naming no
+symbol, now names `budget.skill-over-target` and `budget.skill-over-cap` at its first statement of
+it. **§10's register half, §12.1 and §12.5 are declared-not-cleared** — the sweep is not discharged
 until they are reached, and reporting them unaudited rather than implying a clean population is the
 reason the rest of the result can be trusted.
 
@@ -182,27 +182,26 @@ against the parser does by construction. Two exits: produce a real instance (bet
 genuinely wants the form) or drop support so it fails loudly instead of misparsing. **A third
 synthetic fixture is not an exit** — it adds no information about whether the parser is right.
 
-**Writing the durable-record ruling into §10 and §12.2 — `authoring`.** Ruled: three destinations,
-not one, because §10's defect was routing every durable obligation to a single sink, so one bad
-choice lost all of them at once. Candidate-pair examinations go to `provenance/conversation-map.yaml`
-(already working — batch 2 recorded both boundary rows there); an unnamed donor file goes to the
-provenance fragment; the prior-findings packet goes to `research/reviews/`, whose consumer is a
-replacement reviewer holding nothing but a clean checkout. **The test goes in above the three, not
-under them** — three paths without the rule that produced them is a list someone extends by
-resemblance. The test is `authoring`'s own: a record that discharges an obligation must be
-distinguishable from the obligation never having been discharged. The decisive fact is that
-`reviewer-continuity-not-amnesia` uses the word *durable* itself, so the contract routed to a
-gitignored path a record its own ruling calls durable.
+**§12's "returns nothing" contradicts the ruling it routes into — `authoring`, reported at
+`82b663f`.** The `## What it must be given` passage says a seat whose input no longer binds "returns
+nothing rather than judging a stale artifact". `required-lane-failure-is-unavailable` says a lane
+that could not be given its required context returns `unavailable`, which "is a result, not an
+absence" and "is never downgraded to an empty result" — and §12's own table defines the heading that
+sentence routes into as the conditions under which *empty* is the correct answer. Measured across
+all 29 tracked role bodies: 26 return `unavailable` in that section, **0** say "returns nothing",
+and the three core roles each carry their own blocking vocabulary, `supervisor/ROLE.md:84` using
+§12's identical phrase "no longer binds" and returning no choice. The bodies are right without the
+contract's help; the contract governs whoever writes the thirtieth.
 
-**The §6/§8 split and two §12.2 repairs — `authoring`.** The wrong-authority rule goes in §6 (it
-constrains the artifact); the method for finding instances goes in §8 (it constrains the reader).
-§12.2's placement clause states a position — "inline in the Why it is wrong column" — where it means
-a relation, and batch 2 hit a row where obeying the letter would have credited a ruling with a
-suppression rule it does not state; same class as §10's "last sentence", repaired at `21607c5`.
-§12.2 also states some mandated rows as verbatim blocks and others as prose quotations without
-saying which mandate governs which, which is why batch 2 had to ask about row 4's punctuation.
-Plus, for §6: cite where a row **bounds or excepts** a ruling, leave bare where it merely applies one
-the body already cites.
+Nothing in the repo could have found it. `UNIVERSAL_NEVER_ROWS` row 2 is
+`["lane that could not run", "unavailable"]`, so the violated clause is one of the three the gate
+does not check — the same three `authoring`'s own disclosure paragraph names, about fifty lines
+below the violation. One omission on two surfaces, which is why neither corrects the other.
+**The cheap fix is the one that hides it:** adding the ruling id to that sentence yields a sentence
+citing the rule it breaks, after which every citation check in the repo passes.
+`rulings.uncited-restatement` warns that a claim *narrower* than its ruling is the defect rather
+than the citation — a claim that contradicts its ruling is a second case, and the message names
+only the first.
 
 **Pin `typescript` in `devDependencies` — `cli`, now, not at batch 6.** `bunx` resolves from the
 network, so every "tsc clean" anyone has reported is a claim about whatever `bunx` fetched that
@@ -248,6 +247,23 @@ The *implementation* plan is a third document, is not in this tree, and `plan §
 narrowed row survived in 29 bodies from `ed81a69` through a writer, two reviewers and every
 instrument in `src/`. If that gate is not in the tree when a later batch authors a role body, the
 same failure is available again.
+
+**A validator figure taken from the working tree is a timestamp, not a measurement.** Five lanes
+write to one tree; eleven commits landed in one afternoon inside stretches of two or three minutes.
+Every figure disagreement between lanes so far — three in one day — was a faithful count of a
+different tree. Quote figures from a revision: `research/probes/validate-figure.sh <sha>` prints the
+sha, says whether `.donors/` was copied and deps installed, and prints the command to re-derive it.
+
+Two corollaries the script now carries, both measured rather than reasoned. **A warning can appear
+and vanish with nothing done to the text it names** — `rulings.uncited-restatement` scores windows
+against term weights derived from the whole tree, so prose added anywhere moves every score; one row
+appeared at `7f159d8` and was gone by `daef077` with the window byte-identical at all three
+revisions and its ruling byte-identical too. So neither "it passed when I wrote it" nor "it stopped
+warning" is a claim about that passage. **And the locator is the window's first line, with the claim
+running forward from it** — reading it as a midpoint pulls earlier sentences into the window, and if
+one of them concerns the named ruling the row reads as corroboration from a second instrument. That
+nearly happened at `82b663f`, and a manufactured convergence is worse than none, because
+corroboration is what stops the next person checking.
 
 **`git log --author` cannot distinguish the lanes.** Every commit carries one identity. Authorship
 lives in the commit message and the paths touched, both writer-controlled and neither checked; git
