@@ -368,21 +368,24 @@ overrules a reader who already is. So count the enforcing copies before the desc
 treat a repair that stopped at the prose as unfinished rather than as partial credit.
 
 **That list was four items long and was read as complete, which it is not.** At `76e57ba` nine
-tracked files carry the digits, and `src/validation/provenance.ts` derives them twice more — once to
-bound `G:L` ranges, once to hold the register against the file. Two of the nine are wrong,
-`research/dossiers/protocols.md` and `research/dossiers/review-personas.md`, both still saying 2264,
-and they are absent from the list for the reason they are still wrong: it was assembled from the
-copies someone had repaired. Such a list is consistent by construction, every item on it correct, so
-re-reading it finds nothing. The two derivations are absent for a different reason — a search for
-the digits cannot find a copy that computes them. A figure is published where it is written and
-where it is derived, and only the first kind greps.
+tracked files carry the digits, and three further places derive them and carry none:
+`src/validation/provenance.ts` twice, to bound `G:L` ranges and to hold the register against the
+file, and `src/validation/budget.ts`, which decides whether a body is over its 150-line target. Two
+of the nine are wrong, `research/dossiers/protocols.md` and `research/dossiers/review-personas.md`,
+both still saying 2264, and they are absent from the list for the reason they are still wrong: it
+was assembled from the copies someone had repaired. Such a list is consistent by construction, every
+item on it correct, so re-reading it finds nothing. The three derivations are absent for a different
+reason — a search for the digits cannot find a copy that computes them. A figure is published where
+it is written and where it is derived, and only the first kind greps.
 
 Nor is that count safe to quote. *Published* was never defined, and the nine include a test fixture,
-this contract's own narration of the defect, and a brief recording the repair. The first attempt at
-this correction undercounted again and in the same direction, saying *two research documents* after
-looking at the two that were wrong (`30cb3ed`). Which surfaces carry a figure is a question for a
-search over a named revision against a population someone has written down; memory returns the
-copies its owner repaired.
+this contract's own narration of the defect, and a brief recording the repair. This paragraph has
+now undercounted twice: *two research documents* at `30cb3ed`, after looking at the two that were
+wrong, and *two derivations* at `baca1d3`, after verifying the two it had been handed without
+searching for a third. What finally produced a complete answer was neither — it was classifying
+every `split("\n")` in `src/`, twenty-one of them at `3c652d9`, by whether it derives a published
+count or walks a file. A population you can enumerate and sort is checkable. A pattern you can think
+of is a sample of what you expected to find.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
