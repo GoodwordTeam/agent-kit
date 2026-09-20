@@ -1629,6 +1629,21 @@ at any depth and a new subdirectory there — `research/reviews/`, for instance 
 exclusion without anything having been decided about it. Depth is not where the question gets asked.
 The directory is.
 
+**The two edits are not equally risky, and the dangerous one is the edit that adds reach.** A new
+directory left outside the lists is silently invisible: nothing walks it, so nothing complains, and
+the omission keeps indefinitely until someone asks. A new name in `DIRECTORY_SECTIONS` is the
+opposite. It is the only edit that puts a tree inside the walk, so it confers doctrinal standing on
+every file underneath at the moment it lands, over files written by people who were never asked the
+question. Adding a name to that list is the change that has to answer the criterion above first;
+leaving a directory out of it is the change that can wait to be noticed.
+
+Root markdown is the walk's other non-catalog surface, and it is why `README.md` and
+`CONTRACT-DEFECTS.md` stand as warnings rather than passing quietly: a file at the root is reached
+by the walker and has no catalog entry to be reached through. Leaving such a file unbound is
+allowed. What it costs is stated by the rule itself — the file is excluded from every citation count
+rather than passing them, which is §10's distinction between a discharged obligation and an
+undischarged one, arrived at from the other side.
+
 A loose doctrine file carries shared doctrine that several protocols cite. It has no required section
 list, no frontmatter and no sidecar. It is prose, and §8 governs it.
 
