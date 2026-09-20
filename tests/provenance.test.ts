@@ -754,3 +754,81 @@ ${entry}
     expect(issues[0]?.skipped).toBe("local source anchors");
   });
 });
+
+describe("a scenario number that names nothing still reads as coverage", () => {
+  const PLAN_10 = `# Plan
+
+## 10. Evaluation and release gates
+
+1. First scenario.
+2. Second scenario.
+3. Third scenario.
+
+## 11. Next section
+
+1. Not a scenario; this list belongs to another section.
+`;
+
+  function scenarioIssues(prose: string, plan: string = PLAN_10) {
+    const ctx = ctxFor({
+      "research/sources/engineering-skills-repo-plan.md": plan,
+      "provenance/conversation-map.yaml": `schema_version: 1
+capabilities:
+  - id: some-capability
+    disposition: retained
+    destination: skills/adapted
+    origin: conversation
+    locator: G:L1-2
+    acceptance_test: ${prose}
+`,
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    });
+    return checkProvenance(ctx).filter(
+      (i) => i.rule === "provenance.unknown-scenario" || i.rule === "provenance.plan-scenarios-unavailable",
+    );
+  }
+
+  test("a scenario inside the plan's list passes", () => {
+    expect(scenarioIssues("Covers release scenario 2.")).toEqual([]);
+  });
+
+  test("a scenario past the end of the list is an error", () => {
+    const issues = scenarioIssues("Covers release scenario 25.");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.unknown-scenario");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("the plural form is read as two references, not one", () => {
+    // The spelling that defeated a hand count and a reviewer's regex on the same
+    // day: `scenarios 3 and 9` has an `s` where a singular pattern expects a space.
+    const issues = scenarioIssues("Covers release scenarios 3 and 9.");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("scenario 9");
+  });
+
+  test("the error names the line, because the map is long and the tag is prose", () => {
+    const issues = scenarioIssues("Covers release scenario 25.");
+    expect(issues[0]?.line).toBeGreaterThan(0);
+  });
+
+  test("the list is scoped to §10 and does not absorb a later section's numbering", () => {
+    // §11 carries its own `1.` item. If the scan ran to end of file it would be
+    // read as a scenario and the range would silently widen.
+    expect(scenarioIssues("Covers release scenario 4.")).toHaveLength(1);
+  });
+
+  test("an unparseable §10 skips rather than indicting every reference", () => {
+    const issues = scenarioIssues("Covers release scenarios 1 and 2.", "# Plan\n\n## Evaluation\n\nNo numbers.\n");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.plan-scenarios-unavailable");
+    expect(issues[0]?.skipped).toBe("release scenario numbers");
+    expect(issues[0]?.severity).not.toBe("error");
+  });
+
+  test("a map citing no scenario at all is silent, not skipped", () => {
+    // Nothing to check is not the same as something unchecked, and a skip here
+    // would report an instrument failure on a tree that has no subject for it.
+    expect(scenarioIssues("Covers nothing numbered.")).toEqual([]);
+  });
+});

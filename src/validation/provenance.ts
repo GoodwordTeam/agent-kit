@@ -613,6 +613,82 @@ function checkLocalSources(root: string): Issue[] {
   return issues;
 }
 
+/**
+ * The numbered release scenarios in plan §10.
+ *
+ * Returns null rather than an empty set when the section yields nothing, because
+ * the two are not the same claim. An empty set would make every scenario a map
+ * row cites unknown, and this check would report forty confident errors naming
+ * the wrong defect when what actually happened is that §10 moved.
+ */
+function planScenarios(root: string): Set<number> | null {
+  const text = readTextIfPresent(join(root, PLAN));
+  if (text === null) return null;
+  const out = new Set<number>();
+  let inside = false;
+  for (const line of text.split("\n")) {
+    if (/^#{2,6}\s+(?:§\s*)?10[.\s)]/.test(line)) {
+      inside = true;
+      continue;
+    }
+    if (!inside) continue;
+    if (/^#{2,6}\s+(?:§\s*)?\d+(?:\.\d+)*[.\s)]/.test(line)) break;
+    const match = /^\s*(\d+)\.\s+\S/.exec(line);
+    if (match?.[1] !== undefined) out.add(Number(match[1]));
+  }
+  return out.size === 0 ? null : out;
+}
+
+/**
+ * Scenario numbers the map cites, checked against the list plan §10 actually has.
+ *
+ * This gates the dangling number and nothing else. Whether the scenarios are
+ * *covered* is reported by research/probes/scenario-coverage.py and does not
+ * gate, because an uncovered scenario is a gap someone may be carrying on
+ * purpose. A cited number that names no scenario is not a gap: it is a row
+ * claiming coverage that cannot exist, and it reads as coverage to every human
+ * reader and to every tally built by grepping this file.
+ *
+ * The map tags scenarios in prose rather than in a field, which is why nothing
+ * constrained them before and why this is worth a gate at all: a schema would
+ * have made `release scenario 25` impossible to write.
+ */
+function checkScenarioReferences(root: string, scenarios: Set<number> | null): Issue[] {
+  const text = readTextIfPresent(join(root, CONVERSATION_MAP));
+  if (text === null) return [];
+
+  const cited: { value: number; line: number }[] = [];
+  text.split("\n").forEach((line, index) => {
+    for (const match of line.matchAll(/release scenarios?\s+([0-9][0-9,\s]*(?:and\s+\d+)?)/g)) {
+      for (const digits of match[1]?.match(/\d+/g) ?? []) cited.push({ value: Number(digits), line: index + 1 });
+    }
+  });
+  if (cited.length === 0) return [];
+
+  if (scenarios === null) {
+    return [
+      skipped(
+        "provenance.plan-scenarios-unavailable",
+        CONVERSATION_MAP,
+        "release scenario numbers",
+        `${cited.length} scenario reference${cited.length === 1 ? "" : "s"} went unchecked: no numbered list was found under §10 of ${PLAN}. A reference to a scenario that does not exist reads exactly like one that does.`,
+      ),
+    ];
+  }
+
+  const known = [...scenarios].sort((a, b) => a - b);
+  return cited
+    .filter((c) => !scenarios.has(c.value))
+    .map((c) =>
+      error(
+        "provenance.unknown-scenario",
+        CONVERSATION_MAP,
+        `Release scenario ${c.value} is not one of the ${known.length} numbered in §10 of ${PLAN} (${known[0]}-${known[known.length - 1]}). A row naming a scenario that does not exist asserts coverage nothing can satisfy, and it counts as coverage in every tally taken from this file. Cite the scenario the capability actually tests, or drop the reference if it tests none.`,
+        c.line,
+      ),
+    );
+}
+
 export function checkProvenance(ctx: CheckContext): Issue[] {
   const { root, catalog } = ctx;
   const issues: Issue[] = [];
@@ -620,6 +696,7 @@ export function checkProvenance(ctx: CheckContext): Issue[] {
   const { donors, issues: donorIssues } = loadDonors(root);
   issues.push(...donorIssues);
   issues.push(...checkLocalSources(root));
+  issues.push(...checkScenarioReferences(root, planScenarios(root)));
   const { rows, issues: adaptationIssues } = loadAdaptationFragments(root);
   issues.push(...adaptationIssues);
   issues.push(...checkAdaptationsSync(ctx));
