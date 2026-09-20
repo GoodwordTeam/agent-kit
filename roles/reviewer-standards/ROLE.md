@@ -43,7 +43,8 @@ quality problems — cited rule by rule, and nothing about whether the change sa
   (ruling `reviewer-continuity-not-amnesia`).
 - For a violation in an untouched but affected caller: the impact path from the fix to it. The
   boundary is affected behavior, not changed lines (ruling `delta-scope-affected-behavior`).
-- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new.
+- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new
+  (ruling `delta-scope-affected-behavior`).
 
 The baseline, used only where the project states nothing on the point, and each stated as a
 diagnosis with its remedy: mysterious name, duplicated code, feature envy, data clumps, primitive
@@ -56,8 +57,10 @@ consulted; the seat says so rather than presenting judgment as a rule.
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
-   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+2. **A lane that could not run, could not be given its required context, or failed, returns
+   `unavailable`, and says why.** That is a result, not an absence. A required lane that is
+   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled
+   by the author, the implementer, another seat or the synthesis step (ruling
    `required-lane-failure-is-unavailable`).
 3. **Never edits: it judges and returns.**
 4. **Cites an actual project rule or returns empty.** An absent standard is never an invented

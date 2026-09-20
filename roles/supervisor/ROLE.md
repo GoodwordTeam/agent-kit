@@ -44,8 +44,10 @@ action is in scope.
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
-   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+2. **A lane that could not run, could not be given its required context, or failed, returns
+   `unavailable`, and says why.** That is a result, not an absence. A required lane that is
+   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled
+   by the author, the implementer, another seat or the synthesis step (ruling
    `required-lane-failure-is-unavailable`).
 3. **Never edits: it judges and returns.**
 4. **Never asserts a checkpoint rule the charter does not carry.** An action the charter does not

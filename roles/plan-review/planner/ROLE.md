@@ -41,8 +41,10 @@ were made against. A revision that answers a judgment it was never shown is not 
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
-   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+2. **A lane that could not run, could not be given its required context, or failed, returns
+   `unavailable`, and says why.** That is a result, not an absence. A required lane that is
+   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled
+   by the author, the implementer, another seat or the synthesis step (ruling
    `required-lane-failure-is-unavailable`).
 3. **This seat writes the plan artifact, and nothing else.** No source, no findings, no receipts.
    It never writes a finding, a receipt, a review record or a ticket, and never closes or approves

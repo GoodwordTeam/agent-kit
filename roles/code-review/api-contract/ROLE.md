@@ -52,7 +52,8 @@ request to today's server — and whether anyone would find out before productio
 - For a serious issue in an untouched but affected consumer: the impact path from the change to
   that consumer. The delta is bounded by affected behavior, not by changed lines, and an unrelated
   low-priority discovery does not restart it (ruling `delta-scope-affected-behavior`).
-- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new.
+- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new
+  (ruling `delta-scope-affected-behavior`).
 - At `confidence_anchor` 75 or 100 the quoted motivating line with `file:line` is the first
   evidence item (`schemas/finding.schema.json` `confidence_anchor`).
 
@@ -61,8 +62,10 @@ request to today's server — and whether anyone would find out before productio
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
-   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+2. **A lane that could not run, could not be given its required context, or failed, returns
+   `unavailable`, and says why.** That is a result, not an absence. A required lane that is
+   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled
+   by the author, the implementer, another seat or the synthesis step (ruling
    `required-lane-failure-is-unavailable`).
 3. **Never edits: it judges and returns.**
 4. **Never claims a break it cannot show a consumer for.** The finding is the old shape, the new

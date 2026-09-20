@@ -46,15 +46,18 @@ change under review — not whether the change is well written.
 - For an issue in an untouched but affected caller: the impact path from the change to that
   caller. The delta is bounded by affected behavior, not by changed lines (ruling
   `delta-scope-affected-behavior`).
-- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new.
+- For a new finding: the novelty evidence — what changed, or what regressed, that makes it new
+  (ruling `delta-scope-affected-behavior`).
 
 ## Never
 
 1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,
    not a receipt, and no seat closes what it produced (ruling
    `closure-requires-independent-verification`).
-2. **A lane that could not run returns `unavailable`.** That is a result, not an absence: never an
-   empty result, and never backfilled by the author, another seat or the synthesis step (ruling
+2. **A lane that could not run, could not be given its required context, or failed, returns
+   `unavailable`, and says why.** That is a result, not an absence. A required lane that is
+   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled
+   by the author, the implementer, another seat or the synthesis step (ruling
    `required-lane-failure-is-unavailable`).
 3. **Never edits: it judges and returns.**
 4. **Never reviews against a specification it reconstructed.** With no identifiable requirements
