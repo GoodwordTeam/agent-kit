@@ -21,6 +21,24 @@ it.
 
 ## Batch 5 — review-ship
 
+**Two practices belong in this brief, not in `AUTHORING.md`** — both govern how lanes talk to each
+other rather than how bodies are written.
+
+*A correction you send to a teammate is checked by rebuilding the measurement, not by re-reading what
+you sent.* Re-reading finds a claim consistent with itself, because it was consistent when written —
+the same instrument under both hypotheses, pointed at your own output. Re-deriving runs a different
+instrument against the world. Proposed by `provmap` after they caught and retracted their own
+incorrect correction of another lane.
+
+*Sweep for the figure; do not repair the surface you were handed.* The transcript line count was
+reported wrong on one surface. Sweeping for it found two more, one of which was **enforcing**:
+`schemas/common.schema.json` `$defs.g_locator` ended `226[0-4]`, rejecting `G:L2265` — the
+transcript's last line — while the description beside it stated the bound as `1..2264`. A wrong rule
+plus wrong documentation of that rule is one defect with its own alibi: every instrument a confused
+author reaches for confirms the error, and they renumber a correct citation down to fit. Latent, like
+the `arch` trap, and the same shape — a rule that has never fired, waiting for the first person to do
+the correct thing.
+
 **§6.2 is an input to this brief, not background.** Two rows of
 `provenance/conversation-map.yaml` settle here rather than earlier, and the brief must say so
 explicitly or the writer will treat them as already dispositioned. Confirmed with `provmap`.
@@ -120,7 +138,22 @@ Recorded because a commission that lives only in a message has exactly the defec
 to fix: an issued one and a completed one are indistinguishable to anyone reading the repo. Each
 entry is deleted when its lane reports and the result lands.
 
-**The §8 sweep of `AUTHORING.md`'s behaviour-specifying sections — `sweep-reviewer`.** §8 requires
+**The §8 sweep — `sweep-reviewer`, four findings landed, three members still owed.** Findings 1–4
+are with `authoring` to edit: §12.2 says "verbatim" twice while the gate enforces a two-substring
+floor (the converse of §9's direction, and the dangerous one); §12.2 calls the active `BUDGETED` gate
+hypothetical seventy lines after stating it correctly; §11 hand-checks six items the two commands
+above it already gate; §1 owns the length rule and names no symbol while §12.2, which borrows it,
+does. **§10's register half, §12.1 and §12.5 are declared-not-cleared** — the sweep is not discharged
+until they are reached, and reporting them unaudited rather than implying a clean population is the
+reason the rest of the result can be trusted.
+
+An expectation of mine was falsified in the process and the correction matters more than the finding:
+I said a section overstating its enforcement gets caught the first time someone relies on it. It does
+not. **Overstatement is caught when reliance fails, and reliance on an over-strong claim fails
+silently, because the gate still passes.** §12.2's "verbatim" was relied on from `ed81a69` by a
+writer, two reviewers and me, and caught by none of us.
+
+**Original commission, for the record —** §8 requires
 naming the population a check owns, then verifying every member reaches a term in the output.
 `authoring` applied it to §9, found §9 understating its own gate, fixed it at `d5b8c9c`, and asked
 that the remaining sections be swept **by someone other than them** — §8 is theirs and they had
