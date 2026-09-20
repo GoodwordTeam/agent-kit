@@ -894,3 +894,60 @@ guards starts failing.
 Third time in one day that the author of an entry on this page walked into it while using the tool
 the entry is about. That rate is not embarrassment, it is the measurement: these defects are not
 caught by knowing about them.
+
+---
+
+## The two bundles differ in one file, and it is the one neither host reads
+
+`ak build` writes `dist/claude-code` and `dist/codex` and reports zero errors for both. A full
+compare returns a single line:
+
+```
+$ diff -rq dist/claude-code dist/codex
+Files dist/claude-code/.claude-plugin/ak.json and dist/codex/.claude-plugin/ak.json differ
+```
+
+`ak.json` is the build's own provenance, and it lives there because of `96f5291`: it was moved out
+of the host manifest precisely *because* the host rejects fields it does not define. So it is, by
+construction, the file the host ignores. Every file either host actually reads is byte-identical.
+There is one bundle with two names.
+
+What makes it worth an entry is the content of the file that differs. It records that the two hosts
+are not alike -- claude-code `enforces: ["no-model-invocation"]`, codex `enforces: []` with the note
+that no restriction is claimed. The package computes the capability difference correctly, writes it
+down, and then emits the same artifact either way. `dist/codex/skills/super-align/SKILL.md` carries
+`disable-model-invocation: true`, which is exactly the key its own sibling record says codex cannot
+honour.
+
+**The mechanism that should have acted on it is built, and disconnected one link before the end.**
+`plan.ts:198` derives `unenforceable` from `capabilities.enforces` -- correct, and the ak.json proves
+it ran. `:199` gates it behind `wantsAutonomous`. `wantsAutonomous` reads `manifest.autonomyModes`.
+`manifest.ts:52` takes that from an `autonomy` key that `schemas/skill.schema.json` cannot express:
+the top level is `additionalProperties: false` and has no such property. So `unenforceable` is
+computed and discarded, and the governing requirement -- *a host that cannot enforce a required
+restriction exposes the skill in guided or manual mode rather than silently weakening the contract*
+-- is precisely what does not happen.
+
+This means the §4 entry and the codex-bundle finding are **one defect reported from two ends**, not
+two findings. Which side is wrong is settled by shape rather than by counting sources. Eight skills
+already write the declaration where §4 and the schema put it, `packaging.hosts[].{mode,unsupported}`,
+once per adapter; `diagnose` asks for `autonomous` on claude-code with a four-item `unsupported`
+list. The code reads a flat `autonomy.modes` with no adapter dimension at all. The disagreement is
+not two spellings of one field. It is a field that can hold a per-host answer against a field that
+cannot, and the requirement is per-host. The code loses on what it is able to represent, which is a
+firmer reason than three-documents-against-one.
+
+**And the safety direction is an accident.** Every skill lands on `manual` because an empty list
+makes `wantsAutonomous` false, and `manual` is the falsy arm of the ternary. Nothing chose it. Had
+the expression been written the other way round, the same dead read would have shipped every skill
+claiming an autonomy nothing checks. A dead branch fails safe or unsafe by accident, because the
+surviving value was not selected, only left. So "it currently fails closed" is not mitigation to
+record next to this; it is a second thing to check, not a reassurance.
+
+**The class, and its mirror.** Two defects fixed here this week were sites that *should agree and
+had drifted* -- `fc8e6ef`, three places answering "which profile did this build install?" three ways.
+This is the mirror: sites that *should differ and do not*. They look like opposites and they are the
+same failure, because both are invisible for one reason -- nothing compares them. A build that emits
+two adapters and never diffs them has the same blind spot as three call sites that never read each
+other. Where two artifacts are supposed to differ, the check is a comparison, and its absence is why
+a decorative second adapter can report zero errors for as long as anyone likes.
