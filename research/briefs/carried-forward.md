@@ -853,3 +853,44 @@ That is the fourth spelling of this remedy in one day and the first one stated a
 as a shape. It is also the figure rule wearing procedural clothes, which neither of us noticed until
 it was written down: a command substitution is correct, correctly formed and wrong about which
 commit it names -- the label is true and does not describe what was published.
+
+## `$?` after a pipeline measures the last command, so a gate can read another program's verdict
+
+Measured while checking the packaging gate. The command was
+`claude plugin validate dist/claude-code --strict 2>&1 | tail -20; echo "(exit $?)"`, and it printed
+
+```
+✘ Validation failed (--strict treats warnings as errors)
+(exit 0)
+```
+
+The failure banner and the success code are both correct. `$?` after a pipeline is the *last*
+command's status, so it reported `tail`, which had nothing to say about the bundle and succeeded at
+not saying it. Re-run without the pipe, the validator exits 1.
+
+This is the exit-0 collision in a third register. The first was a read resolving at the wrong file;
+the second was a control reading the wrong quantity; this one is a **verdict** taken from the wrong
+program. It is distinct from the branch failure above it, and the distinction matters: there *is* a
+branch here, the check *did* fire, and the branch is wired to a status that belongs to something
+else. So the four-axis set needs reading carefully -- a check can have the right cases, the right
+quantity, the right subject and a real branch, and still be consuming another process's verdict at
+the point where it decides.
+
+**The operational form, because this one has a deadline.** Any gating command that ends up in a
+script or a CI step must not sit in a pipeline. Capture the status first, format the output second:
+
+```sh
+claude plugin validate dist/claude-code --strict > "$OUT" 2>&1; status=$?
+tail -20 "$OUT"
+[ "$status" -eq 0 ] || exit 1
+```
+
+`set -o pipefail` fixes the specific case and is worth having, and it is not the rule, because it
+fails the same test the refspec remedy kept failing: it is a spelling that has to be present, it is
+absent by default in every shell anyone will copy this into, and its absence is silent. A gate whose
+exit code measures `tail` passes forever, and it passes most convincingly on the day the thing it
+guards starts failing.
+
+Third time in one day that the author of an entry on this page walked into it while using the tool
+the entry is about. That rate is not embarrassment, it is the measurement: these defects are not
+caught by knowing about them.
