@@ -429,3 +429,51 @@ own checks. The generalising fix is a term in the summary line for which kind of
 narrow one is making this check block. Note what makes it sting: the check enforcing *a required
 lane that is unavailable blocks approval* reports itself unavailable and does not block. It is the
 one rule it does not apply to itself.
+
+**A contract's claim that a rule is enforced is not checked by asking whether the rule exists.**
+From `batch4-writer`, who found that §11's first half tells a writer the ten required `SKILL.md`
+headings, their order, insertions between them and the anti-rationalization table are "Decided by
+the commands above. Read these when one of them reports, not before" -- and that nothing in `src/`
+performs any of the four for a skill. `bodies.ts:1135` seats `["protocols", "roles"]`;
+`SKILL_SECTIONS` occurs zero times in the tree. The comment on `checkSections`'s own
+`noInsertions` parameter calls the law "§3's insertion law, which §12.1 inherits for protocols and
+§12.2 does not impose on roles": the kind that inherits it is seated, the kind that declines it is
+seated, and the kind it was written for is not.
+
+The part worth carrying is the gate I nearly routed. §11's first half names 14 rule ids. I
+extracted all 14 and checked them against every id emitted anywhere in `src/`. **All 14 are
+emitted, including the four that are the defect** -- they are emitted for protocols and for roles.
+§11 is "Before handing a skill back", so every claim in it is a claim about a skill body, and an
+existence check reads green on exactly the bullets that are false. The working gate is coverage,
+not existence: one minimal mutated body per claimed id, asserting *that id appears* rather than
+that the run fails. Two properties belong in the rule rather than in whoever implements it -- a
+case violating two rules proves neither, because either id satisfies the assertion; and a mutated
+body in a corpus this size will fail for some reason, so watching the exit code is an instrument
+returning the same answer under both hypotheses.
+
+Population, measured because the defect invites the opposite assumption: all five authored bodies
+-- `doc-review`, `super-align`, `super-bound`, `super-scout`, `wayfind` -- carry all ten headings,
+at `##`, in order, as an exact prefix, no duplicates, seven-row table under `## Hard gates`. The
+corpus is clean, and it is clean because five writers hand-verified instead of trusting the report
+§11 promised. **A gap that has not yet produced a defect has not been shown to be harmless; it has
+been shown to be outrun by care.**
+
+**Read whether a section already rules on a question before routing a ruling about it.** I sent
+`authoring` a ruling that §10 guards only deletion-outruns-gate, that the reverse direction is
+worse, and that it is invisible per-lane. The first clause is true. The second is backwards, and
+this contract already says so in its own words: *a section understating its enforcement makes a
+reader redo work the gate already did; a section overstating it makes a reader skip work nothing
+does*, and the second does not surface, because reliance on an over-strong claim fails silently --
+the gate still passes, so nothing reports and the writer who trusted the word is never
+contradicted. A stale disclosure outliving its gate is the understating direction: the lesser one,
+and self-correcting the first time a writer watches the gate fire. §10's existing retirement rule
+guards the worse direction and needs no companion.
+
+What produced the error is the third guard, in the one place it is easiest to skip: the reading
+passed through my own summary of my own earlier conclusion rather than through §10. A second
+reading by a different route is cheapest and least likely to be taken when the first reading was
+your own. The real gap this misrouting was pointing at is in §11 rather than §10 -- §10's
+disclosures are negative claims and its retirement rule reaches them; §11's first half is a list of
+*positive* enforcement claims maintained by hand, separately from the enforcement, and nothing
+reaches it. It is a structural generator of the direction the doctrine says to assume is
+under-found, and it has now generated one.
