@@ -1268,13 +1268,16 @@ kind 3 or kind 4 and is never charged against it.
 
 **Every exemption in this section is from the bullet count, and from nothing else.** "Unbudgeted"
 means the entry does not consume one of the three or four sibling slots; it does not mean the entry
-is free of length, and no entry here is exempt from a file-length target should one ever be enforced
-against role bodies (see §12.2's note on §1 above). If a role is ever over a length bound, **a
-required entry is not what gets cut** — dropping a mandated `## Never` row or a declared counterpart
-to fit a line count is weakening the artifact to satisfy a check, which §10 forbids outright. The
-material to cut is prose the contract does not require. This is what keeps the cap doing the work it was
-written for: sibling enumeration is what grows quadratically with panel size, and cross-panel
-entries do not.
+is free of length. No entry here is exempt from the file-length target, and that target is enforced
+against role bodies today rather than someday: `BUDGETED` (`src/validation/budget.ts`) lists `roles`
+beside `skills` and `protocols`, and `budget.body-over-target` fires on every run. §12.2 states this
+correctly where it borrows §1's rule, which is what makes describing it here as a possible future a
+defect rather than a difference of emphasis. If a role is ever over a length bound, **a required
+entry is not what gets cut** — dropping a mandated `## Never` row or a declared counterpart to fit a
+line count is weakening the artifact to satisfy a check, which §10 forbids outright. The material to
+cut is prose the contract does not require. This is what keeps the cap doing the work it was written
+for: sibling enumeration is what grows quadratically with panel size, and cross-panel entries do
+not.
 
 Kinds 2 and 3 are exempt for the same reason, and it is the reason the budget exists at all. Every
 seat enumerating every other is quadratic — but **only kind 1 is quadratic.** The non-seat
@@ -1460,6 +1463,26 @@ clause that does not generalize is usually a clause that was never universal.
 guidance produces rows in the seat's own words. A universal row that needs a bespoke per-seat
 instantiation is the welded form returning: the invariant part gets enforced, and the part that must
 vary is load-bearing and unchecked.
+
+**"Verbatim" is this section's word, not the gate's.** `UNIVERSAL_NEVER_ROWS`
+(`src/validation/bodies.ts`) stores each mandated row as a ruling id plus a list of substrings, and
+`role.missing-universal-never-row` fires only when no row in the body contains all of them. Row 2's
+list is `["lane that could not run", "unavailable"]`, so a body carrying those two fragments beside
+the citation passes while stating none of the rest: not that a required lane which is `unavailable`
+blocks approval, not that it is never downgraded to an empty result, not the four parties who may
+not backfill it. Every one of those clauses is contract prose with nothing behind it.
+
+This is §9's disclosure in the opposite direction and it is the worse one. A section understating
+its enforcement makes a reader redo work the gate already did; a section overstating it makes a
+reader skip work nothing does. The second does not surface the way the first does, because reliance
+on an over-strong claim fails silently — the gate still passes, so nothing reports and the writer
+who trusted the word is never contradicted. Assume this direction is under-found rather than rare.
+
+**Byte-for-byte governs a row reproduced as a block; a row quoted inside a sentence is punctuated to
+its host.** Rows 1 and 2 are set as a numbered block and are carried as they stand. Row 4 is a
+quotation embedded in a sentence, so a body that bolds its lead clause, or ends it with a period
+where this section uses a semicolon, is not in breach. What decides it is the form the mandate takes
+here, not which row is being carried.
 
 `## Rationalizations this seat makes` comes last, after `## When it has nothing to say`, and carries
 §3.1's table unchanged: the same three columns, `The thought | Why it is wrong | Do this instead`, no
