@@ -1152,12 +1152,12 @@ any of them for a skill body: `src/validation/bodies.ts:1135` seats the check th
 now. The list that put them in the wrong half is still hand-maintained.
 
 **The gate is coverage, not existence, and the existence version reads green on exactly the claims
-that are wrong.** Those four ids are all emitted under `src/` — they fire for protocol bodies, and
-two of them for role bodies — so a check resolving each id a claim names against the ids the tree
-can emit would have passed on every one of them, and passed for the reason the claims were wrong:
-both confuse *this rule exists* with *this rule is enforced for a skill*. What separates the two is
-a case. **For each rule id claimed in §11's first half there is a skill body correct in every
-respect but the one that id names, on which `ak validate` emits that id.**
+that are wrong.** Those four ids are all emitted under `src/` — three of them fire for role bodies
+as well as protocol ones — so a check resolving each id a claim names against the ids the tree can
+emit would have passed on every one of them, and passed for the reason the claims were wrong: both
+confuse *this rule exists* with *this rule is enforced for a skill*. What separates the two is a
+case. **For each rule id claimed in §11's first half there is a skill body correct in every respect
+but the one that id names, on which `ak validate` emits that id.**
 
 Three properties, because each is a way the obvious implementation stops discriminating. The case
 **must be minimal in the respect under test** — a body violating two rules at once proves neither,
@@ -1405,16 +1405,27 @@ need it.
 - Nothing in the body links to a file the bundle does not carry — `links.broken-bundle`.
 
 **Not checked by anything. This is the part of the list that is yours**, and each entry says what
-the nearest instrument does instead, so that a clean run is not read as an answer to it.
+the nearest instrument does instead, so that a clean run is not read as an answer to it. Most are
+unreachable by any instrument there could be. Where an entry is instead waiting on a gate it names
+the condition that retires it, and an entry here naming none is claiming there is nothing to wait
+for.
 
 - **The ten required sections are present, in order, with nothing inserted between them, and
   `## Hard gates` carries an anti-rationalization table.** This sat in the half above until it was
   checked. `body.missing-section`, `body.sections-out-of-order`, `body.section-inserted` and
-  `body.missing-anti-rationalization-table` are real rules that really fail, but
-  `src/validation/bodies.ts:1135` seats the check emitting them over `protocols` and `roles` only,
-  and `SKILL_SECTIONS` occurs nowhere in the tree. No skill body is read for its headings, so a
-  clean run says nothing about them. §10 states the gate that would have caught this entry sitting
-  in the wrong half.
+  `body.missing-anti-rationalization-table` are real rules that really fail, but `checkBodyShapes`
+  (`src/validation/bodies.ts:1116`) seats them over `protocols` and `roles`, and `SKILL_SECTIONS`
+  occurs nowhere in the tree. No skill body is read for its headings, so a clean run says nothing
+  about them. **The condition that retires this entry is `checkBodyShapes` seating `skills`**, and
+  it moves back into the half above in that same commit rather than in a later tidy-up, for §10's
+  reason: an entry that outlives the gap it records is the same artifact as a stale disclosure,
+  whichever direction it is stale in. Whoever lands that seating is reading four rules, not a set.
+  `body.missing-section` and `body.sections-out-of-order` come from `checkSections` and already
+  reach both kinds; `body.missing-anti-rationalization-table` has two sites, `:726` under
+  `## Hard gates` and `:742` under `## Rationalizations this seat makes`; `body.section-inserted`
+  has one, gated on `noInsertions`, true for protocols and false for roles. That last is the one a
+  seating can drop while every other check in the group reports as expected. §10 states the gate
+  that would have caught this entry sitting in the wrong half.
 - **The table's rows come from recorded failures.** The gate sees that a table exists. Whether its
   rows were invented to fill it is §3.1's question, and no tool can reach it.
 - **Every artifact in `## Outputs` names a schema and a KB operation, not a repository path.** The
