@@ -277,6 +277,52 @@ a copy, and is the right tool whenever the figure will be quoted.
 The general form is worth more than the flag. A copy made to isolate a measurement is itself an
 instrument, and an instrument nobody calibrated returns numbers that look exactly like results.
 
+**Seven undercounts across three lanes in one day, and they are not one failure.** Each wants a
+different guard, and the guards do not substitute for one another.
+
+*Memory wants a sweep.* Four of the seven were someone enumerating their own material from
+recollection — §5's "four places", `baca1d3`'s "two research documents", one absolute-path file
+that was six, two derivations that were three. Every one was corrected by somebody else's search.
+The fix is to sweep a written-down population rather than list what you remember putting there.
+
+*A moving tree wants a revision.* Three were correct sweeps over a tree that changed underneath
+them: `bun test` at 807 and then 829 hours apart, a `const lines` population at 12 and 13 within
+the hour, a test total quoted twice by people who had each just insisted on a revision for a
+validator figure. Conflating this with the first gets you a sweep with no date, which fails the
+second way while looking like it has addressed the first.
+
+*A reading that passed through anything but the file itself wants a second reading by a different
+route.* This one defeats both guards above and is the reason it is worth naming separately.
+`authoring` read a file via `f=$(git show ...)` and then `echo "$f" | grep -n`; zsh's builtin
+`echo` interprets backslash escapes, the file is full of `\n` inside TypeScript string literals,
+and 259 phantom lines appeared. They had a revision. The tree had not moved — the file is
+byte-identical at both commits. They ran a command rather than trusting memory. Every guard was in
+place and none applies, **because a revision names which subject was measured, not whether the
+instrument altered it in transit.** Their counts survived and every line number beside them was
+wrong, because splitting a line changes which line a match is on and not how many lines contain
+one. A sweep reporting *which* rather than *how many* would have been wrong in every row.
+
+*Before reaching for a second route, check whether you already have a second reading and never
+compared it.* `provmap`'s addition, and it is the cheap half: a second route is expensive and will
+not be done routinely, while both of the day's worst instances were two readings already in hand.
+`authoring` had the correct line numbers earlier in the same session and reported different ones
+without comparing. `provmap` had the enumerated site list in front of them and stated a tally that
+contradicted it. The classification sweep survived a moving tree for the same reason — it kept
+every member visible instead of collapsing them into a number.
+
+Two of my own from the same afternoon, both in the third class, and one of them is a repeat of a
+trap already written down on this page. In zsh, `git show $rev:AUTHORING.md` inside a loop reads
+`$rev:A` as a parameter modifier and yields nothing; every size in the table came back `0 lines`
+and the shape of the result — three identical zeroes — is the only thing that gave it away. I had
+recorded that exact trap earlier the same day after it produced a vacuous diff, and reproduced it
+anyway, which is the argument for a guard that does not depend on remembering. Braced as
+`${rev}:AUTHORING.md` it is correct. And a grep for `eturn nothing`, written to catch both
+capitalisations, cannot match `returns nothing` at all: the `s` falls inside the span. It returned
+two hits, I read the absence of a third as a fact about the corpus, and reported a zero that
+`sweep-reviewer` then had to correct out of a commit message. The population is three across two
+spellings. **A pattern narrowed to catch a variant is a pattern that excludes the others, and the
+report does not say which ones.**
+
 **A validator figure taken from the working tree is a timestamp, not a measurement.** Five lanes
 write to one tree; eleven commits landed in one afternoon inside stretches of two or three minutes.
 Every figure disagreement between lanes so far — three in one day — was a faithful count of a
