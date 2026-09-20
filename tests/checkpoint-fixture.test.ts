@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { execFileSync, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { checkSchemas } from "../src/validation/schemas.ts";
@@ -145,8 +144,13 @@ describe("the fixture can host a refused closure", () => {
   type Outcome = { pass: number; fail: number; failing: string[] };
 
   function run(files: Record<string, string>, target: string): Outcome {
-    const work = mkdtempSync(join(tmpdir(), "state-"));
-    cpSync(join(FIXTURE, "repo"), work, { recursive: true });
+    // Materialize rather than copy `repo/`. The layout a state runs against has
+    // to be the one materialize.sh produces -- including the rename that keeps
+    // the fixture's own checks out of this repository's test collector -- and a
+    // copy made here would be a second spelling of that layout that diverges
+    // the first time either moves. It already did: this harness reported an
+    // empty state machine when the copy kept a name the materializer changes.
+    const work = materialize();
     for (const [rel, from] of Object.entries(files)) {
       mkdirSync(dirname(join(work, rel)), { recursive: true });
       writeFileSync(join(work, rel), readFileSync(from, "utf8"));
@@ -166,7 +170,7 @@ describe("the fixture can host a refused closure", () => {
     };
   }
 
-  const ISOLATION = join(FIXTURE, "stages", "finding", "tests", "isolation.test.ts");
+  const ISOLATION = join(FIXTURE, "stages", "finding", "tests", "isolation.checks.ts");
   const TICKET_DONE = join(FIXTURE, "selftest", "ticket-done", "quota.ts");
   const INCOMPLETE = join(FIXTURE, "selftest", "repair-incomplete", "report.ts");
   const COMPLETE = join(FIXTURE, "selftest", "repair-complete", "report.ts");

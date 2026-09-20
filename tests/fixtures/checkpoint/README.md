@@ -19,7 +19,7 @@ fixture reviewable in diffs and shippable to whoever drives the slice, and
 creating the *repository* on demand keeps it disposable.
 
 The initial commit is reproducible — identity and both dates are pinned — so the
-artifacts can cite a real revision rather than a placeholder, and
+artifacts can cite a revision that exists rather than one invented to fill the field, and
 `tests/checkpoint-fixture.test.ts` asserts that the revision they cite is the
 one that materializes.
 
@@ -76,7 +76,7 @@ there is no way to know which kind you have without running it.
 |---|---|
 | 3 | tenant isolation, security lane, closure refusable |
 | 4 | `CHECKPOINT_SECURITY_LANE=unavailable` makes a required lane produce no result; exit 70 keeps that distinguishable from the lane finding something |
-| 6 | `finding.vague.json` is a `smell`: no difficulty, no fixer, and the schema refuses to let it acquire either |
+| 6 | `finding.vague.json` is a `smell`: no difficulty, no fixer, and the schema refuses to let it acquire either (`tests/finding-constraints.test.ts`, "a smell has an open solution space") |
 | 7 | the repair is a small diff, which is what a delta pass is for |
 | 8 | `src/report.ts` is outside `allowed_changes` and downstream of the change |
 | 9 | `stages/line-move/` moves the quoted line; the fingerprint is taken over the excerpt and the path and does not move with it |

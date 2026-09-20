@@ -27,6 +27,16 @@ fi
 mkdir -p "$DEST"
 cp -R "$FIXTURE_DIR/repo/." "$DEST/"
 
+# The fixture's acceptance tests are stored under a name the surrounding
+# repository's test runner does not collect. `bun test` scans the whole tree for
+# `*.test.ts` wherever it sits, and these are red at this revision by design --
+# they are the red half of the ticket's TDD cycle. Stored under their runnable
+# name they would fail the catalog's own suite, and a fixture that breaks the
+# suite it ships in gets deleted rather than driven. The rename happens before
+# the commit, so the committed tree is the one the artifacts cite and the
+# revision they cite does not move.
+mv "$DEST/tests/quota.checks.ts" "$DEST/tests/quota.test.ts"
+
 cd "$DEST"
 git init --quiet
 git config user.email "fixture@checkpoint.invalid"
