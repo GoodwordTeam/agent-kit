@@ -691,3 +691,31 @@ side of the refspec is a literal 40-hex sha you pasted from the commit you measu
 push succeeds, the range line `A..B` is the only signal, and reading it requires already knowing
 which commit you made. It is the positive-control rule above wearing different clothes: the
 instrument reported truthfully and the reader had no subject to compare it against.
+
+## A repair that needs history rewritten has a deadline, and on a shared branch it is always past
+
+`97bd59b` is missing the `Co-Authored-By:` trailer `AGENTS.md` requires. `provmap` caught it
+immediately and went to `git commit --amend`; another lane had committed `09860e4` on top in the
+seconds between, so the amend correctly refused, and they stopped rather than rewrite history under
+someone else's commit. That was the right call and the commit stays as it is: `97bd59b` is on
+`origin/main`, five lanes have based work on it, and a force-push to repair a trailer would cost
+this team the same divergence it paid for once today -- a larger defect than the one being fixed,
+introduced by the fix.
+
+**The rule is that attribution is repaired forward, never backward.** A missing trailer is a fact
+about one commit; a rewritten shared branch is a fact about every clone of it. The asymmetry does
+not depend on how small the trailer is, and it gets worse the longer the branch lives, so there is
+no threshold at which the rewrite becomes worth it.
+
+What generalises past trailers: **a repair whose only mechanism is rewriting history is available
+for a window you do not control, and the window closes on another lane's schedule.** `--amend` is
+not a repair with a cost, it is a repair with an expiry, and on a branch several lanes push to the
+expiry is typically shorter than noticing. So a class of defect that can only be fixed by amending
+must instead be prevented at commit time or accepted at read time -- there is no third state, and
+planning to amend is planning on a race.
+
+`git notes` was considered and rejected. It attaches to the commit without rewriting anything, which
+is exactly the shape wanted, and it fails the test this page keeps applying to everything else: notes
+do not push by default, almost nothing in the normal reading path displays them, and a record that
+nothing reads is the same defect as a caveat published under the second signature of three. The
+record belongs where lanes already grep, which is this file.
