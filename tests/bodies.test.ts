@@ -1,8 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { loadCatalog } from "../src/catalog/load.ts";
 import {
   ANTI_RATIONALIZATION_HEADER,
+  AUTHORSHIP_CONVERSE_ROW,
   MANDATORY_NEVER_RULINGS,
   PRODUCING_SEATS,
   PROTOCOL_SECTIONS,
@@ -66,7 +69,10 @@ function protocolTree(extra: Record<string, string> = {}, sections?: ReadonlyArr
 
 function roleTree(extra: Record<string, string> = {}, sections?: ReadonlyArray<string>) {
   return ctxFor({
-    "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n`,
+    "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+    // §12.2's mandated rows are read from this file at runtime, so a role
+    // fixture without it is a role fixture the row gate cannot judge.
+    "AUTHORING.md": CONTRACT,
     "roles/seat/ROLE.md": roleBody(sections),
     ...extra,
   });
@@ -317,33 +323,108 @@ describe("unauthored and absent trees", () => {
 });
 
 /**
- * The four governed `## Never` rows, written out the way §12.2 words them.
+ * §12.2's mandated block: the contract the gate reads at runtime.
  *
- * Literal on purpose, and wrapped at awkward points on purpose: building them
- * from the checker's own clause constants would only assert that the checker
- * agrees with itself, and the line breaks are what prove the match survives a
- * reflow. The existing bodies wrap these across three lines at different points.
+ * Written out here rather than copied from the real `AUTHORING.md` at test
+ * time. A fixture that reads the live contract cannot fail when the contract
+ * and the bodies drift *together*, and separating those two is the whole job of
+ * a gate that compares one against the other. The row constants below are
+ * written out a second time, independently, as the text a body carries — so the
+ * equality this gate asserts is an equality between two literals rather than a
+ * string compared with itself.
+ */
+const CONTRACT = [
+  "### 12.2 Role bodies",
+  "",
+  "**Mandatory, verbatim in every role body:**",
+  "",
+  "1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,",
+  "   not a receipt, and no seat closes what it produced (ruling",
+  "   `closure-requires-independent-verification`).",
+  "2. **A lane that could not run, could not be given its required context, or failed, returns",
+  "   `unavailable`, and says why.** That is a result, not an absence. A required lane that is",
+  "   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled",
+  "   by the author, the implementer, another seat or the synthesis step (ruling",
+  "   `required-lane-failure-is-unavailable`).",
+  "",
+  "**Conditional, required exactly where the condition holds:**",
+  "",
+  "3. **Never edits: it judges and returns.** Carried by every seat except the two that produce an",
+  "   artifact. `implementer` and `plan-review/planner` carry the converse instead, naming what the",
+  "   seat writes and stating that it never writes a finding, a receipt, a review record or a ticket,",
+  "   and never closes or approves what it produced.",
+  '4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and',
+  '   `code-review/project-standards` (the catalog\'s only `tier: standards-gate`). They carry *"cites an',
+  '   actual project rule or returns empty; an absent standard is never an invented preference."* This',
+  "   row is **not** an instance of ruling `required-lane-failure-is-unavailable` and does not cite it.",
+  "   No ruling states it; §12.2 does.",
+  "",
+  "Beyond those four, each seat writes its own grounding rule as its own row.",
+  "",
+  // §12.2 also carries the counterpart table, and `checkBodyShapes` reads it
+  // from this same file. A fixture that supplied the mandated block and not the
+  // table would put every tree that uses it into
+  // `role.counterpart-table-unreadable`, so the two seats below stand in for a
+  // family. They are declared in the fixture catalogs and have no directories,
+  // which is what keeps them out of every other check here.
+  COUNTERPART_TABLE_HEADER,
+  "|---|---|",
+  "| `twin-a` | `twin-b` |",
+  "| `twin-b` | `twin-a` |",
+  "",
+].join("\n");
+
+/** The catalog rows for the two seats §12.2's fixture table pairs. */
+const CATALOG_TWINS = "  - id: twin-a\n    status: contract\n  - id: twin-b\n    status: contract\n";
+
+/**
+ * The four governed rows as a body carries them.
+ *
+ * Rows 1 and 2 are the contract's numbered items reproduced as they stand, wrap
+ * points included, because §12.2 governs a block-set row byte-for-byte. Row 3
+ * is the bolded sentence alone: the rest of the contract's item 3 is the
+ * condition, not the row. Row 4 is the quotation, which §12.2 says is
+ * punctuated to its host — so a body bolds its lead clause and ends it with a
+ * period where the contract uses a semicolon, and is not in breach.
  */
 const CLOSURE_ROW = [
-  "1. **Only independent verification closes a finding.** Reading a patch is the author's",
-  "   confidence, not a receipt, and no seat closes what it produced (ruling",
+  "1. **Only independent verification closes a finding.** Reading a patch is the author's confidence,",
+  "   not a receipt, and no seat closes what it produced (ruling",
   "   `closure-requires-independent-verification`).",
 ].join("\n");
 
 const UNAVAILABLE_ROW = [
+  "2. **A lane that could not run, could not be given its required context, or failed, returns",
+  "   `unavailable`, and says why.** That is a result, not an absence. A required lane that is",
+  "   `unavailable` **blocks approval**; it is never downgraded to an empty result and never backfilled",
+  "   by the author, the implementer, another seat or the synthesis step (ruling",
+  "   `required-lane-failure-is-unavailable`).",
+].join("\n");
+
+/** The same words, broken at different points. Under a block bar this is a breach. */
+const UNAVAILABLE_ROW_REFLOWED = [
+  "2. **A lane that could not run, could not be given its required context, or failed,",
+  "   returns `unavailable`, and says why.** That is a result, not an absence. A required",
+  "   lane that is `unavailable` **blocks approval**; it is never downgraded to an empty",
+  "   result and never backfilled by the author, the implementer, another seat or the",
+  "   synthesis step (ruling `required-lane-failure-is-unavailable`).",
+].join("\n");
+
+/** The wording that stood in all twenty-nine bodies before `ed81a69`. */
+const UNAVAILABLE_ROW_NARROWED = [
   "2. **A lane that could not run returns `unavailable`.** That is a result, not an absence:",
   "   never an empty result, and never backfilled by the author, another seat or the",
   "   synthesis step (ruling `required-lane-failure-is-unavailable`).",
 ].join("\n");
 
-/** The same row with the break falling inside the matched clause. */
-const UNAVAILABLE_ROW_REFLOWED = [
-  "2. **A lane that could not",
-  "   run returns `unavailable`.** Never backfilled by another seat (ruling",
-  "   `required-lane-failure-is-unavailable`).",
-].join("\n");
+/** Two substrings and the citation: everything the clause floor ever required. */
+const UNAVAILABLE_ROW_GUTTED =
+  "2. A lane that could not run returns `unavailable` (ruling `required-lane-failure-is-unavailable`).";
 
-const PLAIN_AUTHORSHIP_ROW = "3. **This seat never edits: it judges and returns.**";
+const PLAIN_AUTHORSHIP_ROW = "3. **Never edits: it judges and returns.**";
+
+/** The same row with a seat-shaped prefix: words added, so not the mandated row. */
+const PLAIN_AUTHORSHIP_ROW_PREFIXED = "3. **This seat never edits: it judges and returns.**";
 
 const CONVERSE_AUTHORSHIP_ROW = [
   "3. **This seat writes the patch its approved ticket allows.** It never writes a finding, a",
@@ -351,9 +432,12 @@ const CONVERSE_AUTHORSHIP_ROW = [
 ].join("\n");
 
 const STANDARDS_ROW = [
-  "4. **This seat cites an actual project rule or returns empty.** An absent standard is",
-  "   never an invented preference.",
+  "4. **Cites an actual project rule or returns empty.** An absent standard is never an invented",
+  "   preference.",
 ].join("\n");
+
+/** The quotation with its second half dropped: punctuation is free, words are not. */
+const STANDARDS_ROW_HALVED = "4. **Cites an actual project rule or returns empty.**";
 
 function neverSection(rows: ReadonlyArray<string>): string {
   return `${rows.join("\n")}\n`;
@@ -366,7 +450,8 @@ function seatBody(never: string): string {
 
 function seatTree(id: string, never: string, catalogRows = "", extra: Record<string, string> = {}) {
   return ctxFor({
-    "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: ${id}\n    status: authored\n${catalogRows}`,
+    "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: ${id}\n    status: authored\n${catalogRows}${CATALOG_TWINS}`,
+    "AUTHORING.md": CONTRACT,
     [`roles/${id}/ROLE.md`]: seatBody(never),
     ...extra,
   });
@@ -387,23 +472,24 @@ describe("the two universal ## Never rows (AUTHORING 12.2)", () => {
     expect(issues[0]?.message).toContain("required-lane-failure-is-unavailable");
   });
 
-  test("the citation alone does not satisfy the row; the distinguishing clause must be there too", () => {
+  test("the citation alone does not satisfy the row; the row's own text must be there", () => {
     const hollow = "2. Some other prohibition entirely (ruling `required-lane-failure-is-unavailable`).";
     const issues = errors(checkBodyShapes(seatTree("seat", neverSection([CLOSURE_ROW, hollow, PLAIN_AUTHORSHIP_ROW])))).filter(
-      (i) => i.rule === "role.missing-universal-never-row",
+      (i) => i.rule === "role.never-row-not-verbatim",
     );
     expect(issues).toHaveLength(1);
   });
 
-  test("the clause alone does not satisfy the row either; the citation must be there too", () => {
-    const uncited = "2. **A lane that could not run returns `unavailable`.** Never backfilled.";
+  test("the row's text alone does not satisfy it either; the citation must be there too", () => {
+    const uncited = UNAVAILABLE_ROW.replace(" (ruling\n   `required-lane-failure-is-unavailable`)", "");
+    expect(uncited).not.toBe(UNAVAILABLE_ROW);
     const issues = errors(checkBodyShapes(seatTree("seat", neverSection([CLOSURE_ROW, uncited, PLAIN_AUTHORSHIP_ROW])))).filter(
       (i) => i.rule === "role.missing-universal-never-row",
     );
     expect(issues).toHaveLength(1);
   });
 
-  test("the citation and the clause must sit in the same row, not merely in the section", () => {
+  test("the citation and the text must sit in the same row, not merely in the section", () => {
     const split = neverSection([
       CLOSURE_ROW,
       "2. **A lane that could not run returns `unavailable`.** Never backfilled.",
@@ -411,15 +497,215 @@ describe("the two universal ## Never rows (AUTHORING 12.2)", () => {
       PLAIN_AUTHORSHIP_ROW,
     ]);
     expect(
-      errors(checkBodyShapes(seatTree("seat", split))).filter((i) => i.rule === "role.missing-universal-never-row"),
+      errors(checkBodyShapes(seatTree("seat", split))).filter((i) => i.rule === "role.never-row-not-verbatim"),
     ).toHaveLength(1);
   });
+});
 
-  test("a line break inside the matched clause does not produce a false error", () => {
-    const reflowed = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW_REFLOWED, PLAIN_AUTHORSHIP_ROW]);
-    expect(
-      errors(checkBodyShapes(seatTree("seat", reflowed))).filter((i) => i.rule === "role.missing-universal-never-row"),
-    ).toEqual([]);
+/**
+ * The bar §12.2 states, rather than the floor the gate used to hold.
+ *
+ * `ed81a69` narrowed row 2 in all twenty-nine bodies, dropping four clauses
+ * including the one that makes an `unavailable` required lane block approval.
+ * The sweep at `e6ab663` restored them and changed no validate output at all:
+ * before and after, 0 errors. The gate was requiring two substrings beside the
+ * citation, so both wordings satisfied it and so does a row stripped to nothing
+ * else.
+ */
+describe("a mandated row is compared with the contract, not with two substrings", () => {
+  const rowsOf = (never: string, id = "seat") =>
+    errors(checkBodyShapes(seatTree(id, never))).filter((i) => i.rule === "role.never-row-not-verbatim");
+
+  test("the pre-sweep narrow row 2 is an error", () => {
+    const issues = rowsOf(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW_NARROWED, PLAIN_AUTHORSHIP_ROW]));
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("error");
+    // The message shows where the two part company, or the writer is told only
+    // that something is wrong with a five-line row.
+    expect(issues[0]?.message).toContain("could not be given its required context");
+  });
+
+  test("a row stripped to the two matched substrings and the citation is an error", () => {
+    expect(rowsOf(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW_GUTTED, PLAIN_AUTHORSHIP_ROW]))).toHaveLength(1);
+  });
+
+  test("the same words rewrapped at different points is an error: a block row is carried as it stands", () => {
+    // §12.2: byte-for-byte governs a row reproduced as a block, and the wrap is
+    // part of what is reproduced. Two things are deliberately *not* governed,
+    // because §12.2 mandates the row's text and never its setting: the list
+    // marker, so a seat may number its `## Never` rows as it likes, and the
+    // continuation indent that follows from the marker's width.
+    expect(rowsOf(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW_REFLOWED, PLAIN_AUTHORSHIP_ROW]))).toHaveLength(1);
+  });
+
+  test("the list marker and the indent that follows it are not governed: the text is", () => {
+    // The stated limit of the bar, held as a test rather than left in a comment.
+    // A seat orders its own `## Never` list, so the same row numbered 5 is the
+    // same row, and a seat that writes its rows as bullets is not in breach.
+    const renumbered = UNAVAILABLE_ROW.replace(/^2\. /, "5. ");
+    const bulleted = CLOSURE_ROW.replace(/^1\. /, "- ").replaceAll("\n   ", "\n  ");
+    expect(bulleted).not.toBe(CLOSURE_ROW);
+    expect(renumbered).not.toBe(UNAVAILABLE_ROW);
+    expect(rowsOf(neverSection([bulleted, renumbered, PLAIN_AUTHORSHIP_ROW]))).toEqual([]);
+  });
+
+  test("a bulleted row is still compared, so the marker's freedom is not the row's", () => {
+    // Paired with the test above: the tolerance is in finding the row, and a
+    // narrowed row that borrowed the same freedom is still caught.
+    const narrowed = UNAVAILABLE_ROW_NARROWED.replace(/^2\. /, "- ").replaceAll("\n   ", "\n  ");
+    expect(rowsOf(neverSection([CLOSURE_ROW, narrowed, PLAIN_AUTHORSHIP_ROW]))).toHaveLength(1);
+  });
+
+  test("a row that carries the contract's text and then adds to it is an error", () => {
+    // The weld §12.2's split exists to remove. A writer keeps the mandated row
+    // whole and absorbs a seat-specific clause onto the end of it, where the
+    // clause is load-bearing and nothing can check it. A bar that asked whether
+    // the row *contains* the contract would pass exactly this.
+    const welded = `${CLOSURE_ROW} It also never reopens a finding another seat closed.`;
+    expect(rowsOf(neverSection([welded, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW]))).toHaveLength(1);
+  });
+
+  test("a row this seat never wrote does not stop the next row being compared", () => {
+    // `reviewer-standards` here carries no authorship row at all, so row 3
+    // cannot be located. Row 4 is still compared: an absent row is the presence
+    // check's finding, not a reason to stop reading the seat.
+    const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, STANDARDS_ROW_HALVED]);
+    const issues = rowsOf(never, "reviewer-standards");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("invented preference");
+  });
+
+  test("a fenced example inside ## Never is not read as one of the seat's rows", () => {
+    // A seat may show a wrong row in order to rule it out. Read as a row, the
+    // example is the seat's own text and the seat fails on prose it disowned.
+    const never = [
+      "```",
+      "2. **A lane that could not run returns `unavailable`.** (ruling `required-lane-failure-is-unavailable`)",
+      "```",
+      "",
+      CLOSURE_ROW,
+      UNAVAILABLE_ROW,
+      PLAIN_AUTHORSHIP_ROW,
+      "",
+    ].join("\n");
+    expect(rowsOf(never)).toEqual([]);
+  });
+
+  test("the contract's own rows pass, which is what makes the three above evidence", () => {
+    expect(rowsOf(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW]))).toEqual([]);
+  });
+
+  test("row 3 with a seat-shaped prefix is an error: the mandated sentence is the whole row", () => {
+    const issues = rowsOf(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW_PREFIXED]));
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("Never edits");
+  });
+
+  test("row 4 is punctuated to its host, so bolding and a period for the semicolon pass", () => {
+    // §12.2 says this in as many words: row 4 is a quotation embedded in a
+    // sentence, and a body that bolds its lead clause or ends it with a period
+    // is not in breach. A byte bar here would fail both seats that carry it.
+    const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW, STANDARDS_ROW]);
+    expect(rowsOf(never, "reviewer-standards")).toEqual([]);
+  });
+
+  test("row 4 with half the quotation dropped is still an error: punctuation is free, words are not", () => {
+    const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW, STANDARDS_ROW_HALVED]);
+    const issues = rowsOf(never, "reviewer-standards");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("invented preference");
+  });
+});
+
+describe("the contract is the authority, and its absence is said rather than passed", () => {
+  test("no AUTHORING.md means the row gate did not run, and says which check that was", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n`,
+      "roles/seat/ROLE.md": seatBody(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW])),
+    });
+    const skips = checkBodyShapes(ctx).filter((i) => i.rule === "role.mandated-rows-unavailable");
+    expect(skips).toHaveLength(1);
+    expect(skips[0]?.skipped).toBe("mandated role rows");
+    // And no row verdict is reported off a contract that was never read.
+    expect(checkBodyShapes(ctx).filter((i) => i.rule.startsWith("role.never-row"))).toEqual([]);
+  });
+
+  test("an AUTHORING.md whose mandated block has gone is the same skip, not a clean pass", () => {
+    const gutted = CONTRACT.replace("**Mandatory, verbatim in every role body:**", "**Mandatory:**");
+    expect(gutted).not.toBe(CONTRACT);
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+      "AUTHORING.md": gutted,
+      "roles/seat/ROLE.md": seatBody(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW])),
+    });
+    expect(checkBodyShapes(ctx).filter((i) => i.rule === "role.mandated-rows-unavailable")).toHaveLength(1);
+  });
+
+  test("a mandatory block with a row this gate cannot place is a skip, not a narrowing", () => {
+    // Adding a fifth mandated row is a contract change, and a gate that read
+    // the two it recognised and passed the rest would report a clean tree while
+    // a row nothing checks stands in AUTHORING.md.
+    const anchor = "**Conditional, required exactly where the condition holds:**";
+    const extended = CONTRACT.replace(anchor, `3. **A third universal row.** Stated here and nowhere else.\n\n${anchor}`);
+    expect(extended).not.toBe(CONTRACT);
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+      "AUTHORING.md": extended,
+      "roles/seat/ROLE.md": seatBody(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW])),
+    });
+    expect(checkBodyShapes(ctx).filter((i) => i.rule === "role.mandated-rows-unavailable")).toHaveLength(1);
+    expect(checkBodyShapes(ctx).filter((i) => i.rule === "role.mandated-row-population")).toEqual([]);
+  });
+
+  test("a mandated row that no longer cites its ruling is a skip, not a row dropped in silence", () => {
+    // The gate pairs rows 1 and 2 to their rulings by citation. A contract that
+    // stopped citing one leaves the gate unable to say which row is which, and
+    // the honest report is that it did not run.
+    const uncited = CONTRACT.replace("`closure-requires-independent-verification`", "`a-ruling-by-another-name`");
+    expect(uncited).not.toBe(CONTRACT);
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+      "AUTHORING.md": uncited,
+      "roles/seat/ROLE.md": seatBody(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW])),
+    });
+    const issues = checkBodyShapes(ctx);
+    expect(issues.filter((i) => i.rule === "role.mandated-rows-unavailable")).toHaveLength(1);
+    expect(issues.filter((i) => i.rule === "role.never-row-not-verbatim")).toEqual([]);
+  });
+
+  test("the rows are read from the contract, so editing the contract moves the bar", () => {
+    // The property that keeps the row text out of src/. A body carrying the
+    // contract's row passes; change the contract alone and the same body fails.
+    const moved = CONTRACT.replace("Only independent verification closes a finding.", "Only independent verification closes it.");
+    expect(moved).not.toBe(CONTRACT);
+    const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW]);
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+      "AUTHORING.md": moved,
+      "roles/seat/ROLE.md": seatBody(never),
+    });
+    expect(errors(checkBodyShapes(ctx)).filter((i) => i.rule === "role.never-row-not-verbatim")).toHaveLength(1);
+  });
+});
+
+describe("the gate names the population it covered", () => {
+  test("the census reports each row's seats, so a seat missing from one is visible", () => {
+    const judging = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW]);
+    const producing = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, CONVERSE_AUTHORSHIP_ROW]);
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n  - id: implementer\n    status: authored\n${CATALOG_TWINS}`,
+      "AUTHORING.md": CONTRACT,
+      "roles/seat/ROLE.md": seatBody(judging),
+      "roles/implementer/ROLE.md": seatBody(producing),
+    });
+    const census = checkBodyShapes(ctx).find((i) => i.rule === "role.mandated-row-population");
+    expect(census?.severity).toBe("note");
+    // Two seats saw the universal rows; one saw each authorship form; neither
+    // judges against a project standard. A tally would hide that split.
+    expect(census?.message).toContain("2 for each universal row");
+    expect(census?.message).toContain("1 for the plain authorship row");
+    expect(census?.message).toContain("1 for the converse");
+    expect(census?.message).toContain("0 for standards grounding");
   });
 });
 
@@ -521,9 +807,103 @@ describe("the conditional standards-grounding row (AUTHORING 12.2)", () => {
   test("a role tier other than the standards gate does not pull the row in", () => {
     const ctx = ctxFor({
       "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: code-review/correctness\n    status: authored\n    tier: always-on\n`,
+      "AUTHORING.md": CONTRACT,
       "roles/code-review/correctness/ROLE.md": seatBody(COMPLIANT_JUDGING_SEAT),
     });
     expect(errors(checkBodyShapes(ctx)).filter((i) => i.rule === "role.standards-row-mismatch")).toEqual([]);
+  });
+});
+
+/**
+ * The converse authorship row is the one governed row §12.2 does not set as
+ * text, so it is the one row this gate still matches on substrings.
+ *
+ * That leaves a copy of the contract's wording in `src/`, which is the drift
+ * shape the rest of this gate exists to remove. It cannot be removed here
+ * without §12.2 stating the row; what can be removed is the silence, so the
+ * copy is checked against the contract that describes it.
+ */
+describe("the one row with no verbatim form keeps its clauses under check", () => {
+  test("every converse clause appears in the contract paragraph that describes it", () => {
+    const authoring = readFileSync(join(import.meta.dir, "..", "AUTHORING.md"), "utf8");
+    const anchor = "**Conditional, required exactly where the condition holds:**";
+    const start = authoring.indexOf(anchor);
+    expect(start).toBeGreaterThan(-1);
+    const item = authoring.slice(start).split(/\n\d+\. /)[1] ?? "";
+    // Guard against an empty subject: a slice that matched nothing would make
+    // every `toContain` below vacuous.
+    expect(item).toContain("carry the converse instead");
+
+    const flat = item.replace(/\s+/g, " ");
+    for (const clause of AUTHORSHIP_CONVERSE_ROW.clauses) {
+      expect(flat).toContain(clause);
+    }
+  });
+});
+
+describe("the gate against the real contract and the real seats", () => {
+  const repo = join(import.meta.dir, "..");
+
+  function realTree(edit: (id: string, text: string) => string = (_, text) => text) {
+    const catalog = readFileSync(join(repo, "catalog.yaml"), "utf8");
+    const files: Record<string, string> = {
+      "catalog.yaml": catalog,
+      "AUTHORING.md": readFileSync(join(repo, "AUTHORING.md"), "utf8"),
+    };
+    const { catalog: loaded } = loadCatalog(repo);
+    if (loaded === null) throw new Error("the repository has no readable catalog");
+    let bodies = 0;
+    for (const entry of loaded.bySection("roles")) {
+      const path = join(repo, "roles", entry.id, "ROLE.md");
+      if (!existsSync(path)) continue;
+      files[`roles/${entry.id}/ROLE.md`] = edit(entry.id, readFileSync(path, "utf8"));
+      bodies += 1;
+    }
+    // The denominator this gate is measured on. §12.2 mandates the universal
+    // rows in twenty-nine seats and `required-lane-failure-is-unavailable`
+    // binds exactly twenty-nine role ids.
+    expect(bodies).toBe(29);
+    return ctxFor(files);
+  }
+
+  test("all twenty-nine authored bodies carry the contract's rows exactly", () => {
+    const issues = checkBodyShapes(realTree()).filter((i) => i.rule.startsWith("role.never-row"));
+    expect(issues).toEqual([]);
+  });
+
+  test("the census over the real tree names 29, 27 and 2", () => {
+    const census = checkBodyShapes(realTree()).find((i) => i.rule === "role.mandated-row-population");
+    expect(census?.message).toContain("29 for each universal row");
+    expect(census?.message).toContain("27 for the plain authorship row");
+    expect(census?.message).toContain("2 for the converse");
+    expect(census?.message).toContain("2 for standards grounding");
+  });
+
+  test("narrowing one real body's row 2 by one clause is caught, naming that body", () => {
+    // The paired assertion. Silence over twenty-nine real bodies is evidence
+    // only if the gate can tell them apart from twenty-nine narrowed ones, and
+    // a gate that located nothing would be silent in exactly the same way.
+    let edited = 0;
+    const ctx = realTree((id, text) => {
+      if (id !== "supervisor") return text;
+      const narrowed = text.replace(", could not be given its required context,", ",");
+      if (narrowed !== text) edited += 1;
+      return narrowed;
+    });
+    expect(edited).toBe(1);
+
+    const issues = checkBodyShapes(ctx).filter((i) => i.rule === "role.never-row-not-verbatim");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.file).toBe("roles/supervisor/ROLE.md");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("the gate is live against the repository itself, not only against a copy", () => {
+    const { catalog } = loadCatalog(repo);
+    if (catalog === null) throw new Error("the repository has no readable catalog");
+    const issues = checkBodyShapes({ root: repo, catalog });
+    expect(issues.filter((i) => i.rule.startsWith("role.never-row"))).toEqual([]);
+    expect(issues.filter((i) => i.rule === "role.mandated-rows-unavailable")).toEqual([]);
   });
 });
 

@@ -19,7 +19,7 @@ import { entryDir, preferredBodyFile, type DirectorySection } from "../catalog/l
 import { exists, isDir, readTextIfPresent } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import type { CheckContext } from "./context.ts";
-import { error, note, type Issue } from "./types.ts";
+import { error, note, skipped, type Issue } from "./types.ts";
 
 /** §3's ten headings with `## Authority` replaced by `## Invoked by` (§12.1). */
 export const PROTOCOL_SECTIONS: ReadonlyArray<string> = [
@@ -287,6 +287,310 @@ function carries(rows: ReadonlyArray<string>, governed: GovernedNeverRow): boole
   return rows.some((row) => rowMatches(row, governed));
 }
 
+/** A markdown list marker at the head of a line: `1.`, `-` or `*`. */
+const LIST_MARKER = /^\s*(?:\d+\.|[-*])\s+/;
+
+/**
+ * §12.2's two anchors, and the bar each block carries.
+ *
+ * The row text itself is deliberately *not* here. `clauses` above is a floor —
+ * it asks whether two substrings appear somewhere in a row, and `ed81a69`
+ * narrowed row 2 in all twenty-nine bodies without moving that floor at all:
+ * the sweep that restored the four dropped clauses changed no validate output,
+ * before or after. The floor cannot be raised by writing the row out here
+ * either, because a second copy of a mandated row is the drift shape the rest of
+ * this file exists to close. So the contract is read from AUTHORING.md at run
+ * time and the bodies are compared against it, which makes §12.2 the single
+ * statement of what the row says.
+ */
+const MANDATORY_ANCHOR = "**Mandatory, verbatim in every role body:**";
+const CONDITIONAL_ANCHOR = "**Conditional, required exactly where the condition holds:**";
+
+/** The name under which this gate reports itself unable to run. */
+const MANDATED_ROWS_CHECK = "mandated role rows";
+
+/**
+ * How closely a body must reproduce a mandated row.
+ *
+ * §12.2 states the distinction in as many words: "Byte-for-byte governs a row
+ * reproduced as a block; a row quoted inside a sentence is punctuated to its
+ * host." Rows 1-3 are set as blocks there, so their wording and their line
+ * breaks are both governed. Row 4 is a quotation embedded in a sentence, so a
+ * body that bolds its lead clause or ends it with a period where §12.2 uses a
+ * semicolon is not in breach -- and a byte bar there would fail both seats that
+ * carry the row today.
+ */
+type RowBar = "block" | "quoted";
+
+interface MandatedRow {
+  /** Which population carries it, used to pick the seats and to count them. */
+  readonly scope: "universal" | "plain-authorship" | "standards";
+  readonly label: string;
+  /** Rows 1-2 are found by the ruling they cite; rows 3-4 by their opening clause. */
+  readonly ruling: string | null;
+  readonly locator: string;
+  readonly expected: string;
+  readonly bar: RowBar;
+}
+
+/** The list items of a section as blocks: raw lines, wrap points intact. */
+function listBlocks(text: string): string[][] {
+  const out: string[][] = [];
+  let current: string[] | null = null;
+  let fenced = false;
+  for (const raw of text.split("\n")) {
+    if (/^\s*```/.test(raw)) fenced = !fenced;
+    if (!fenced && LIST_MARKER.test(raw)) {
+      if (current !== null) out.push(current);
+      current = [raw];
+      continue;
+    }
+    if (current !== null && raw.trim() !== "") current.push(raw);
+  }
+  if (current !== null) out.push(current);
+  return out;
+}
+
+/**
+ * A list item in the form the two sides are compared in: the marker dropped,
+ * continuation lines dedented, line breaks kept.
+ *
+ * The marker goes because a row's position in a seat's `## Never` list is the
+ * seat's to choose -- §12.2 mandates the text, never the number. The
+ * indentation goes for the same reason: it follows from the marker's width, so
+ * a body that writes its rows as `-` bullets is not thereby in breach. What
+ * survives is the wording and the wrap, which is what "carried as it stands"
+ * leaves for a reader to get wrong. All three candidate bars were measured
+ * against the tree first, and all three were 29/29 today; this is the one that
+ * cannot fail a body over a digit or a bullet character.
+ */
+function blockForm(lines: ReadonlyArray<string>): string {
+  const [first = "", ...rest] = lines;
+  return [first.replace(LIST_MARKER, ""), ...rest.map((line) => line.trim())].join("\n");
+}
+
+/** Wording without its punctuation or markup: the bar a quoted row is held to. */
+function looseForm(text: string): string {
+  return text
+    .replace(/[`*"]/g, "")
+    .replace(/;/g, ".")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * The numbered items following an anchor line.
+ *
+ * The block ends at the first non-blank line flush with the margin that is not
+ * itself a numbered item -- the next anchor, or the paragraph that closes the
+ * list. Nothing here counts lines or offsets: a section that is edited above
+ * moves, and a gate that remembered where §12.2 used to sit would read the
+ * wrong text rather than say it could not find it.
+ */
+function itemsAfter(lines: ReadonlyArray<string>, anchor: string): string[][] {
+  const start = lines.findIndex((line) => line.trim() === anchor);
+  if (start === -1) return [];
+  const out: string[][] = [];
+  let current: string[] | null = null;
+  for (const raw of lines.slice(start + 1)) {
+    if (/^\d+\.\s/.test(raw)) {
+      if (current !== null) out.push(current);
+      current = [raw];
+      continue;
+    }
+    if (raw.trim() === "") continue;
+    if (!/^\s/.test(raw)) break;
+    if (current !== null) current.push(raw);
+  }
+  if (current !== null) out.push(current);
+  return out;
+}
+
+/** An item's text on one line, for pulling a span out of it. */
+function flatten(lines: ReadonlyArray<string>): string {
+  return lines.map((line) => line.trim()).join(" ");
+}
+
+/**
+ * §12.2's mandated rows, read from AUTHORING.md.
+ *
+ * `null` means the contract could not be read: absent, or present with the
+ * block no longer in the shape this reads. Either way the caller reports a
+ * check that did not run rather than a tree that passed, because a gate whose
+ * only authority has quietly gone is a gate that approves everything.
+ */
+function mandatedRows(root: string): MandatedRow[] | null {
+  const text = readTextIfPresent(join(root, AUTHORING_FILE));
+  if (text === null) return null;
+  const lines = text.split("\n");
+
+  const universal = itemsAfter(lines, MANDATORY_ANCHOR);
+  const conditional = itemsAfter(lines, CONDITIONAL_ANCHOR);
+  if (universal.length !== UNIVERSAL_NEVER_ROWS.length || conditional.length !== 2) return null;
+
+  const rows: MandatedRow[] = [];
+
+  // Rows 1-2, paired to their rulings by citation rather than by position, so
+  // the order §12.2 sets them in is §12.2's business.
+  for (const ruling of MANDATORY_NEVER_RULINGS) {
+    const item = universal.find((candidate) => flatten(candidate).includes(ruling));
+    if (item === undefined) return null;
+    rows.push({
+      scope: "universal",
+      label: `the universal row citing \`${ruling}\``,
+      ruling,
+      locator: "",
+      expected: blockForm(item),
+      bar: "block",
+    });
+  }
+
+  // Row 3: the bolded sentence that opens the item. The rest of the item is the
+  // condition -- which seats carry it -- and is not part of the row.
+  const plainBold = /^\*\*(.+?)\*\*/.exec(flatten(conditional[0] ?? []).replace(LIST_MARKER, ""));
+  const plain = plainBold?.[1];
+  if (plain === undefined) return null;
+  rows.push({
+    scope: "plain-authorship",
+    label: "the plain authorship row",
+    ruling: null,
+    locator: looseForm(plain),
+    expected: `**${plain}**`,
+    bar: "block",
+  });
+
+  // Row 4: the quotation inside the item's sentence.
+  const quoted = /\*"([^"]+)"\*/.exec(flatten(conditional[1] ?? []));
+  const standards = quoted?.[1];
+  if (standards === undefined) return null;
+  rows.push({
+    scope: "standards",
+    label: "the standards-grounding row",
+    ruling: null,
+    // Its opening clause only: a body that dropped the second half must still
+    // be found, or the gate would report it missing instead of wrong.
+    locator: looseForm(standards.split(";")[0] ?? standards),
+    expected: standards,
+    bar: "quoted",
+  });
+
+  return rows;
+}
+
+/** The first line on which the contract and the body part company. */
+function firstDifference(expected: string, actual: string): { want: string; got: string } {
+  const want = expected.split("\n");
+  const got = actual.split("\n");
+  for (let i = 0; i < Math.max(want.length, got.length); i += 1) {
+    if (want[i] === got[i]) continue;
+    return { want: want[i] ?? "(the row ends here)", got: got[i] ?? "(the row ends here)" };
+  }
+  return { want: expected, got: actual };
+}
+
+/** How many seats each mandated row was compared against, counted where it happened. */
+interface RowPopulation {
+  bodies: number;
+  universal: number;
+  plain: number;
+  converse: number;
+  standards: number;
+}
+
+/**
+ * The mandated rows a seat carries.
+ *
+ * The converse authorship row is absent from this list on purpose: §12.2
+ * describes it in prose and never sets it as a row, so there is no contract
+ * text to compare a body against. It keeps its clause floor, and the census
+ * below says so rather than letting two seats look covered.
+ */
+function rowsBinding(rows: ReadonlyArray<MandatedRow>, id: string, standardsSeats: ReadonlySet<string>): MandatedRow[] {
+  return rows.filter((row) => {
+    if (row.scope === "universal") return true;
+    if (row.scope === "plain-authorship") return !PRODUCING_SEATS.includes(id);
+    return standardsSeats.has(id);
+  });
+}
+
+/**
+ * Compare a seat's `## Never` rows against §12.2's own text.
+ *
+ * Tolerance goes into *locating* the row and none into comparing it. A row is
+ * found by the ruling it cites, or by the clause it opens with, so a body that
+ * narrowed or padded one is still recognised as an attempt at it -- and is then
+ * held to the contract exactly. A row that cannot be located at all is not
+ * reported here: that is an absent row, and the presence checks above own it.
+ */
+function checkMandatedRows(
+  file: string,
+  id: string,
+  text: string,
+  line: number,
+  rows: ReadonlyArray<MandatedRow>,
+  standardsSeats: ReadonlySet<string>,
+  population: RowPopulation,
+): Issue[] {
+  const issues: Issue[] = [];
+  const blocks = listBlocks(text);
+
+  if (PRODUCING_SEATS.includes(id)) population.converse += 1;
+
+  // Counted once per seat per row kind, not once per comparison: the census
+  // answers "which seats did this row reach", and the two universal rows reach
+  // the same seats.
+  const binding = rowsBinding(rows, id, standardsSeats);
+  const scopes = new Set(binding.map((row) => row.scope));
+  if (scopes.has("universal")) population.universal += 1;
+  if (scopes.has("plain-authorship")) population.plain += 1;
+  if (scopes.has("standards")) population.standards += 1;
+
+  for (const row of binding) {
+    const found =
+      row.ruling !== null
+        ? blocks.find((block) => flatten(block).includes(row.ruling as string))
+        : blocks.find((block) => looseForm(blockForm(block)).includes(row.locator));
+    if (found === undefined) continue;
+
+    const actual = blockForm(found);
+    const matches = row.bar === "block" ? actual === row.expected : looseForm(actual) === looseForm(row.expected);
+    if (matches) continue;
+
+    const diff =
+      row.bar === "block"
+        ? firstDifference(row.expected, actual)
+        : { want: looseForm(row.expected), got: looseForm(actual) };
+    issues.push(
+      error(
+        "role.never-row-not-verbatim",
+        file,
+        `${id} carries ${row.label}, but not as AUTHORING.md §12.2 sets it. ${
+          row.bar === "block"
+            ? "§12.2 governs a row reproduced as a block byte-for-byte, so the wording and the line breaks are both part of it."
+            : "§12.2 punctuates this row to its host, so the markup and the punctuation are free and the wording is not."
+        } §12.2: ${JSON.stringify(diff.want)}; ${id}: ${JSON.stringify(diff.got)}.`,
+        line,
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/** The census this gate owes: which seats each row was compared against. */
+function rowPopulationNote(population: RowPopulation): Issue {
+  return note(
+    "role.mandated-row-population",
+    AUTHORING_FILE,
+    `§12.2's mandated rows were compared against the contract across ${population.bodies} role ${
+      population.bodies === 1 ? "body" : "bodies"
+    }: ${population.universal} for each universal row, ${population.plain} for the plain authorship row, ${
+      population.converse
+    } for the converse, ${population.standards} for standards grounding. A seat short of its population carried no ${"## Never"} row this could find and is reported above. The converse is the one row §12.2 describes in prose instead of setting, so those ${population.converse} are held to its clauses and to no verbatim form; everything else counted here was compared with §12.2's own text.`,
+  );
+}
+
 function checkSections(
   file: string,
   sections: ReadonlyArray<Section>,
@@ -354,6 +658,8 @@ function checkOneBody(
   id: string,
   standardsSeats: ReadonlySet<string>,
   families: ReadonlyMap<string, ReadonlyArray<string>> | null,
+  mandated: ReadonlyArray<MandatedRow> | null,
+  population: RowPopulation,
 ): Issue[] {
   const dir = entryDir(section, id);
   if (!isDir(join(ctx.root, dir))) return [];
@@ -414,6 +720,7 @@ function checkOneBody(
     return issues;
   }
 
+  population.bodies += 1;
   issues.push(...checkSections(file, sections, ROLE_SECTIONS, ROLE_FORBIDDEN, false));
   const rationalizations = sections.find((s) => s.heading === "## Rationalizations this seat makes");
   if (rationalizations !== undefined && !hasAntiRationalizationTable(rationalizations.text)) {
@@ -430,7 +737,12 @@ function checkOneBody(
   const never = sections.find((s) => s.heading === "## Never");
   // A body with no `## Never` is already reported as a missing section; there is
   // nothing to say about its rows on top of that.
-  if (never !== undefined) issues.push(...checkNeverRows(file, id, never.text, never.line, standardsSeats));
+  if (never !== undefined) {
+    issues.push(...checkNeverRows(file, id, never.text, never.line, standardsSeats));
+    if (mandated !== null) {
+      issues.push(...checkMandatedRows(file, id, never.text, never.line, mandated, standardsSeats, population));
+    }
+  }
 
   const notThisSeat = sections.find((s) => s.heading === "## Not this seat");
   if (notThisSeat !== undefined) {
@@ -804,10 +1116,32 @@ export function checkBodyShapes(ctx: CheckContext): Issue[] {
   }
   if (families !== null) issues.push(...checkCounterpartTable(ctx, families));
 
+  const mandated = mandatedRows(ctx.root);
+  const population: RowPopulation = { bodies: 0, universal: 0, plain: 0, converse: 0, standards: 0 };
+
   for (const section of ["protocols", "roles"] as const) {
     for (const entry of ctx.catalog.bySection(section)) {
-      issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats, families));
+      issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats, families, mandated, population));
     }
   }
+
+  // Said only once there are role bodies to say it about. A tree with no seats
+  // is not a tree this gate failed to read, and reporting a skip there would
+  // put a standing "did not look" on every run that has nothing to look at.
+  if (population.bodies > 0) {
+    issues.push(
+      mandated === null
+        ? skipped(
+            "role.mandated-rows-unavailable",
+            AUTHORING_FILE,
+            MANDATED_ROWS_CHECK,
+            `§12.2's mandated rows could not be read from ${AUTHORING_FILE}, so ${population.bodies} role ${
+              population.bodies === 1 ? "body was" : "bodies were"
+            } not compared against them. The block is found by its anchors \`${MANDATORY_ANCHOR}\` and \`${CONDITIONAL_ANCHOR}\`, each followed by its numbered items. Every seat still ran the clause checks above, which is a floor and not the contract.`,
+          )
+        : rowPopulationNote(population),
+    );
+  }
+
   return issues;
 }
