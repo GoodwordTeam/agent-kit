@@ -1,0 +1,72 @@
+{
+  "schema": "ticket",
+  "schema_version": 1,
+  "id": "example-ticket-2",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "supervisor",
+    "skill": "super-bound",
+    "operation": "bound.ticket"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "done",
+  "type": "decision",
+  "title": "Decide whether merging is delegated to the run or held by the charter approver",
+  "work_source": {
+    "kind": "decision",
+    "ref": {
+      "id": "example-decision-2",
+      "schema": "decision",
+      "hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "revision": "1111111111111111111111111111111111111111"
+    }
+  },
+  "goal": "The merge question raised by example-decision-2 is answered in the charter, so no later run has to read a grant into the charter's silence.",
+  "non_goals": [
+    "Merging anything.",
+    "Changing the loader, which is example-ticket-1's work."
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "text": "The amended charter names merge explicitly, either as a sensitive action or as a denied one."
+    },
+    {
+      "id": "AC-2",
+      "text": "The superseded charter is marked superseded and no grant issued under it is treated as carrying over."
+    }
+  ],
+  "prerequisites": [
+    {
+      "kind": "decision",
+      "ref": "example-decision-2",
+      "satisfied": true
+    }
+  ],
+  "stop_conditions": [
+    "The answer would require granting an action the charter denies: stop, because that is the question rather than its answer.",
+    "The human does not answer within the run's budget: stop and leave the pull request open."
+  ],
+  "kb_refs": [
+    {
+      "ref": "projects/example-project/decisions/merge-authority",
+      "kind": "kb-fact",
+      "note": "Records that merge authority is settled in the charter and never inferred from its silence."
+    }
+  ],
+  "decision": {
+    "question": "Is merging delegated to the run under a single-use grant, or denied outright?",
+    "subtype": "task",
+    "mode": "hitl",
+    "answer": "Denied outright. The amended charter example-charter-2 lists merge among its denied actions."
+  }
+}

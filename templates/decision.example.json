@@ -66,10 +66,10 @@
     }
   ],
   "charter": {
-    "hash": "sha256:b95c76edd38f95ae5b0efc83323dde4af5978bb7b79094a6aa63e5c39b29a760",
+    "hash": "sha256:4feb70cab928fb2e25f5a6884ca43c6ba534d9c5555d4030761bc496a9a07fd0",
     "rule": "charter:checkpoints/finding-adjudication",
     "grant": {
-      "charter_hash": "sha256:51ee41dc80a81df2072ac2a1e5d9f7321edb18bb315a624c916c4edbe5991aaf",
+      "charter_hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095",
       "covers": "finding-adjudication",
       "decision": "example-decision-1"
     }
@@ -131,7 +131,7 @@
   },
   "grants_issued": [
     {
-      "charter_hash": "sha256:51ee41dc80a81df2072ac2a1e5d9f7321edb18bb315a624c916c4edbe5991aaf",
+      "charter_hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095",
       "covers": "adjudicate-finding",
       "decision": "example-decision-1"
     }

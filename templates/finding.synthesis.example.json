@@ -1,0 +1,127 @@
+{
+  "schema": "finding",
+  "schema_version": 1,
+  "id": "example-finding-3",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "super-review",
+    "operation": "review.synthesize"
+  },
+  "inputs": [
+    {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "accepted",
+  "title": "The artifact loader returns only the first configured directory",
+  "detail": "The specialist's grading is carried unchanged except for severity. A partial read that is indistinguishable from a complete one defeats every later check that trusts the set, which is a consequence the specialist's own lane could not see.",
+  "lane": "code-review/security",
+  "fingerprint": {
+    "value": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "inputs": {
+      "rule": "loader-returns-a-partial-set",
+      "symbol_or_path": "src/loader/artifacts.ts#loadArtifacts",
+      "evidence_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  },
+  "severity": "P1",
+  "presentation_label": "Critical",
+  "confidence_anchor": 50,
+  "spec_quality": "patch",
+  "difficulty": "mechanical",
+  "autofix_class": "gated_auto",
+  "evidence": [
+    {
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/artifacts.ts",
+        "symbol": "loadArtifacts",
+        "line_range": {
+          "start": 24,
+          "end": 51
+        }
+      },
+      "observation": "The loop body returns on its first iteration, so only the first configured directory is ever read. The motivating line was identified by its symbol rather than quoted, which is what the 50 anchor records."
+    },
+    {
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/config/defaults.ts",
+        "symbol": "ARTIFACT_DIRS"
+      },
+      "observation": "Only one directory is configured by default, so on a default configuration the partial read is not observable.",
+      "supports": "counter-evidence"
+    }
+  ],
+  "conflicting_evidence": [
+    {
+      "ref": "projects/example-project/reviews/example-review-1",
+      "kind": "artifact",
+      "note": "An earlier pass read the same code and did not raise it."
+    }
+  ],
+  "suggested_fix": {
+    "summary": "Accumulate across the configured directories instead of returning inside the loop.",
+    "affected": [
+      "src/loader/artifacts.ts"
+    ]
+  },
+  "verification": [
+    {
+      "check": "A document in a non-first configured directory is returned by the loader.",
+      "kind": "command",
+      "supports": [
+        "AC-1"
+      ]
+    }
+  ],
+  "synthesis": {
+    "of": {
+      "id": "example-finding-1",
+      "schema": "finding",
+      "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    "changes": [
+      {
+        "field": "severity",
+        "from": "P2",
+        "to": "P1"
+      }
+    ],
+    "rationale": "Raised on consequence, not on agreement: the partial set reaches every later check in the same shape as a complete one. No other grading field is touched, and the identity inputs are the specialist's unchanged, so this is the same finding at a worse grade rather than a second one."
+  },
+  "adjudication": {
+    "by": "supervisor",
+    "outcome": "accepted",
+    "rationale": "The regrade is accepted. Severity is the only field synthesis moved and it moved in the one direction synthesis is allowed to move it.",
+    "at": "2026-09-19T09:00:00Z",
+    "evidence": [
+      {
+        "ref": "projects/example-project/runs/example-run-1/finding.json",
+        "kind": "artifact"
+      }
+    ]
+  },
+  "authorization_ref": {
+    "kind": "decision",
+    "decision": {
+      "id": "example-decision-1",
+      "schema": "decision",
+      "hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "schema": "finding",
+  "schema_version": 1,
+  "id": "example-finding-2",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "code-review/maintainability",
+    "skill": "super-review",
+    "operation": "review.full"
+  },
+  "inputs": [
+    {
+      "id": "example-dossier-1",
+      "schema": "dossier",
+      "hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "open",
+  "title": "Two loaders decide independently what counts as a document",
+  "detail": "Each loader walks the same directory and applies its own test for what it will accept. Neither is wrong on its own and the pair has no owner, so a file that fails both tests is reported by neither. What the right shape is -- one loader, a shared predicate, or an explicit rejection path -- is not settled by reading the code.",
+  "lane": "code-review/maintainability",
+  "fingerprint": {
+    "value": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "inputs": {
+      "rule": "two-readers-one-input",
+      "symbol_or_path": "src/loader/artifacts.ts#loadArtifacts",
+      "evidence_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    }
+  },
+  "severity": "P2",
+  "presentation_label": "Important",
+  "confidence_anchor": 75,
+  "spec_quality": "smell",
+  "difficulty": null,
+  "autofix_class": "advisory",
+  "evidence": [
+    {
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/artifacts.ts",
+        "symbol": "loadArtifacts"
+      },
+      "observation": "The loader accepts a file only when it carries a string member naming its schema, and skips anything else without recording that it did.",
+      "excerpt": "if (typeof schema !== \"string\") continue;"
+    },
+    {
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/targets.ts",
+        "symbol": "collectTargets"
+      },
+      "observation": "The second loader applies the same test for its own purposes and skips the same files, so the two agree on what to ignore without either one owning the decision.",
+      "excerpt": "if (typeof declared !== \"string\") continue;"
+    }
+  ],
+  "verification": [
+    {
+      "check": "A file that neither loader accepts is reported by some check, or the run states that it was ignored.",
+      "kind": "manual"
+    }
+  ]
+}

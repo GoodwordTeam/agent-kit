@@ -1,0 +1,203 @@
+{
+  "schema": "decision",
+  "schema_version": 1,
+  "id": "example-decision-2",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "runner"
+  },
+  "inputs": [
+    {
+      "id": "example-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "escalated",
+  "checkpoint": "ticket-approval",
+  "question": "May this run merge the pull request that closes the loader ticket, or does merging stay with the human who approved the charter?",
+  "options": [
+    {
+      "id": "delegate-merge",
+      "summary": "Issue a single-use grant letting the run merge once every required lane is covered.",
+      "consequence": "The run finishes without a second human turn; the charter has to name merge as a sensitive action."
+    },
+    {
+      "id": "hold-merge",
+      "summary": "Leave merging with the human and stop the run at an open pull request.",
+      "consequence": "The run ends one step short of done and the human merges when they are ready."
+    }
+  ],
+  "evidence": [
+    {
+      "ref": "projects/example-project/runs/example-run-1/ticket.json",
+      "kind": "artifact",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "ref": "projects/example-project/runs/example-run-1/review.json",
+      "kind": "artifact",
+      "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    }
+  ],
+  "required_evidence": [
+    "projects/example-project/runs/example-run-1/ticket.json",
+    "projects/example-project/runs/example-run-1/review.json"
+  ],
+  "affected_artifacts": [
+    {
+      "id": "example-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "charter": {
+    "hash": "sha256:4feb70cab928fb2e25f5a6884ca43c6ba534d9c5555d4030761bc496a9a07fd0",
+    "rule": "charter:checkpoints/ticket-approval",
+    "grant": {
+      "charter_hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095",
+      "covers": "approve-ticket",
+      "decision": "example-decision-2"
+    }
+  },
+  "seats": [
+    {
+      "id": "seat-one",
+      "filled_by": "supervisor",
+      "independent": true,
+      "may_implement": false
+    },
+    {
+      "id": "seat-two",
+      "filled_by": "reviewer-standards",
+      "independent": true,
+      "may_implement": false
+    }
+  ],
+  "judgments": [
+    {
+      "seat": "seat-one",
+      "by": "supervisor",
+      "choice": "delegate-merge",
+      "rationale": "Every required lane is covered and the grant would be single-use, so the delegation is bounded.",
+      "unresolved_assumptions": [],
+      "escalate": false,
+      "at": "2026-09-19T09:00:00Z",
+      "saw_other_judgment": false
+    },
+    {
+      "seat": "seat-two",
+      "by": "reviewer-standards",
+      "choice": "hold-merge",
+      "rationale": "The charter does not name merge at all. Reading a grant into that silence is the reading the charter cannot settle, so it is the human's to answer.",
+      "unresolved_assumptions": [
+        "Whether the charter's silence on merge was deliberate or an omission."
+      ],
+      "escalate": true,
+      "at": "2026-09-19T09:00:00Z",
+      "saw_other_judgment": false
+    }
+  ],
+  "agreement": false,
+  "authority_check": {
+    "deterministic": true,
+    "charter_permits": true,
+    "required_evidence_present": true,
+    "seats_independent": true,
+    "checkpoint_in_charter": true,
+    "both_judgments_returned": true,
+    "result": "pass"
+  },
+  "ruling": {
+    "outcome": "blocked",
+    "chosen_option": null,
+    "at": "2026-09-19T09:00:00Z",
+    "recorded_by": "policy",
+    "note": "The authority check passed and the checkpoint still blocks. Authority is not agreement in either direction: a passed check does not manufacture a choice the two seats did not reach."
+  },
+  "escalation": {
+    "need": "Whether merging is delegated to this run under a single-use grant, or stays with the human who approved the charter.",
+    "options": [
+      {
+        "id": "delegate-merge",
+        "summary": "Amend the charter to name merge a sensitive action and grant it once.",
+        "consequence": "The run can finish unattended; every later run reads the same amended charter."
+      },
+      {
+        "id": "hold-merge",
+        "summary": "Amend the charter to deny merge outright.",
+        "consequence": "This run and every later one stop at an open pull request."
+      }
+    ],
+    "tried": [
+      {
+        "ref": "projects/example-project/runs/example-run-1/charter.json",
+        "kind": "artifact",
+        "hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095"
+      },
+      {
+        "ref": "projects/example-project/runs/example-run-1/review.json",
+        "kind": "artifact",
+        "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+      }
+    ],
+    "default": "hold-merge",
+    "charter_rule": "charter:denied_actions",
+    "blocked": [
+      "example-ticket-1"
+    ]
+  },
+  "result": {
+    "operation": "decision.approve-ticket",
+    "status": "needs-input",
+    "next_permitted_action": "Hand the escalation to the human who approved the charter. Nothing else in this run may proceed on the merge question.",
+    "outputs": [
+      {
+        "id": "example-decision-2",
+        "schema": "decision",
+        "hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "escalation": {
+      "need": "Whether merging is delegated to this run under a single-use grant, or stays with the human who approved the charter.",
+      "options": [
+        {
+          "id": "delegate-merge",
+          "summary": "Amend the charter to name merge a sensitive action and grant it once.",
+          "consequence": "The run can finish unattended; every later run reads the same amended charter."
+        },
+        {
+          "id": "hold-merge",
+          "summary": "Amend the charter to deny merge outright.",
+          "consequence": "This run and every later one stop at an open pull request."
+        }
+      ],
+      "tried": [
+        {
+          "ref": "projects/example-project/runs/example-run-1/charter.json",
+          "kind": "artifact",
+          "hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095"
+        },
+        {
+          "ref": "projects/example-project/runs/example-run-1/review.json",
+          "kind": "artifact",
+          "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+        }
+      ],
+      "default": "hold-merge",
+      "charter_rule": "charter:denied_actions",
+      "blocked": [
+        "example-ticket-1"
+      ]
+    }
+  }
+}

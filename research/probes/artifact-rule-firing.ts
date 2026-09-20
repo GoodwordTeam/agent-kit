@@ -19,7 +19,9 @@
  *               so nothing is compared. Only a mutation that flips the guard
  *               makes it report. The rule is installed, not tested.
  *   unreached   No document carries a node of the shape the rule looks for at
- *               all, so no single-field mutation reaches it.
+ *               all, so no single-field mutation reaches it. Empty today; it
+ *               stays in the classification because the way a set regresses is
+ *               by losing a document, not by losing a rule.
  *
  * WHAT A CLEAN RUN IS EVIDENCE OF
  *   - The unmutated example set raises nothing from `checkArtifacts`,
@@ -39,16 +41,25 @@
  *   - That `exercised` means fully exercised. Several rules hold more than one
  *     clause; a rule is counted exercised when any clause compares a shipped
  *     value. Where a second clause stays inert, `note` says so.
- *   - That the example set is the right set. It is ten documents, one per
- *     schema with a runtime shape. Rules that compare two documents of the
- *     same schema cannot be satisfied by one of each, and that shows up here
- *     as `inert` rather than as an argument for a larger set.
+ *   - That the example set is the right set. It grew from ten documents to
+ *     eighteen by adding exactly the states these rules guard -- a blocked
+ *     decision, an amended charter, a smell, a decision ticket, a review with
+ *     an unavailable required lane, a second lesson, a regraded finding, a
+ *     receipt for a weakened check. A document added to move a count would be
+ *     worth nothing here, and the way to tell the two apart is to ask whether
+ *     a real run would emit it.
  *   - That anything outside these three modules ran. `checkSchemas` validates
  *     the same documents and is not gated on `templates/` having content.
  *
  * Nothing is written inside the repository. The documents are copied to a
  * temporary root and mutated there, because a mutation loop in the working
  * tree is visible to everyone else working in it.
+ *
+ * Measured on the shipped set: 44 exercised, 1 inert, 0 unreached. The one
+ * inert rule is `charter.sensitive-grant-requires-explicit-human-approval-
+ * bound-to-this-hash`, and no document closes it: it asks a nested approval to
+ * carry the digest of the content that approval is part of. That is a defect
+ * in the rule, recorded here as the measurement that found it.
  *
  * Usage: bun run research/probes/artifact-rule-firing.ts
  * Exits 0 when the baseline is silent and every mutation reported its own
@@ -117,9 +128,11 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
   {
     rule: "escalation.default-not-an-option",
-    file: null,
-    kind: "absent",
-    note: "The rule looks for a node carrying need, options and default. No example carries an escalation: the decision was decided and the review was approved, and an escalation belongs to the blocked forms of both.",
+    file: "decision.blocked.example.json",
+    path: "escalation.default",
+    to: "neither-option",
+    kind: "value",
+    note: "Two nodes of this shape are checked on every run: the decision's own escalation and the copy its result carries, because needs-input requires one there and a blocked ruling requires one here.",
   },
   {
     rule: "finding.closed-without-receipt",
@@ -130,11 +143,10 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
   {
     rule: "finding.difficulty-on-open-solution-space",
-    file: "finding.example.json",
-    path: "spec_quality",
-    to: "smell",
-    kind: "guard",
-    note: "Guarded on spec_quality === 'smell'. The example is a patch, so the difficulty comparison never runs.",
+    file: "finding.smell.example.json",
+    path: "difficulty",
+    to: "mechanical",
+    kind: "value",
   },
   {
     rule: "finding.self-closed",
@@ -145,12 +157,10 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
   {
     rule: "finding.smell-is-not-autofixable",
-    file: "finding.example.json",
-    path: "spec_quality",
-    to: "smell",
-    also: [{ path: "difficulty", to: null }],
-    kind: "guard",
-    note: "Guarded on spec_quality === 'smell', same gate as the difficulty rule above.",
+    file: "finding.smell.example.json",
+    path: "autofix_class",
+    to: "gated_auto",
+    kind: "value",
   },
   {
     rule: "grant.charter-hash-unknown",
@@ -161,11 +171,11 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
   {
     rule: "ticket.decision-dispatched-as-implementation",
-    file: "ticket.example.json",
-    path: "type",
-    to: "decision",
-    kind: "guard",
-    note: "Guarded on type === 'decision'. The example is an implementation ticket, which is the shape the rest of the worked example needs.",
+    file: "ticket.decision.example.json",
+    path: "decision.answer",
+    to: "",
+    kind: "value",
+    note: "The shipped decision ticket is in an executing status with its answer recorded, so both clauses compare: the implementation-field scan and the answered-question check.",
   },
 
   // ---------------------------------------------------------- configrules.ts
@@ -199,7 +209,7 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
       },
     ],
     kind: "guard",
-    note: "Guarded on a non-empty sensitive_grants. It is also unsatisfiable once entered: the rule wants approval.artifact_hash to equal immutability.hash, and that value is part of the content immutability.hash is taken over, so no assignment is a fixed point.",
+    note: "The one rule left inert, and not for want of a document. It wants approval.artifact_hash to equal immutability.hash, and that approval is nested inside the content immutability.hash is taken over: no assignment is a fixed point. Reported rather than worked around.",
   },
   {
     rule: "charter.supervisor-seats-independent-and-not-the-implementer",
@@ -211,11 +221,10 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   {
     rule: "charter.amendment-creates-a-new-hash-and-invalidates-old-grants",
     file: "charter.example.json",
-    path: "supersedes",
-    to: { id: "example-charter-0", schema: "charter", hash: SYN },
-    also: [{ path: "immutability.hash", to: SYN }],
-    kind: "guard",
-    note: "Guarded on the envelope's supersedes. The example is a first charter, so no amendment is compared.",
+    path: "status",
+    to: "active",
+    kind: "value",
+    note: "Mutated on the superseded charter, which is what the amendment is compared against. All three clauses compare on every run; this one exercises the clause that a superseded charter says so itself.",
   },
 
   // ------------------------------------------------------ docrules.ts: decision
@@ -300,7 +309,7 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
     path: "fingerprint.inputs.symbol_or_path",
     to: "src/loader/artifacts.ts:24",
     kind: "value",
-    note: "The line-bearing-input clause is exercised. The cross-document clause, which compares two findings' inputs and values, is inert: there is one finding.",
+    note: "Both clauses compare now. The synthesis finding carries the specialist's identity inputs unchanged and the same value, which is the agreeing case the cross-document clause exists to tell apart from a collision.",
   },
   {
     rule: "finding.presentation-label-never-substitutes-for-severity",
@@ -311,15 +320,12 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
   {
     rule: "finding.synthesis-may-only-worsen-a-grade",
-    file: "finding.example.json",
-    path: "synthesis",
-    to: {
-      of: { id: "example-finding-0", schema: "finding", hash: SYN },
-      changes: [{ field: "severity", from: "P2", to: "P3" }],
-      rationale: "Recorded to show the direction the validator enforces.",
-    },
-    kind: "guard",
-    note: "Guarded on a synthesis member. The example is a specialist's own finding, not a regraded one.",
+    file: "finding.synthesis.example.json",
+    path: "synthesis.changes.0.to",
+    to: "P3",
+    also: [{ path: "severity", to: "P3" }],
+    kind: "value",
+    note: "All three clauses compare: the direction, the recorded from against the original document, and the recorded to against this one. The mutation moves severity the one way synthesis may not.",
   },
   {
     rule: "finding.low-confidence-security-is-adjudicated-not-filtered",
@@ -339,9 +345,11 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   // -------------------------------------------------------- docrules.ts: lesson
   {
     rule: "lesson.duplicate-of-an-existing-lesson-is-refused",
-    file: null,
-    kind: "absent",
-    note: "The rule compares this lesson's statement against every other lesson document. One lesson exists, so the loop body never runs; a second lesson is what reaches it, not a changed field.",
+    file: "lesson.charter-silence.example.json",
+    path: "statement",
+    to: "When a loader iterates a configured list and returns from inside the loop, every caller receives a partial set that is shaped exactly like a complete one; check the return position before trusting a set's completeness.",
+    kind: "value",
+    note: "The comparison normalizes case and whitespace, so the mutation is the other lesson's statement verbatim.",
   },
   {
     rule: "lesson.skill-rollback-preserves-lesson-and-evidence-history",
@@ -363,32 +371,31 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   { rule: "review.security-seat-not-filled-by-implementer-or-spec-approver", file: "review.example.json", path: "lanes.1.seat.filled_by", to: "implementer", kind: "value" },
   {
     rule: "review.unavailable-required-lane-blocks-approval",
-    file: "review.example.json",
-    path: "lanes.0.state",
-    to: "unavailable",
-    kind: "guard",
-    note: "Guarded on a required lane in the unavailable state. Every required lane in the example is covered, so the comparison against the verdict never runs.",
+    file: "review.blocked.example.json",
+    path: "verdict",
+    to: "approved",
+    kind: "value",
   },
   { rule: "review.third-fix-cycle-stops", file: "review.example.json", path: "fix_cycles.allowed", to: 3, kind: "value" },
   { rule: "review.delta-scope-bounded-by-affected-behavior", file: "review.example.json", path: "delta_scope.boundary", to: "changed-lines", kind: "value" },
   {
     rule: "review.material-change-establishes-a-new-baseline",
-    file: "review.example.json",
-    path: "baseline_reset",
-    to: { reason: "requirements-changed", invalidated_approvals: [], new_scope: true },
-    kind: "guard",
-    note: "Guarded on a baseline_reset member. A delta pass that also resets its baseline is contradictory, so the example carries one or the other.",
+    file: "review.blocked.example.json",
+    path: "baseline_reset.invalidated_approvals",
+    to: [],
+    kind: "value",
+    note: "The reset lives on the blocked full pass, not on the delta one: a delta review that also resets its baseline is the contradiction the rule's third clause names.",
   },
 
   // -------------------------------------------------- docrules.ts: verification
   { rule: "verification.prose-never-substitutes-for-exit-status-and-digest", file: "verification.example.json", path: "exit_status", to: 1, kind: "value" },
   {
     rule: "verification.weakened-check-requires-its-own-decision",
-    file: "verification.example.json",
-    path: "weakened_checks",
-    to: [{ what: "assertion-weakened", detail: "Recorded to reach the rule; a real entry carries the decision that authorized it." }],
-    kind: "guard",
-    note: "Guarded on a non-empty weakened_checks. Nothing was weakened, which is the state the rule exists to protect.",
+    file: "verification.weakened.example.json",
+    path: "status",
+    to: "passed",
+    kind: "value",
+    note: "Only the second clause is the rule's own. The first -- that each entry names a decision -- restates a schema `required`, so no document reaches it without failing ajv first.",
   },
   {
     rule: "verification.receipt-stale-when-revision-differs-from-head",

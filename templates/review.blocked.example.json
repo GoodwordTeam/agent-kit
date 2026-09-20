@@ -1,0 +1,114 @@
+{
+  "schema": "review",
+  "schema_version": 1,
+  "id": "example-review-2",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "super-review",
+    "operation": "review.full"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "complete",
+  "mode": "full",
+  "comparison_base": {
+    "repo": "example-org/example-service",
+    "revision": "0000000000000000000000000000000000000000"
+  },
+  "reviewed_head": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "snapshot": {
+    "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "immutable": true,
+    "reviewers_may_edit_source": false,
+    "includes": [
+      "diff",
+      "tests",
+      "prior-findings",
+      "verification-receipts"
+    ],
+    "excludes": [
+      "implementer-narrative",
+      "other-reviewer-judgments"
+    ]
+  },
+  "authorship": {
+    "implementer": "implementer",
+    "spec_approver": "reviewer-spec",
+    "tickets": [
+      {
+        "id": "example-ticket-1",
+        "schema": "ticket",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "role": "code-review/correctness",
+      "required": true,
+      "tier": "always-on",
+      "state": "covered",
+      "seat": {
+        "filled_by": "code-review/correctness",
+        "independent_of_author": true,
+        "context_isolated": true
+      },
+      "verdict": "approve",
+      "evidence": [
+        {
+          "ref": "projects/example-project/runs/example-run-1/verification.json",
+          "kind": "receipt"
+        }
+      ]
+    },
+    {
+      "role": "code-review/security",
+      "required": true,
+      "tier": "always-on",
+      "state": "unavailable",
+      "reason": "The seat did not return within the checkpoint's budget. No other seat covers it and the lane is required, so the pass returns blocked rather than approving what was reviewed.",
+      "verdict": "no-opinion"
+    }
+  ],
+  "findings": [
+    {
+      "id": "example-finding-2",
+      "schema": "finding",
+      "hash": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    }
+  ],
+  "baseline_reset": {
+    "reason": "requirements-changed",
+    "invalidated_approvals": [
+      {
+        "id": "example-review-1",
+        "schema": "review",
+        "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+      }
+    ],
+    "new_scope": true,
+    "note": "The amended charter denies merge, which changes what this pass is reviewing towards. The earlier approval was given against the superseded charter and does not carry."
+  },
+  "fix_cycles": {
+    "allowed": 2,
+    "used": 0,
+    "exhausted_action": "blocked"
+  },
+  "blocked_reasons": [
+    "The security lane is required and returned unavailable; no other seat covers it.",
+    "The baseline was reset by the charter amendment, so the earlier approval does not carry."
+  ],
+  "verdict": "blocked"
+}

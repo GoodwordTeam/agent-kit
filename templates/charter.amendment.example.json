@@ -1,7 +1,7 @@
 {
   "schema": "charter",
   "schema_version": 1,
-  "id": "example-charter-1",
+  "id": "example-charter-2",
   "project": {
     "id": "example-project",
     "repo": "example-org/example-service"
@@ -13,15 +13,15 @@
   "inputs": [],
   "source_revision": {
     "repo": "example-org/example-service",
-    "revision": "0000000000000000000000000000000000000000"
+    "revision": "1111111111111111111111111111111111111111"
   },
   "created_at": "2026-09-19T09:00:00Z",
-  "status": "superseded",
+  "status": "active",
   "immutability": {
     "immutable": true,
     "worker_writable": false,
-    "hash": "sha256:4feb70cab928fb2e25f5a6884ca43c6ba534d9c5555d4030761bc496a9a07fd0",
-    "location": "example-org/example-knowledgebase/projects/example-project/runs/example-run-1/charter.json"
+    "hash": "sha256:8a356f0b4debd41d29d2b9b4a9fc6f0a126aef182c3a6875f3e933a34c9e1b32",
+    "location": "example-org/example-knowledgebase/projects/example-project/runs/example-run-1/charter-2.json"
   },
   "work_source": {
     "kind": "ticket",
@@ -31,7 +31,7 @@
       "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "revision": "0000000000000000000000000000000000000000"
     },
-    "summary": "Close the finding raised against the artifact loader in the example service."
+    "summary": "Close the finding raised against the artifact loader in the example service, under a charter that names merge a denied action rather than leaving it to a grant."
   },
   "repos": [
     {
@@ -63,15 +63,14 @@
     "approve-ticket",
     "start-implementation-ticket",
     "adjudicate-finding",
-    "local-commit",
     "publish-lesson"
   ],
   "denied_actions": [
-    "merge",
     "deploy",
-    "production-credentials",
     "force-push",
-    "history-rewrite"
+    "history-rewrite",
+    "merge",
+    "production-credentials"
   ],
   "checkpoints": [
     "ticket-approval",
@@ -136,17 +135,17 @@
     "on_cancel": "preserve-artifacts"
   },
   "supersedes": {
-    "id": "example-charter-0",
+    "id": "example-charter-1",
     "schema": "charter",
-    "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    "hash": "sha256:4feb70cab928fb2e25f5a6884ca43c6ba534d9c5555d4030761bc496a9a07fd0"
   },
   "approvals": [
     {
-      "artifact_hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095",
+      "artifact_hash": "sha256:9fcc897ba191477d8a21cced71d885781a1a74243a8a5026436f638998f1bbd2",
       "by": "human",
       "authority": "explicit",
       "at": "2026-09-19T09:00:00Z",
-      "note": "Approved before the run opened. Superseded by example-charter-2 once the merge question was escalated."
+      "note": "Approved in answer to the escalation raised by example-decision-2; merge is denied outright rather than delegated."
     }
   ]
 }

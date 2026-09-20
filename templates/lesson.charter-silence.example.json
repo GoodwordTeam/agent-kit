@@ -1,0 +1,76 @@
+{
+  "schema": "lesson",
+  "schema_version": 1,
+  "id": "example-lesson-2",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "compound",
+    "operation": "compound.capture"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "published",
+  "title": "A charter's silence is not a grant",
+  "statement": "When a charter neither permits nor denies an action, two independent seats can read that silence in opposite directions and both be reasoning correctly; escalate the silence to whoever approved the charter instead of resolving it by agreement.",
+  "trigger": {
+    "kind": "failure",
+    "occurrence": {
+      "id": "example-decision-2",
+      "schema": "decision",
+      "hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    "summary": "Two seats split on whether merging was delegated. The authority check passed on every component and the checkpoint still blocked, because what was missing was in the charter rather than in the check.",
+    "at": "2026-09-19T09:00:00Z"
+  },
+  "evidence": [
+    {
+      "ref": "projects/example-project/runs/example-run-1/decision-2.json",
+      "kind": "artifact",
+      "hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    {
+      "ref": "projects/example-project/runs/example-run-1/charter-2.json",
+      "kind": "artifact",
+      "hash": "sha256:9fcc897ba191477d8a21cced71d885781a1a74243a8a5026436f638998f1bbd2"
+    }
+  ],
+  "applies_to": {
+    "domains": [
+      "authority",
+      "charters"
+    ],
+    "paths": [],
+    "packs": [],
+    "skills": [
+      "super-bound"
+    ]
+  },
+  "guidance": [
+    "Read the charter for the action by name before reading any grant that would cover it.",
+    "Where the charter is silent, the escalation names the silence rather than the disagreement it produced."
+  ],
+  "counter_examples": [
+    "A charter that denies an action is not silent about it; a seat proposing it anyway is a seat to correct, not a charter to amend."
+  ],
+  "publication": {
+    "authorization": {
+      "kind": "delegated-grant",
+      "grant": {
+        "charter_hash": "sha256:6281e6af61f190365ec27fd87e6e11582fc176ce466d9126a74588370b1ed095",
+        "covers": "publish-lesson",
+        "decision": "example-decision-1"
+      }
+    },
+    "kb_ref": "example-org/example-knowledgebase/projects/example-project/lessons/charter-silence-is-not-a-grant",
+    "published_at": "2026-09-19T09:00:00Z"
+  }
+}
