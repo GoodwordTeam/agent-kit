@@ -2,7 +2,7 @@
 
 Batch items: `skills/ideate` (U) · `skills/pov` (U) · `skills/bakeoff` (U) · `skills/doubt-driven` (U) · `skills/prototype` (M) · `skills/research` (M) · `skills/source-driven` (M)
 
-This dossier is self-sufficient: it names every source with a verifiable donor path, quotes the concrete mechanisms worth adapting, and states what must change to fit our contract. All donor paths below were verified to exist at the pinned commit with `git cat-file -e` before being cited. Plan references are to `/Users/eduardopicazo/Documents/agent-kit/research/sources/engineering-skills-repo-plan.md` (`plan §x`); transcript references are `G:Lx-Ly` against `/Users/eduardopicazo/Documents/agent-kit/research/sources/grok-transcript.md`.
+This dossier is self-sufficient: it names every source with a verifiable donor path, quotes the concrete mechanisms worth adapting, and states what must change to fit our contract. All donor paths below were verified to exist at the pinned commit with `git cat-file -e` before being cited. Plan references are to `research/sources/engineering-skills-repo-plan.md` (`plan §x`); transcript references are `G:Lx-Ly` against `research/sources/grok-transcript.md`.
 
 ## 0. How this batch reads across the plan
 
