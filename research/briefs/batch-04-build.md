@@ -89,6 +89,25 @@ one process's memory. Land early, fix forward, and flip the four `catalog.yaml` 
 `contract` to `authored` in the commit that lands the bodies — six `catalog.status-behind-body`
 warnings is the expected mid-batch signature, not a defect.
 
+## Two checkpoint scenarios are yours, and nothing else will cover them
+
+`ak validate` reports `evals.uncovered-scenarios` by listing the members, not counting them. At
+`f6efaf7` seven of the twenty-four are covered — 1, 3, 12, 18, 20, 21, 23 — and seventeen are not.
+
+The batch-5 checkpoint gates on scenarios 1, 3, 4, 6, 7, 8, 10, 18 and 20 (plan verification step
+6). Five of those nine have no case today: **4, 6, 7, 8, 10**. Your dossier §8.5 assigns **6, 10 and
+11** to this batch; batch 5 picks up 4, 7 and 8.
+
+So scenarios 6 and 10 reach the checkpoint only through your cases. Tag them `scenario-06` and
+`scenario-10` — the convention is a `tags:` entry on the case, `SCENARIO_TAG` in
+`src/validation/evals.ts` is what reads it, and an untagged case covering the right behaviour counts
+for nothing because the check reads tags rather than intent. If you ship without those tags the gap
+does not surface now; it surfaces at the checkpoint, after batch 5 has been authored against the
+assumption that it held.
+
+Scenario 11 is yours too and is not a checkpoint gate, so it is the one of the three you may report
+as unwritten rather than block on.
+
 ## The failure modes I expect, named so you can report them rather than absorb them
 
 **Scenario 6 is two cases and the dossier says so; write both.** A `smell` / `difficulty: null`
