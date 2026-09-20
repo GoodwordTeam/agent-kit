@@ -514,14 +514,9 @@ deliberately, with each ruling's full text printed beside every citing clause, d
 requirement from three seats, examined the question, and left it on the ground that the surrounding
 bullet carried the bound in substance. Read each sentence of a ruling as naming a population, then
 check that every population reaches a term in the restatement. Comparing topics will not do it, and
-`rulings.uncited-restatement` cannot see it at all: the citation is present and correct.
-
-The instrument available here is a note and must not become a gate. For each ruling, report which of
-its sentences has no lexical trace in the citing paragraph. It over-reports by construction, since a
-clause can be carried faithfully in other words, which is why it cannot gate — but a per-body
-worklist costing a minute to clear is worth more than a gate that cannot exist. This is §8's
-population rule one level up, with the ruling's sentences as the population and a paragraph that
-answers on topic as the place members stop being individually visible.
+`rulings.uncited-restatement` cannot see it at all: the citation is present and correct. §8 carries
+the sweep that finds instances, which reports and does not gate; this section states what a body
+owes, not how to go looking for breaches of it.
 
 **In a table row, cite where the row bounds or excepts a ruling; leave it bare where the row merely
 applies one the body already cites.** A bounding row carries load a reader cannot recover without
@@ -733,6 +728,22 @@ expected to be rather than from the tree, and a search that comes back empty is 
 the head of this section says cannot be read as an absence — including when the person reading it
 that way wrote the rule. Naming the sink a record was supposed to land in is not declaring the
 population of places it could have landed, and only the second is checkable.
+
+**The method for a narrowed clause is a note and must not become a gate.** For each ruling, report
+which of its sentences has no lexical trace in the paragraph citing it. It over-reports by
+construction, because a clause can be carried faithfully in other words, and that is the reason it
+cannot gate — but a per-body worklist costing a minute to clear is worth more than a gate that
+cannot exist. It is this section's population rule applied one level down, with a ruling's sentences
+as the population and a paragraph that answers on topic as the place members stop being individually
+visible.
+
+It is filed here rather than beside the rule it detects, and the split is general. A rule constrains
+what an artifact may contain; a method constrains how someone sweeps for breaches of it. Filing a
+detection method under the rule invites reading it as that rule's enforcement, which this one is not
+and cannot be. The evidence for splitting them is that the last two sweeps run here each found a
+defect of a different class from the one they hunted, because the value came from reading the
+candidates rather than from the pattern that produced them — a method that travels is worth more
+than a method attached to one rule.
 
 **An instrument asserts the outcome only its hypothesis predicts, never one both would produce.**
 This is the population rule's companion and neither replaces it: the population question is whether
