@@ -940,9 +940,13 @@ function verificationRules(rc: RuleContext): void {
   const RULE_WEAK = "verification.weakened-check-requires-its-own-decision";
   const weakened = arr(doc["weakened_checks"]).map(obj);
   // The schema already requires `decision` on every entry, so a check for its
-  // absence here was unreachable: nothing without it got past ajv to be tested.
-  // What ajv cannot see is whether the decision named exists and decided
-  // anything. An unauthorized weakening, one citing an id nobody wrote, and one
+  // absence here only ever reported a defect ajv had already named on the same
+  // field -- two messages for one missing member. It was not unreachable:
+  // document rules run on documents that failed schema validation, which
+  // tests/docrules.test.ts pins, so a clause restating a `required` does fire.
+  // It just cannot fire on anything ajv let through, which makes it worth
+  // nothing rather than dead. What ajv cannot see is whether the decision
+  // named exists and decided anything. An unauthorized weakening, one citing an id nobody wrote, and one
   // citing a checkpoint that blocked are the same document to a shape check,
   // and the third is the one a run actually produces -- the weakening happens,
   // the escalation it depends on never comes back, and the reference stays.

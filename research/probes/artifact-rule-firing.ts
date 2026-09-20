@@ -400,7 +400,7 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
     path: "weakened_checks.0.decision.id",
     to: "example-decision-2",
     kind: "value",
-    note: "example-decision-2 is the blocked decision: it exists, it is a decision, and its ruling is `blocked`. That is the shape a real run produces -- the weakening happens, the escalation it waited on never comes back, and the reference stays -- and it is indistinguishable from an authorized weakening to a shape check. This clause used to restate a schema `required` on the same field and so could not be reached; it now resolves the reference instead.",
+    note: "example-decision-2 is the blocked decision: it exists, it is a decision, and its ruling is `blocked`. That is the shape a real run produces -- the weakening happens, the escalation it waited on never comes back, and the reference stays -- and it is indistinguishable from an authorized weakening to a shape check. This clause used to restate a schema `required` on the same field, which reported a second time on a defect ajv had already named and could report on nothing else; it now resolves the reference instead.",
   },
   {
     rule: "verification.weakened-check-requires-its-own-decision",

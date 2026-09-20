@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 
+import { checkSchemas } from "../src/validation/schemas.ts";
 import { checkDocument, checkDocumentRules, indexDocuments } from "../src/validation/docrules.ts";
 import { artifactHash } from "../src/util/hash.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
@@ -20,6 +23,31 @@ function envelope(schema: string, id: string, extra: Record<string, unknown> = {
     ...extra,
   };
 }
+
+/** The shipped schemas, so the one case that needs ajv reads the real text. */
+const SCHEMAS_DIR = join(import.meta.dir, "..", "schemas");
+
+function shippedSchemas(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of readdirSync(SCHEMAS_DIR)) {
+    if (name.endsWith(".schema.json")) out[`schemas/${name}`] = readFileSync(join(SCHEMAS_DIR, name), "utf8");
+  }
+  return out;
+}
+
+const CATALOG = `schema_version: 1
+package:
+  id: ak
+  name: agent-kit
+  version: 0.1.0
+  namespace: "/ak:"
+  default_profile: core
+schemas:
+${readdirSync(SCHEMAS_DIR)
+  .filter((n) => n.endsWith(".schema.json"))
+  .map((n) => `  - id: ${n.replace(".schema.json", "")}\n    status: authored`)
+  .join("\n")}
+`;
 
 function rulesOf(issues: Array<{ rule: string }>): string[] {
   return issues.map((i) => i.rule);
@@ -694,9 +722,12 @@ describe("verification rules", () => {
   });
 
   // The rule's first clause used to ask whether an entry named a decision at
-  // all, which the schema already requires of every entry, so no document could
-  // reach it without failing ajv first. It now resolves the reference, and these
-  // are the three ways that resolution fails. A weakening authorized by nobody,
+  // all, which the schema already requires of every entry, so the only documents
+  // it could report on were ones ajv had already rejected naming the same field.
+  // Not dead -- the case below pins that document rules do run on documents that
+  // fail schema validation -- but worth nothing, which is the harder thing to
+  // see. It now resolves the reference, and these are the three ways that
+  // resolution fails. A weakening authorized by nobody,
   // one citing an id nobody wrote, and one citing a checkpoint that blocked are
   // the same document to a shape check.
   const weakened = (id: string) => [
@@ -723,6 +754,64 @@ describe("verification rules", () => {
   test("verification.weakened-check-requires-its-own-decision accepts a failed receipt whose weakening was decided", () => {
     const doc = verification({ status: "failed", weakened_checks: weakened("decision-1") });
     expect(rulesOf(run(doc, [decision()]))).not.toContain("verification.weakened-check-requires-its-own-decision");
+  });
+
+  // The premise the comment above rests on, measured rather than assumed. It is
+  // easy to reason that a clause restating a schema `required` can never run,
+  // and that reasoning would be a licence to delete clauses that do run.
+  // `loadTemplateDocuments` filters on shape -- parseable, a mapping, a string
+  // `schema` -- and never on validity, so an ajv-invalid document reaches every
+  // document rule. A clause whose guard is a schema `required` is therefore
+  // redundant, not dead, and the difference decides whether deleting one is
+  // safe.
+  test("document rules run on a document that fails schema validation", () => {
+    // Built here rather than from `envelope`, which sets `project` to a string
+    // where the schema wants an object -- so every other fixture in this file is
+    // schema-invalid, and an assertion that ajv objected would be satisfied by
+    // the fixture instead of by the defect. This document validates clean except
+    // for the one thing added to it.
+    const valid = {
+      schema: "verification",
+      schema_version: 1,
+      id: "verification-1",
+      project: { id: "demo" },
+      run_id: null,
+      created_by: { role: "runner" },
+      inputs: [],
+      source_revision: { repo: "app", revision: "b".repeat(40) },
+      created_at: "2026-09-19T00:00:00Z",
+      status: "passed",
+      kind: "command",
+      command: { argv: ["bun", "test"] },
+      exit_status: 0,
+      output_digest: `sha256:${"a".repeat(64)}`,
+      environment: { id: "ci", isolated: true, secrets_policy: "none" },
+      supports: ["AC-1"],
+    };
+    const tree = (doc: Record<string, unknown>) => {
+      const root = makeTree({
+        "catalog.yaml": CATALOG,
+        ...shippedSchemas(),
+        "templates/verification.json": JSON.stringify(doc),
+        "templates/decision.json": JSON.stringify({ ...decision(), project: { id: "demo" } }),
+      });
+      const { catalog } = loadCatalog(root);
+      const ctx = { root, catalog: catalog! };
+      return {
+        ajv: checkSchemas(ctx).filter((i) => i.file === "templates/verification.json" && i.severity === "error"),
+        rules: rulesOf(checkDocumentRules(ctx).filter((i) => i.file === "templates/verification.json")),
+      };
+    };
+
+    // The control: without it, a later ajv error could be the fixture rotting
+    // rather than the defect, and this case would go on passing either way.
+    expect(tree({ ...valid, weakened_checks: weakened("decision-1") }).ajv).toEqual([]);
+
+    // Two independent defects in one file: an `exit_status` the schema rejects,
+    // and a weakening on a passed receipt that only the document rule sees.
+    const both = tree({ ...valid, exit_status: 1, weakened_checks: weakened("decision-1") });
+    expect(both.ajv.length).toBeGreaterThan(0);
+    expect(both.rules).toContain("verification.weakened-check-requires-its-own-decision");
   });
 
   test("verification.weakened-check-requires-its-own-decision catches a pass obtained by weakening", () => {
