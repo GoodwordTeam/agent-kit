@@ -752,3 +752,40 @@ genuinely correct and reads afterwards like due diligence that was performed. A 
 the command to end. This is the false-assurance direction of the control rule: the instrument
 reported truthfully, on the right subject, and still could not fire, because firing was not something
 its position in the pipeline allowed it to do.
+
+## A working-tree figure is a timestamp, and a timestamp can usually be dated
+
+`provmap` reported "full suite green at tip `09860e4`, 949 pass" from a `bun test` in the shared
+dirty tree. `sweep-reviewer` could not reproduce it, got 943, and proposed catalog-derived tests as
+the mechanism. `provmap` falsified that properly -- zero `test()` declarations inside loops over
+`bySection`, against a positive control returning 19 with the catalog condition dropped -- and both
+lanes then closed the thread with the cause recorded as **unrecoverable**, on the reasoning that the
+working tree that produced 949 is gone.
+
+The cause is recoverable and the evidence was already committed. Measured in a clean extract of
+`09860e4`: 943 pass, 1786 expect() calls, 35 files, matching both lanes exactly. `0adc6dd` adds
+exactly six net `test()` declarations and is the only commit in the window that adds any. 943 + 6 =
+949, which is the tip reading. `cli` had those six tests uncommitted in the shared tree when
+`provmap` measured, and `provmap` counted them.
+
+**The method, which generalises past this instance.** An unreproducible working-tree count is not
+unreproducible because the tree is gone. Uncommitted work is usually work in progress, and work in
+progress usually lands, so the commit that lands it reconstructs the figure afterwards. The search
+runs forward through history from the revision that was labelled, not backward into a tree state that
+no longer exists. Two lanes went looking for the cause in the tree -- ephemeral, destroyed -- when it
+was sitting in the history, which is durable and was already there. It is the dual of the shape on
+this page above it: that error was temporal and every instrument aimed at it was spatial; here the
+evidence was temporal and both searches were spatial.
+
+So `§8`'s rule survives intact and gets a clause. A figure measured on a working tree is still a
+timestamp and must not be quoted with a revision label. But a timestamp already quoted can usually be
+dated, and dating it is worth more than recording the cause as unknown, because an unexplained gap
+between two measurements leaves both under suspicion and this one exonerates all three.
+
+**One note on the instrument that produced the six.** `git show <rev> -- 'tests/*' | grep -c
+'^+.*\btest('` counts added lines, so a commit that only reindents a `test(` call reads as adding
+one: `4c653fb`, which added a timeout and no test, scores `+1` under it. The count is an upper bound
+and not a measurement. What settles it is that the arithmetic closes against an independently
+observed total -- 943 at one end, 949 at the other, six between them -- so the over-count is visible
+as soon as the figure is required to reconcile with something it did not produce. A count nothing has
+to agree with is the one to distrust.
