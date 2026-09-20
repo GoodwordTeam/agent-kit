@@ -1140,6 +1140,39 @@ rather than on the tree, and nothing in the output distinguishes the two unless 
 Key that guard on the source having members, never on the tally being zero. A guard keyed on the
 tally reproduces the fault it was added to catch.
 
+**A list of enforcement claims is a gap record with the sign flipped, and §11's first half is one.**
+The rule above forbids a prose survey of known gaps, because a stale survey is read as a current
+one. Run the argument with the polarity reversed and it reaches §11's *Decided by the commands
+above*: a hand-maintained list of positive claims about what `ak validate` performs, kept in prose,
+beside the enforcement rather than derived from it, updated by whoever remembers. It has already
+produced the failure that shape produces. Four ids sat in it — the ten required sections, their
+order, insertions between them, the anti-rationalization table — and nothing under `src/` performs
+any of them for a skill body: `src/validation/bodies.ts:1135` seats the check that emits them over
+`protocols` and `roles`, and `SKILL_SECTIONS` occurs nowhere in the tree. They sit in the other half
+now. The list that put them in the wrong half is still hand-maintained.
+
+**The gate is coverage, not existence, and the existence version reads green on exactly the claims
+that are wrong.** Those four ids are all emitted under `src/` — they fire for protocol bodies, and
+two of them for role bodies — so a check resolving each id a claim names against the ids the tree
+can emit would have passed on every one of them, and passed for the reason the claims were wrong:
+both confuse *this rule exists* with *this rule is enforced for a skill*. What separates the two is
+a case. **For each rule id claimed in §11's first half there is a skill body correct in every
+respect but the one that id names, on which `ak validate` emits that id.**
+
+Three properties, because each is a way the obvious implementation stops discriminating. The case
+**must be minimal in the respect under test** — a body violating two rules at once proves neither,
+since either id satisfies the assertion. The id **must be asserted present, not the run asserted
+failing**: a mutated body will fail for some reason against a corpus this size, so a gate watching
+the exit code returns the same answer under both hypotheses. And the case list **is derived from
+§11's bullets, not written beside them** — a hand-maintained list of cases checking a
+hand-maintained list of claims is this same defect one level up, and the copy nobody updates is the
+second one.
+
+**Nothing in `src/` performs this either.** It is recorded here rather than left to whoever next
+reads §11, because a claim a check could express and no check performs is what the paragraph above
+says to record; and the failing version is written down beside it so that the gate someone builds is
+not the one that reads green on the bullets it was built for.
+
 **A check that cannot complete owes the reason it could not, and the generic catch is where that
 obligation is usually lost.** `src/validation/run.ts` wraps every check so that one failure does not
 stop the run, and reports the cause under `check.threw` as `(cause as Error).message`. A throw that
@@ -1207,24 +1240,34 @@ past that revision with no notice recorded against the newer one, fails. **Nothi
 performs it**, and the obstacle is a missing field rather than a missing check: the word *notice*
 appears nowhere in `schemas/`, `policies/` or `catalog.yaml`, so a gate written today would read
 nothing and pass. That is worse than no gate, and it is why this one did not land beside the other
-two at `d87f9e9`. Until this paragraph is deleted, its sentence describes a gate that does not
-exist, and it was found the way the other two were: a reviewer diffing `git log` by hand, after
-seven commits touched this file during their pass — one of which rewrote the row they were filing
-against — with nothing failing.
+two at `d87f9e9`. The other half of the field is absent in a way a search cannot show. `covered`
+occurs seven times in `schemas/review.schema.json` and every one is `lanes[].state`, the enum
+`covered | skipped | unavailable` recording whether a seat ran — lane coverage, not which files the
+review read. The nearest candidate, `delta_scope.affected_surface`, is omissible in two places and
+describes what the change affects rather than what the review covered. So whoever re-checks this
+disclosure greps `covered`, finds seven hits and concludes the field is declared: the disclosure is
+right and the obvious check of it returns the opposite answer. That is §5's rule about where a
+figure is published, in the direction where the token is present and the thing it names is not, and
+a disclosure survives a repair cycle only by being re-checkable. Until this paragraph is deleted,
+its sentence describes a gate that does not exist, and it was found the way the other two were: a
+reviewer diffing `git log` by hand, after seven commits touched this file during their pass — one of
+which rewrote the row they were filing against — with nothing failing.
 
 **The gate is silent movement, not movement.** Movement during a review is legitimate and happened
 repeatedly while this section was being written; the notice is what makes it safe. A check that
 failed on movement alone would make the duty unperformable, and an unperformable gate gets turned
 off.
 
-**One rule in this section still specifies a check with no gate, and it says so in its own
+**Two rules in this section still specify a check with no gate, and each says so in its own
 paragraph.** The retirement rule and the entry-quotation rule were gated at `d87f9e9`; the
-recorded-revision rule was not. **Each disclosure retires on the commit that lands its own gate**,
-deleted there with the ruling in the message. They did not retire together and this paragraph is the
-proof: two went and one stayed. A reader who takes those two deletions as covering all three arrives
-at the state the disclosures exist to prevent — believing a check runs because the section stopped
-saying it does not — and that reading is available now rather than hypothetically, which is why the
-count is written out here instead of being left to be inferred from which paragraphs survive.
+recorded-revision rule and the §11 coverage rule were not. **Each disclosure retires on the commit
+that lands its own gate**, deleted there with the ruling in the message. They did not retire
+together and this paragraph is the proof: of the three written before `d87f9e9`, two went and one
+stayed, and the §11 rule was specified after. A reader who takes those two deletions as covering the
+rest arrives at the state the disclosures exist to prevent — believing a check runs because the
+section stopped saying it does not — and that reading is available now rather than hypothetically,
+which is why the count is written out here instead of being left to be inferred from which
+paragraphs survive.
 
 **A handback lists every donor file the writer cited that its dossier did not name.** Following a
 dossier's citation into the pinned clone and finding adjacent material is expected: it is how a
@@ -1355,9 +1398,6 @@ need it.
   fails.
 - Frontmatter carries spec keys only and `name` equals the directory — `frontmatter.unknown-key`,
   `frontmatter.host-key-in-canonical`, `frontmatter.name-mismatch`.
-- The ten required sections are present, in order, spelled exactly — `body.missing-section`,
-  `body.sections-out-of-order`, `body.section-inserted`.
-- `## Hard gates` carries an anti-rationalization table — `body.missing-anti-rationalization-table`.
 - Every adapted file has a provenance row and the cited path exists at the pin —
   `provenance.missing-adaptation`, `provenance.source-not-at-pin`.
 - Three or more eval cases exist, one of each required kind — `evals.too-few-cases`,
@@ -1367,6 +1407,14 @@ need it.
 **Not checked by anything. This is the part of the list that is yours**, and each entry says what
 the nearest instrument does instead, so that a clean run is not read as an answer to it.
 
+- **The ten required sections are present, in order, with nothing inserted between them, and
+  `## Hard gates` carries an anti-rationalization table.** This sat in the half above until it was
+  checked. `body.missing-section`, `body.sections-out-of-order`, `body.section-inserted` and
+  `body.missing-anti-rationalization-table` are real rules that really fail, but
+  `src/validation/bodies.ts:1135` seats the check emitting them over `protocols` and `roles` only,
+  and `SKILL_SECTIONS` occurs nowhere in the tree. No skill body is read for its headings, so a
+  clean run says nothing about them. §10 states the gate that would have caught this entry sitting
+  in the wrong half.
 - **The table's rows come from recorded failures.** The gate sees that a table exists. Whether its
   rows were invented to fill it is §3.1's question, and no tool can reach it.
 - **Every artifact in `## Outputs` names a schema and a KB operation, not a repository path.** The
