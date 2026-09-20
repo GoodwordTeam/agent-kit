@@ -1435,6 +1435,23 @@ skipped: `tdd`, `apply-findings` and `review-delta` each exist because a recorde
 
 Long material goes behind `protocols/<id>/references/` on §1's rule.
 
+**Five of those obligations are gated, and this section named none of them.** The required sections
+and the `## Authority` → `## Invoked by` substitution are `PROTOCOL_SECTIONS` and
+`PROTOCOL_FORBIDDEN` at `src/validation/bodies.ts:25`, raising `body.missing-section`,
+`body.sections-out-of-order` and `body.forbidden-section`; the remedy text the gate prints for
+`## Authority` cites the same ruling the table above cites, so the two cannot drift apart in
+silence. A `protocol.yaml` raises `body.sidecar-forbidden`, from `FORBIDDEN_SIDECAR` at `:182`. A
+`## Hard gates` section present but carrying no three-column table raises
+`body.missing-anti-rationalization-table`. Length is `budget.body-over-target` and
+`budget.body-over-cap`, through `BUDGETED` at `src/validation/budget.ts:22` whose `protocols` row is
+`:24` — not the `skill-over-*` pair §1 names. One directory per catalog entry is
+`catalog.directory-without-entry`.
+
+Naming them is not decoration. A section stating a machine-checked obligation and naming no gate
+sends a writer to verify by hand what `ak validate` already refuses, which is the direction §10
+argues is the harder one to catch: a contract claiming less than it enforces reads as conservative
+rather than wrong.
+
 ### 12.2 Roles
 
 `roles/<path>/ROLE.md`, one per catalog entry. `<path>` nests at most one level — the core roles sit
