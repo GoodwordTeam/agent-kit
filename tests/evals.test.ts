@@ -174,8 +174,14 @@ describe("release scenario coverage", () => {
   test("uncovered scenario numbers are reported", () => {
     const note = checkEvals(complete()).find((i) => i.rule === "evals.uncovered-scenarios");
     expect(note?.severity).toBe("note");
-    expect(note?.message).toContain("2");
-    expect(note?.message).not.toMatch(/(^|\D)1(\D|$)/); // scenario 1 is tagged by every case here
+    // Asserted against the list rather than the whole message. The earlier form
+    // searched the message for a bare `1` to show scenario 1 was absent, which
+    // read the prose as well as the list and so could not survive the message
+    // saying anything else numeric. Parsing out the list is what the test meant
+    // and is stronger besides: the set is compared exactly, so a scenario
+    // wrongly listed fails as loudly as one wrongly missing.
+    const listed = /^release scenarios no case tags: ([^.]+)\./.exec(note?.message ?? "")?.[1];
+    expect(listed).toBe(RELEASE_SCENARIOS.filter((n) => n !== 1).join(", "));
   });
 
   test("a case tagging every scenario leaves none uncovered", () => {
@@ -184,6 +190,78 @@ describe("release scenario coverage", () => {
     for (const c of THREE) files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = CASE(c.id, tags);
     const issues = checkEvals(ctxFor(files));
     expect(issues.filter((i) => i.rule === "evals.uncovered-scenarios")).toEqual([]);
+  });
+
+  test("the note says what it counted, and does not claim the tagged scenarios were tested", () => {
+    // The message read "The corpus must cover all 24 across the catalog", which
+    // is a claim about testing made by a check that counted tag strings. Every
+    // reader of a run reporting 17 took it to mean 17 untested and 7 tested. A
+    // case reduced to `tags: [scenario-18]` produces the identical reading.
+    const note = checkEvals(complete()).find((i) => i.rule === "evals.uncovered-scenarios");
+    expect(note?.message).toMatch(/tag/);
+    expect(note?.message).toMatch(/not|nothing|no case was/i);
+    expect(note?.message).not.toContain("must cover");
+  });
+});
+
+describe("a scenario tag outside the release range", () => {
+  const tagged = (tags: string) => {
+    const files: Record<string, string> = { "skills/alpha/skill.yaml": declare(THREE) };
+    for (const c of THREE) files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = CASE(c.id, tags);
+    return checkEvals(ctxFor(files));
+  };
+  const rejected = (tags: string) => tagged(tags).filter((i) => i.rule === "evals.scenario-tag-out-of-range");
+
+  test("scenario-31 is an error naming the case file and the tag", () => {
+    // `scenario-31` typed for `scenario-13` parses, contributes nothing to
+    // `covered`, and is filtered back out of `uncovered` because that list runs
+    // over 1-24. The writer loses the scenario they meant and the run says
+    // nothing, which is indistinguishable from never having tagged the case.
+    const issue = rejected("[scenario-31]")[0];
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe(`${EVALS_DIR}/alpha/fires-on-trigger/case.yaml`);
+    expect(issue?.message).toContain("scenario-31");
+    expect(issue?.message).toContain("24");
+  });
+
+  test("scenario-24 is accepted: the boundary is the only input that separates the two checks", () => {
+    // The control, and the reason there are two assertions. An off-by-one range
+    // test and a correct one agree on every out-of-range input; they differ on
+    // 24 alone, so the first test above passes under both.
+    expect(rejected("[scenario-24]")).toEqual([]);
+    expect(rejected("[scenario-01]")).toEqual([]);
+  });
+
+  test("scenario-0 is rejected at the low end too", () => {
+    expect(rejected("[scenario-0]")).toHaveLength(3);
+    expect(rejected("[scenario-00]")).toHaveLength(3);
+  });
+
+  test("a tag that is not a scenario claim at all is left alone", () => {
+    // The population this rule owns is tags claiming a release scenario. A tag
+    // naming something else is not a malformed scenario tag, and reporting one
+    // would make the rule fire on every corpus that tags anything.
+    expect(rejected("[smoke, slow]")).toEqual([]);
+  });
+
+  test("a scenario claim the old pattern silently dropped is reported, not ignored", () => {
+    // `^scenario-(\d{1,2})$` did not match these, so they never reached the
+    // range test and were discarded with the same silence. The prefix is the
+    // claim; what follows it is either a scenario in range or a mistake.
+    expect(rejected("[scenario-100]")).toHaveLength(3);
+    expect(rejected("[scenario-1a]")).toHaveLength(3);
+  });
+
+  test("an out-of-range tag contributes nothing to coverage while its neighbour does", () => {
+    // Paired in one case so the two readings come from the same run: 2 leaves
+    // the uncovered list and 31 never enters it. Without the valid tag beside
+    // it, `covered` is empty, the note is suppressed by its own guard, and the
+    // assertion would pass on a build that counted 31 as coverage.
+    const issues = tagged("[scenario-02, scenario-31]");
+    expect(issues.some((i) => i.rule === "evals.scenario-tag-out-of-range")).toBe(true);
+    const uncovered = issues.find((i) => i.rule === "evals.uncovered-scenarios");
+    expect(uncovered?.message).toContain("1, 3, 4");
+    expect(uncovered?.message).not.toMatch(/\b31\b/);
   });
 });
 

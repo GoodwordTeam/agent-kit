@@ -41,7 +41,20 @@ export const MINIMUM_CASES = 3;
 /** The numbered release scenarios in plan §10. */
 export const RELEASE_SCENARIOS: ReadonlyArray<number> = Array.from({ length: 24 }, (_, i) => i + 1);
 
-const SCENARIO_TAG = /^scenario-(\d{1,2})$/;
+/**
+ * A tag claiming a release scenario. The prefix is the claim; what follows is
+ * the number, judged separately.
+ *
+ * An earlier pattern, `^scenario-(\d{1,2})$`, decided both questions at once
+ * and discarded everything that did not match. That made three different tags
+ * indistinguishable: `smoke`, which is not a scenario claim and is rightly
+ * ignored; `scenario-31`, which matched and then vanished because `uncovered`
+ * is filtered over 1-24; and `scenario-100`, which did not match the two-digit
+ * pattern and was dropped before the range was ever consulted. Only the first
+ * should be silent. Splitting the claim from the number is what lets the other
+ * two be reported instead of lost.
+ */
+const SCENARIO_CLAIM = /^scenario-(.+)$/;
 
 interface Declaration {
   readonly id: string;
@@ -79,20 +92,37 @@ function declarationsOf(manifest: Record<string, unknown>): Declaration[] {
   return out;
 }
 
-/** The `scenario-NN` tags a case carries, as numbers. */
-export function scenarioTags(caseDoc: Record<string, unknown>): number[] {
-  const tags = Array.isArray(caseDoc["tags"]) ? caseDoc["tags"] : [];
-  const out: number[] = [];
-  for (const tag of tags) {
-    if (typeof tag !== "string") continue;
-    const match = SCENARIO_TAG.exec(tag.trim());
-    if (match?.[1] === undefined) continue;
-    out.push(Number(match[1]));
-  }
-  return out;
+export interface ScenarioTags {
+  /** Claims naming a scenario in `RELEASE_SCENARIOS`. */
+  readonly covered: number[];
+  /** Claims that name none, kept verbatim so the report can quote what was typed. */
+  readonly rejected: string[];
 }
 
-function checkOneSkill(ctx: CheckContext, id: string, covered: Set<number>): Issue[] {
+/** The release-scenario claims a case carries, split by whether they name one. */
+export function scenarioTags(caseDoc: Record<string, unknown>): ScenarioTags {
+  const tags = Array.isArray(caseDoc["tags"]) ? caseDoc["tags"] : [];
+  const covered: number[] = [];
+  const rejected: string[] = [];
+  for (const tag of tags) {
+    if (typeof tag !== "string") continue;
+    const raw = tag.trim();
+    const claim = SCENARIO_CLAIM.exec(raw)?.[1];
+    if (claim === undefined) continue; // not a scenario claim; some other tag.
+    const scenario = /^\d+$/.test(claim) ? Number(claim) : Number.NaN;
+    if (RELEASE_SCENARIOS.includes(scenario)) covered.push(scenario);
+    else rejected.push(raw);
+  }
+  return { covered, rejected };
+}
+
+/** What the coverage note counted, so it can say so. */
+interface Coverage {
+  readonly scenarios: Set<number>;
+  cases: number;
+}
+
+function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue[] {
   const issues: Issue[] = [];
   const manifestPath = `skills/${id}/skill.yaml`;
   const manifest = readYaml(ctx.root, manifestPath);
@@ -178,7 +208,18 @@ function checkOneSkill(ctx: CheckContext, id: string, covered: Set<number>): Iss
     const casePath = `${caseRoot}/${caseId}/${CASE_FILE}`;
     const doc = readYaml(ctx.root, casePath);
     if (doc === null) continue;
-    for (const scenario of scenarioTags(doc)) covered.add(scenario);
+    coverage.cases += 1;
+    const tags = scenarioTags(doc);
+    for (const scenario of tags.covered) coverage.scenarios.add(scenario);
+    for (const raw of tags.rejected) {
+      issues.push(
+        error(
+          "evals.scenario-tag-out-of-range",
+          casePath,
+          `tag \`${raw}\` claims a release scenario and names none: plan §10 numbers them 1-${RELEASE_SCENARIOS.length}. The claim contributes nothing to coverage, and \`evals.uncovered-scenarios\` runs over 1-${RELEASE_SCENARIOS.length}, so it cannot report the claim either — a case tagged this way reads exactly like a case that was never tagged. Correct the number, or drop the \`scenario-\` prefix if this tag was not meant as a release-scenario claim.`,
+        ),
+      );
+    }
     if (byId.has(caseId)) continue;
     issues.push(
       error(
@@ -195,9 +236,9 @@ function checkOneSkill(ctx: CheckContext, id: string, covered: Set<number>): Iss
 export function checkEvals(ctx: CheckContext): Issue[] {
   const issues: Issue[] = [];
   const skillIds = new Set(ctx.catalog.bySection("skills").map((e) => e.id));
-  const covered = new Set<number>();
+  const coverage: Coverage = { scenarios: new Set<number>(), cases: 0 };
 
-  for (const id of [...skillIds].sort()) issues.push(...checkOneSkill(ctx, id, covered));
+  for (const id of [...skillIds].sort()) issues.push(...checkOneSkill(ctx, id, coverage));
 
   if (!isDir(join(ctx.root, EVALS_DIR))) {
     issues.push(
@@ -223,14 +264,26 @@ export function checkEvals(ctx: CheckContext): Issue[] {
 
   // Reported whenever any case exists: "nothing is covered" before the first
   // case is written is noise, not news.
-  if (covered.size > 0) {
-    const uncovered = RELEASE_SCENARIOS.filter((n) => !covered.has(n));
+  if (coverage.scenarios.size > 0) {
+    const uncovered = RELEASE_SCENARIOS.filter((n) => !coverage.scenarios.has(n));
     if (uncovered.length > 0) {
+      const tagged = RELEASE_SCENARIOS.length - uncovered.length;
       issues.push(
         note(
           "evals.uncovered-scenarios",
           EVALS_DIR,
-          `release scenarios with no case tagged scenario-NN: ${uncovered.join(", ")}. The corpus must cover all ${RELEASE_SCENARIOS.length} across the catalog.`,
+          // The second sentence used to read "The corpus must cover all 24
+          // across the catalog" -- a claim about testing, emitted by a check
+          // that counted tag strings. Every reader of a run reporting 17 took
+          // it to mean 17 untested and 7 tested, including the people who wrote
+          // the corpus. What it counted is stated instead, and what it did not
+          // count is stated beside it, because the gap between the two is the
+          // whole content of the misreading.
+          `release scenarios no case tags: ${uncovered.join(", ")}. Counted: \`scenario-NN\` tag strings across ${
+            coverage.cases
+          } case ${coverage.cases === 1 ? "file" : "files"}. Not counted: whether a tagged case exercises the scenario it names, or whether any case here has ever run — this repository does not execute the corpus, the host does (\`adapters/runner-contract/CONTRACT.md\`), and a case reduced to its \`tags:\` line alone produces this identical reading. So the ${tagged} ${
+            tagged === 1 ? "scenario" : "scenarios"
+          } absent from the list above ${tagged === 1 ? "is" : "are"} tagged, not tested.`,
         ),
       );
     }
