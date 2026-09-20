@@ -11,8 +11,27 @@ attributed. The tree it captured also contains a **third** repair, made after cy
 committed, which the message does not mention. The commit is otherwise the only record of the
 difference, which is why this file exists.
 
-I verified the claim rather than accepting it: `git show 52d1cea` contains 21 lines carrying narrowed
-child-key citations, which cycle 2 as described would not have produced.
+I verified the claim rather than accepting it — and got the figure wrong in the first filed version,
+which the writer caught. Measured at `47c3b62`, naming the unit, because the unit is what went wrong:
+
+| population | count |
+|---|---|
+| added lines in `roles/` carrying a narrowed child-key citation | 20 |
+| citation strings on those added lines | 20 |
+| bodies carrying at least one | **19** |
+| bare parent-key `evidence.quote_the_line` citations remaining | 0 |
+
+Cycle 2 as described would have produced none of these. The first version of this sentence said 21,
+which is the count of the string anywhere in `git show`'s output — added lines, removed lines and
+context together — a population nobody has a use for.
+
+**19 and 20 are both correct and they count different things.** `correctness` carries two citations
+after the split, `.rule` and `.cannot_quote`, so nineteen is right for *bodies* and twenty for
+*citations*. The original sentence mixed the two without saying which it meant. That is the 155/177
+header-row confusion again — two honest counts of adjacent populations in one sentence with no
+statement of the unit — appearing in the file that exists because a commit message understated what
+it held. A wrong figure inside the correction is the same failure one level up, which is §5's
+subject exactly.
 
 ## The third repair, and why it is the most interesting thing in the batch
 
