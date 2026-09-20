@@ -59,8 +59,14 @@ donors:
     license_file: provenance/licenses/Yeachan-Heo_oh-my-codex.LICENSE
 # ---------------------------------------------------------------------------
 # Local sources: third-party or design material held in-repo rather than at a
-# donor pin. Nothing machine-reads this block; it is the register that says what
-# these files are, who owns them, and how they may be cited.
+# donor pin. This block is the register that says what these files are, who owns
+# them, and how they may be cited.
+#
+# Two fields of it are machine-read. `working_copy`, `sha256` and `lines` are
+# recomputed on every run by provenance.local-source-modified; the rest of the
+# block is documentation. That is a narrower claim than it sounds: the check
+# verifies the file is the one the digest was taken against, and says nothing
+# about whether any locator citing it points at the right part of it.
 #
 # DECISION (2026-09-19, standing): a local source is real provenance, there is
 # deliberately no `source:` spelling for citing one, and building one is
@@ -157,3 +163,34 @@ local_sources:
   - id: conversation
     description: Design transcript (Grok) that specified the catalog. Cited as G:L<start>-<end>.
     working_copy: research/sources/grok-transcript.md
+    # `sha256` and `lines` are the anchor, and the anchor is what makes a line
+    # number evidence. A G:L range is a position, and a position means nothing
+    # without the content it was taken against: insert a paragraph at line 400
+    # and every later range still parses, still passes its bounds check, and now
+    # points at the wrong text. Before these two fields the check answered the
+    # same way whether the locators were right or wrong, so it was not evidence.
+    #
+    # The cost is deliberate and was ruled on. Any edit to this file -- including
+    # a typo fix -- fails validation until the locators that cite it are
+    # re-derived. That is expensive and it is the point: the same edit without
+    # the anchor costs exactly as much work and nobody learns they owe it. These
+    # are vendored research inputs with no editing workflow to preserve.
+    sha256: b2b20986e23b69aaa66f43c3fc45a969c913b674c4c4353411ed8fa6e8a2f408
+    # 2265, not the 2264 `wc -l` reports. This file does not end in a newline, so
+    # `wc -l` -- which counts newlines -- misses the last line. The range checker
+    # counts lines, and a G:L citing 2265 resolves there, so a register saying
+    # 2264 would contradict the bounds check it exists to underwrite. The first
+    # run of this check caught exactly that, because the figure was derived with
+    # `wc -l` by the person writing the check.
+    lines: 2265
+  - id: plan
+    description: Repository plan specifying phases, batches, gates and the 24 release scenarios. Cited as `plan §<section>`.
+    working_copy: research/sources/engineering-skills-repo-plan.md
+    # Anchored for the same reason as the transcript, against a weaker failure
+    # mode. A `plan §N` reference resolves against a heading rather than a line,
+    # so renumbering breaks it loudly where a mid-file insertion would not. What
+    # the digest adds is the case renumbering does not cover: §7's *body* being
+    # rewritten under a heading that still reads `## 7.`, which every reference
+    # to it survives while meaning something else.
+    sha256: fba7f575c6ac0d26e3d2ddf0c5d7c7851d7f624437830a1d5eb667bdc3cab088
+    lines: 676

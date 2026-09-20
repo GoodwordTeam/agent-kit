@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
@@ -520,12 +521,105 @@ function transcriptLineCount(root: string): number | null {
   return lines[lines.length - 1] === "" ? lines.length - 1 : lines.length;
 }
 
+/**
+ * Every `local_sources:` entry checked against the file it names.
+ *
+ * WHAT THIS MAKES TRUE THAT WAS NOT
+ * ---------------------------------
+ * A `G:L` range is a position, and a position is evidence only about the content
+ * it was taken against. Before this check, inserting a paragraph into the middle
+ * of the transcript repointed all 99 later ranges, and every one still parsed,
+ * still passed its bounds check against the new longer file, and still validated
+ * clean while pointing at the wrong text. The instrument returned the same answer
+ * whether the locators were right or wrong, so it was not evidence about them.
+ * A digest converts that silent repoint into a loud failure.
+ *
+ * WHAT IT STILL DOES NOT SEE
+ * --------------------------
+ * Whether any locator points at the *right* part of an unmodified file. A range
+ * cited against the wrong paragraph of a file that never changed passes here and
+ * always will; this check knows the content is what the digest was taken against
+ * and nothing about what any row claims to find in it.
+ *
+ * The line count is checked separately rather than treated as implied by the
+ * digest. If the content matches and `lines` does not, the file is right and the
+ * register misrecords it -- a defect in this block rather than in the tree, and
+ * one the digest alone would report as clean.
+ */
+function checkLocalSources(root: string): Issue[] {
+  const issues: Issue[] = [];
+  const doc = readYaml(root, LOCK);
+  if (doc === null || "error" in doc) return issues;
+
+  for (const entry of listOf(doc.value, ["local_sources"])) {
+    const id = typeof entry["id"] === "string" ? entry["id"] : "(unnamed)";
+    const workingCopy = entry["working_copy"];
+    if (typeof workingCopy !== "string") continue;
+
+    const recordedHash = entry["sha256"];
+    const recordedLines = entry["lines"];
+    if (typeof recordedHash !== "string" || typeof recordedLines !== "number") {
+      // An error rather than a warning, because an unanchored entry is the exact
+      // state this check exists to end, and it reads as complete: the file is
+      // registered, named and described, and only the two fields that make a
+      // citation into it mean anything are absent.
+      issues.push(
+        error(
+          "provenance.local-source-unanchored",
+          LOCK,
+          `Local source '${id}' names ${workingCopy} with no sha256 and lines. A citation into an unanchored file is a position with nothing behind it: the content can change under every reference to it and this run will not say so. Take the digest with 'shasum -a 256'. For 'lines', do not use 'wc -l': it counts newlines, so it undercounts a file with no trailing newline by one and would disagree with the bounds check this field underwrites. Record 0 and this check reports the count to use.`,
+        ),
+      );
+      continue;
+    }
+
+    const text = readTextIfPresent(join(root, workingCopy));
+    if (text === null) {
+      issues.push(
+        skipped(
+          "provenance.local-source-unavailable",
+          LOCK,
+          "local source anchors",
+          `Local source '${id}' names ${workingCopy}, which is not in the tree, so its digest went unverified. Rows citing it were range-checked against nothing.`,
+        ),
+      );
+      continue;
+    }
+
+    const actualHash = createHash("sha256").update(text, "utf8").digest("hex");
+    if (actualHash !== recordedHash) {
+      issues.push(
+        error(
+          "provenance.local-source-modified",
+          workingCopy,
+          `${workingCopy} is not the file local source '${id}' was anchored to: recorded sha256 ${recordedHash.slice(0, 12)}, found ${actualHash.slice(0, 12)}. Every locator citing it now points into content it was not taken against. Restore the file, or re-derive the locators that cite it and update sha256 and lines in ${LOCK} in the same commit. Do not update the digest alone -- that silences the check without fixing what it found.`,
+        ),
+      );
+      continue;
+    }
+
+    const lines = text.split("\n");
+    const actualLines = lines[lines.length - 1] === "" ? lines.length - 1 : lines.length;
+    if (actualLines !== recordedLines) {
+      issues.push(
+        error(
+          "provenance.local-source-line-count",
+          LOCK,
+          `Local source '${id}' records ${recordedLines} lines and ${workingCopy} has ${actualLines}, while the digest matches. The file is the right one, so the register is wrong here rather than the tree; correct lines to ${actualLines}.`,
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
 export function checkProvenance(ctx: CheckContext): Issue[] {
   const { root, catalog } = ctx;
   const issues: Issue[] = [];
 
   const { donors, issues: donorIssues } = loadDonors(root);
   issues.push(...donorIssues);
+  issues.push(...checkLocalSources(root));
   const { rows, issues: adaptationIssues } = loadAdaptationFragments(root);
   issues.push(...adaptationIssues);
   issues.push(...checkAdaptationsSync(ctx));

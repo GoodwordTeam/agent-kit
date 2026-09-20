@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -646,5 +647,110 @@ capabilities:
   test("an unknown origin is an error listing the three that exist", () => {
     const issue = rowIssues("G:L10-12", "invented-by-me").find((i) => i.rule === "provenance.unknown-origin");
     expect(issue?.message).toContain("donor, conversation, amalgam");
+  });
+});
+
+describe("a line number is evidence only about the content it was taken against", () => {
+  const BODY = "alpha\nbeta\ngamma\n";
+  // sha256 of BODY, recomputed here rather than pasted so a change to BODY cannot
+  // leave the fixture asserting against a digest of text that no longer exists.
+  const DIGEST = createHash("sha256").update(BODY, "utf8").digest("hex");
+
+  function lockWith(entry: string): string {
+    return `schema_version: 1
+donors: []
+local_sources:
+${entry}
+`;
+  }
+
+  function anchorIssues(entry: string, extra: Record<string, string> = {}) {
+    const ctx = ctxFor({
+      "provenance/upstream.lock.yaml": lockWith(entry),
+      "provenance/conversation-map.yaml": "schema_version: 1\ncapabilities: []\n",
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+      "research/sources/design.md": BODY,
+      ...extra,
+    });
+    return checkProvenance(ctx).filter((i) => i.rule.startsWith("provenance.local-source"));
+  }
+
+  const ANCHORED = `  - id: design
+    working_copy: research/sources/design.md
+    sha256: ${DIGEST}
+    lines: 3`;
+
+  test("an anchored source whose file is unchanged reports nothing", () => {
+    expect(anchorIssues(ANCHORED)).toEqual([]);
+  });
+
+  test("a source registered without a digest is an error, not a silence", () => {
+    const issues = anchorIssues(`  - id: design
+    working_copy: research/sources/design.md`);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.local-source-unanchored");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("the remediation does not tell the reader to use wc -l", () => {
+    // The first run of this check failed on a count taken with `wc -l`, which
+    // counts newlines and so misses the last line of a file that does not end in
+    // one. Advice that reproduces the defect it is fixing is worse than none.
+    const issues = anchorIssues(`  - id: design
+    working_copy: research/sources/design.md`);
+    expect(issues[0]?.message).toContain("do not use 'wc -l'");
+  });
+
+  test("editing the file breaks the anchor even when the line count is unchanged", () => {
+    // The defect this check exists for: content moves, every locator still parses
+    // and still passes its bounds check. A same-length edit is the hardest case.
+    const issues = anchorIssues(ANCHORED, { "research/sources/design.md": "alpha\nBETA!\ngamma\n" });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.local-source-modified");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("the failure says what to do, and says not to silence it by editing the digest", () => {
+    const issues = anchorIssues(ANCHORED, { "research/sources/design.md": "alpha\nBETA!\ngamma\n" });
+    expect(issues[0]?.message).toContain("re-derive the locators");
+    expect(issues[0]?.message).toContain("Do not update the digest alone");
+  });
+
+  test("a wrong line count beside a matching digest indicts the register, not the tree", () => {
+    const issues = anchorIssues(`  - id: design
+    working_copy: research/sources/design.md
+    sha256: ${DIGEST}
+    lines: 99`);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.local-source-line-count");
+    expect(issues[0]?.message).toContain("correct lines to 3");
+  });
+
+  test("a file with no trailing newline counts its last line", () => {
+    // `wc -l` reports 2 here and the range checker resolves L3, so the register
+    // has to mean what the range checker means or the two disagree by one.
+    const noTrailing = "alpha\nbeta\ngamma";
+    const issues = anchorIssues(
+      `  - id: design
+    working_copy: research/sources/design.md
+    sha256: ${createHash("sha256").update(noTrailing, "utf8").digest("hex")}
+    lines: 3`,
+      { "research/sources/design.md": noTrailing },
+    );
+    expect(issues).toEqual([]);
+  });
+
+  test("an absent file is a skip, because the check could not examine what it owns", () => {
+    const ctx = ctxFor({
+      "provenance/upstream.lock.yaml": lockWith(`  - id: design
+    working_copy: research/sources/absent.md
+    sha256: ${DIGEST}
+    lines: 3`),
+      "provenance/conversation-map.yaml": "schema_version: 1\ncapabilities: []\n",
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    });
+    const issues = checkProvenance(ctx).filter((i) => i.rule === "provenance.local-source-unavailable");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.skipped).toBe("local source anchors");
   });
 });
