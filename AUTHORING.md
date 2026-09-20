@@ -483,7 +483,7 @@ There are two citation shapes, and `ak validate` resolves both against the ids i
 | Where | Shape |
 |---|---|
 | A markdown body — `SKILL.md`, a `references/` file, an adapter contract | The word `ruling` followed by the bare id in backticks, inline at the sentence it governs |
-| A YAML file — `skill.yaml`, a policy, a profile | The key `ruling: <bare-id>`, or `rulings: [<id>, <id>]` for several |
+| A YAML file — `skill.yaml`, a policy, a profile | The key `ruling: <bare-id>`, or `rulings: [<id>, <id>]` for several. Where the point of use is a scalar with no key to carry one, the markdown shape, written inside the scalar itself |
 
 **In YAML the unit a `ruling:` key covers is the mapping it belongs to, plus everything nested
 beneath that mapping.** Not the file, not the block a reader's eye groups it with, and never a
@@ -505,9 +505,22 @@ govern.** `synthesis` also holds `autofix_class_emission`, which cites a differe
 authority with a rule it does not state. That is this section's defect arrived at by widening rather
 than by omitting, and it is worse than the uncited entry, because it resolves. Hoist only where the
 entire subtree is governed by the one ruling — that permission is what makes this a scope rule and
-not a prohibition. Otherwise cite at the point of use, and where the point of use is a scalar list
-item that has no key to carry the citation, converting it to a mapping is a schema question for the
-file's owner and `ak validate`, never a reason to cite somewhere easier.
+not a prohibition. Otherwise cite at the point of use. Where the point of use is a scalar list item
+with no key to carry the citation, the table's YAML row gives the shape — the markdown form, written
+inside the scalar. Converting the item to a mapping to make room for a `ruling:` key is a schema
+question for the file's owner and `ak validate`, never a reason to cite somewhere easier.
+
+**In a YAML scalar the inline form attributes the lines it shares a match window with, not the
+block.** In a wrapped multi-line scalar a citation written in the second sentence does not reach a
+claim made in the first, so it goes on the line making the claim. This is the same scope rule the
+key form has, read at a finer grain, and it is why the shape is named here rather than left to be
+inferred: a citation that resolves while attributing the wrong sentence is indistinguishable from a
+working one.
+
+`policies/invocation.yaml:213` is this case in the tree, and the evidence is a removal rather than a
+clean run: delete the citation from that line and `ak validate` raises `rulings.binding-not-cited`
+on the file, restore it and the run is clean. That is the instrument accepting the shape, which a
+comment beside the branch could not establish.
 
 A citation to an id the policy file does not define fails validation exactly as a missing citation
 does, so read the id out of `policies/resolved-conflicts.yaml` rather than reconstructing it from the
