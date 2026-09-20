@@ -15,15 +15,12 @@
 # Repo-native authority: docs/decisions/0001-kb-document-vocabulary.md §4 requires this file to
 # treat knowledgebase acceptance as an authority a skill does not hold. See `authority_not_held`.
 #
-# Prior art, read at /Users/eduardopicazo/Documents/software-factory/docs/decisions/:
-#   ADR-018 "Factory authority boundaries" — authority is explicit and separated per surface;
-#           an investigation/diagnosis runtime carries no approval authority; a launcher exit is
-#           not workflow completion; delivery requires a human-authorized merge plus post-merge
-#           verification. The seat-separation and merge rules below use that vocabulary.
-#   ADR-021 "Separate outcome claims from verified closure" — an agent outcome claim is recorded
-#           separately from an independent verification result; caller-provided pass flags are
-#           not proof; automatic closure requires proof artifacts bound to an authorized
-#           baseline. `closure` in policies/review.yaml uses that distinction.
+# Prior art read for this vocabulary is recorded in that ADR's `Prior art read:` field rather
+# than here, which is this repository's convention for material consulted but not shipped. Nothing
+# below rests on it directly: seat separation cites `missing-supervisor-never-implementer`, the
+# sensitive-action set cites `sensitive-actions-need-approved-charter-entry`, and `closure` in
+# policies/review.yaml cites `closure-requires-independent-verification` — each of them sourced to
+# the plan in policies/resolved-conflicts.yaml, which is the authority a reader can check.
 #
 # No model, provider, cost or routing rule appears here. Seat independence is a
 # structural constraint the runner enforces, not a selection.
