@@ -655,9 +655,18 @@ second alone does not answer the question. `isExempt()` only removes paths that 
 gathered, so a tree in neither list is never offered to the scanner, and reading the exempt list for
 it returns "not exempt" — which reads as scanned and is not. Check both.
 
+**That is three states, and the third reads as a decision it is not.** A tree `SCAN_DIRS` gathers
+and the exempt list subtracts is a boundary someone drew. A tree in neither list is the trap above.
+A tree that is exempt *and* ungathered has an exemption suppressing nothing, so reading "exempt" for
+it credits a decision the scanner never had occasion to make. Two of the four prefixes are there
+now: `provenance/` and `research/` are absent from `SCAN_DIRS`, and `content.ts` says so of
+`research/` in its own words, keeping the entry as a fail-safe rather than deleting it.
+
 The invariant that decides the exempt list: nothing packaged into `dist/` is ever exempt, and an
 exemption exists only where the material's job is to quote what the denylist excludes — pinned
-sources, dossiers recording a donor's routing, and the tests that prove the scanner fires. That
+sources, dossiers recording a donor's routing, the tests that prove the scanner fires, and the term
+definitions themselves, which are the excluded shapes rather than a quotation of them. The
+enumeration tracks the list entry for entry, because one short still reads as complete. That
 invariant governs `SCAN_DIRS` too, in the other direction: a tree this package authors, with no
 quoting job, belongs in it. `evals/` was in neither list until `AUTHORING.md` was ruled on, which
 is how a populated tree of authored prose went unscanned. The substitutions are in `AGENTS.md`,
@@ -683,11 +692,27 @@ forbidden command's effect through a side door (ruling `entrypoint-phase-operati
 requirements, plans, tickets, reviews, lessons and sanitized run receipts — and this package owns
 reusable instructions and templates only (ruling `central-kb-owns-project-artifacts`; plan,
 "Separate instructions, knowledge, and execution" and "Knowledgebase integration"). A skill that
-writes `docs/`, `CONTEXT.md`, `plans/`, `.scratch/` or an ADR tree into the working repository fails
-release scenario 21, whatever the donor did. `docs/decisions/0001-kb-document-vocabulary.md`
-(ADR-0001) names the central equivalent for each retired path and the nine document kinds a KB write
-may use; convert every donor "write a file in the repo" instruction into a KB adapter call
-(`adapters/knowledgebase/CONTRACT.md`). `ak validate` scans skill bodies for the retired targets.
+writes `CONTEXT.md`, `docs/solutions/`, an ADR tree, `plans/` or `.scratch/` into the working
+repository fails release scenario 21, whatever the donor did; convert every donor "write a file in
+the repo" instruction into a KB adapter call (`adapters/knowledgebase/CONTRACT.md`).
+
+**That list is two prohibitions, and only the first has central equivalents to point at.**
+`docs/decisions/0001-kb-document-vocabulary.md` (ADR-0001) names the central equivalent for three of
+them — `CONTEXT.md`, `docs/solutions/` and an app-local ADR tree — and the nine document kinds a KB
+write may use. `plans/` is the same prohibition with no entry there: the plan's knowledgebase sketch
+puts `plans/` under the KB root, so a skill writing it locally recreates a central type rather than
+a retired one. `.scratch/` is not that prohibition at all. Scratch space is excluded because it is
+not a durable project artifact, and it has no central equivalent for the same reason it should not
+acquire one — a skill needing a working file uses the runner's temporary space, not a tracked
+directory. The two reasons are stated apart so the second is not read as an omission in the ADR.
+
+**The prohibition names subtrees, never the segment `docs/`.** A check written against bare `docs/`
+would fire on this package's own `docs/decisions/`, where ADR-0001 lives and which skill bodies cite
+by path because this section sends them there. Measured at `3282296`: `docs/` occurs in skill bodies
+exactly twice, `skills/doc-review/SKILL.md:154` and `skills/super-align/SKILL.md:130`, and both are
+that citation — so the wider term would be wrong on every occurrence it has. `ak validate` scans
+skill bodies for the targets `LOCAL_DOC_TARGET_TERMS` carries (`src/denylist.ts`); read that list
+for the coverage, because naming a path in this paragraph does not put it in the scanner.
 
 Two clauses of `central-kb-owns-project-artifacts` are easy to lose and both bind a writer, and both
 are stated below in the ruling's own words. **Directory names under the knowledgebase root are
