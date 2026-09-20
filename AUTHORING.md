@@ -239,6 +239,22 @@ is where a skill records the degradation its adapter contract describes — a sk
 restriction a host lacks lists it in `unsupported` and drops to `guided` or `manual`, rather than
 claiming a guarantee nothing enforces (`adapters/claude-code/CONTRACT.md` §4).
 
+**Nothing reads that declaration, and until this paragraph is deleted the sentence above describes a
+field with no consumer.** `src/packaging/manifest.ts:52` takes the mode from `autonomy.modes` and
+`autonomy.requires_enforced`, not from `packaging.hosts[]`, and `src/packaging/plan.ts:199` computes
+the bundle's mode from those two alone. No manifest can carry an `autonomy` key —
+`schemas/skill.schema.json` closes the top level with `additionalProperties: false` and has no such
+property — so the read returns empty for every skill in the package and the expression has one
+reachable branch. All eight bodies in `dist/claude-code/skills/` carry `mode: manual`, including
+those whose manifests declare `autonomous`. With them go `rejected` and the whole
+`unsupported`-driven degradation this paragraph describes: a skill declaring a guarantee its host
+cannot enforce and a skill declaring nothing produce the same bundle. Which file is amended is not
+settled here — §4 and the schema agree with each other and the code disagrees with both, which is
+the shape that usually means the code is wrong, but `ak build` reports zero errors either way and a
+writer sees nothing. What is settled is that declaring a `mode` today buys the guarantee §10 says a
+stated-but-ungated rule buys, which is none, and that a writer who fills this block correctly has no
+way to find that out from a clean run.
+
 `ak validate` cross-checks `catalog.yaml`'s `invocation` against `skill.yaml`'s `invocation` and its
 entrypoint authorities, and fails on disagreement.
 
