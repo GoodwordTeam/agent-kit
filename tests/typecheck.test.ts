@@ -101,18 +101,23 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
   });
 });
 
-describe("the packaged bundle is in sync with the tree", () => {
-  test("ak build --check reports no errors", () => {
-    // `dist/` is generated and never committed, so nothing else notices when the
-    // packager and the catalog disagree. AGENTS.md lists this beside `bun test`
-    // in what to run before committing; this is that list, enforced.
-    const run = spawnSync("bun", ["run", join(REPO, "src", "cli.ts"), "build", "--check"], {
-      cwd: REPO,
-      encoding: "utf8",
-    });
-    const output = `${run.stdout}${run.stderr}`;
-    expect(output).toContain("ak build --check:");
-    expect(output).toMatch(/ak build --check: 0 errors/);
-    expect(run.status).toBe(0);
-  });
-});
+/**
+ * `ak build --check` is deliberately NOT gated here, and the reason is a finding.
+ *
+ * It was gated, briefly, and it passed -- because this working tree happened to
+ * carry a `dist/` from an earlier build. In a clean `git archive` extract the
+ * same command emits 22 `packaging.dist-missing` errors, because `dist/` is
+ * generated and `.gitignore`d and therefore absent from every fresh checkout.
+ *
+ * So it is not a gate. It is a post-build verification whose result is decided
+ * by uncommitted local state: green for a developer who has built, red for one
+ * who has not, and neither answer is about the tree. AGENTS.md lists it in the
+ * pre-commit block beside `bun test` without saying that `ak build` has to
+ * precede it, which is the same trap one level up.
+ *
+ * Gating it properly means building to a scratch directory and checking there,
+ * and `ak build` has no output-directory flag today. That is a packaging change
+ * and it is reported rather than bodged in here -- a test that ran `ak build`
+ * into the repository would write `dist/` during the suite and race the other
+ * lanes working in this tree.
+ */
