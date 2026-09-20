@@ -991,6 +991,22 @@ Grader types available: `tool_used`, `llm`, `regex`, `file_exists`, `tool_order`
 wherever the pass criterion is observable; use `llm` for the judgment cases, with an
 `expected_outcome` that a reader could score by hand.
 
+**This section specifies the fields of two of those five types, and a case using the other three is
+not held to anything it says.** The worked example above is the whole of the specification:
+`tool_used` takes `tool`, `llm` takes `expected_outcome`. `regex` takes `pattern` — required by
+`schemas/case.schema.json` and carried by all four `regex` cases in the tree — and this section has
+never said so, which is §5's distinction arriving in a checklist: the field is published where it is
+derived and not where it is written, so a writer reading §9 alone cannot learn it and a writer
+grepping §9 for it concludes there is none. `file_exists` and `tool_order` are named here and
+specified nowhere in this repository. No case uses either, and `schemas/case.schema.json` leaves its
+grader object open rather than guess at field names no run has produced — which is a stated limit
+rather than a silent one, and is why this paragraph can be written at all. The consequence is uneven
+and worth knowing before you pick a type: a `regex` case is validated against its field by the
+schema even though this section is silent, and a `file_exists` or `tool_order` case parses,
+validates, and is checked against nothing, because there is no record of what to check. Writing one
+authors the specification by example. Say so in the batch report rather than leaving the next reader
+to infer the shape from your case.
+
 Tag every case with the release scenario it exercises (`scenario-NN`). Across the whole catalog the
 case corpus must cover **all 24** release scenarios in the plan's "Evaluation and release gates";
 `ak validate` reports uncovered scenario numbers. A writer covers the scenarios its dossier assigns
