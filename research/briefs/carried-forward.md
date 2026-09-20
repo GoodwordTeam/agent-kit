@@ -182,31 +182,16 @@ against the parser does by construction. Two exits: produce a real instance (bet
 genuinely wants the form) or drop support so it fails loudly instead of misparsing. **A third
 synthetic fixture is not an exit** — it adds no information about whether the parser is right.
 
-**§12's "returns nothing" contradicts the ruling it routes into — `authoring`, reported at
-`82b663f`.** The `## What it must be given` passage says a seat whose input no longer binds "returns
-nothing rather than judging a stale artifact". `required-lane-failure-is-unavailable` says a lane
-that could not be given its required context returns `unavailable`, which "is a result, not an
-absence" and "is never downgraded to an empty result" — and §12's own table defines the heading that
-sentence routes into as the conditions under which *empty* is the correct answer. Measured across
-all 29 tracked role bodies: 26 return `unavailable` in that section, **0** say "returns nothing",
-and the three core roles each carry their own blocking vocabulary, `supervisor/ROLE.md:84` using
-§12's identical phrase "no longer binds" and returning no choice. The bodies are right without the
-contract's help; the contract governs whoever writes the thirtieth.
-
-Nothing in the repo could have found it. `UNIVERSAL_NEVER_ROWS` row 2 is
-`["lane that could not run", "unavailable"]`, so the violated clause is one of the three the gate
-does not check — the same three `authoring`'s own disclosure paragraph names, about fifty lines
-below the violation. One omission on two surfaces, which is why neither corrects the other.
-**The cheap fix is the one that hides it:** adding the ruling id to that sentence yields a sentence
-citing the rule it breaks, after which every citation check in the repo passes.
-`rulings.uncited-restatement` warns that a claim *narrower* than its ruling is the defect rather
-than the citation — a claim that contradicts its ruling is a second case, and the message names
-only the first.
-
-**Pin `typescript` in `devDependencies` — `cli`, now, not at batch 6.** `bunx` resolves from the
-network, so every "tsc clean" anyone has reported is a claim about whatever `bunx` fetched that
-minute, not about a pinned tool. Pinning changes no behaviour and defers nothing; it makes an
-existing capability reproducible.
+**Gate the typecheck now — `cli`, ruling reversed at `76e57ba`.** The pin landed at `b06c73a` and
+verifies three ways: `tsc --version` 7.0.2, `--noEmit` exits 0, `--listFiles` shows 72 `.ts` files
+including every in-flight untracked one, and a planted `const x: number = "nope"` reports TS2322.
+All three legs — it runs, it has a population, and it can fail. The gate was deferred to batch 6
+because `tsc` was exiting 1 with thirty `TS7006` errors; that condition is gone, so the deferral
+expires with it. A gate added to a clean tree costs one line. A gate added at batch 6 first has to
+clean up whatever batches 4 and 5 accumulated unchecked, arriving exactly when the checkpoint and
+the `v0.1.0` tag compete for the same attention. Open question inside it: `research/probes/
+denylist-reach.ts` is outside `tsc`'s file set because `tsconfig.json` scopes to `src/` and
+`tests/` — defensible as a choice, not as an unnoticed glob.
 
 **The two-surface inventory — `provmap`, list only, do not fix.** The original framing of this
 commission was wrong and is corrected here rather than quietly dropped: the claim was that this
@@ -218,7 +203,13 @@ plus-interface, catalog-key-plus-`Record`. Some will want a test, some a type, s
 `DOCUMENT_FILE`'s index check is the case no `tsc` run would ever produce, because it asserts a
 relationship between a mapping and a resource rather than a shape.
 
-**Falsifying the mandated-rows gate — `sweep-reviewer`, queued behind the §8 sweep.** First case is
+**Falsifying the mandated-rows gate — `sweep-reviewer`, queued behind the §8 sweep, and a third
+case added at `76e57ba`: a row carrying both required fragments and the citation that then states
+the opposite of an unchecked clause.** The two existing cases both test whether the gate notices
+*less* text than the ruling; nothing measures whether it can tell a compliant row from an inverted
+one, which is the worse failure. The live proof that inversion happens is `ba02021`, where
+AUTHORING.md's own §12 contradicted `required-lane-failure-is-unavailable` on the exact clause row 2
+does not check. First case is
 a body whose row is correct in words but rewrapped.
 
 ## Needs an owner — not yet commissioned
