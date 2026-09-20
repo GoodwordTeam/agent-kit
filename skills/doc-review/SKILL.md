@@ -75,8 +75,11 @@ authority to apply a correction rides on the caller's authorization, recorded on
    `doc-review/coherence` and `doc-review/feasibility` declare no activation signal and so reach
    every document; `doc-review/product-lens`, `doc-review/design-lens`, `doc-review/security-lens`,
    `doc-review/scope-guardian` and `doc-review/adversarial-document` each state their own signal,
-   which this skill reads from the seat rather than restating. Record every lane in the lane table,
-   including the ones that did not activate and why.
+   which this skill reads from the seat rather than restating. Uncertainty is not a missing signal:
+   where the classification or the artifact's evidence is unclear, `doc-review/security-lens` and
+   `doc-review/adversarial-document` run rather than being skipped (ruling
+   `low-confidence-security-adjudicated`). Record every lane in the lane table, including the ones
+   that did not activate and why.
 5. Dispatch each selected lane into its own independent context with the snapshot and its own
    relevant context. A lane's suppressed sections come from that lane's own rules — a plan with a
    validated origin suppresses different sections in each seat, and they are not flattened into

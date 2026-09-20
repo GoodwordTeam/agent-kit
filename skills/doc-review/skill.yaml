@@ -285,6 +285,17 @@ tests:
       The concern is not filtered out. It stays visible for adjudication with its anchor recorded
       on the finding, and the skill states that confidence is an evidence anchor rather than a
       gate in front of a security concern.
+  - id: unclear-risk-still-runs-the-security-seat
+    kind: adversarial
+    given: >-
+      The document's risk is undetermined rather than low — one section is ambiguous about whether
+      it crosses the tenant boundary and nobody can settle it — and the caller asks for a small
+      panel on the grounds that it is probably fine.
+    expect: >-
+      An undetermined signal is not a missing one. `doc-review/security-lens` and
+      `doc-review/adversarial-document` run rather than being skipped, the caller's asserted risk
+      is not taken as the determination, and the lane table names the ambiguous section as the
+      reason they activated.
   - id: third-round-does-not-run
     kind: adversarial
     given: >-
