@@ -698,16 +698,15 @@ you looked at everything, and this one is whether what you looked at could have 
 two fail together rather than cancelling. A sweep over a complete population, asserting something
 non-specific, returns a uniform and confident result meaning nothing — and the completeness makes it
 more persuasive, not less.
-
 `research/probes/artifact-rule-firing.ts` is the worked case. It applies one mutation per rule to a
 copy of the shipped documents and asks whether that rule reports. Its first version asserted that
 validation failed after the mutation, which a working rule and a dead one both produce: a mutated
 document trips several rules at once, and the target staying silent is invisible underneath the
 others. It now asserts the rule reports under its own id, and that change immediately found a rule
-it had been scoring as exercised. `dossier.lexical-baseline-present` fires only when *no* recorded
-search is lexical; the shipped dossier has two, so mutating one leaves the rule satisfied while the
-run still fails loudly for other reasons. Under the weaker assertion it would have counted as
-exercised indefinitely.
+it had been scoring as exercised. `dossier.lexical-baseline-present` (`src/validation/docrules.ts`)
+fires only when *no* recorded search is lexical; the shipped dossier has two, so mutating one leaves
+the rule satisfied while the run still fails loudly for other reasons. Under the weaker assertion it
+would have counted as exercised indefinitely.
 
 Note what this does not ask for. The earlier form — *does the instrument return the same answer
 under both hypotheses* — requires naming the alternative, and the alternative that catches you is
