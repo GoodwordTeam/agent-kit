@@ -70,6 +70,7 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
 
   // finding.schema.json
   "finding.fingerprint-stable-across-line-moves": ["finding.fingerprint-stable-across-line-moves"],
+  "finding.evidence-digest-domain": ["finding.evidence-digest-domain"],
   "finding.presentation-label-never-substitutes-for-severity": ["finding.presentation-label-never-substitutes-for-severity"],
   // Narrowed on purpose, and the narrowing is the record. `finding.self-closed`
   // enforces one half of this tag: the closer is not the author of the finding.

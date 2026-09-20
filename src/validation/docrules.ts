@@ -9,12 +9,12 @@
  * cross-document or recomputed half is what actually bites.
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import type { CheckContext } from "./context.ts";
 import { error, type Issue } from "./types.ts";
-import { artifactHash, canonicalJson } from "../util/hash.ts";
+import { artifactHash, canonicalJson, sha256Hex } from "../util/hash.ts";
 import { loadArtifacts } from "./artifacts.ts";
 
 const REMOTE_SIDE_EFFECTS = new Set([
@@ -170,6 +170,65 @@ interface RuleContext {
   readonly index: DocIndex;
   readonly ctx?: CheckContext;
   readonly issues: Issue[];
+}
+
+/**
+ * The domain of `finding.fingerprint.inputs.evidence_digest`, read from the
+ * schema that states it.
+ *
+ * The domain is declared once, as `x-digest-domain` beside the field, and this
+ * reads it rather than repeating it. A digest whose domain is written once in a
+ * schema description and once in TypeScript has two places to drift and nothing
+ * that says which one is the guarantee -- and the direction this one drifts in
+ * is not a weaker check but an inverted one, because a digest that picks up
+ * `location.line_range` makes `finding.fingerprint-stable-across-line-moves`
+ * refuse the stable fingerprint release scenario 9 requires and accept the
+ * moving one it forbids.
+ */
+export interface DigestDomain {
+  readonly over: string;
+  readonly fields: ReadonlyArray<string>;
+}
+
+const DIGEST_DOMAIN_PATH =
+  "properties.fingerprint.properties.inputs.properties.evidence_digest.x-digest-domain";
+const digestDomainCache = new Map<string, DigestDomain | null>();
+
+export function digestDomain(root: string): DigestDomain | null {
+  const cached = digestDomainCache.get(root);
+  if (cached !== undefined) return cached;
+  let found: DigestDomain | null = null;
+  const file = resolve(root, "schemas", "finding.schema.json");
+  if (existsSync(file)) {
+    let schema: Record<string, unknown> | null = null;
+    try {
+      schema = obj(JSON.parse(readFileSync(file, "utf8")));
+    } catch {
+      schema = null;
+    }
+    const declared = schema === null ? null : obj(at(schema, DIGEST_DOMAIN_PATH));
+    const over = declared === null ? null : str(declared["over"]);
+    const fields = declared === null ? [] : arr(declared["fields"]).map(str).filter((f): f is string => f !== null);
+    if (over !== null && fields.length > 0) found = { over, fields };
+  }
+  digestDomainCache.set(root, found);
+  return found;
+}
+
+/**
+ * The digest itself, so that whatever writes a finding and whatever checks one
+ * compute it the same way. Nothing in this tree produces findings yet, which is
+ * how the domain came to be a convention rather than a rule; when something
+ * does, it calls this rather than spelling the projection a second time.
+ */
+export function evidenceDigest(doc: Record<string, unknown>, domain: DigestDomain): string {
+  const projected = arr(at(doc, domain.over)).map((entry) => {
+    const record = obj(entry);
+    const out: Record<string, unknown> = {};
+    for (const field of domain.fields) out[field] = record === null ? null : (at(record, field) ?? null);
+    return out;
+  });
+  return `sha256:${sha256Hex(canonicalJson(projected))}`;
 }
 
 function fail(rc: RuleContext, rule: string, message: string): void {
@@ -600,6 +659,33 @@ function findingRules(rc: RuleContext): void {
       }
       if (!sameInputs && value !== null && value === otherValue) {
         fail(rc, RULE_FP, `fingerprint value ${value} is shared with ${other.file}, which has different identity inputs`);
+      }
+    }
+  }
+
+  const RULE_DIGEST = "finding.evidence-digest-domain";
+  // Recomputation is all this adds. The definition it recomputes against lives
+  // in the schema, so the check and the statement cannot disagree: see
+  // digestDomain above for why that matters more here than for other digests.
+  // Gated on ctx because the domain is read from the tree under inspection,
+  // which is the same place the documents come from.
+  if (inputs !== null && rc.ctx !== undefined) {
+    const domain = digestDomain(rc.ctx.root);
+    const declared = str(inputs["evidence_digest"]);
+    if (domain === null) {
+      fail(
+        rc,
+        RULE_DIGEST,
+        `schemas/finding.schema.json declares no ${DIGEST_DOMAIN_PATH}; the domain of this digest is the whole of what release scenario 9 rests on and a domain stated only in prose is one no check can hold`,
+      );
+    } else if (declared !== null) {
+      const recomputed = evidenceDigest(doc, domain);
+      if (recomputed !== declared) {
+        fail(
+          rc,
+          RULE_DIGEST,
+          `evidence_digest ${declared} is not a digest of what the schema says it covers; recomputed ${recomputed} over ${domain.fields.join(" and ")} of each ${domain.over} entry`,
+        );
       }
     }
   }

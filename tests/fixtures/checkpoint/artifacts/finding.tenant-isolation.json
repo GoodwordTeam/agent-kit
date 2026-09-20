@@ -26,11 +26,11 @@
   "title": "The tenant summary reports a limit belonging to a tenant outside the request",
   "lane": "security",
   "fingerprint": {
-    "value": "sha256:2877521417cc1bbaf463d369cf54be1019fe1651aaa869c2eb810715f0fa6ffa",
+    "value": "sha256:e7c78fb69f1bef8b7fedeef04f87bb93e8e26da2a462b822839b522940fad4cb",
     "inputs": {
       "rule": "tenant-isolation",
       "symbol_or_path": "src/report.ts#buildTenantSummary",
-      "evidence_digest": "sha256:46ca51244c8d4d27db6590f2ef41222b80a416b3cdba5616efb9970d6a370133"
+      "evidence_digest": "sha256:c4e952374124dca1305e9690f5c6dd3b4a84167d69ffe34a5a30d96c017e4ec7"
     }
   },
   "severity": "P1",

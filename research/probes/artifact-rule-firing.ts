@@ -316,6 +316,14 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
     note: "Both clauses compare now. The synthesis finding carries the specialist's identity inputs unchanged and the same value, which is the agreeing case the cross-document clause exists to tell apart from a collision.",
   },
   {
+    rule: "finding.evidence-digest-domain",
+    file: "finding.example.json",
+    path: "evidence.0.observation",
+    to: "The loop body returns on its first iteration, so only the first configured directory is ever read.",
+    kind: "value",
+    note: "Rewording one observation and leaving the digest alone is the whole mutation: nothing else in the tree reads `observation`, so a report here is the recomputation and cannot be anything else. The paired non-firing case -- the same evidence at a different line_range, which must leave the digest alone -- is in tests/docrules.test.ts, because this probe records firings and a rule that must stay silent is not one.",
+  },
+  {
     rule: "finding.presentation-label-never-substitutes-for-severity",
     file: "finding.example.json",
     path: "severity",

@@ -7,6 +7,7 @@ import { checkSchemas } from "../src/validation/schemas.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
 import { canonicalJson, sha256Hex, artifactHash } from "../src/util/hash.ts";
+import { digestDomain, evidenceDigest } from "../src/validation/docrules.ts";
 
 /**
  * The batch-5 checkpoint fixture, checked rather than described.
@@ -261,10 +262,12 @@ describe("the findings point at what they say they point at", () => {
 
   test("moving the quoted line does not change the fingerprint", () => {
     // Release scenario 9, made drivable rather than asserted. The staged file
-    // is the same defect with two comment lines added above it. The digest is
-    // taken over the excerpt and the path, which is the domain
-    // schemas/finding.schema.json states, so the identity inputs are unchanged
-    // and the value derived from them is too.
+    // is the same defect with two comment lines added above it, so the excerpt
+    // and the path are what they were and the position is not. The domain is
+    // read from schemas/finding.schema.json and recomputed with the function
+    // the validator recomputes with: this test used to project the evidence
+    // itself, and that copy went stale the moment the domain gained a member,
+    // which is the whole argument for there being one of them.
     const finding = artifacts["finding.tenant-isolation.json"]!;
     const inputs = (finding["fingerprint"] as Record<string, any>)["inputs"];
     const excerpt = ((finding["evidence"] as Array<Record<string, any>>)[0]!)["excerpt"];
@@ -276,13 +279,12 @@ describe("the findings point at what they say they point at", () => {
     expect(lineBefore).toBeGreaterThan(0);
     expect(lineAfter).toBeGreaterThan(lineBefore);
 
-    // Recomputed over the stated domain at the moved position.
-    const domain = (finding["evidence"] as Array<Record<string, any>>).map((e) => ({
-      path: e["location"]["path"],
-      excerpt: e["excerpt"],
-    }));
-    const recomputed = `sha256:${sha256Hex(canonicalJson(domain))}`;
-    expect(recomputed).toBe(inputs["evidence_digest"]);
+    // The digest the finding carries is a digest of its evidence over the
+    // stated domain, and the moved line is not in that domain.
+    const domain = digestDomain(join(import.meta.dir, ".."));
+    expect(domain).not.toBeNull();
+    expect(domain!.fields.some((f) => /line|offset/i.test(f))).toBe(false);
+    expect(evidenceDigest(finding, domain!)).toBe(inputs["evidence_digest"]);
     expect(`sha256:${sha256Hex(canonicalJson(inputs))}`).toBe((finding["fingerprint"] as Record<string, any>)["value"]);
   });
 });

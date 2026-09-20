@@ -33,7 +33,7 @@
     "inputs": {
       "rule": "two-readers-one-input",
       "symbol_or_path": "src/loader/artifacts.ts#loadArtifacts",
-      "evidence_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+      "evidence_digest": "sha256:eb57d860e0e2792a1a05a92aeb30714d77b314585c5c63882285e7669342b847"
     }
   },
   "severity": "P2",

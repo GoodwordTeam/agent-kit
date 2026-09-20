@@ -79,7 +79,7 @@ there is no way to know which kind you have without running it.
 | 6 | `finding.vague.json` is a `smell`: no difficulty, no fixer, and the schema refuses to let it acquire either (`tests/finding-constraints.test.ts`, "a smell has an open solution space") |
 | 7 | the repair is a small diff, which is what a delta pass is for |
 | 8 | `src/report.ts` is outside `allowed_changes` and downstream of the change |
-| 9 | `stages/line-move/` moves the quoted line; the fingerprint is taken over the excerpt and the path and does not move with it |
+| 9 | `stages/line-move/` moves the quoted line; the findings carry real digests over the domain `x-digest-domain` names in `schemas/finding.schema.json`, which excludes position, so the fingerprint does not move with the line |
 | 10 | the second commit's revision differs from the first by construction, so evidence bound to the first is stale |
 | 18 | the charter allows two fix cycles, so a third is refused |
 | 20 | the dry-run payload is generated locally and there is nowhere to push it |

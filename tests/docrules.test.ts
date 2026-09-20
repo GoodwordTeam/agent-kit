@@ -3,7 +3,13 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { checkSchemas } from "../src/validation/schemas.ts";
-import { checkDocument, checkDocumentRules, indexDocuments } from "../src/validation/docrules.ts";
+import {
+  checkDocument,
+  checkDocumentRules,
+  digestDomain,
+  evidenceDigest,
+  indexDocuments,
+} from "../src/validation/docrules.ts";
 import { artifactHash } from "../src/util/hash.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -476,6 +482,133 @@ function lesson(extra: Record<string, unknown> = {}): Record<string, unknown> {
     ...extra,
   });
 }
+
+describe("finding.evidence-digest-domain", () => {
+  /*
+   * The pair, run against one instrument.
+   *
+   * `finding.fingerprint-stable-across-line-moves` requires two findings with
+   * different identity inputs to carry different values, so whether the evidence
+   * digest moves when a line moves decides whether release scenario 9 is
+   * enforced or enforced backwards. One of the two mutations below must change
+   * the digest and the other must not. A check reading the wrong domain passes
+   * the first and fails the second, and a check reading no domain at all passes
+   * both -- which is the state this rule was written out of, where the domain
+   * was a paragraph and the digests in the tree were synthetic literals.
+   *
+   * The domain itself is not repeated here. These tests seal documents with
+   * `evidenceDigest`, the same function the rule recomputes with, because the
+   * claim under test is what moving a line does to the digest and not what the
+   * digest is. That the rule reports a digest which does not match its domain is
+   * a separate claim, and it is measured by mutation in
+   * research/probes/artifact-rule-firing.ts rather than here.
+   */
+  const RULE = "finding.evidence-digest-domain";
+  const ROOT = join(import.meta.dir, "..");
+  const DOMAIN = digestDomain(ROOT)!;
+
+  const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+  function base(): Record<string, unknown> {
+    return finding({
+      // An object, unlike the shared envelope's string, so this case is
+      // measuring the rule rather than a document ajv would have refused.
+      project: { id: "demo" },
+      evidence: [
+        {
+          location: {
+            repo: "app",
+            revision: "a".repeat(40),
+            path: "src/handler.ts",
+            symbol: "handle",
+            line_range: { start: 24, end: 51 },
+          },
+          observation: "the tenant argument is accepted and never read",
+        },
+      ],
+    });
+  }
+
+  function sealed(doc: Record<string, unknown>): Record<string, unknown> {
+    const out = clone(doc);
+    ((out["fingerprint"] as Record<string, unknown>)["inputs"] as Record<string, unknown>)["evidence_digest"] =
+      evidenceDigest(out, DOMAIN);
+    return out;
+  }
+
+  function moved(doc: Record<string, unknown>, start: number, end: number): Record<string, unknown> {
+    const out = clone(doc);
+    (out["evidence"] as Array<Record<string, any>>)[0]!["location"]["line_range"] = { start, end };
+    return out;
+  }
+
+  function issuesFor(doc: Record<string, unknown>, schemaText?: string) {
+    const root = makeTree({
+      "catalog.yaml": CATALOG,
+      ...shippedSchemas(),
+      ...(schemaText === undefined ? {} : { "schemas/finding.schema.json": schemaText }),
+      "templates/finding.json": JSON.stringify(doc),
+    });
+    const { catalog } = loadCatalog(root);
+    return checkDocumentRules({ root, catalog: catalog! }).filter((i) => i.file === "templates/finding.json");
+  }
+
+  function rulesFor(doc: Record<string, unknown>, schemaText?: string): string[] {
+    return rulesOf(issuesFor(doc, schemaText));
+  }
+
+  /** The shipped finding schema with `fields` widened by one member. */
+  function schemaWithField(field: string): string {
+    const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, "finding.schema.json"), "utf8"));
+    const node =
+      schema.properties.fingerprint.properties.inputs.properties.evidence_digest["x-digest-domain"];
+    node.fields = [...node.fields, field];
+    return JSON.stringify(schema);
+  }
+
+  test("a digest taken over the stated domain is accepted", () => {
+    expect(rulesFor(sealed(base()))).not.toContain(RULE);
+  });
+
+  test("the same evidence at a different line keeps the digest, and the rule stays silent", () => {
+    const at24 = sealed(base());
+    const at33 = moved(at24, 33, 60);
+    expect(evidenceDigest(at33, DOMAIN)).toBe(evidenceDigest(at24, DOMAIN));
+    expect(rulesFor(at33)).not.toContain(RULE);
+  });
+
+  test("different evidence at the same line changes the digest, and the rule reports", () => {
+    const at24 = sealed(base());
+    const reworded = clone(at24);
+    (reworded["evidence"] as Array<Record<string, unknown>>)[0]!["observation"] =
+      "the tenant argument is read and then discarded";
+    expect(evidenceDigest(reworded, DOMAIN)).not.toBe(evidenceDigest(at24, DOMAIN));
+    expect(rulesFor(reworded)).toContain(RULE);
+  });
+
+  test("a domain widened to a line-bearing member inverts the guarantee, and says so", () => {
+    // The failure this rule exists to make visible. Under the widened domain a
+    // moved line is a different finding, which is release scenario 9 enforced
+    // backwards -- and the tree cannot reach that state quietly, because every
+    // finding sealed under the stated domain stops matching the moment the
+    // domain moves.
+    const at24 = sealed(base());
+    expect(rulesFor(at24, schemaWithField("location.line_range"))).toContain(RULE);
+    expect(rulesFor(moved(at24, 33, 60), schemaWithField("location.line_range"))).toContain(RULE);
+  });
+
+  test("a schema that states no domain is an error rather than a silence", () => {
+    const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, "finding.schema.json"), "utf8"));
+    delete schema.properties.fingerprint.properties.inputs.properties.evidence_digest["x-digest-domain"];
+    // The document is sealed, so a rule that reported a mismatch here would be
+    // reporting the wrong thing and this test would not know the difference.
+    // What it has to name is the absent annotation.
+    const reported = issuesFor(sealed(base()), JSON.stringify(schema)).filter((i) => i.rule === RULE);
+    expect(reported).toHaveLength(1);
+    expect(reported[0]!.message).toContain("declares no");
+    expect(reported[0]!.message).toContain("x-digest-domain");
+  });
+});
 
 describe("lesson rules", () => {
   test("a well-formed lesson produces no lesson issues", () => {

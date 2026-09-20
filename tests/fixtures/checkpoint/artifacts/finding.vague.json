@@ -26,11 +26,11 @@
   "title": "Tenant limits are compiled in, and whether that is wrong depends on facts not in this repository",
   "lane": "maintainability",
   "fingerprint": {
-    "value": "sha256:abbbf9ad521c62662d2be80123787e18566bbde913d6c357fe19768d5b9b470c",
+    "value": "sha256:dbf11c8a1da02f830d68fed37e7e643c2432470c4bf3123ddbf12b581c220932",
     "inputs": {
       "rule": "configuration-as-code",
       "symbol_or_path": "src/scope.ts#LIMITS",
-      "evidence_digest": "sha256:2df03e4b64e5837d8a953a019d97bc569350b205bb7a62fd2110df8695f76aef"
+      "evidence_digest": "sha256:a8633a5cb81d11e76ce5e00c3aea0bf21086c05da669a251b54981ff09e414ba"
     }
   },
   "severity": "P3",

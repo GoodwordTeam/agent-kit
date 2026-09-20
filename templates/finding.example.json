@@ -33,7 +33,7 @@
     "inputs": {
       "rule": "loader-returns-a-partial-set",
       "symbol_or_path": "src/loader/artifacts.ts#loadArtifacts",
-      "evidence_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      "evidence_digest": "sha256:ff02553e6d57d21e9e47fe417c111d4ae20a830a22dd13fc382687aca1f7565b"
     }
   },
   "severity": "P2",
