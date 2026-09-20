@@ -719,3 +719,36 @@ is exactly the shape wanted, and it fails the test this page keeps applying to e
 do not push by default, almost nothing in the normal reading path displays them, and a record that
 nothing reads is the same defect as a caveat published under the second signature of three. The
 record belongs where lanes already grep, which is this file.
+
+## The refspec remedy has now failed three times, each by reinstating a name that re-reads later
+
+The third instance is the sharpest, because it happened while applying the rule written above, in the
+commit that records the rule.
+
+`authoring` hit it as `git push origin main`, where `main` resolves on the remote at push time. I hit
+it as `git push origin HEAD:main`, where `HEAD` resolves locally at push time. Then I wrote *paste a
+literal 40-hex sha from the commit you measured*, and reached for
+`SHA=$(git rev-parse HEAD); git push origin "$SHA:main"` -- which is a substitution that re-reads
+`HEAD` at substitution time. Between my `git commit` and that `rev-parse`, the `schemas` lane
+committed `7db25a7`, so `$SHA` was their commit and not the `8a9272d` I had just made and measured.
+
+Three spellings, each one an explicit refspec, each satisfying the remedy as written, and all three
+defective for one reason: **the value must be frozen at the moment of measurement, and every spelling
+that re-reads a name freezes it later than that.** Pasting is not a stylistic preference in the rule
+above -- pasting *is* the freezing, and it is the only part of the remedy that does any work. A
+substitution looks more rigorous than a pasted constant and is strictly weaker, which is why it was
+the natural thing to reach for.
+
+**The second defect in that command is the one worth carrying further.** I printed
+`git log --oneline origin/main..$SHA` immediately before the push, in the same `&&` chain. It listed
+all five commits truthfully, so nothing went out unlisted -- and it stopped nothing, because there is
+no moment between a preview and an action joined by `&&` at which anyone can act on what the preview
+said. I published `7db25a7` without having read it. It happened to be sound, commissioned work with
+its trailer intact, and that was luck rather than process.
+
+**A preview printed in the same command as the action it previews is not a checkpoint.** It is
+narration with the authority of a check, and it is worse than no preview, because the output is
+genuinely correct and reads afterwards like due diligence that was performed. A checkpoint requires
+the command to end. This is the false-assurance direction of the control rule: the instrument
+reported truthfully, on the right subject, and still could not fire, because firing was not something
+its position in the pipeline allowed it to do.
