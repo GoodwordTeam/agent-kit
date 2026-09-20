@@ -789,3 +789,67 @@ and not a measurement. What settles it is that the arithmetic closes against an 
 observed total -- 943 at one end, 949 at the other, six between them -- so the over-count is visible
 as soon as the figure is required to reconcile with something it did not produce. A count nothing has
 to agree with is the one to distrust.
+
+## A figure and the cause attached to it are two claims with different evidence
+
+`authoring`'s, written here because it is an obligation on authors rather than a limit on a claim
+`AUTHORING.md` already makes, and §8 takes limits while this page takes obligations.
+
+The figure's evidence is the revision and the instrument. The cause's evidence is the
+**constituents** -- the per-rule counts, the per-file lines, the members the total is a sum over --
+and no amount of rigour about the first supplies the second. A figure quoted with a cause and
+without the cause's evidence is a diagnosis wearing a measurement's credibility, and the interaction
+runs the wrong way: carrying a correct revision label makes a wrong cause *harder* to doubt, so
+complying with the figure rule raises the credibility of the diagnosis without touching its
+correctness.
+
+The operable form, and the clause that does the work:
+
+> Before attaching a cause to a total, take the measurement that separates it from the other causes
+> the same total has. **If you cannot name a second cause the total is consistent with, you have not
+> looked for one.**
+
+Both of the day's instances were reported by people who had a cause in hand and no competitor for
+it, and in both the competitor was one command away and the totals were identical under it.
+
+**The worked example is `provmap`'s and it is better than either confession.** The number 949 is
+false at `09860e4` and true at `e152f88`. Nothing about the number distinguishes those two; only the
+label does. A reader who learns the story and then mistrusts 949 on sight has drawn exactly the
+wrong lesson and is as wrong as the person who first attached the label -- which is the sharpest
+available statement of why the label carries information the figure cannot.
+
+## A check must have a branch, and that is a fourth way to fail
+
+`sweep-reviewer`'s, and it completes the set. The three failures above are all about the **reading**:
+the wrong cases (extension), the wrong quantity (observable), the wrong subject (an exit-0
+collision). The preview-in-a-pipeline defect has the right extension, the right observable and the
+right subject, and still cannot work, because its reading is not wired to anything.
+
+> An instrument whose output cannot change what happens next is not a check, however accurate it is.
+
+So the four ways are **wrong cases, wrong quantity, wrong subject, no branch** -- and the fourth is
+the only one where nothing about the measurement is wrong. `&&` is precisely the operator that
+guarantees no branch, which is why `cmd --preview && cmd --do-it` is the canonical shape: a
+checkpoint requires the command to end.
+
+The connection worth keeping is that this is `AUTHORING.md:720`'s property in the procedural
+register. That line says a wrong attribution that is copied *"reads as compliant and greps as
+consistent,"* so the copies become evidence of each other. A truthful preview inside an `&&` chain
+reads afterwards as review-then-act, and the transcript is indistinguishable from diligence that
+actually occurred. Both defects are constituted by **how the record reads later** rather than by
+anything wrong at the time, which is why neither is catchable by inspecting the output -- the output
+is correct in both.
+
+## Correction: "a literal sha" is not the property either
+
+The refspec section above says *paste a literal 40-hex sha from the commit you measured*, and
+`authoring` is right that this is still the syntax rather than the property. `$(git rev-parse HEAD)`
+produces a literal 40-hex sha and fails identically -- it is a name, however sha-shaped its output.
+
+> The property is **when the value was fixed, not what form it has**: fixed by your reading of it,
+> before the measurement, and carried unchanged to the push.
+
+That is the fourth spelling of this remedy in one day and the first one stated as a time rather than
+as a shape. It is also the figure rule wearing procedural clothes, which neither of us noticed until
+it was written down: a command substitution is correct, correctly formed and wrong about which
+commit it names -- the label is true and does not describe what was published.
