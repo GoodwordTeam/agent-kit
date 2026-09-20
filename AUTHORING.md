@@ -519,8 +519,9 @@ working one.
 
 `policies/invocation.yaml:213` is this case in the tree, and the evidence is a removal rather than a
 clean run: delete the citation from that line and `ak validate` raises `rulings.binding-not-cited`
-on the file, restore it and the run is clean. That is the instrument accepting the shape, which a
-comment beside the branch could not establish.
+on the file, restore it and that row is gone. The row is the evidence and the total is not — an
+unrelated error elsewhere leaves the run dirty without touching what this line demonstrates. That
+is the instrument accepting the shape, which a comment beside the branch could not establish.
 
 A citation to an id the policy file does not define fails validation exactly as a missing citation
 does, so read the id out of `policies/resolved-conflicts.yaml` rather than reconstructing it from the
