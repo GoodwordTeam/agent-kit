@@ -477,3 +477,35 @@ disclosures are negative claims and its retirement rule reaches them; §11's fir
 *positive* enforcement claims maintained by hand, separately from the enforcement, and nothing
 reaches it. It is a structural generator of the direction the doctrine says to assume is
 under-found, and it has now generated one.
+
+**A name is not a reading, and the grader that settles a case is rarely the first one.** My own
+correction at `57f4280` claimed scenario 18 read green on the wrong loop: that
+`doc-review/third-round-does-not-run` caps *review rounds*, that scenario 18 is the third *fix
+cycle*, and that it therefore belongs to `super-build`/`super-verify`. All three clauses were
+wrong. `two-fix-cycles-then-stop` carries `scenario: 18` and rules *at most two fix-and-verify
+cycles after the first pass*; its `binds.skills` are `super-review`, `ultraqa`, `autopilot` and
+`babysit-pr`, and batch 4's dossier independently rules that scenario 18 is the pass-2 cap rather
+than the per-ticket implementer loop. The case supplies a prompt in which two rounds have already
+happened, and its **second** grader says *the cap is two fix rounds and no configuration buys a
+third*.
+
+What I read was the directory name and the first grader's *"No third review round is run"*. Both
+say **round**; the ruling says **cycle**; the second grader says **fix rounds**. The whole error
+fits between the first grader and the second. Two carried lessons meet here and neither caught it:
+a report names a line and the defect is rarely one line wide -- this time there was no defect at
+all -- and a test for an ordering has to supply input in which the ordering can arise, which is the
+property that made the case correct and which I did not check for before calling it wrong.
+
+The residual claim, after re-reading, is real but narrower and differently shaped: the ruling does
+not bind `doc-review`, and the checkpoint slice runs `super-review`, so the corpus is covered by a
+case hanging off a skill the ruling has nothing to do with. The global `Set<number>` is satisfied
+and the slice is not. **A wrong diagnosis of a real gap is more expensive than no diagnosis**,
+because it sends the next writer to repair something correct: the brief had told batch 5 to take
+the answer rather than the task.
+
+Rows 1, 3 and 20 were re-read by the same route and hold, and row 20 came back stronger than it was
+filed -- all five of its cases are knowledgebase or tracker writes read back before writing, while
+the gate is a commit or PR action. That is a different side-effect class, not merely a different
+skill, and the difference matters: a knowledgebase record can be read back, a pushed PR cannot, and
+the checkpoint's `super-ship` step is dry-run, so the fixture has to prove nothing was pushed
+without ever pushing.
