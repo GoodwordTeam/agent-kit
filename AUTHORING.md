@@ -479,6 +479,29 @@ saw the row. What a seat may not do is lean on the row: carrying the rule anapho
 on the ground that the body states it somewhere above. The row is elsewhere in the file, and
 elsewhere in the file is the one place a citation may never point.
 
+**A clause that is present but narrower than the rule it is credited with is a dropped clause.** The
+restatement defect above is a clause going missing. This one is harder to see, because the clause is
+there, it is accurate, it is on the ruling's topic, and it covers part of the population the ruling
+covers. `delta-scope-affected-behavior` carries two populations: *New findings require novelty
+evidence* reaches every new finding, and *a serious newly discovered issue in an untouched affected
+caller stays reportable* reaches a subset. A seat carrying an impact-path bullet has stated the
+second and not the first — a new finding in changed code reaches no term in it — while the
+substitution reads as complete precisely because the bullet is true and cites the right ruling.
+
+The method that catches a missing clause does not catch a narrowed one. A writer auditing
+deliberately, with each ruling's full text printed beside every citing clause, dropped that novelty
+requirement from three seats, examined the question, and left it on the ground that the surrounding
+bullet carried the bound in substance. Read each sentence of a ruling as naming a population, then
+check that every population reaches a term in the restatement. Comparing topics will not do it, and
+`rulings.uncited-restatement` cannot see it at all: the citation is present and correct.
+
+The instrument available here is a note and must not become a gate. For each ruling, report which of
+its sentences has no lexical trace in the citing paragraph. It over-reports by construction, since a
+clause can be carried faithfully in other words, which is why it cannot gate — but a per-body
+worklist costing a minute to clear is worth more than a gate that cannot exist. This is §8's
+population rule one level up, with the ruling's sentences as the population and a paragraph that
+answers on topic as the place members stop being individually visible.
+
 **A quoted specimen is not a body, and this rule does not reach it.** The examples in §3 state rules
 without citing them, deliberately: nothing loads a specimen. No agent arrives at one through
 progressive disclosure, and the writer reading it has the governing section in front of them, so the
@@ -819,11 +842,12 @@ than an escape from it. The scope is stated rather than implied because implying
 this rule was written and then implemented file-wide by the same hand, inside one day. An entry that
 names no section the check can resolve fails this rule rather than falling outside it: a checker
 that widens to the whole file when it cannot find the scope restores the loose behaviour exactly
-where the entry gave it least to work with, which is `required-lane-failure-is-unavailable`'s last
-sentence applied to a checker rather than a lane. Failing closed is not the same as matching
-strictly, and the two are easy to confuse here: a citation may carry a gloss its heading does not,
-so resolve on the section number and ignore the rest of the reference. An implementation that
-compares the whole rendered citation manufactures the unresolvable case it then has to fail.
+where the entry gave it least to work with, which is `required-lane-failure-is-unavailable`'s *fail
+closed when required evidence is absent*, applied to a checker rather than to a lane. Failing closed
+is not the same as matching strictly, and the two are easy to confuse here: a citation may carry a
+gloss its heading does not, so resolve on the section number and ignore the rest of the reference.
+An implementation that compares the whole rendered citation manufactures the unresolvable case it
+then has to fail.
 
 **Nothing in `src/` runs this check.** *An open entry's quoted instruction must still resolve in the
 section it cites* is a specification, not a description of anything that executes. `ak validate`
@@ -943,6 +967,30 @@ dossier's coverage limits get discovered, and it is not an exception to justify.
 because the reviewer re-derives from the dossier, so material the dossier never named is material the
 reviewer cannot miss — artifact and packet still agree once it is gone. The delta is what makes that
 loss visible.
+
+**Two different obligations in this section are spelled the same way: delivered, and durable.** A
+record is *delivered* when its consumer is the pass it was written for — a reviewer reads it, acts
+on it, and the question it answers is not asked again. A record is *durable* when it answers a
+question that can be asked after the batch closes, and a clean checkout is then the only place it
+can be asked from. This section routes both to the handback and distinguishes neither, which is why
+the distinction has to be made here rather than by whoever files one.
+
+The discriminator is not importance. **A record that discharges an obligation must be
+distinguishable from the obligation never having been discharged**, and that is a property of where
+it is filed, not of what it says. Where both states leave a reader the same trace, the record is in
+the wrong place however complete it is — which is this contract's own argument about vacuity,
+applied to a filing decision instead of to a check.
+
+Three obligations routed to the handback are durable by that test, and each says so in terms this
+contract already uses. A candidate pair recorded as examined and not a family (§12.2) answers a
+question outliving every seat involved, and §12.2 states the equivalence itself: an unexamined
+candidate is indistinguishable from a declared non-family. A donor file cited that the dossier did
+not name is provenance, and §5 is the argument for why provenance outlives its author. The
+prior-findings packet is durable because `reviewer-continuity-not-amnesia` promises a replacement
+receives a *durable* prior-finding packet — the ruling's own word — and a replacement can arrive at
+any time, including after the batch that produced it has closed. This contract does not say where a
+durable record lives. Whoever rules that has to satisfy the test above, and a path excluded from the
+tracked tree does not.
 
 **At most two fix-and-verify cycles after the first pass** (ruling `two-fix-cycles-then-stop`). The
 third does not run. It **stops with an explicit blocked-or-replan decision and the open findings
@@ -1225,6 +1273,27 @@ dossier — the batch boundary is what makes a handback reviewable, and a cross-
 it. The report names both seats and the distinction the writer believes separates them; the earlier
 batch's fix cycle writes the bullet, because a seat's own writer is the one who can say what that
 seat is not.
+
+**Both rows above are in that state now, and it is this section's defect rather than a writer's.**
+All four seats are `status: authored`, so the window specified above — while that seat is still open
+— has closed for both pairs, and nothing in the tracked tree records either as examined. The
+mechanism was defeated by its choice of sink rather than by anyone ignoring it: a pair resolved in a
+handback and a pair never examined leave a clean checkout the same trace, which is none, and the
+sentence above names that exact equivalence as the reason the rule exists. §10's durable-record rule
+governs the repair. Asking the writers again does not repair it, because what they would produce is
+another record in the same place.
+
+**Where the earlier batch has no fix cycle left, the pair escalates instead of routing.** The rule
+above sends a backward-reaching pair to the earlier batch's fix cycle and assumes one is open. Once
+that batch is closed and its cycles are spent there is nowhere for it to land, and the reason the
+rule gives — that a seat's own writer is the one who can say what that seat is not — has no writer
+left to reach. The obligation converts rather than lapsing: the finder records both seats and the
+distinction against this table as a contract defect under §10, and it stays open there. Reopening a
+closed batch to write the bullets is a batch-plan decision belonging to whoever owns that plan, and
+is never taken by the writer who found the pair, for the reason the paragraph above gives about
+cross-batch edits. An open contract defect naming both seats is the correct resting state, and it is
+not the same trace as the pair never having been examined — which is the whole distinction this
+table exists to keep.
 
 **A seat that finds a pair this contract does not declare files a contract defect (§10).** It is not
 a body defect, and the writer does not quietly add the bullet and move on: the counterpart is in
