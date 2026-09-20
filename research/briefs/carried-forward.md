@@ -402,3 +402,30 @@ and reading a green run of it mid-catalogue as a fact about the catalogue is the
 reading `evals.uncovered-scenarios` as a fact about the skill a checkpoint exercises. **Run a
 population count beside any scan whose subject is still being created.** A gate over a directory
 tree is an assertion about the tree's contents and quietly becomes an assertion about nothing.
+
+**In the corrupted-reading class, the dangerous member is the one that stays well-formed.** From
+`provmap`, who reproduced `authoring`'s `echo "$f"` corruption exactly — all four locators, 1079
+lines against 1338 — and then hit a *second* zsh artifact inside the command verifying the first:
+`"$R:tests/..."` read `:t` as a history modifier and produced `8ea...ests/provenance.test.ts`, which
+git refused. Two shell artifacts, one command apart. **One failed loudly and one produced a file
+that parsed, read as TypeScript, and had citable line numbers.** Only the first is self-reporting.
+The second is worse precisely because everything downstream of it works: a corrupted reading that
+still parses yields quotations, line numbers and diffs, all of them false and none of them
+malformed. This is what rules out care as the guard — care is exactly what both lanes had, and it
+caught the loud one. The guard is a second reading by a different route, which is the third of the
+three guards and the reason it is worth its cost.
+
+**A check whose subject is absent and a check whose authority is absent are different events, and
+`ak validate` prints one word for both.** From `sweep-reviewer`, found by attacking the
+mandated-rows gate's authority rather than its subject. `.donors` absent is a check that looked and
+found nothing: its subject is gone, empty is the correct answer, and `validate-figure.sh` documents
+it as a legitimate skip. A reworded `**Mandatory, verbatim in every role body:**` anchor is
+different in kind — the subject is entirely present, 29 bodies sit there uncompared, and the check
+was *given* nothing to compare them against. Measured: gutted row with the anchor intact exits 1 and
+blocks; gutted row with the anchor reworded exits 0 with `1 check skipped`. **The tree is strictly
+worse and the exit code is strictly better.** The distinction is already in the contract for
+returns — `ba02021` put it there this morning — and the validator does not yet observe it for its
+own checks. The generalising fix is a term in the summary line for which kind of skip occurred; the
+narrow one is making this check block. Note what makes it sting: the check enforcing *a required
+lane that is unavailable blocks approval* reports itself unavailable and does not block. It is the
+one rule it does not apply to itself.
