@@ -1584,7 +1584,9 @@ vary is load-bearing and unchecked.
 list is `["lane that could not run", "unavailable"]`, so a body carrying those two fragments beside
 the citation passes while stating none of the rest: not that a required lane which is `unavailable`
 blocks approval, not that it is never downgraded to an empty result, not the four parties who may
-not backfill it. Every one of those clauses is contract prose with nothing behind it.
+not backfill it (ruling `required-lane-failure-is-unavailable`, cited here because this paragraph
+restates its clauses and a citation in the row above does not reach it). Every one of those clauses
+is contract prose with nothing behind it.
 
 This is §9's disclosure in the opposite direction and it is the worse one. A section understating
 its enforcement makes a reader redo work the gate already did; a section overstating it makes a
