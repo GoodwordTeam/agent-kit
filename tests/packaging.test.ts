@@ -157,6 +157,72 @@ describe("bundle planning", () => {
     expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(true);
   });
 
+  /**
+   * `package.default_profile` is the only statement in the tree about what a
+   * plain `ak build` installs: catalog.yaml calls core "the default install" and
+   * profiles/core.yaml repeats it. A build that names no profile must therefore
+   * apply that one.
+   *
+   * The fixture has to carry a skill outside the default for any of this to be
+   * visible. In the real catalog every authored skill happens to be in `core`,
+   * so selecting all skills and selecting core's members return the same bundle
+   * and the disagreement leaves no trace in the artifact -- it waits on the next
+   * skill to be authored outside core.
+   */
+  describe("a build that names no profile", () => {
+    const gamma = {
+      "catalog.yaml": CATALOG.replace(
+        "protocols:",
+        "  - id: gamma\n    status: authored\n    invocation: M\n    profiles: [autonomy]\nprotocols:",
+      ),
+      "skills/gamma/SKILL.md": `${HEAD("gamma")}\nPlain body.\n`,
+      "profiles/autonomy.yaml": "id: autonomy\nskills: [beta, gamma]\n",
+    };
+
+    test("installs the catalog's default profile, not every skill in the catalog", () => {
+      const plan = planBundle(ctxFor(gamma), "claude-code", {});
+      const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta"]);
+      expect([...plan.files.keys()]).not.toContain("skills/gamma/SKILL.md");
+    });
+
+    test("records the profile it applied, so the bundle does not have to be re-derived to know", () => {
+      const plan = planBundle(ctxFor(gamma), "claude-code", {});
+      const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      expect(manifest.ak.profile).toBe("core");
+      expect(plan.profile).toBe("core");
+    });
+
+    test("a default naming no declared profile installs everything rather than nothing", () => {
+      // Found by fixture 04-broken-link-bundle, which declares `default_profile:
+      // core` and no `profiles:` section at all. Honoring that default emptied
+      // the bundle, and an empty bundle has no links, so `links.broken-bundle`
+      // stopped reporting the defect the fixture exists to demonstrate. One bad
+      // field silenced an unrelated check. The complaint about the field belongs
+      // to `catalog.exactly-one-default-profile-matching-package-default-profile`
+      // and is left there.
+      const plan = planBundle(
+        ctxFor({ ...gamma, "catalog.yaml": gamma["catalog.yaml"].replace(/^profiles:\n(?:  .*\n)+/m, "") }),
+        "claude-code",
+        {},
+      );
+      const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta", "./skills/gamma"]);
+      expect(manifest.ak.profile).toBe("all");
+      expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(false);
+    });
+
+    test("a catalog declaring no default still installs everything, and says so", () => {
+      // The boundary: the fallback is guarded on a default being declared, not
+      // applied unconditionally. Without this, a catalog with no default would
+      // resolve to the empty string and select nothing.
+      const plan = planBundle(ctxFor({ ...gamma, "catalog.yaml": gamma["catalog.yaml"].replace("  default_profile: core\n", "") }), "claude-code", {});
+      const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta", "./skills/gamma"]);
+      expect(manifest.ak.profile).toBe("all");
+    });
+  });
+
   test("a reference into a source-only tree cannot be bundled and is reported", () => {
     const ctx = ctxFor({
       "skills/alpha/SKILL.md": `${HEAD("alpha")}\nSee [notes](../../research/sources/notes.md).\n`,
@@ -349,8 +415,8 @@ describe("host-capability decisions at build time", () => {
 describe("ak build and --check", () => {
   test("writes both host bundles under dist/", () => {
     const ctx = ctxFor();
-    const issues = writeBundles(ctx, {});
-    expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+    const built = writeBundles(ctx, {});
+    expect(built.issues.filter((i) => i.severity === "error")).toEqual([]);
     expect(readFileSync(join(ctx.root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8")).toContain("alpha");
     expect(readFileSync(join(ctx.root, "dist/codex/skills/alpha/SKILL.md"), "utf8")).toContain("name: alpha");
   });

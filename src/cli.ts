@@ -165,9 +165,9 @@ function build(parsed: Parsed, options: CliOptions): number {
     return code === 0 ? 1 : code;
   }
 
-  const issues = writeBundles(ctx, opts);
-  const code = report(options.io, issues, "ak build");
-  if (code === 0) options.io.out(`ak build: wrote dist/ for profile ${opts.profile ?? ctx.catalog.package.defaultProfile}`);
+  const built = writeBundles(ctx, opts);
+  const code = report(options.io, built.issues, "ak build");
+  if (code === 0) options.io.out(`ak build: wrote dist/ for profile ${built.profile}`);
   return code;
 }
 

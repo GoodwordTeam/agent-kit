@@ -34,7 +34,8 @@ export interface HostDecision {
 
 export interface BundlePlan {
   host: HostId;
-  profile?: string;
+  /** The profile applied, or `"all"`. Always set: every plan applied one. */
+  profile: string;
   files: Map<string, BundleFile>;
   decisions: HostDecision[];
   issues: Issue[];
@@ -247,12 +248,10 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
   files.set(".claude-plugin/plugin.json", {
     path: ".claude-plugin/plugin.json",
-    contents: pluginManifest(ctx, host, options, emitted, excluded, decisions, capabilities.enforces, capabilities.notes),
+    contents: pluginManifest(ctx, host, membership.profile, emitted, excluded, decisions, capabilities.enforces, capabilities.notes),
   });
 
-  const plan: BundlePlan = { host, files: sortFiles(files), decisions, issues };
-  if (options.profile !== undefined) plan.profile = options.profile;
-  return plan;
+  return { host, profile: membership.profile, files: sortFiles(files), decisions, issues };
 }
 
 function skillAssets(root: string, skillId: string): string[] {
@@ -271,7 +270,8 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
 function pluginManifest(
   ctx: CheckContext,
   host: HostId,
-  options: PlanOptions,
+  /** Passed in, not re-derived: the manifest records the selection that was made. */
+  profile: string,
   skills: ReadonlyArray<string>,
   excluded: ReadonlyArray<{ skill: string; reason: string }>,
   decisions: ReadonlyArray<HostDecision>,
@@ -286,7 +286,7 @@ function pluginManifest(
     // Explicit enumeration, in catalog order, so load order is controlled rather than glob-dependent.
     skills: skills.map((id) => `./skills/${id}`),
     ak: {
-      profile: options.profile ?? "all",
+      profile,
       /**
        * Emitted even when empty. An absent key would read as "an older build
        * that did not record this" rather than "nothing was left out", and the

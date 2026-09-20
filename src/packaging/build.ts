@@ -47,11 +47,24 @@ function collapseDuplicates(issues: ReadonlyArray<Issue>): Issue[] {
   return out;
 }
 
-export function writeBundles(ctx: CheckContext, options: BuildOptions): Issue[] {
+export interface BuildResult {
+  issues: Issue[];
+  /**
+   * The profile the bundles were planned with, so the command can report the
+   * selection that happened rather than working it out a second time. The two
+   * derivations had stopped agreeing: the plan recorded `"all"` for a build
+   * that named no profile while the command announced the catalog's default.
+   */
+  profile: string;
+}
+
+export function writeBundles(ctx: CheckContext, options: BuildOptions): BuildResult {
   const issues: Issue[] = [];
+  let profile = "all";
 
   for (const plan of planAll(ctx, options)) {
     issues.push(...plan.issues);
+    profile = plan.profile;
     const outRoot = join(ctx.root, distDir(plan.host));
     rmSync(outRoot, { recursive: true, force: true });
     for (const file of plan.files.values()) {
@@ -61,7 +74,7 @@ export function writeBundles(ctx: CheckContext, options: BuildOptions): Issue[] 
     }
   }
 
-  return collapseDuplicates(issues);
+  return { issues: collapseDuplicates(issues), profile };
 }
 
 /** Verify dist/ matches what a build would emit. Writes nothing. */
