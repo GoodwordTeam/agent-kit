@@ -509,3 +509,40 @@ the gate is a commit or PR action. That is a different side-effect class, not me
 skill, and the difference matters: a knowledgebase record can be read back, a pushed PR cannot, and
 the checkpoint's `super-ship` step is dry-run, so the fixture has to prove nothing was pushed
 without ever pushing.
+
+**`git add <path> && git commit` is not scoped to that path, and this tree has four lanes staging
+into it.** I committed `AGENTS.md` at `021bc47` and took twenty files of another lane's in-flight
+checkpoint fixture with it, because `git commit` with no pathspec commits the whole index and
+`schemas` had staged work in the shared tree. The snapshot that went in was incoherent -- two
+runnable check files renamed, neither the materializer that restores them nor the harness that
+reads them included -- and since `bun test` collects `*.test.ts` anywhere in the tree, including
+under `tests/fixtures/`, it put 6 failures and 1 unhandled error into a suite that was otherwise
+green. `schemas` found it and landed the rest of the change at `f23b81d`. **Use the pathspec form
+-- `git commit <path> -F -` -- which commits the named paths from the working tree and leaves every
+other staged entry staged.** `git status --short` before committing shows the index; reading it is
+the guard, and truncating it is the trap already recorded above.
+
+The reason it is worth a paragraph rather than a note: nothing in the repo could have caught it. The
+commit was green at the moment I made it, the files I did not intend to ship were another lane's
+correct work-in-progress, and the damage was a *fixture* breaking the suite that collects it --
+which is a failure mode with no owner, because the lane that wrote the fixture had not finished it
+and the lane that shipped it had not read it.
+
+**The verification convention manufactured a false red, and the gate it fired on is the one that
+had already been deferred for reading red.** `mktemp -d` on macOS returns a path under
+`/var/folders`, and `/var` is a symlink to `/private/var`, so the extract has two names.
+`tests/typecheck.test.ts` asks `tsc --listFiles` which files it checked and keeps the ones prefixed
+by the repo root; `tsc` prints the resolved name, the prefix never matches, the checked set reads
+empty, and the population assertion reports every file in `src/` and `tests/` as untypechecked.
+Measured on one revision: **916 pass 0 fail extracted under `/Users`, 1 fail extracted under
+`/var`.** I was one step from reporting HEAD red.
+
+This is the day's pattern inverted and worth holding beside it. Every other instance has been an
+instrument returning the same answer under both hypotheses -- a false green, silent, found only by
+mutation. This one is loud, and its danger is different in kind: the test's own header records that
+this gate was deferred once because `tsc` was red over an in-flight file and *a gate that starts red
+is a gate people learn to skip*. A convention that makes it red for every lane but its author would
+have taught the whole team to skip it, and the skipping would have looked like judgement rather than
+a bug. **A false red does not corrupt a reading; it corrupts the reader's disposition toward the
+instrument**, which outlasts the revision that caused it. Fixed at `e0d7ce4` in
+`research/probes/validate-figure.sh`, which is the copy lanes take, rather than in each copy.
