@@ -286,7 +286,7 @@ describe("bundle planning", () => {
  *
  * Exclusion is the dangerous half of that: a bundle that silently ships without
  * most of its skills and reports success is the fails-open shape this validator
- * exists to prevent. So the exclusion is recorded in `.claude-plugin/plugin.json`,
+ * exists to prevent. So the exclusion is recorded in `.claude-plugin/ak.json`,
  * which is inside the byte comparison `ak build --check` performs, and a run
  * that drops a skill says so in its output. Neither is a courtesy; they are what
  * make the exclusion checkable rather than invisible.
@@ -336,6 +336,25 @@ protocols:`,
     const note = plan.issues.find((i) => i.rule === "packaging.excluded-unauthored");
     expect(note?.severity).toBe("note");
     expect(note?.message).toContain("gamma");
+  });
+
+  test("the file the note sends you to is the file the exclusion is written to", () => {
+    // This drifted once. The note kept naming `plugin.json` after the build
+    // record moved to `ak.json`, so it sent the reader to a file that no longer
+    // held what it promised -- and nothing failed, because every assertion on
+    // this note was about its severity and its skill list.
+    //
+    // The filename is taken out of the message and used to look the file up,
+    // rather than compared against a second copy of the name written here. A
+    // literal would have passed through the move that broke this, since both
+    // sides of it would have been edited together or neither.
+    const plan = planBundle(ctxFor(WITH_CONTRACT), "claude-code", {});
+    const note = plan.issues.find((i) => i.rule === "packaging.excluded-unauthored");
+    const named = /recorded in (\S+?)\.\s*$/.exec(note?.message ?? "")?.[1];
+    expect(named).toBeDefined();
+    expect(note?.file).toBe(named);
+    const written = JSON.parse(plan.files.get(named ?? "")?.contents ?? "{}");
+    expect(written.excluded).toEqual([{ skill: "gamma", reason: "status: contract" }]);
   });
 
   test("a bundle with no skills left in it is an error, not a green empty build", () => {

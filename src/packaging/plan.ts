@@ -17,6 +17,19 @@ const SOURCE_ONLY_PREFIXES = ["research/", "provenance/", "src/", "tests/", "dis
 /** Where the packager parks a copied shared dependency, preserving its source layout. */
 export const SHARED_ROOT = "references/shared";
 
+/** The host's own manifest, carrying host keys only. */
+export const HOST_MANIFEST_FILE = ".claude-plugin/plugin.json";
+
+/**
+ * Where this package records what its own build decided.
+ *
+ * Separate from the host manifest because `claude plugin validate --strict`
+ * errors on a key it does not define. Named here rather than spelled out at
+ * each use: the previous spelling-it-out is what let a reader-facing message go
+ * on naming the host manifest after the record moved out of it.
+ */
+export const BUILD_RECORD_FILE = ".claude-plugin/ak.json";
+
 export interface BundleFile {
   /** Path inside dist/<host>/. */
   path: string;
@@ -163,16 +176,22 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   }
 
   /**
-   * Said out loud, because the manifest is a file nobody opens on a green run
-   * and a bundle quietly missing most of its skills is exactly the failure
+   * Said out loud, because the build record is a file nobody opens on a green
+   * run and a bundle quietly missing most of its skills is exactly the failure
    * this package keeps finding elsewhere.
+   *
+   * The filename is written once and used for both the issue's `file` and the
+   * sentence that sends a reader there. It was written twice before, and when
+   * the `ak` block moved out of the host manifest into `ak.json` both copies
+   * were left naming the manifest -- a note pointing at a file that no longer
+   * carried what the note promised it did.
    */
   if (excluded.length > 0) {
     issues.push(
       note(
         "packaging.excluded-unauthored",
-        ".claude-plugin/plugin.json",
-        `${excluded.length} skill(s) are excluded from this bundle because catalog.yaml does not declare them authored: ${excluded.map((e) => e.skill).join(", ")}. The exclusion and its reason are recorded in .claude-plugin/plugin.json.`,
+        BUILD_RECORD_FILE,
+        `${excluded.length} skill(s) are excluded from this bundle because catalog.yaml does not declare them authored: ${excluded.map((e) => e.skill).join(", ")}. The exclusion and its reason are recorded in ${BUILD_RECORD_FILE}.`,
       ),
     );
   }
@@ -246,12 +265,12 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     }
   }
 
-  files.set(".claude-plugin/plugin.json", {
-    path: ".claude-plugin/plugin.json",
+  files.set(HOST_MANIFEST_FILE, {
+    path: HOST_MANIFEST_FILE,
     contents: pluginManifest(ctx, emitted),
   });
-  files.set(".claude-plugin/ak.json", {
-    path: ".claude-plugin/ak.json",
+  files.set(BUILD_RECORD_FILE, {
+    path: BUILD_RECORD_FILE,
     contents: buildRecord(host, membership.profile, excluded, decisions, capabilities.enforces, capabilities.notes),
   });
 
