@@ -38,6 +38,17 @@ caused it and to the reader of the rendered prose.
 When a run reports fewer than the baseline, the pin is stale rather than the file wrong.
 Move `BASELINE_PIN` to the commit that lowered it, in that commit, so the floor ratchets.
 
+IT HAS NO TEMP ROOT, AND THAT IS LOAD-BEARING
+---------------------------------------------
+Every reading here comes from `git show` or from the file in place, so this script never holds a
+directory under an unresolved name. That matters because the trap that made a sibling suite green
+where the repository lives and red in every extract needs two terms together: a temp root held
+under its unresolved name, and an external process reporting paths back resolved. In-process
+Python never sees `/private/var`, so the mismatch cannot arise -- but it arrives the moment an
+extract does. Measured: `tempfile.mkdtemp()` returns `/var/folders/...`, whose realpath is
+`/private/var/folders/...`, and `TemporaryDirectory().name` carries the same unresolved form. If
+an extract is ever added here, take the root as `os.path.realpath(tempfile.mkdtemp())`.
+
 HOW TO RE-DERIVE
 ----------------
     ./research/probes/authoring-format.py            # the working tree
