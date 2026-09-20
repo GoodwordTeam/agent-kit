@@ -634,6 +634,14 @@ and nothing recomputes it. State what the figure was evidence for and let a read
 number count it. Where a measured figure has to be quoted, it carries the revision it was measured
 at, so a later reader can tell whether it still holds.
 
+This section's own author published a wrong one two commits after landing the rule, to the person
+about to act on it: a count of outstanding commits produced from memory of what had been committed
+rather than measured against the remote, reported as twelve when it was three. The rule above would
+have caught it — the figure was evidence for *these commits are outstanding*, which the commit names
+carry without a number. What it demonstrates is that a figure recalled feels measured, and that
+where the set is one another seat can change, a count is a timestamp: the corrected figure went
+stale between being measured and being read.
+
 A reference into another document **by position** is the third form of the same defect. "Section 5",
 a line number, "the table above" — each survives the target being renumbered or rewritten, still
 parses, and points somewhere else. The test is whether the position can move without the reference
@@ -676,6 +684,13 @@ for, one level up. The discharge is not a better pattern: name the population th
 check that every member of it reaches the output, so that what is unrepresented can be seen instead
 of imagined. A count of hits does not do this. A tally is where members stop being individually
 visible.
+
+That is not a counsel of perfection, and the instance is this file. An edit to one paragraph here
+left a line half again over the limit — invisible to the edit, which was correct, and invisible to a
+reader, who sees rendered prose. What found it was a population: every prose line in the file,
+measured, reporting one more over-width line than the run before. No pattern would have found it,
+because nobody greps for a line they do not know is there. The same count caught the same slip a
+second time, on a different paragraph, a commit later.
 
 ---
 
@@ -925,6 +940,21 @@ was already established instead of checking whether it was addressed. A continui
 retain its own finding context; a replacement receives a durable prior-finding packet. What
 independence forbids is inheriting the *author's* account, never the prior findings themselves.
 
+**A handback has two audiences with different entitlements, and the batch owner is the filter.**
+This section entitles a reviewer to prior findings with their fingerprints and evidence and, in the
+same breath, denies it the writer's narrative. One handback file is routinely both. A writer's note
+recording that they examined something and concluded it was fine is, in form, a documented *I
+checked that already* about a body the reviewer is about to verify — so handing the file over
+breaches the exclusion and withholding it breaches the entitlement. The contract named one artifact
+that has to be simultaneously delivered and denied.
+
+The routing: the narrative goes to whoever owns the batch, and anything real in it reaches the
+reviewer as a finding carrying a fingerprint and evidence. A reviewer declining to read the writer's
+file is not refusing information, it is refusing the form the information arrives in — a narrative
+cannot be re-derived and a finding can. What a writer may not take from this is that the note was
+theirs to keep. **A finding a writer declines to raise is not filtered, it is dropped**, and the
+filter sits at the batch owner rather than at the writer for exactly that reason.
+
 **A reviewer reads the working tree and records the revision it read.** A review pinned to a revision
 that has since moved is judging a batch against a contract the batch never saw, and it will report
 requirements that did not exist when the work was done. So the reviewer states the revision in its
@@ -991,6 +1021,15 @@ receives a *durable* prior-finding packet — the ruling's own word — and a re
 any time, including after the batch that produced it has closed. This contract does not say where a
 durable record lives. Whoever rules that has to satisfy the test above, and a path excluded from the
 tracked tree does not.
+
+**No mention of the handback in this contract names where it lives, and that is the mechanism
+underneath everything above.** Every mention assigns it work; the set of mentions naming a path, a
+directory or a filename is empty. A destination never named defaults to wherever the writer puts it,
+and it defaulted to the one tree that does not survive a clean checkout — so the durable obligations
+were not filed carelessly, they were filed nowhere in particular, which is a different failure with
+a different fix. How many mentions there are is not the evidence and moves whenever these sections
+are edited; it moved while this defect was being reported. The evidence is that the naming set is
+empty, which a grep settles and which stays settleable as the contract grows.
 
 **At most two fix-and-verify cycles after the first pass** (ruling `two-fix-cycles-then-stop`). The
 third does not run. It **stops with an explicit blocked-or-replan decision and the open findings
