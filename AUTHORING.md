@@ -1068,9 +1068,8 @@ candidate is indistinguishable from a declared non-family. A donor file cited th
 not name is provenance, and §5 is the argument for why provenance outlives its author. The
 prior-findings packet is durable because `reviewer-continuity-not-amnesia` promises a replacement
 receives a *durable* prior-finding packet — the ruling's own word — and a replacement can arrive at
-any time, including after the batch that produced it has closed. This contract does not say where a
-durable record lives. Whoever rules that has to satisfy the test above, and a path excluded from the
-tracked tree does not.
+any time, including after the batch that produced it has closed. Each of the three is filed where
+its own question is already answered, below.
 
 **No mention of the handback in this contract names where it lives, and that is the mechanism
 underneath everything above.** Every mention assigns it work; the set of mentions naming a path, a
@@ -1080,6 +1079,34 @@ were not filed carelessly, they were filed nowhere in particular, which is a dif
 a different fix. How many mentions there are is not the evidence and moves whenever these sections
 are edited; it moved while this defect was being reported. The evidence is that the naming set is
 empty, which a grep settles and which stays settleable as the contract grows.
+
+**There is deliberately no single destination, and no handbacks directory.** One sink for every
+durable obligation is what turned one bad choice of path into the loss of all three at once. A
+tracked directory with the same topology repairs today's instance and preserves the failure mode, so
+the next misroute is again wholesale. Each obligation instead goes where its own question is already
+being answered:
+
+- **A candidate pair examined and ruled not a family → `provenance/conversation-map.yaml`.** Already
+  the working mechanism rather than a new one: `frontend-races-vs-design-lens-boundary` and
+  `design-lens-vs-frontend-races-boundary` are recorded there reciprocally, each naming the other
+  seat by catalog id. §12.2's backward-reaching escalation lands here as well, which is what keeps
+  it from needing a file of its own.
+- **A donor file cited that the dossier did not name → the provenance fragment.** Already the
+  mechanism and already tracked, and §5 is the standing argument for why provenance outlives its
+  author. A writer used it for this without being told to.
+- **The prior-findings packet → `research/reviews/`.** The one of the three with no existing home,
+  which is why it reached for an ignored path. Its consumer is a replacement reviewer in a later
+  cycle or a later batch, arriving with nothing but a clean checkout — precisely the reader the test
+  above describes. `research/briefs/` already holds writer-facing inputs; this is the
+  reviewer-facing mirror of it.
+
+**A fourth obligation is checked against the test, not filed beside whichever of the three it
+resembles.** Three paths with the rule that produced them removed is a list that grows by
+resemblance, and growth by resemblance is how a single ignored directory became the destination for
+all three in the first place. `research/reviews/` itself was created for one narrow reason and is a
+destination now because it was ruled one, not because it accumulated the role — a directory that
+becomes a convention through nobody writing down that it was not one repeats the original defect
+with a tracked path instead of an ignored one.
 
 **At most two fix-and-verify cycles after the first pass** (ruling `two-fix-cycles-then-stop`). The
 third does not run. It **stops with an explicit blocked-or-replan decision and the open findings
