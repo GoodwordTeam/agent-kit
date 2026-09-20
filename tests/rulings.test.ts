@@ -4,6 +4,7 @@ import { loadCatalog } from "../src/catalog/load.ts";
 import type { Section } from "../src/catalog/layout.ts";
 import { RULINGS_FILE, checkRulings, citedRulingsInYaml, loadRulings } from "../src/validation/rulings.ts";
 import { citedRulings } from "../src/validation/bodies.ts";
+import { hasBlockingSkips } from "../src/validation/types.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const CATALOG_HEAD = `schema_version: 1
@@ -497,11 +498,58 @@ describe("a file with no catalog entry is reachable from binds (AUTHORING 12.3)"
 describe("a rulings file that will not parse", () => {
   const MALFORMED = "conflicts: [unclosed\n";
 
+  /** A body whose citation is correct against a readable policy file. */
+  const CITING = {
+    "catalog.yaml": `${CATALOG_HEAD}skills:\n  - id: alpha\n    invocation: U\n    status: contract\n`,
+    "skills/alpha/SKILL.md": SKILL_BODY("This closes a finding (ruling `one-thing`)."),
+  };
+
   test("is an error on the policy file, and no ruling resolves", () => {
     const ctx = ctxFor({ "policies/resolved-conflicts.yaml": MALFORMED });
     const issues = errors(checkRulings(ctx));
     expect(issues.map((i) => i.rule)).toEqual(["rulings.unparseable"]);
     expect(issues[0]?.file).toBe(RULINGS_FILE);
+  });
+
+  /**
+   * One unreadable authority used to convict every body that cited anything.
+   * `loadRulings` returned `present: true` on the unparseable path, so the
+   * `!present` guard did not fire, `checkCitations` ran against an empty ruling
+   * set, and each correct citation came back as `rulings.unknown-citation`
+   * against the body -- a defect in one file, reported as a defect in all the
+   * others. The subject was present; the authority to judge it was not.
+   */
+  test("does not convict the bodies: a correct citation is not reported as unknown", () => {
+    // The first half is a positive control and is load-bearing. Asserting only
+    // that the malformed run omits `rulings.unknown-citation` would pass just as
+    // well if the citation in this body were never extracted at all -- an empty
+    // citation set cannot produce an unknown-citation issue either, so the two
+    // give the same reading. Proving the same body against a readable policy
+    // that does not define the id makes the absence in the second half mean
+    // something: the check can see this citation, and chose not to grade it.
+    const seen = checkRulings(ctxFor({ ...CITING, [RULINGS_FILE]: rulings(ROW("something-else")) }));
+    expect(seen.map((i) => i.rule)).toContain("rulings.unknown-citation");
+
+    const rules = checkRulings(ctxFor({ ...CITING, [RULINGS_FILE]: MALFORMED })).map((i) => i.rule);
+    expect(rules).not.toContain("rulings.unknown-citation");
+    expect(rules).toContain("rulings.unparseable");
+  });
+
+  test("reports the citation check as unavailable, which blocks", () => {
+    const ctx = ctxFor({ ...CITING, "policies/resolved-conflicts.yaml": MALFORMED });
+    const issues = checkRulings(ctx);
+    const gap = issues.find((i) => i.rule === "rulings.citations-unavailable");
+    expect(gap?.blocking).toBe(true);
+    expect(gap?.skipped).toBe("ruling citations");
+    expect(hasBlockingSkips(issues)).toBe(true);
+  });
+
+  test("the file is still an error, so nothing that blocked before stops blocking", () => {
+    // The unavailable() is added beside the error(), not in place of it. A
+    // malformed policy file is a real gradeable defect in the tree; the check
+    // that could not run because of it is the separate fact.
+    const ctx = ctxFor({ ...CITING, "policies/resolved-conflicts.yaml": MALFORMED });
+    expect(errors(checkRulings(ctx)).map((i) => i.rule)).toEqual(["rulings.unparseable"]);
   });
 
   test("the error carries the parser's own reason", () => {

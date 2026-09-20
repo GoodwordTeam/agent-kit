@@ -36,7 +36,17 @@ import {
 import { readTextIfPresent, walkFiles } from "../util/fs.ts";
 import { citedRulings } from "./bodies.ts";
 import type { CheckContext } from "./context.ts";
-import { error, note, warning, type Issue } from "./types.ts";
+import { error, note, unavailable, warning, type Issue } from "./types.ts";
+
+/**
+ * The check that reads a body's citations against the resolved-conflicts policy.
+ *
+ * Named because it is the one check here whose subject survives an unreadable
+ * policy file: the bodies are all still in the tree. The row checks below it
+ * (`binds`, `universal`, doctrine reachability) take the rows themselves as
+ * their subject, and with no rows there is nothing they failed to examine.
+ */
+const CITATIONS_CHECK = "ruling citations";
 
 export const RULINGS_FILE = "policies/resolved-conflicts.yaml";
 
@@ -134,8 +144,27 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
           RULINGS_FILE,
           `could not be parsed: ${cause instanceof Error ? cause.message : String(cause)}`,
         ),
+        // `present: false`, so the citation check does not run at all.
+        //
+        // It used to return `present: true` with no rows, which let
+        // `checkCitations` run against an empty ruling set: one unreadable file
+        // convicted every body that cited anything of citing a ruling that does
+        // not exist. The bodies were correct and the authority to judge them was
+        // what had gone missing, so every one of those was a false attribution.
+        //
+        // `unavailable()` and not `skipped()` for the same reason: the subject
+        // is present -- the bodies are all in the tree -- and what is absent is
+        // the contract they are measured against. That blocks. It is added
+        // beside the error and not in place of it; the file is a real defect,
+        // and the check that could not run because of it is a separate fact.
+        unavailable(
+          "rulings.citations-unavailable",
+          RULINGS_FILE,
+          CITATIONS_CHECK,
+          `${RULINGS_FILE} could not be parsed, so no ruling id resolves and no citation in any body was checked against one. Every body is still in the tree; what is missing is the authority to judge their citations. Fix the parse error above and the citations are checked on the next run.`,
+        ),
       ],
-      present: true,
+      present: false,
     };
   }
 

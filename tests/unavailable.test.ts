@@ -218,6 +218,11 @@ describe("every skip in the validator is classified, so a new one cannot default
     "sideeffects.vocabulary-unavailable": ["skipped"],
     // Authority absent while the subject is present: these block.
     "role.mandated-rows-unavailable": ["unavailable"],
+    // The bodies are all in the tree; the policy that says which ruling ids
+    // exist is what could not be read, so no citation in any of them was
+    // checked. The row checks at the same seam stay out of this table: their
+    // subject is the rows, and with no rows there is nothing unexamined.
+    "rulings.citations-unavailable": ["unavailable"],
     // Both, and which one depends on whether any open entry went unexamined.
     "defects.contract-unreadable": ["skipped", "unavailable"],
   };
