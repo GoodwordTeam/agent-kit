@@ -28,6 +28,7 @@ import { checkProvenance } from "./provenance.ts";
 import { checkRestatements } from "./restatement.ts";
 import { checkRulings } from "./rulings.ts";
 import { checkSchemas } from "./schemas.ts";
+import { checkSideEffects } from "./sideeffects.ts";
 import { error, hasErrors, sortIssues, type Issue } from "./types.ts";
 
 export interface Check {
@@ -62,6 +63,7 @@ export const CHECKS: readonly Check[] = [
   { name: "budget", run: checkBudget },
   { name: "invocation", run: checkInvocation },
   { name: "policies", run: checkPolicies },
+  { name: "side-effects", run: checkSideEffects },
   { name: "skill-manifests", run: checkSkillManifests },
   { name: "pack-manifests", run: checkPackManifests },
   { name: "links-source", run: checkSourceLinks },

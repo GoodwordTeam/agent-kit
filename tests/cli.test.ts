@@ -151,6 +151,14 @@ describe("ak validate", () => {
    * unchecked against its own contract. That most fixtures in this file validate
    * without schema conformance running at all is a fact the term surfaced, and
    * the reason it is worth having.
+   *
+   * It takes a `skill.yaml` for the same reason. A body with no execution
+   * contract leaves `## Side effects` with nothing to agree with, and
+   * `sideeffects.manifest-unavailable` says so -- a second fact this term
+   * surfaced about a fixture that called itself verified. The manifest is
+   * deliberately partial: the tests below read the summary's skipped clause,
+   * and an incomplete manifest is `schemas.document-invalid`, which is an
+   * error and not a skip.
    */
   function verifiedTree(): string {
     const dir = join(import.meta.dir, "..", "schemas");
@@ -158,7 +166,12 @@ describe("ak validate", () => {
     for (const name of readdirSync(dir)) {
       if (name.endsWith(".schema.json")) schemas[`schemas/${name}`] = readFileSync(join(dir, name), "utf8");
     }
-    return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, ...schemas });
+    return makeTree({
+      "catalog.yaml": CATALOG,
+      "skills/triage/SKILL.md": SKILL,
+      "skills/triage/skill.yaml": "id: triage\nversion: 0.1.0\nkind: lifecycle\ninvocation: U\nside_effects: []\n",
+      ...schemas,
+    });
   }
 
   function summaryOf(root: string): string {
