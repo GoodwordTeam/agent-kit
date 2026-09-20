@@ -852,7 +852,13 @@ transcript is an error naming the bound*, asserting `toContain("2264")` against 
 `G:L9999`. What defeated it was neither the assertion nor the input but the fixture under both — a
 transcript of `"line\n"` repeated ends in a newline, the one shape in which a newline count and a
 trailing-empty correction return the same number, so the message was identical under the defect and
-the assertion could not move. Dropping that trailing newline is the whole repair.
+the assertion could not move. Dropping that trailing newline was the whole repair, landed at
+`72db157`: `tests/provenance.test.ts:33` now reads `${"line\n".repeat(2263)}line`. The `2264` at
+`:335` stays and is correct — the fixture is a synthetic 2264-line transcript, so the bound its
+message names is 2264. Which leaves one spelling over two populations: `2264` as the wrong count of
+`research/sources/grok-transcript.md`, and `2264` as the right count of a fixture. Anything sweeping
+for the figure as a defect signature carries that false positive by construction, and the false
+positive is the test that proves the repair.
 
 The repository's own data is still not what exercises a limit. `g_locator` admits `G:L` up to 2265,
 the transcript's last line is 2265, and the tree's highest real citation is `G:L2038-2254`
@@ -1049,13 +1055,14 @@ writing a brief in advance or is discharged by one that predates the entry. The 
 the one that held: `57ea582` ruled eighty-eight seconds before `76099ab` dispatched, with nobody
 aware the written clause said something else.
 
-**The retirement rule has no detector, and it has already failed.** The commit that resolved the
-reference-pack entry wrote §12.5, which answered it, and left the entry standing; the entry then
-stood blocking a batch on a gap that no longer existed, and cost nothing only because that batch had
-not been dispatched. Nothing failed, because nothing was looking — a resolved entry and an open one
-are the same bytes. The obvious check, a commit message that rules on an entry the commit does not
-delete, would have been silent here: that commit's message never mentioned the entry. This was not a
-writer declining to retire one. It was a writer who did not notice there was anything to retire.
+**The retirement rule failed before it had a detector, and the way it failed decided the shape of
+the one it now has.** The commit that resolved the reference-pack entry wrote §12.5, which answered
+it, and left the entry standing; the entry then stood blocking a batch on a gap that no longer
+existed, and cost nothing only because that batch had not been dispatched. Nothing failed, because
+nothing was looking — a resolved entry and an open one are the same bytes. The obvious check, a
+commit message that rules on an entry the commit does not delete, would have been silent here: that
+commit's message never mentioned the entry. This was not a writer declining to retire one. It was a
+writer who did not notice there was anything to retire.
 
 **So the check is on the entry, not on the commit.** Every entry quotes the instruction it is filed
 against, and a quotation is a fingerprint of the text it was taken from. **An open entry's quoted
@@ -1081,31 +1088,24 @@ gloss its heading does not, so resolve on the section number and ignore the rest
 An implementation that compares the whole rendered citation manufactures the unresolvable case it
 then has to fail.
 
-**Nothing in `src/` runs this check.** *An open entry's quoted instruction must still resolve in the
-section it cites* is a specification, not a description of anything that executes. `ak validate`
-seats no check that performs it. It does seat a check that reads this file for something else:
-`scannedFiles` at `src/validation/restatement.ts:239` adds every root `.md` by discovery, so
-`CONTRACT-DEFECTS.md` is scored against the rulings on every run, and the single by-name mention
-under `src/` is the comment at `:249` explaining that discovery is deliberate because naming the
-roots would have missed this file the day it was added. This paragraph first said no check reads the
-file at all, on the strength of that one grep hit. A file reached by discovery leaves no trace
-bearing its name, so a search of `src/` for the path finds the comment about it and nothing else —
-which is §5's rule about derived figures in a second shape: what a search for a name cannot find is
-a use that never writes the name. An entry whose quotation never resolved can be filed, validated
-and merged in silence. The mechanical detail in this rule — whitespace collapsed, scoped to the
-cited section, failing closed on a citation it cannot resolve — is exactly why this has to be said
-rather than left to be found: a rule specified precisely enough to implement reads as a rule
-something already implements, and it was read that way by someone who went looking for the code. The
-validator does report the underlying gap — the §12.3 warning that this file has no `catalog.yaml`
-entry, so no ruling's `binds` block names it and no `binds`-derived check reaches it — and that
-warning has been sitting in a count nobody connected to this rule. Until a detector exists the
-comparison is made by hand by whoever rules on the entry, and nothing obliges them to make it. This
-paragraph is an open entry against the contract that happens to live inside it, and it retires the
-way any other does: the commit that lands the detector deletes it, with the ruling in the commit
-message. Left standing once a check exists, it becomes the same defect pointing the other way — a
-contract that understates its own enforcement sends a reader to redo by hand what the gate already
-did, and teaches them that these claims run behind the code. That version is harder to catch,
-because a contract claiming less than it enforces reads as conservative rather than wrong.
+**Both of those rules are gated, at `d87f9e9`.** `src/validation/defects.ts` performs them and
+`ak validate` seats it. The retirement rule is checked structurally rather than lexically, which is
+the only way it can be checked at all: a resolved entry reads exactly like an open one, so nothing
+in an entry's wording is detectable, and what is detectable is the file growing a second entry list.
+`defects.entry-outside-open` fires on any entry outside `## Open` whatever the heading is called,
+and `defects.retired-section` names the heading itself, for the case above that carries no entry to
+be seen — an empty retirement section. The entry-quotation rule is
+`defects.entry-quotation-dangling`, with `defects.entry-citation-unresolvable` for an entry naming
+no section this file has, `defects.entry-unquoted` for one quoting nothing, and
+`defects.contract-unreadable` when the section index cannot be built at all. Those three are the
+fail-closed cases the two paragraphs above argue for, gated rather than described.
+
+**`defects.entry-population` prints on every run and says the word vacuous.** `## Open` is empty
+here, so the live run reports zero entries and zero quotations and would merge green with the
+comparison inverted, with the scoping removed, or with the check deleted. Saying so in the output is
+what stops a clean run being read as coverage, and it puts the rule about a grep finding instances
+and never proving their absence inside the instrument rather than leaving the reader to supply it.
+The blindness below is stated there too, for the same reason.
 
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
@@ -1204,26 +1204,27 @@ reword also moved a character inside a verbatim-mandated quotation, under a live
 materiality note that accompanied it did not mention the string. So the reviewer's recorded revision
 is machine-readable, and the gate this section specifies is that a file the review covers, moved
 past that revision with no notice recorded against the newer one, fails. **Nothing in `src/`
-performs it.** Until this paragraph is deleted, that sentence describes a gate that does not exist,
-and it was found the way the other two were: a reviewer diffing `git log` by hand, after seven
-commits touched this file during their pass — one of which rewrote the row they were filing against
-— with nothing failing.
+performs it**, and the obstacle is a missing field rather than a missing check: the word *notice*
+appears nowhere in `schemas/`, `policies/` or `catalog.yaml`, so a gate written today would read
+nothing and pass. That is worse than no gate, and it is why this one did not land beside the other
+two at `d87f9e9`. Until this paragraph is deleted, its sentence describes a gate that does not
+exist, and it was found the way the other two were: a reviewer diffing `git log` by hand, after
+seven commits touched this file during their pass — one of which rewrote the row they were filing
+against — with nothing failing.
 
 **The gate is silent movement, not movement.** Movement during a review is legitimate and happened
 repeatedly while this section was being written; the notice is what makes it safe. A check that
 failed on movement alone would make the duty unperformable, and an unperformable gate gets turned
 off.
 
-**Every rule in this section that specifies a check lacks a gate, and each says so in its own
-paragraph.** The retirement rule, the entry-quotation rule and the recorded-revision rule each state
-mechanical behaviour that `ak validate` does not perform. One of the three has a probe:
-`research/probes/defect-entries.py` runs the entry-quotation comparison and carries a self-test,
-which is enforcement somebody has to choose to run rather than a gate that runs anyway. The other
-two have nothing. **Each disclosure retires on the commit that lands its own gate**, deleted there
-with the ruling in the message. They do not retire together. A reader who takes one deletion as
-covering all three arrives at the state all three exist to prevent — believing a check runs because
-the section stopped saying it does not — and that reading is available the moment the first gate
-lands.
+**One rule in this section still specifies a check with no gate, and it says so in its own
+paragraph.** The retirement rule and the entry-quotation rule were gated at `d87f9e9`; the
+recorded-revision rule was not. **Each disclosure retires on the commit that lands its own gate**,
+deleted there with the ruling in the message. They did not retire together and this paragraph is the
+proof: two went and one stayed. A reader who takes those two deletions as covering all three arrives
+at the state the disclosures exist to prevent — believing a check runs because the section stopped
+saying it does not — and that reading is available now rather than hypothetically, which is why the
+count is written out here instead of being left to be inferred from which paragraphs survive.
 
 **A handback lists every donor file the writer cited that its dossier did not name.** Following a
 dossier's citation into the pinned clone and finding adjacent material is expected: it is how a

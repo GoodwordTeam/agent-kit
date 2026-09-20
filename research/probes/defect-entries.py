@@ -9,10 +9,22 @@ AUTHORING.md §10 states the rule this performs:
 the file, failing closed when the citation cannot be resolved, and resolving on the
 section number so that a descriptive gloss cannot manufacture the unresolvable case.
 
-This is a probe, not a gate. `ak validate` does not run it and no CHECKS entry
-reaches CONTRACT-DEFECTS.md -- §10 says so in the paragraph beginning "Nothing in
-`src/` runs this check." If that paragraph is gone and this file is still here,
-the gate landed and this probe is redundant.
+The gate landed at `d87f9e9`. `src/validation/defects.ts` performs this rule and
+`ak validate` seats it, so this file is no longer the only enforcement either rule
+has -- and it is not redundant and not the gate's source. It is a second,
+independently written implementation, kept for the one thing the gate cannot do:
+the differential backtest below runs over git history, and a check inside
+`ak validate` only ever sees the tree it is run in.
+
+Agreement recorded at `d87f9e9`. Over an extract of `f04a4d0` carrying HEAD's
+`src/`, `ak validate` raises `defects.entry-quotation-dangling` twice, naming the
+same entry and the same two quotations this probe names, and raises neither at
+`f04a4d0~1`. Two implementations, one real historical regression, same answer in
+both directions. That is the whole reason to keep two.
+
+An earlier version of this header said the gate landing would make this probe
+redundant. It was written before the gate existed and it was wrong about why this
+file is worth keeping.
 
 Usage:
     python3 research/probes/defect-entries.py            # check the working tree
