@@ -592,6 +592,19 @@ someone edits the code, which is constant and silent, and nothing in `ak validat
 Naming the symbol does not prevent drift either; it makes drift findable, because a reader who greps
 the name reaches the definition, where an enumeration leaves them believing they already know it.
 
+**A citation that resolves at the wrong authority is caught by nothing.** A citation to a symbol
+that does not exist fails every link check in this package. A citation to a symbol that does exist,
+attached to a claim the symbol does not make, passes all of them — the name resolves, the path
+resolves, and only reading the definition settles it. `schemas/finding.schema.json`'s
+`confidence_anchor` gate is the worked example: it requires one evidence entry carrying a non-empty
+`excerpt`, and its own description hands ordering and the `file:line` spelling to
+`policies/review.yaml`. Twenty role bodies credited the schema with both, twelve of them in a
+byte-identical sentence. §6 names this defect for rulings — crediting an authority with a rule it
+does not state — and it is the same defect pointed at a symbol, with one property §6's version does
+not have: a wrong attribution that is copied reads as compliant and greps as consistent, so the
+copies are evidence of each other and the sweep that would find them returns a uniform result. Check
+the claim against the definition, not against the neighbours that make it too.
+
 The same holds for a count or a range measured over this repository. "Eleven of twenty-nine roles",
 "bodies run 75–110 lines" — each was true when measured, each moves on a schedule nobody watches,
 and nothing recomputes it. State what the figure was evidence for and let a reader who needs the
@@ -873,13 +886,28 @@ wrong, and a reviewer is never at fault for having read the revision it was give
 change to assess their own diff, which is where it fails: a change described in good faith as a
 reword also moved a character inside a verbatim-mandated quotation, under a live review, and the
 materiality note that accompanied it did not mention the string. So the reviewer's recorded revision
-is machine-readable, and `ak validate` fails when a file the review covers has moved past that
-revision with no notice recorded against the newer one.
+is machine-readable, and the gate this section specifies is that a file the review covers, moved
+past that revision with no notice recorded against the newer one, fails. **Nothing in `src/`
+performs it.** Until this paragraph is deleted, that sentence describes a gate that does not exist,
+and it was found the way the other two were: a reviewer diffing `git log` by hand, after seven
+commits touched this file during their pass — one of which rewrote the row they were filing against
+— with nothing failing.
 
 **The gate is silent movement, not movement.** Movement during a review is legitimate and happened
 repeatedly while this section was being written; the notice is what makes it safe. A check that
 failed on movement alone would make the duty unperformable, and an unperformable gate gets turned
 off.
+
+**Every rule in this section that specifies a check lacks a gate, and each says so in its own
+paragraph.** The retirement rule, the entry-quotation rule and the recorded-revision rule each state
+mechanical behaviour that `ak validate` does not perform. One of the three has a probe:
+`research/probes/defect-entries.py` runs the entry-quotation comparison and carries a self-test,
+which is enforcement somebody has to choose to run rather than a gate that runs anyway. The other
+two have nothing. **Each disclosure retires on the commit that lands its own gate**, deleted there
+with the ruling in the message. They do not retire together. A reader who takes one deletion as
+covering all three arrives at the state all three exist to prevent — believing a check runs because
+the section stopped saying it does not — and that reading is available the moment the first gate
+lands.
 
 **A handback lists every donor file the writer cited that its dossier did not name.** Following a
 dossier's citation into the pinned clone and finding adjacent material is expected: it is how a
