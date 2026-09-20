@@ -578,7 +578,12 @@ method is unaudited either way. It was caught on the lucky branch, which is the 
 catching it is hardest to motivate.
 
 The remedy, and the guard is narrower than the one we nearly wrote down: **anything quoted comes
-from `git ls-tree -r <rev>`; if `ls-files` is used anyway it owes a `git diff --cached`.**
+from `git ls-tree -r <rev>`; if `ls-files` is used anyway it owes a `git diff --cached`, and if
+bytes are also read off disk it owes a `git diff --name-only` for those paths.** The second clause
+is `sweep-reviewer`'s and it closes a hole in the first: their actual method was a hybrid, names
+from the index via `ls-files` and bytes from the working tree via `grep`, and `diff --cached` is
+silent on an unstaged edit. **The guard's scope has to match the measurement's scope** -- guard the
+index if names came from it, guard the working tree for those paths if bytes came off disk.
 `sweep-reviewer` proposed `git status --porcelain` and `provmap` tested it across four states
 rather than reasoning about it -- the divergence is index-versus-HEAD, so `diff --cached`
 corresponds to it exactly while `status --porcelain` also fires on unstaged edits and untracked
@@ -614,6 +619,52 @@ what these searches are usually run to establish. One `wc -l` on the extract bef
 one pattern known to match, kills both of today's artifacts at the point of measurement rather than
 at the point where someone happens to know the answer. It is the same move as `diff --cached` above,
 applied to a failure that is not spatial at all.
+
+**Correction to the sentence above, landed the same hour and falsified by measurement.** I wrote
+that a `wc -l` on the extract kills both artifacts. It does not, and `provmap` built the case that
+shows why. Every mangled path today exited 128 *because the mangled name happened not to exist*. In
+a throwaway repo with both `evals/x/case.yaml` and `vals/x/case.yaml` present, `git show
+$R:evals/x/case.yaml` degrades to `git show vals/x/case.yaml` -- **exit 0**, a commit header and a
+diff for a different file, 273 bytes captured. The byte-count control *passes*. The grep for the
+wrong file's content returns 1 and the grep for what you wanted returns 0, which reads as a clean
+true negative.
+
+So: **a positive control proves the instrument had a subject; it cannot prove it had the right
+one.** What survives is the *discriminating* control -- a sentinel expected in the intended file and
+absent from the plausible wrong ones. `provmap`'s working version was `scannedFiles 0 /
+CONTRACT-DEFECTS 4 / schema_version 2`: it worked because the second and third are specific to
+`AUTHORING.md`, so a wrong subject drives them to zero alongside the finding and the undiscriminating
+`0 0 0` becomes a discriminating `0 4 2`. `sanity: 145223 bytes` would have passed on the wrong file.
+**A count proves something was read; only a sentinel proves the right thing was read.**
+
+Two mechanical notes that cost more than they look. **Quoting does not help and braces do.**
+`$R:AUTHORING.md` and `"$R:AUTHORING.md"` expand identically under zsh's `:A` absolute-path
+modifier -- both to `…/0c785b8UTHORING.md` -- while `"${R}:AUTHORING.md"` is correct. So a reviewer
+who spots the shell risk and adds quotes has changed nothing and now believes it is handled. And
+capturing stderr does not rescue it either: with `2>&1` the variable holds git's fatal message and
+the following greps still return clean zeros, because the error text does not contain the patterns.
+`provmap` censused all 27 top-level tracked paths against `$R:<path>`: **14 corrupt, 13 safe**, with
+every directory a lane works in -- `src`, `skills`, `schemas`, `tests`, `roles`, `evals`,
+`adapters`, `catalog.yaml`, `AUTHORING.md`, `AGENTS.md` -- in the corrupt column, and the safe set
+an accident of which letters happen to be zsh modifiers rather than anything anyone chose.
+
+`sweep-reviewer`'s unification is the shortest true statement of both halves of this page, and it is
+why each of them was blind to the other's error: **a control must have the same extension as the
+hypothesis it guards.** There are exactly two ways to miss. `git status --porcelain` fires on states
+that are not the defect -- too wide in the firing direction, a false alarm, and a guard that fires
+every day is stepped over. `sanity: N bytes` passes on subjects that are not the right one -- too
+wide in the passing direction, false assurance, and nobody looks again. The third live instance
+today was neither shell nor prose but committed test code: `tests/typecheck.test.ts`'s population
+check reported all 78 owned files as untypechecked whenever the suite was reached through a symlink,
+because `spawnSync`'s `cwd` does not rewrite `PWD` and `tsc` builds `--listFiles` from `PWD`. Green
+where the repository lives, red in every `mktemp -d` extract -- which is how every lane here
+verifies anything. Its author had guarded the vacuous-pass direction with
+`expect(owned.length).toBeGreaterThan(30)` and left the false-alarm direction open. **I made that
+worse before I made it better:** at `e0d7ce4` I fixed the *convention*, making `validate-figure.sh`
+extract under a resolved path, which routes around the trap for callers who copy that script and
+leaves it armed for everyone else. The comparison itself is canonicalised at `09860e4`, with a
+symlink regression control that is the only test in the file to fail when the canonicalisation is
+removed.
 
 **`git push origin HEAD:main` is a moving ref too, and I published another lane's commit ninety
 minutes after being handed the report that names the defect.** `authoring` found it first: they ran
