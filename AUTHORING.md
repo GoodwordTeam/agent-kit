@@ -383,9 +383,14 @@ this contract's own narration of the defect, and a brief recording the repair. T
 now undercounted twice: *two research documents* at `30cb3ed`, after looking at the two that were
 wrong, and *two derivations* at `baca1d3`, after verifying the two it had been handed without
 searching for a third. What finally produced a complete answer was neither — it was classifying
-every `split("\n")` in `src/`, twenty-one of them at `3c652d9`, by whether it derives a published
-count or walks a file. A population you can enumerate and sort is checkable. A pattern you can think
-of is a sample of what you expected to find.
+every `split("\n")` in `src/`, twenty-one of them at `8ef24c2`, by whether it derives a published
+count or walks a file: three derive, and every other `lines.length` there is a loop bound, an index
+bound or a zero-check. That sweep needs its revision as much as any other figure. The three held at
+every commit measured, while the population around them went from twelve sites to thirteen in a
+working tree an hour later under another lane's uncommitted edit — so a tally over that sweep would
+have disagreed with itself within the hour, and the classification did not, because what it
+publishes is which members sort where rather than how many there are. A population you can enumerate
+and sort is checkable. A pattern you can think of is a sample of what you expected to find.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
