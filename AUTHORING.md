@@ -469,6 +469,16 @@ it. A body loaded through progressive disclosure arrives at one passage without 
 so a rule whose attribution sits seven lines up reaches the agent as a rule with no attribution —
 the state this section exists to prevent.
 
+**A mandated verbatim row does not absorb a seat's own statement of the same rule.** §12.2's rows
+are a floor every role body carries. A seat that also states the rule where it bites, in its own
+terms and carrying its own citation, is citing at the point of use — the thing this section requires
+— and not restating. The compression instinct runs the other way, because the row is exact and the
+seat's sentence therefore looks redundant; deleting it produces exactly the failure the consumer
+argument describes, since a reader who arrives at one passage through progressive disclosure never
+saw the row. What a seat may not do is lean on the row: carrying the rule anaphorically, or uncited,
+on the ground that the body states it somewhere above. The row is elsewhere in the file, and
+elsewhere in the file is the one place a citation may never point.
+
 **A quoted specimen is not a body, and this rule does not reach it.** The examples in §3 state rules
 without citing them, deliberately: nothing loads a specimen. No agent arrives at one through
 progressive disclosure, and the writer reading it has the governing section in front of them, so the
