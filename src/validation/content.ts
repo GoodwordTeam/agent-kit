@@ -45,6 +45,7 @@ export const DENYLIST_EXEMPT_PREFIXES: ReadonlyArray<string> = [
 ];
 
 const SCAN_DIRS = [
+  "evals",
   "skills",
   "packs",
   "protocols",

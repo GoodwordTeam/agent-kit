@@ -624,12 +624,19 @@ different route.
 names, no pricing or per-token cost expressions, no effort ladders, no escalation tiers, no routing
 directives. The literal denylist lives in `src/denylist.ts` rather than in this file, because
 reproducing the terms here would trip the check that enforces them. `ak validate` fails on a hit
-anywhere outside the exempt prefixes, which are `DENYLIST_EXEMPT_PREFIXES`
-(`src/validation/content.ts`). The invariant that decides that list: nothing packaged into `dist/`
-is ever exempt, and an exemption exists only where the material's job is to quote what the denylist
-excludes — pinned sources, dossiers recording a donor's routing, and the tests that prove the
-scanner fires. Read the symbol rather than this sentence for whether a given tree is scanned. The
-substitutions are in `AGENTS.md`, "Model routing is stripped".
+anywhere it scans, and **two symbols in `src/validation/content.ts` decide that together**: a tree
+is scanned when `SCAN_DIRS` gathers it *and* `DENYLIST_EXEMPT_PREFIXES` does not subtract it. The
+second alone does not answer the question. `isExempt()` only removes paths that `collect()` already
+gathered, so a tree in neither list is never offered to the scanner, and reading the exempt list for
+it returns "not exempt" — which reads as scanned and is not. Check both.
+
+The invariant that decides the exempt list: nothing packaged into `dist/` is ever exempt, and an
+exemption exists only where the material's job is to quote what the denylist excludes — pinned
+sources, dossiers recording a donor's routing, and the tests that prove the scanner fires. That
+invariant governs `SCAN_DIRS` too, in the other direction: a tree this package authors, with no
+quoting job, belongs in it. `evals/` was in neither list until `AUTHORING.md` was ruled on, which
+is how a populated tree of authored prose went unscanned. The substitutions are in `AGENTS.md`,
+"Model routing is stripped".
 
 **Independence between seats is structural, never a model identity.** "An independent reviewer" is a
 runner-enforced constraint on who fills the seat (`adapters/runner-contract/CONTRACT.md`). It is
