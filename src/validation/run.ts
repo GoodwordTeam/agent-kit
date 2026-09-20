@@ -31,7 +31,7 @@ import { checkRestatements } from "./restatement.ts";
 import { checkRulings } from "./rulings.ts";
 import { checkSchemas } from "./schemas.ts";
 import { checkSideEffects } from "./sideeffects.ts";
-import { error, hasErrors, sortIssues, type Issue } from "./types.ts";
+import { error, hasBlockingSkips, hasErrors, sortIssues, type Issue } from "./types.ts";
 
 export interface Check {
   readonly name: string;
@@ -120,16 +120,25 @@ export function runValidation(root: string, options: RunOptions = {}): Validatio
     try {
       issues.push(...check.run(ctx));
     } catch (cause) {
+      // `instanceof`, not a cast. `(cause as Error).message` is a claim about
+      // the value, not a conversion of it: a thrown string, object or null has
+      // no `.message`, and the report became "check X threw undefined". That is
+      // worse than a crash, because it names a real check and says nothing about
+      // why, sending the reader to look inside a check that may be fine.
       issues.push(
         error(
           "check.threw",
           "catalog.yaml",
-          `check ${check.name} threw ${(cause as Error).message}; the remaining checks still ran, but this check reported nothing`,
+          `check ${check.name} threw ${cause instanceof Error ? cause.message : String(cause)}; the remaining checks still ran, but this check reported nothing`,
         ),
       );
     }
   }
 
   const sorted = sortIssues(issues);
-  return { catalog: loaded.catalog, issues: sorted, ok: !hasErrors(sorted) };
+  // A check that reported itself unavailable fails the run as surely as a finding
+  // does. Its subject was in the tree and went unexamined, so `ok: true` here
+  // would be the same value as `ok: true` on a tree that was actually checked --
+  // which is the one thing this field exists to distinguish.
+  return { catalog: loaded.catalog, issues: sorted, ok: !hasErrors(sorted) && !hasBlockingSkips(sorted) };
 }

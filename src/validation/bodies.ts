@@ -19,7 +19,7 @@ import { entryDir, preferredBodyFile, type DirectorySection } from "../catalog/l
 import { exists, isDir, readTextIfPresent } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import type { CheckContext } from "./context.ts";
-import { error, note, skipped, type Issue } from "./types.ts";
+import { error, note, unavailable, type Issue } from "./types.ts";
 
 /** §3's ten headings with `## Authority` replaced by `## Invoked by` (§12.1). */
 export const PROTOCOL_SECTIONS: ReadonlyArray<string> = [
@@ -76,10 +76,23 @@ const ANTI_RATIONALIZATION_COLUMNS = ["The thought", "Why it is wrong", "Do this
  * A `## Never` row §12.2 governs.
  *
  * `clauses` are the row's distinguishing wording, matched against the row with
- * whitespace collapsed and markdown emphasis stripped. Matching a clause rather
- * than the whole sentence is what keeps a reflowed line break from producing a
- * false error; requiring the citation and the clause in the *same* row is what
- * keeps a section that merely mentions both from passing.
+ * whitespace collapsed and markdown emphasis stripped. Requiring the citation
+ * and the clause in the *same* row is what keeps a section that merely mentions
+ * both from passing.
+ *
+ * **This is a floor, not the contract.** The contract is §12.2's own text, read
+ * at run time and compared byte-for-byte by `checkMandatedRows`; these clauses
+ * are what still runs when §12.2 cannot be read at all. A row satisfying every
+ * clause here can still fail that comparison, and should -- `sweep-reviewer`'s
+ * case 4 carries both clauses and the citation and states the rule inverted.
+ *
+ * An earlier version of this comment claimed clause-matching existed to stop a
+ * reflowed line break producing a false error. That is no longer true and was
+ * the wrong reason besides: §12.2 sets rows 1-3 as blocks and says "byte-for-byte
+ * governs a row reproduced as a block", so the wrap points are part of the row
+ * and a reflowed row is an error. The sentence misled a reviewer into setting
+ * their bar from this file instead of from the contract, and misled a second
+ * reader before that, which is why it is recorded here rather than deleted.
  */
 export interface GovernedNeverRow {
   /** The ruling the row must cite, or null where §12.2 states the rule itself. */
@@ -1131,7 +1144,12 @@ export function checkBodyShapes(ctx: CheckContext): Issue[] {
   if (population.bodies > 0) {
     issues.push(
       mandated === null
-        ? skipped(
+        ? // `unavailable`, not `skipped`: the bodies are all present and it is the
+          // contract that could not be read, so this run examined a subject it had
+          // no authority for. Reported as a skip it did not reach the exit code,
+          // and rewording an anchor turned a tree with a gutted row from exit 1
+          // into exit 0 -- this gate failing the row it exists to enforce.
+          unavailable(
             "role.mandated-rows-unavailable",
             AUTHORING_FILE,
             MANDATED_ROWS_CHECK,

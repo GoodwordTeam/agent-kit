@@ -10,11 +10,18 @@ export interface Issue {
   line?: number;
   message: string;
   /**
-   * Short name of a check that did not run. Set only by `skipped()`; absent on
-   * every finding. Carried in --json as well as the summary, because a machine
-   * reading `ok: true` has the same problem a human reading a clean summary has.
+   * Short name of a check that did not run. Set by `skipped()` and by
+   * `unavailable()`; absent on every finding. Carried in --json as well as the
+   * summary, because a machine reading `ok: true` has the same problem a human
+   * reading a clean summary has.
    */
   skipped?: string;
+  /**
+   * Set only by `unavailable()`: the check's subject was present and its
+   * authority was not, so the run does not pass. Absent on a `skipped()` issue,
+   * whose subject was the thing missing.
+   */
+  blocking?: true;
 }
 
 export function error(rule: string, file: string, message: string, line?: number): Issue {
@@ -57,22 +64,72 @@ export function note(rule: string, file: string, message: string, line?: number)
  *
  * `check` is a short noun phrase for the summary line -- "donor paths at pin", not a
  * sentence and not the rule id. Several skips of the same check collapse to one term.
+ *
+ * **Use this only when the missing thing is the check's subject.** Where the subject
+ * is present and what went missing is the authority the check measures it against,
+ * use `unavailable()` instead: that case blocks and this one does not. The two are
+ * one decision apart and the wrong one is silent, so `tests/unavailable.test.ts`
+ * holds a table of every call site and fails on an unclassified new one.
  */
 export function skipped(rule: string, file: string, check: string, message: string, line?: number): Issue {
   return { ...note(rule, file, message, line), skipped: check };
+}
+
+/**
+ * A check whose subject is present and whose authority is absent. Blocks the run.
+ *
+ * The distinction `skipped()` could not make. `.donors/` absent is a check with
+ * nothing to judge -- empty is the correct answer, and `validate-figure.sh` depends
+ * on that run still passing. §12.2's anchors reworded is the opposite: 29 role
+ * bodies are sitting in the tree unexamined, and what went missing is the contract
+ * to examine them against. Reporting both as "skipped" made those two runs
+ * indistinguishable at the exit code, so rewording an anchor disarmed the gate and
+ * turned exit 1 into exit 0 with a defective row still in the tree.
+ *
+ * This is `required-lane-failure-is-unavailable` applied to the validator itself: a
+ * required lane that could not be given its context returns `unavailable`, and an
+ * `unavailable` required lane blocks approval. The gate enforcing that row was the
+ * one row it did not apply to itself.
+ *
+ * Severity stays `note` on purpose. An error grades a finding, and a check that did
+ * not run has no finding to grade -- the same argument that gave skips their own
+ * axis rather than a rung on the severity ladder. The blocking lives on the axis.
+ */
+export function unavailable(rule: string, file: string, check: string, message: string, line?: number): Issue {
+  return { ...note(rule, file, message, line), skipped: check, blocking: true };
 }
 
 export function hasErrors(issues: ReadonlyArray<Issue>): boolean {
   return issues.some((i) => i.severity === "error");
 }
 
-/** The distinct checks that did not run, first-seen order. Empty means everything ran. */
-export function skippedChecks(issues: ReadonlyArray<Issue>): string[] {
+/** Whether any check reported itself unavailable, which fails the run. */
+export function hasBlockingSkips(issues: ReadonlyArray<Issue>): boolean {
+  return issues.some((i) => i.blocking === true);
+}
+
+function terms(issues: ReadonlyArray<Issue>, blocking: boolean): string[] {
   const out: string[] = [];
   for (const issue of issues) {
-    if (issue.skipped !== undefined && !out.includes(issue.skipped)) out.push(issue.skipped);
+    if (issue.skipped === undefined || (issue.blocking === true) !== blocking) continue;
+    if (!out.includes(issue.skipped)) out.push(issue.skipped);
   }
   return out;
+}
+
+/**
+ * The distinct non-blocking checks that did not run, first-seen order.
+ *
+ * Disjoint from `blockingSkips` rather than a superset of it: a reader told the
+ * same term under both headings learns nothing from either.
+ */
+export function skippedChecks(issues: ReadonlyArray<Issue>): string[] {
+  return terms(issues, false);
+}
+
+/** The distinct checks that reported themselves unavailable, first-seen order. */
+export function blockingSkips(issues: ReadonlyArray<Issue>): string[] {
+  return terms(issues, true);
 }
 
 /** One line per issue: severity, rule, file[:line], message. */

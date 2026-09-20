@@ -34,7 +34,7 @@ import { join } from "node:path";
 
 import { readTextIfPresent } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
-import { error, note, skipped, type Issue } from "./types.ts";
+import { error, note, skipped, unavailable, type Issue } from "./types.ts";
 
 /** §10: the file lives at the repository root, and that placement is the mechanism. */
 export const DEFECTS_FILE = "CONTRACT-DEFECTS.md";
@@ -259,13 +259,20 @@ export function checkContractDefects(ctx: CheckContext): Issue[] {
   }
 
   if (sections === null || sections.size === 0) {
+    // Which kind of skip this is depends on whether anything went unexamined.
+    // With no open entry the subject is absent and there was nothing to resolve,
+    // so the run still passes. With open entries sitting in the tree, they are
+    // present and unjudged and only the authority is missing, which is the
+    // blocking case -- the same distinction §12.2's anchors turned out to need.
+    const reason = `${
+      contract === null ? `${CONTRACT_FILE} is not in this tree` : `${CONTRACT_FILE} has no numbered sections this can index`
+    }, so the quotations in ${open.length} open ${
+      open.length === 1 ? "entry" : "entries"
+    } were not resolved against it. §10 scopes the comparison to the cited section, and a section index that could not be built is the case that rule says to fail closed on rather than widen.`;
     issues.push(
-      skipped(
-        "defects.contract-unreadable",
-        DEFECTS_FILE,
-        QUOTATION_CHECK,
-        `${contract === null ? `${CONTRACT_FILE} is not in this tree` : `${CONTRACT_FILE} has no numbered sections this can index`}, so the quotations in ${open.length} open ${open.length === 1 ? "entry" : "entries"} were not resolved against it. §10 scopes the comparison to the cited section, and a section index that could not be built is the case that rule says to fail closed on rather than widen.`,
-      ),
+      open.length === 0
+        ? skipped("defects.contract-unreadable", DEFECTS_FILE, QUOTATION_CHECK, `${reason} No entry is open, so nothing in this tree went unexamined and the run still passes.`)
+        : unavailable("defects.contract-unreadable", DEFECTS_FILE, QUOTATION_CHECK, reason),
     );
     return issues;
   }

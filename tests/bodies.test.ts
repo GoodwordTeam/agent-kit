@@ -641,6 +641,43 @@ describe("the contract is the authority, and its absence is said rather than pas
     expect(checkBodyShapes(ctx).filter((i) => i.rule === "role.mandated-rows-unavailable")).toHaveLength(1);
   });
 
+  test("losing the anchor blocks the run: the bodies are present and went unjudged", () => {
+    // `sweep-reviewer` against `817b583`. Rewording the anchor leaves the row
+    // text untouched and the meaning identical, and it took `ak validate` from
+    // exit 1 to exit 0 with a gutted row sitting in the tree -- because the gate
+    // reported itself skipped, and a skip did not reach the exit code.
+    //
+    // This is the row the gate enforces, applied to the gate: a required lane
+    // that could not be given its context returns `unavailable`, and an
+    // `unavailable` required lane blocks approval
+    // (ruling `required-lane-failure-is-unavailable`).
+    const reworded = CONTRACT.replace(
+      "**Mandatory, verbatim in every role body:**",
+      "**Mandatory in every role body, verbatim:**",
+    );
+    expect(reworded).not.toBe(CONTRACT);
+
+    const files = {
+      "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
+      // A row missing everything but its two old clauses and the citation: the
+      // defect the gate exists to catch, present in both trees below.
+      "roles/seat/ROLE.md": seatBody(neverSection([CLOSURE_ROW, UNAVAILABLE_ROW_GUTTED, PLAIN_AUTHORSHIP_ROW])),
+    };
+
+    const intact = checkBodyShapes(ctxFor({ ...files, "AUTHORING.md": CONTRACT }));
+    expect(intact.filter((i) => i.rule === "role.never-row-not-verbatim")).toHaveLength(1);
+    expect(intact.some((i) => i.severity === "error")).toBe(true);
+
+    const lost = checkBodyShapes(ctxFor({ ...files, "AUTHORING.md": reworded }));
+    const skips = lost.filter((i) => i.rule === "role.mandated-rows-unavailable");
+    expect(skips).toHaveLength(1);
+    // The assertion that closes the hole. Before this, the two runs above
+    // differed at the exit code in the wrong direction: the tree with the
+    // defect *and* a disarmed gate was the one that passed.
+    expect(skips[0]?.blocking).toBe(true);
+    expect(lost.some((i) => i.severity === "error")).toBe(false);
+  });
+
   test("a mandatory block with a row this gate cannot place is a skip, not a narrowing", () => {
     // Adding a fifth mandated row is a contract change, and a gate that read
     // the two it recognised and passed the rest would report a clean tree while

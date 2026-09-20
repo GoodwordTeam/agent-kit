@@ -13,7 +13,7 @@ import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.
 import { ADAPTATIONS_FILE, checkAdaptationsSync } from "./validation/provenance.ts";
 import type { CheckContext } from "./validation/context.ts";
 import { runValidation } from "./validation/run.ts";
-import { formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
+import { blockingSkips, formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
 
 export interface CliIo {
   out: (line: string) => void;
@@ -76,17 +76,25 @@ function report(io: CliIo, issues: readonly Issue[], label: string): number {
   const counts = { error: 0, warning: 0, note: 0 };
   for (const issue of sorted) counts[issue.severity] += 1;
 
-  // The skipped term is printed at zero like the other three, and that is the
+  // Both skip terms are printed at zero like the other three, and that is the
   // point: "0 checks skipped" is the only thing that distinguishes a verified run
   // from one where the instrument was missing. Were the clause omitted when empty,
   // its absence would carry the claim, and a reader who does not know the
   // convention cannot tell a silent clause from a silent check.
+  //
+  // They are two clauses and not one because they mean opposite things about the
+  // tree. A skipped check had nothing to judge; an unavailable one had its subject
+  // sitting in front of it and no authority to judge it by, and only the second
+  // fails the run. Collapsed into a single count, the summary said "1 check
+  // skipped" for both and a reader gating on the exit code saw no difference.
   const missed = skippedChecks(sorted);
-  const names = missed.length === 0 ? "" : `: ${missed.join(", ")}`;
+  const blocked = blockingSkips(sorted);
+  const clause = (n: number, word: string, names: string[]) =>
+    `${n} check${n === 1 ? "" : "s"} ${word}${names.length === 0 ? "" : `: ${names.join(", ")}`}`;
   io.out(
-    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${missed.length} check${missed.length === 1 ? "" : "s"} skipped${names}`,
+    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${clause(missed.length, "skipped", missed)}, ${clause(blocked.length, "unavailable", blocked)}`,
   );
-  return hasErrors(sorted) ? 1 : 0;
+  return hasErrors(sorted) || blocked.length > 0 ? 1 : 0;
 }
 
 function contextOf(cwd: string, io: CliIo): CheckContext | null {
@@ -109,7 +117,20 @@ function validate(parsed: Parsed, options: CliOptions): number {
     // `skipped` is beside `ok` and not only inside the issues, because `ok: true`
     // on a machine with no donor clones is the same value as `ok: true` on one
     // that verified every row. A consumer gating on `ok` alone cannot see that.
-    options.io.out(JSON.stringify({ ok: result.ok, skipped: skippedChecks(result.issues), issues: result.issues }, null, 2));
+    // `unavailable` is separate again: those already fail `ok`, and a consumer
+    // that wants to know *why* a clean-looking tree failed needs the term.
+    options.io.out(
+      JSON.stringify(
+        {
+          ok: result.ok,
+          skipped: skippedChecks(result.issues),
+          unavailable: blockingSkips(result.issues),
+          issues: result.issues,
+        },
+        null,
+        2,
+      ),
+    );
     return result.ok ? 0 : 1;
   }
   return report(options.io, result.issues, "ak validate");

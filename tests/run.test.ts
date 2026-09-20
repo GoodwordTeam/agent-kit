@@ -109,6 +109,57 @@ describe("the validation run", () => {
     expect(result.issues.some((i) => i.rule === "check.threw" && i.message.includes("explodes"))).toBe(true);
   });
 
+  test("a check that throws something other than an Error is still described", () => {
+    // `(cause as Error).message` is a cast, not a conversion: a thrown string or
+    // object has no `.message`, so the report read "check X threw undefined".
+    // That is worse than a crash -- it names a real check and says nothing about
+    // why, sending the reader into a check that may be fine. Ten sites elsewhere
+    // in `src/` already narrow with `instanceof`; this one did not.
+    const thrown: Array<[string, unknown, string]> = [
+      ["a-string", "just a string", "just a string"],
+      ["an-object", { code: "EACCES" }, "[object Object]"],
+      ["a-null", null, "null"],
+      ["undefined", undefined, "undefined"],
+    ];
+
+    for (const [name, value, expected] of thrown) {
+      const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL });
+      const result = runValidation(root, {
+        only: [name],
+        extraChecks: [
+          {
+            name,
+            run: () => {
+              throw value;
+            },
+          },
+        ],
+      });
+      const issue = result.issues.find((i) => i.rule === "check.threw");
+      expect(issue?.message).toContain(name);
+      expect(issue?.message).toContain(expected);
+    }
+  });
+
+  test("a thrown Error is still reported by its message, not by its whole self", () => {
+    // The paired control for the test above: narrowing with `instanceof` must
+    // not change the ordinary case into `Error: boom` or `[object Error]`.
+    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL });
+    const result = runValidation(root, {
+      only: ["explodes"],
+      extraChecks: [
+        {
+          name: "explodes",
+          run: () => {
+            throw new Error("boom");
+          },
+        },
+      ],
+    });
+    const issue = result.issues.find((i) => i.rule === "check.threw");
+    expect(issue?.message).toContain("threw boom");
+  });
+
   test("the run can be narrowed to named checks", () => {
     const root = makeTree({
       "catalog.yaml": CATALOG,
