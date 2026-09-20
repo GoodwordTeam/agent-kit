@@ -110,7 +110,9 @@ Measured at `b9fa424`:
   the checkpoint, because the check reads tags rather than intent.
 - Seven scenarios are covered: **1, 3, 12, 18, 20, 21, 23.** Seventeen are not.
 
-**Scenario 20 is the one to look at, and it is a checkpoint gate.** It is covered four times — and
+**Scenario 20 is the clearest instance of the class, and the class is the finding.** Four of the
+seven "covered" scenarios are covered by cases that do not test what the checkpoint tests; the table
+in the next section has all four. Take 20 as the worked example. It is covered four times — and
 all four cases are in `doc-review`, `super-align`, `super-bound` and `wayfind`, three of them the
 same case shape, `interrupted-publish-resumes-on-the-idempotency-key`. The checkpoint's scenario-20
 test is *"a second run does not duplicate a commit/PR action"*, which is a `super-ship` behaviour
@@ -126,25 +128,48 @@ ask you for it.
 
 The slice gates on scenarios **1, 3, 4, 6, 7, 8, 10, 18, 20** (plan verification step 6).
 
-| scenario | today | owed by |
-|---|---|---|
-| 1, 3, 18 | covered, batch-3 cases | — |
-| 20 | covered, but not on `super-ship` | **you**, see above |
-| 6, 10 | uncovered | batch 4 (its brief assigns them and says to tag them) |
-| 4, 7, 8 | uncovered | **you** |
+**Not one of the nine is soundly covered today, and `ak validate` reports four of them as covered
+and exits 0.** This table replaces an earlier version of this brief that said 1, 3 and 18 were
+covered and only 20 needed work. That was wrong — it read the coverage row instead of the cases,
+and the coverage row is the thing under audit. Verified case by case at `57ad2af`:
 
-Your dossier §9 assigns **1, 2, 3, 4, 5, 7, 8, 9, 15, 19, 22**. Of those, 4, 7 and 8 are checkpoint
-gates and reach it only through your cases. Tag them `scenario-04`, `scenario-07`, `scenario-08` —
-the tag is a `tags:` entry on the case and `SCENARIO_TAG` in `src/validation/evals.ts` is what reads
-it. The pattern is `^scenario-(\d{1,2})$` and the value is parsed with `Number()`, so an unpadded
-`scenario-4` also counts; every existing tag in the tree is zero-padded and matching that is worth
-doing for greppability, not for correctness.
+| # | what `ak validate` says | what the cases actually do | owed by |
+|---|---|---|---|
+| 1 | covered | **its one case asserts the converse.** `doc-review/drafted-spec-gets-a-panel` is a positive activation test that a substantial plan *does* get a layered panel. Scenario 1 says a documentation typo *does not*. Nothing tests triviality. | **you** |
+| 3 | covered | **one-third tested.** The tagged case is the visibility half — a half-sure security item is not filtered — and zero of its graders mention closure or blocking. The activation half, with the tenant boundary named, is the *untagged* `unclear-risk-still-runs-the-security-seat`. | **you** |
+| 18 | covered | **wrong loop.** `third-round-does-not-run` caps *review rounds*. Scenario 18 is the third *fix cycle*, which lives in `super-build`/`super-verify`. Neither has a case. | **you**, for the review loop you own |
+| 20 | covered | **wrong skill.** Four cases, three the same idempotency-key shape, all on batch-3 skills. The checkpoint's test is a commit or PR action — `super-ship` — which has no case. | **you** |
+| 4, 7, 8 | uncovered | no case exists | **you**; your dossier §9 assigns them |
+| 6, 10 | uncovered | no case exists | batch 4 |
+
+So five of the nine need a case written from nothing, and four need a case written *despite the
+validator saying they are covered*. The second four are the dangerous ones: nothing will prompt you,
+and the row stays green whether you write them or not.
+
+This is the corpus-level form of the same defect the ruling-citation section above describes.
+`evals.uncovered-scenarios` accumulates one global `Set<number>` across the whole catalog
+(`checkOneSkill(ctx, id, covered)` in `src/validation/evals.ts`), so a tag anywhere satisfies a
+scenario everywhere. Per skill the validator enforces only a floor: three cases, one per kind.
+**29 of the 33 declared skills have no `case.yaml` at all** — every case in the corpus belongs to
+batch 3's four skills.
+
+Tag with `scenario-04`, `scenario-07`, `scenario-08` and so on. The tag is a `tags:` entry on the
+case and `SCENARIO_TAG` in `src/validation/evals.ts` reads it. The pattern is `^scenario-(\d{1,2})$`
+parsed with `Number()`, so unpadded also counts; every existing tag is zero-padded and matching that
+is worth doing for greppability, not for correctness. **A tag outside 1–24 is silently discarded** —
+`RELEASE_SCENARIOS` covers 1–24 and a typo like `scenario-31` parses fine, contributes nothing, and
+is indistinguishable from never tagging. That is a reported defect, not yours to fix; just do not
+assume a tag took because the file has one.
 
 Your dossier notes scenario **18** is "adjacent though not in this batch's assigned list" and
-grounded twice in your material. It is a checkpoint gate and it is already covered by
-`evals/doc-review/third-round-does-not-run/case.yaml`. Check whether that case exercises the
-two-fix-cycle stop on a *review* loop or on a doc-review loop before deciding you owe nothing: `two-fix-cycles-then-stop` binds `super-review`, `babysit-pr` and `ultraqa`, and a stop proven in one
-loop is not proven in another.
+grounded twice in your material. It is a checkpoint gate, it reads as covered, and an earlier
+version of this brief told you to check which loop its case caps. That has since been checked, so
+take the answer rather than the task: `evals/doc-review/third-round-does-not-run` asserts *"No third
+review round is run"* — it caps **review rounds**. Scenario 18 is the third **fix cycle**, which is
+a build-and-repair loop living in `super-build` and `super-verify`, and neither has a case. The two
+loops are cousins, which is why the substitution survived being looked at once.
+`two-fix-cycles-then-stop` binds `super-review`, `babysit-pr` and `ultraqa`, so the review-loop half
+is yours to prove even though the row is already green.
 
 ### `super-review` is three entrypoints with three different authorities, in one body
 
