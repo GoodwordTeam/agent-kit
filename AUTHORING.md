@@ -820,23 +820,30 @@ case depending on its absence fails, delete the branch and the case depending on
 nothing. Both were run rather than asserted, which is the difference between a negative test and a
 claim about one.
 
-**A limit is exercised only near its value.** The rule above governs what an instrument asserts, and
-an instrument can satisfy it and still decide nothing, because the same freedom lives in the input:
-an assertion specific to the thing under test, made about a value far from the boundary, is one that
-every candidate boundary produces. `g_locator` in `schemas/common.schema.json` admits `G:L`
-citations up to 2265, and the transcript's last line is 2265 — so that single value is the whole of
-what separates the bound from the 2264 a newline count yields. `tests/provenance.test.ts` exercises
-the bound with `G:L9999`, refused under either, and the tree's own citations reach no higher than
-`G:L2038-2254` (`provenance/adaptations.d/protocols.yaml`, measured at `76e57ba`), admitted under
-either. The same shape sits one surface over: the derivation that computes the figure is covered by
-a fixture of `"line\n"` repeated, which ends in a newline — the one shape in which a newline count
-and a trailing-empty correction agree, so the case cannot tell them apart. The bound shipped wrong
-by one and every citation in the repository passed.
+**A limit that only accepts or refuses must be probed from beside it; one that names itself can be
+probed from anywhere.** A test can assert something specific to the thing under test, as the rule
+above requires, and still be unable to move, and what it asserts decides where it has to be fed
+from. On a verdict, only an input whose accept-or-refuse flips can decide, and that input sits
+beside the boundary. On what the instrument *reports*, any refused input carries the bound in the
+message and distance stops mattering.
 
-So the population that exercises a limit is not the repository's data, and *every real input passes*
-is not a statement about the limit. Name the input whose verdict changes if the limit is off by one,
-and check that something uses it. Where the tree itself never reaches that neighbourhood no input
-will arrive there by accident, and the limit rests on whoever wrote it.
+`ak validate`'s range check is the second kind by construction: its message embeds the derived bound
+(`src/validation/provenance.ts`), and the test covering it is named *a locator past the end of the
+transcript is an error naming the bound*, asserting `toContain("2264")` against a locator of
+`G:L9999`. What defeated it was neither the assertion nor the input but the fixture under both — a
+transcript of `"line\n"` repeated ends in a newline, the one shape in which a newline count and a
+trailing-empty correction return the same number, so the message was identical under the defect and
+the assertion could not move. Dropping that trailing newline is the whole repair.
+
+The repository's own data is still not what exercises a limit. `g_locator` admits `G:L` up to 2265,
+the transcript's last line is 2265, and the tree's highest real citation is `G:L2038-2254`
+(`provenance/adaptations.d/protocols.yaml` at `76e57ba`): the bound shipped wrong by one and every
+citation in the repository passed. Where the tree never reaches a bound, a verdict-asserting test
+has to invent the data that does, so an instrument that states its own limit is the cheaper thing to
+build and worth building for that reason. This rule was landed at `30cb3ed` in a stronger form — *a
+limit is exercised only near its value* — reasoned from the input rather than read off the
+assertion, which the test's own name states. That version sends a reader to write the harder test
+when a one-line fixture change was the repair.
 
 **A claim that something is checked is the one claim nobody checks.** Every other assertion in a
 comment or a contract gets tested against the code by the next reader who works nearby, because
