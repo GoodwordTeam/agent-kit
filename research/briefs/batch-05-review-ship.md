@@ -137,8 +137,8 @@ and the coverage row is the thing under audit. Verified case by case at `57ad2af
 |---|---|---|---|
 | 1 | covered | **its one case asserts the converse.** `doc-review/drafted-spec-gets-a-panel` is a positive activation test that a substantial plan *does* get a layered panel. Scenario 1 says a documentation typo *does not*. Nothing tests triviality. | **you** |
 | 3 | covered | **one-third tested.** The tagged case is the visibility half — a half-sure security item is not filtered — and zero of its graders mention closure or blocking. The activation half, with the tenant boundary named, is the *untagged* `unclear-risk-still-runs-the-security-seat`. | **you** |
-| 18 | covered | **wrong loop.** `third-round-does-not-run` caps *review rounds*. Scenario 18 is the third *fix cycle*, which lives in `super-build`/`super-verify`. Neither has a case. | **you**, for the review loop you own |
-| 20 | covered | **wrong skill.** Four cases, three the same idempotency-key shape, all on batch-3 skills. The checkpoint's test is a commit or PR action — `super-ship` — which has no case. | **you** |
+| 18 | covered | **right test, wrong seat.** `doc-review/third-round-does-not-run` is a correct scenario-18 case — do not touch it. But `two-fix-cycles-then-stop` does not bind `doc-review`, and the checkpoint slice runs `super-review`. | **you**, a second case on a skill the ruling binds |
+| 20 | covered | **wrong side-effect class.** Five cases now. Every one is a knowledgebase or tracker write, read back before writing. The checkpoint's test is a commit or PR action — `super-ship` — which has no case. | **you** |
 | 4, 7, 8 | uncovered | no case exists | **you**; your dossier §9 assigns them |
 | 6, 10 | uncovered | no case exists | batch 4 |
 
@@ -150,8 +150,9 @@ This is the corpus-level form of the same defect the ruling-citation section abo
 `evals.uncovered-scenarios` accumulates one global `Set<number>` across the whole catalog
 (`checkOneSkill(ctx, id, covered)` in `src/validation/evals.ts`), so a tag anywhere satisfies a
 scenario everywhere. Per skill the validator enforces only a floor: three cases, one per kind.
-**29 of the 33 declared skills have no `case.yaml` at all** — every case in the corpus belongs to
-batch 3's four skills.
+**28 of the 33 declared skills have no `case.yaml` at all** — every case in the corpus belongs to
+batch 3's four skills plus `super-scout`. That figure moves as batch 4 lands; re-derive it rather
+than quoting it, the way `research/probes/catalog-progress.sh` does for the catalog.
 
 Tag with `scenario-04`, `scenario-07`, `scenario-08` and so on. The tag is a `tags:` entry on the
 case and `SCENARIO_TAG` in `src/validation/evals.ts` reads it. The pattern is `^scenario-(\d{1,2})$`
@@ -163,13 +164,33 @@ assume a tag took because the file has one.
 
 Your dossier notes scenario **18** is "adjacent though not in this batch's assigned list" and
 grounded twice in your material. It is a checkpoint gate, it reads as covered, and an earlier
-version of this brief told you to check which loop its case caps. That has since been checked, so
-take the answer rather than the task: `evals/doc-review/third-round-does-not-run` asserts *"No third
-review round is run"* — it caps **review rounds**. Scenario 18 is the third **fix cycle**, which is
-a build-and-repair loop living in `super-build` and `super-verify`, and neither has a case. The two
-loops are cousins, which is why the substitution survived being looked at once.
-`two-fix-cycles-then-stop` binds `super-review`, `babysit-pr` and `ultraqa`, so the review-loop half
-is yours to prove even though the row is already green.
+version of this brief told you to check which loop its case caps, and a later version told you the
+answer was "review rounds, so the fix cycle lives in `super-build`". **Both of those are withdrawn.**
+The case is correct and you are not to change it.
+
+Here is the settled reading, from the ruling rather than from the case's name.
+`two-fix-cycles-then-stop` says *at most two fix-and-verify cycles after the first pass; the third
+stops with an explicit blocked-or-replan decision and the open findings attached*, and it carries
+`scenario: 18`. Its `binds.skills` are `super-review`, `ultraqa`, `autopilot` and `babysit-pr` —
+`super-build` and `super-verify` are not among them, and batch 4's dossier rules the same way in its
+own words: scenario 18 is the pass-2 cap on re-opening findings across a run, not the per-ticket
+implementer loop. `evals/doc-review/third-round-does-not-run` supplies a prompt in which two rounds
+have already happened and asks for a third, and its second grader states *the cap is two fix rounds
+and no configuration buys a third*. It tests the right loop, and it supplies input in which that
+loop can arise, which is the property a test of an ordering has to have.
+
+What is actually missing is narrower and it is still yours. The ruling does not bind `doc-review`,
+and the checkpoint slice runs `super-review`. So scenario 18 is covered in the corpus by a case
+hanging off a skill the ruling has nothing to do with — which the global `Set<number>` is happy
+with and the slice is not. Write the same shape against `super-review`'s own loop: two cycles
+spent, a third requested, and the three things the ruling names together — no third cycle, an
+explicit blocked-or-replan decision, and the open findings attached. The third of those is the one
+the existing case proves least, so it is the one worth building your graders around.
+
+I got this row wrong in an earlier revision of this brief by reading the case's name and its first
+grader and stopping. The name says *round*; the ruling says *cycle*; the second grader says *fix
+rounds* and settles it. A report names a line and the defect is rarely one line wide — and this
+time there was no defect at all.
 
 ### `super-review` is three entrypoints with three different authorities, in one body
 
