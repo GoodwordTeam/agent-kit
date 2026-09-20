@@ -95,6 +95,60 @@ backward-reaching pairs to the earlier batch's fix cycle — a cycle that no lon
 The sibling pair, `doc-review/design-lens` / `code-review/frontend-races`, is entirely within batch 2
 and is in that batch's cycle-2 fix.
 
+## Open commissions — lanes holding work that is not in any batch
+
+Recorded because a commission that lives only in a message has exactly the defect this file exists
+to fix: an issued one and a completed one are indistinguishable to anyone reading the repo. Each
+entry is deleted when its lane reports and the result lands.
+
+**The §8 sweep of `AUTHORING.md`'s behaviour-specifying sections — `sweep-reviewer`.** §8 requires
+naming the population a check owns, then verifying every member reaches a term in the output.
+`authoring` applied it to §9, found §9 understating its own gate, fixed it at `d5b8c9c`, and asked
+that the remaining sections be swept **by someone other than them** — §8 is theirs and they had
+twice found what they were primed to find. Deriving the population is the first half of the job;
+the twelve section headings are not it. The defect shape is a section whose prose describes a
+weaker obligation than what it governs actually enforces, which reads as conservative rather than
+wrong and so is never audited for. Reports to the lead; `authoring` owns the edits.
+
+**The phantom-reference sweep — `personas`.** Both known instances are already handled: `arch §`
+fixed at `5d5e1dc`, `scratchpad/gen.ts` disclosed in place at `tests/fixtures/restatement-cases.ts`.
+Neither was found by looking; both were tripped over, and the population was never enumerated, so
+"no known instances" describes what we happened to hit rather than the tree. The interesting cell
+is a reference both invisible to `src/util/links.ts` (backticked, no `./` prefix) **and**
+non-existent — neither the link check nor a grep covers it, and both known instances lived there.
+Three buckets, not two: broken, disclosed-but-unfixed, and right-by-accident. The third is green
+today, which is why nothing finds it.
+
+**The construct census beyond `policies/` — `policies`, authorized.** Stays with the lane that
+built the instrument; a second lane re-deriving the method would yield two censuses agreeing for
+reasons neither could state.
+
+**Block-sequence `rulings:` must leave its current state — `policies` + `cli`.** Zero instances at
+every depth, still supported, and both tests that exercised it were written in that form and both
+were broken. Every green run proves the fixture agrees with the parser, which a fixture written
+against the parser does by construction. Two exits: produce a real instance (better, if a document
+genuinely wants the form) or drop support so it fails loudly instead of misparsing. **A third
+synthetic fixture is not an exit** — it adds no information about whether the parser is right.
+
+**Falsifying the mandated-rows gate — `sweep-reviewer`, queued behind the §8 sweep.** First case is
+a body whose row is correct in words but rewrapped.
+
+## Needs an owner — not yet commissioned
+
+**`scratchpad/gen.ts` was never committed.** `tests/fixtures/restatement-cases.ts` says to
+regenerate against a revision and commit the diff; that instruction cannot be followed. The header
+discloses this honestly and states what remains reproducible without the generator, so this is a
+debt rather than a defect. Whoever restores it inherits one specific obligation the header names:
+`invocation-lesson-publish-ship-clause` was **re-scored by hand** when YAML citation scope narrowed
+from the file to the mapping, by running the same scan the generator would have run. That one
+number is to be verified, not trusted.
+
+**Where handbacks and review records live.** Open with `authoring`. `AUTHORING.md` says "handback"
+ten times; six assign a durable obligation (§10:912, §12.2:1170, §12.2:1183, §12.2:1207, §12.4:979,
+§12.5:1369); **none of the ten names a path, directory or filename.** `research/reviews/` exists as
+of `7683fd9` but was created to correct one false commit message and is explicitly **not** a ruling
+on the general question — do not cite it as precedent while the question is still with `authoring`.
+
 ## Standing traps — not batch-scoped
 
 **`plan` and `arch` are two spellings of one document.** The architecture document is
