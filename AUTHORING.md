@@ -1420,6 +1420,34 @@ This is safe rather than an oversight. `ak validate`'s directory-without-entry c
 `protocols/` root is therefore not an orphan, and **adding a catalog row for it would be the error,
 not the fix.**
 
+**Which trees hold doctrine, and why the rest do not.** The check above walks the five directory
+sections — `skills/`, `packs/`, `protocols/`, `roles/`, `references/` (`DIRECTORY_SECTIONS`,
+`src/catalog/layout.ts`) — and the repository root. `research/` is in neither list, so markdown
+there raises nothing. Until this paragraph that was a consequence of which list the walker iterates
+rather than a decision anybody made, and `rulings.doctrine-unreachable` already cites this section
+for it.
+
+The exclusion is correct, and the criterion is standing rather than subject matter. **A tree holds
+doctrine when something in it could win a conflict with this contract.** `research/` holds inputs to
+authoring — a dossier, a brief, a source, a probe, a review record — and a brief is subordinate by
+construction: batch 3's own brief states that where it and this contract disagree, this contract
+wins and the brief is the defect. Something built to lose every conflict must not be bindable by a
+ruling, because binding it grants exactly the standing it was built not to have, and a `binds` block
+naming a brief would make that brief citable against a body.
+
+So the question for a new directory is not whether its files read like doctrine. It is whether a
+ruling could bind one of them without that being an error. If it could, the directory belongs in
+`DIRECTORY_SECTIONS` and its contents need catalog entries; if it could not, it belongs outside, and
+the reason belongs here rather than in the walker's iteration order. **A directory added without
+answering that question inherits whichever answer its list already gives, silently.** That is what
+this paragraph converts into a decision.
+
+The exclusion reaches every depth, which is the part most likely to be assumed rather than checked.
+The walker is only ever called with the five section names, so nothing under `research/` is examined
+at any depth and a new subdirectory there — `research/reviews/`, for instance — inherits the
+exclusion without anything having been decided about it. Depth is not where the question gets asked.
+The directory is.
+
 A loose doctrine file carries shared doctrine that several protocols cite. It has no required section
 list, no frontmatter and no sidecar. It is prose, and §8 governs it.
 
