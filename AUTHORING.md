@@ -518,11 +518,18 @@ check that every population reaches a term in the restatement. Comparing topics 
 the sweep that finds instances, which reports and does not gate; this section states what a body
 owes, not how to go looking for breaches of it.
 
-**In a table row, cite where the row bounds or excepts a ruling; leave it bare where the row merely
-applies one the body already cites.** A bounding row carries load a reader cannot recover without
-the id, because which rule's edge is being drawn is the whole content of the row. An applying row
-restates a rule the body has already attributed at its point of use, so a citation there is a second
-attribution of the same rule rather than a new one.
+**A row cites a ruling where it bounds or excepts that ruling — draws an edge, or carves out a case.
+Otherwise the row leaves it bare.** Without the citation a reader cannot tell which rule's edge is
+being drawn, and drawing it is the work the citation does. A row that merely applies a ruling adds
+nothing the reader does not already have.
+
+The first form of this rule ended *"one the body already cites,"* and that clause is true of all
+fifteen rows it was measured against. It never varies, so it never sorts anything. A conjunction
+with a constant half is worse than the half alone, because it invites the next writer to check the
+term that always returns the same answer and conclude *leave bare* every time. Worse still here:
+that clause points a reader at whether the ruling appears elsewhere in the body, which is the one
+thing this section says a citation may never rest on. A criterion whose terms do not vary across the
+population it sorts is not a weak rule. It is not a rule.
 
 The rows that produced this rule were sorted correctly, for a reason that does not reproduce the
 sort. Measured against each other the three were structurally identical, so the criterion offered
@@ -774,6 +781,28 @@ case depending on its absence fails, delete the branch and the case depending on
 nothing. Both were run rather than asserted, which is the difference between a negative test and a
 claim about one.
 
+**A claim that something is checked is the one claim nobody checks.** Every other assertion in a
+comment or a contract gets tested against the code by the next reader who works nearby, because
+working nearby means running into it. An assertion about enforcement describes something that would
+be noticed only by its absence, and absence is exactly what it asserts is not there. Two false
+comments of that kind were landed in this repository in a single day, and neither was caught by
+anyone relying on it.
+
+The resolving citation is the hard form of it. `rulings.doctrine-unreachable` names
+`AUTHORING.md §12.3` in the text it prints, and for a period §12.3 did not contain the rule it was
+being cited for. Nothing about that is cheaply detectable: the section exists, the reference
+resolves, a reader follows it and lands somewhere real. Only reading §12.3 closely enough to notice
+it does not say what sent you there disproves it. That is the reverse of a broken link and much
+harder, because every cheap check passes.
+
+**A figure measured on a working tree is a timestamp, not a report.** Where several lanes write to
+one tree, a count taken from it is stale before it is sent, and two faithful measurements taken
+minutes apart disagree with each other and with the tree by the time either is read — none of them
+wrong, and no term in the output saying which tree was counted. Quote figures from a named revision.
+`research/probes/validate-figure.sh` is the executable form: it extracts a revision, runs the
+validator against it, and prints the figure beside the sha and the command that re-derives it. A
+figure reported without a revision cannot be rechecked by anyone, including the person who took it.
+
 ---
 
 ## 9. Evals
@@ -997,6 +1026,16 @@ says, because the figures underneath it are not worth reading; that is the probe
 rather than on the tree, and nothing in the output distinguishes the two unless the exit code does.
 Key that guard on the source having members, never on the tally being zero. A guard keyed on the
 tally reproduces the fault it was added to catch.
+
+**A check that cannot complete owes the reason it could not, and the generic catch is where that
+obligation is usually lost.** `src/validation/run.ts` wraps every check so that one failure does not
+stop the run, and reports the cause under `check.threw` as `(cause as Error).message`. A throw that
+is not an `Error` — a string, a rejected value, whatever a library hands back — has no `message`, so
+the report reads *threw undefined*: a blocking error that has destroyed the only evidence about why
+it blocked, in the one code path whose entire purpose is to preserve it. Ten sites in `src/` test
+the value before reading `message` and five cast it, so the safe form is already the house idiom and
+the exceptions are not deliberate. Whatever a check does when it cannot finish, it may not emit a
+message guaranteed to be uninformative in exactly the case it exists for.
 
 **A check known to be wrong is not a gate.** Where a validator rule has been ruled incorrect, whoever
 ruled it tells the writers currently authoring against it — not only the person fixing it. A writer
