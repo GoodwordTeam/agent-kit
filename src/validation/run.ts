@@ -16,6 +16,7 @@ import { checkCompleteness } from "./completeness.ts";
 import { checkCatalogRules, checkPackManifests, checkSkillManifests } from "./configrules.ts";
 import type { CheckContext } from "./context.ts";
 import { checkContent } from "./content.ts";
+import { checkContractDefects } from "./defects.ts";
 import { checkDocumentRules } from "./docrules.ts";
 import { checkTemplateDocuments } from "./documents.ts";
 import { checkEvals } from "./evals.ts";
@@ -75,6 +76,7 @@ export const CHECKS: readonly Check[] = [
   { name: "provenance", run: checkProvenance },
   { name: "artifacts", run: checkArtifacts },
   { name: "document-rules", run: checkDocumentRules },
+  { name: "contract-defects", run: checkContractDefects },
   { name: "body-shapes", run: checkBodyShapes },
   { name: "rulings", run: checkRulings },
   { name: "restatements", run: checkRestatements },
