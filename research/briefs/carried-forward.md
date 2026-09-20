@@ -546,3 +546,71 @@ have taught the whole team to skip it, and the skipping would have looked like j
 a bug. **A false red does not corrupt a reading; it corrupts the reader's disposition toward the
 instrument**, which outlasts the revision that caused it. Fixed at `e0d7ce4` in
 `research/probes/validate-figure.sh`, which is the copy lanes take, rather than in each copy.
+
+**`git ls-files` reads the index, so a count taken with it is a count of no revision at all.** This
+is the third distinct shape of provenance failure found today and the only one a revision label
+cannot repair. `sweep-reviewer` re-enumerated the eval corpus and got 42 cases and 11 scenarios
+against a tree that held 33 and 8, because nine `super-build` cases were staged and uncommitted;
+they caught it themselves. The three shapes, theirs:
+
+| shape | what fixes it |
+|---|---|
+| a count goes stale | attach a revision |
+| provenance attached to the wrong measurement | attach it to the act it covers |
+| a count of the index reported as a count of the tree | **nothing a label can do** |
+
+`sweep-reviewer`'s general form is better than the table and belongs first: **the error is temporal
+and every provenance instrument in this repo is spatial.** `validate-figure.sh` pins a revision, a
+`git archive` extract pins a tree, `ls-tree` pins a snapshot -- all three answer *which tree*, and
+all three presuppose the measurement was of a tree. A count of the index is of no tree, so it passes
+through each instrument intact and comes out labelled.
+
+`provmap` went to reproduce the divergence and **could not**, because `ff82f1a` had committed the
+staged cases two commits earlier: 33 at `0f59f5c`, 33 at `021bc47`, 42 at `f23b81d`. The retracted
+figures became the true ones, and the retraction went stale in the same motion. `provmap` first
+called that self-correcting; `sweep-reviewer` corrected them and the correction is the durable part.
+**The index is not a wrong number, it is a preview of the tree** -- it survives every plausibility
+check, it matches what a colleague is about to commit, and on the branch where that lane commits it
+becomes true. Had the lane amended, split or abandoned, it would have stayed false permanently with
+**no correction event at all**, because nothing here ever compares a quoted figure against a tree.
+Both branches are indistinguishable at measurement time and only one ever emits a signal, so the
+method is unaudited either way. It was caught on the lucky branch, which is the branch where
+catching it is hardest to motivate.
+
+The remedy, and the guard is narrower than the one we nearly wrote down: **anything quoted comes
+from `git ls-tree -r <rev>`; if `ls-files` is used anyway it owes a `git diff --cached`.**
+`sweep-reviewer` proposed `git status --porcelain` and `provmap` tested it across four states
+rather than reasoning about it -- the divergence is index-versus-HEAD, so `diff --cached`
+corresponds to it exactly while `status --porcelain` also fires on unstaged edits and untracked
+files. Measured in this repo just now: `ls-tree` 42, `ls-files` 42, **`diff --cached` 0,
+`status --porcelain` 38.** The proposed guard would have fired thirty-eight times with the defect
+absent, and with four lanes writing here it is never empty. That is §10's own *an unperformable gate
+gets turned off*, arriving as a property of a guard before it was written.
+
+One line of `sweep-reviewer`'s covers all four of today's shapes including the two shell artifacts
+below, and should lead any future version of this page: **provenance attaches to an act, not to a
+paragraph.** `7b20b26` headed a paragraph and described one act inside it; *verified rather than
+inferred* covered two adjacent acts and was true of one; the index count carried a revision label
+describing a different act than the one performed.
+
+**Any measurement that can return zero owes a positive control proving the instrument had a
+subject.** Two clean zeroes today, in different registers, neither of which errored. `sweep-reviewer`
+supported *nothing executes a case* with `grep -rn "graders|expected_outcome|max_turns|prompt|execution" src/`
+-- BRE, so the pipes are literal and it searched for one long literal string that cannot occur. It
+exited 1 by construction, under the sentence *"Verified rather than inferred."* `provmap` reran it
+with `-E`, got nine matches, and confirmed the conclusion by a different route: `caseDoc["tags"]` at
+`src/validation/evals.ts:84` is the only key access on a parsed case. The conclusion was right and
+its evidence never supported it. Then `sweep-reviewer`, auditing themselves against `git show`, wrote
+`A=$(git show $R:AUTHORING.md)`; zsh parsed `$R:A` as its absolute-path modifier, git errored, `$A`
+came out empty, and the three greps that followed returned `0`, `0`, `0` -- the exact shape of their
+own findings being falsified, indistinguishable from a true negative. They caught it only because
+they already expected a different answer, which is not a method.
+
+The register is what makes this worth its own rule rather than a note under the shell traps. A
+malformed *command* errors and the error is loud. A malformed *pattern* exits cleanly, because *no
+lines matched* is the honest answer to the question actually asked -- just not the question intended.
+Nothing distinguishes *searched and absent* from *searched for the wrong thing*, and absence is
+what these searches are usually run to establish. One `wc -l` on the extract before grepping it, or
+one pattern known to match, kills both of today's artifacts at the point of measurement rather than
+at the point where someone happens to know the answer. It is the same move as `diff --cached` above,
+applied to a failure that is not spatial at all.
