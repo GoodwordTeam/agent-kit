@@ -223,6 +223,32 @@ AUTHORING.md's own §12 contradicted `required-lane-failure-is-unavailable` on t
 does not check. First case is
 a body whose row is correct in words but rewrapped.
 
+**The batch-5 checkpoint fixture repo — `schemas`, commissioned.** The plan's checkpoint drives one
+bounded change end to end in a throwaway git repo, and the repo does not exist. Nothing in the batch
+structure produces it: `tests/fixtures/{valid,invalid}` are validator fixtures, and every
+"checkpoint" occurrence in `policies/` is the supervisor-checkpoint sense from `authority-defaults`,
+a different concept sharing a word. Batch 5 hands straight into it, so it is the thing standing
+between the catalog and its first evidence that the spine works.
+
+It went to `schemas` because the fixture is mostly artifacts bound by contracts that lane wrote — an
+approved ticket under `ticket.schema.json`, a seeded bug findable as a `finding.schema.json` whose
+`fingerprint` is not line-number-derived, receipts that can say `inconclusive` distinctly from
+`not-run`, review artifacts separating comparison base, reviewed head and last verified head. A
+schema that cannot express what the slice needs is the most valuable thing the commission can
+return, and now is far cheaper than during the checkpoint.
+
+**The constraint the commission leads with: build it so the checkpoint can fail.** A seeded bug a
+`super-scout` pass hands over directly proves nothing about the review seat that then "finds" it. If
+every path through the fixture ends in closure, scenario 3 is untestable on it; if no required lane
+can be made unavailable, scenario 4 is; if the bug does not sit in a caller the change leaves
+untouched, scenario 8 is. A fixture that cannot produce a failing checkpoint is an instrument
+returning the same answer under both hypotheses, which is the one thing a checkpoint may not be.
+
+Two boundaries carried with it. `super-ship` is **dry-run only** and the fixture has no remote it
+could push to — if any part of the slice appears to need one, that is a report, not an addition. And
+the lane that builds the fixture does not drive the slice through it, which is the same
+self-approval rule the catalog is written against.
+
 ## Needs an owner — not yet commissioned
 
 **`scratchpad/gen.ts` was never committed.** `tests/fixtures/restatement-cases.ts` says to
