@@ -372,6 +372,36 @@ function governedRange(lines: ReadonlyArray<string>, at: number, indent: number)
   return { from, to };
 }
 
+/**
+ * The column the citation key itself starts at, which is past the dash in the
+ * sequence-item form `- ruling: <id>`. The key's siblings sit at this column,
+ * so measuring from the dash instead would read them as part of its value --
+ * `policies/limits.yaml` is written that way throughout.
+ */
+function keyColumn(line: string): number {
+  return line.search(/rulings?\s*:/);
+}
+
+/**
+ * The last line of a citation key's value: the rest of its own line, plus a
+ * block sequence under it. Items indented past the key are its value, and so
+ * are items at the key's own column, which is legal YAML -- reading that form
+ * as an empty value would drop a real citation and report the claim it covers,
+ * and this check misses rather than accuses.
+ */
+function valueEnd(lines: ReadonlyArray<string>, at: number, column: number): number {
+  let end = at;
+  for (let i = at + 1; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    if (line.trim() === "") continue;
+    const indent = indentOf(line);
+    const isItemAtKeyColumn = indent === column && /^\s*-\s/.test(line);
+    if (indent <= column && !isItemAtKeyColumn) break;
+    end = i;
+  }
+  return end;
+}
+
 function citationScope(file: string, lines: ReadonlyArray<string>, startLine: number, endLine: number): string {
   if (file.endsWith(".md")) {
     let first = Math.max(0, startLine - 1);
@@ -394,7 +424,13 @@ function citationScope(file: string, lines: ReadonlyArray<string>, startLine: nu
     if (indent < 0) continue;
     const { from, to } = governedRange(lines, at, indent);
     if (last < from || first > to) continue;
-    parts.push(...lines.slice(from, to + 1));
+    // The key's own value, not the range it governs. Pushing the range let an
+    // id written anywhere beneath a cited mapping read as a citation of that
+    // whole mapping, because the match is a substring test -- upward
+    // attribution restored inside every mapping that carried a key, which is
+    // what ancestor scope exists to prevent. Found by `policies` against
+    // `edb7ecb`; the mapping-level key their commit added is what turned it on.
+    parts.push(...lines.slice(at, valueEnd(lines, at, keyColumn(line)) + 1));
   }
   return parts.join("\n");
 }

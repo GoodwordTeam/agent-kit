@@ -395,6 +395,70 @@ describe("in YAML a citation reaches its own mapping and what is nested under it
     ].join("\n");
     expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc }))).length).toBe(1);
   });
+
+  test("a citation on the claim's own mapping does not lend its cover to an id nested beneath", () => {
+    // `policies` found this against `edb7ecb`, and it is the case above plus one
+    // unrelated mapping-level key. The scope pushed the whole *range* a key
+    // governed rather than the key's own value, and the match is a substring
+    // test, so any id written anywhere beneath a mapping that carried a citation
+    // counted as a citation of that mapping. Upward attribution restored inside
+    // every cited mapping -- narrower than the file scope this replaced, and the
+    // same failure the nesting rule exists to prevent.
+    //
+    // The test above cannot see it: it has no mapping-level key, so nothing
+    // widens. The pair is the instrument. `safe-auto-restricted-per-seat` is
+    // deliberately a ruling this claim does not restate, so the mapping-level
+    // key is doing nothing but existing.
+    const doc = [
+      "schema_version: 1",
+      "operations:",
+      "  review.delta:",
+      "    rulings:",
+      "      - safe-auto-restricted-per-seat",
+      "    forbidden: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "    escalation:",
+      "      rulings:",
+      "        - required-lane-failure-is-unavailable",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc }))).length).toBe(1);
+  });
+
+  test("a block sequence written flush against its key is still that key's value", () => {
+    // `rulings:` with its items at the key's own column is legal YAML and no
+    // authored file uses it today. It matters because the fix above reads the
+    // key's value by indentation: a value that is not indented past its key
+    // would be read as empty, the citation would vanish, and the claim beneath
+    // it would be reported. That direction is an accusation, and this check's
+    // standing bias is to miss rather than accuse.
+    const doc = [
+      "schema_version: 1",
+      "review_delta:",
+      "  rulings:",
+      "  - required-lane-failure-is-unavailable",
+      "  forbidden: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc })))).toEqual([]);
+  });
+
+  test("a sibling key of a sequence-item ruling is not part of the ruling's value", () => {
+    // `- ruling: <id>` inside a sequence puts the key one column past the dash,
+    // so its siblings are indented past the *dash* while being level with the
+    // *key*. Reading the value from the dash column would swallow them, which is
+    // how the defect above would come back in a different shape. `policies/
+    // limits.yaml` is written this way throughout.
+    const doc = [
+      "schema_version: 1",
+      "limits:",
+      "  - id: fix-cycles",
+      "    ruling: safe-auto-restricted-per-seat",
+      "    note: required-lane-failure-is-unavailable",
+      "    forbidden: A required lane that cannot be filled under the declared constraints is unavailable, and unavailability blocks the phase.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc }))).length).toBe(1);
+  });
 });
 
 describe("the scan reports its own reach, because a clean run is not an all-clear", () => {
