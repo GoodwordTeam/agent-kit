@@ -719,13 +719,36 @@ byte-identical sentence. §6 names this defect for rulings — crediting an auth
 does not state — and it is the same defect pointed at a symbol, with one property §6's version does
 not have: a wrong attribution that is copied reads as compliant and greps as consistent, so the
 copies are evidence of each other and the sweep that would find them returns a uniform result. Check
-the claim against the definition, not against the neighbours that make it too.
+the claim against the definition, not against the neighbours that make it too. The same defect
+points at a read. A command that resolves at the wrong subject exits 0 and returns content, so every
+cheap signal — the exit status, a non-empty result, a byte count — reports that a read happened,
+which was never the question. A revision-qualified path is the ordinary way in: where the shell's
+own expansion rules absorb a character of it, the intended `<revision>:<path>` read degrades into a
+plain path read, and where that shorter path also names something real it resolves, exits 0, and
+yields a faithful measurement of the wrong file. What separates the two worlds is a control that
+identifies the intended subject — a value expected in that file and absent from the plausible wrong
+ones, so that reading the wrong one drives the control to zero alongside the finding. A size or a
+line count is not that control. It proves something was read; only a sentinel proves the right thing
+was.
 
 The same holds for a count or a range measured over this repository. "Eleven of twenty-nine roles",
 "bodies run 75–110 lines" — each was true when measured, each moves on a schedule nobody watches,
 and nothing recomputes it. State what the figure was evidence for and let a reader who needs the
 number count it. Where a measured figure has to be quoted, it carries the revision it was measured
-at, so a later reader can tell whether it still holds.
+at and the instrument that produced it, so a later reader can tell whether it still holds and what
+it was a measurement of. The revision alone is not enough, because this form has three causes and
+the label addresses one. A figure can be recalled rather than measured. It can be measured and go
+stale. And it can be measured correctly by a command that answers about something other than the
+revision named beside it: `git ls-files` and `git diff` report on the index and the working tree,
+which this repository contains and which no label converts into a revision. A figure carrying a sha
+and produced by one of those is not mislabelled, it is unanswerable — the label is true and does not
+describe what was counted. A control and a remedy answer to one requirement: each has the same
+extension as the thing it is for — the control as the hypothesis it guards, the remedy as the defect
+it repairs. A control that passes on worlds its hypothesis excludes gives false assurance and nobody
+looks again; one that fires where nothing is wrong gives a false alarm, and a guard that fires every
+day is stepped over. A remedy narrower than its defect is the first kind at one remove — the reader
+sees the label, takes the remedy as applied, and stops — which is the direction this paragraph was
+wrong in.
 
 This section's own author published a wrong one two commits after landing the rule, to the person
 about to act on it: a count of outstanding commits produced from memory of what had been committed
