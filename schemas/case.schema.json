@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/case.schema.json",
+  "title": "Executable eval case",
+  "description": "AUTHORING.md §9. The `evals/<skill-id>/<case-id>/case.yaml` that the host's eval runner loads, as against the `tests[]` entry in skill.yaml that declares it. This schema says a case is **well-formed**. It does not say a case is covered, or tested, or that it passes: nothing in this package executes a case, and that is by design -- `adapters/runner-contract/CONTRACT.md` §1 puts execution, isolation and credentials with the runner, and the plan hands the running of these files to `claude plugin eval` on the host. Before this existed a `case.yaml` reduced to a single `tags:` line validated exactly as the full case beside it did, and an empty file was a valid case that satisfied `evals.declaration-without-case` and counted toward the three-case floor. That is what this closes, and it is all of what it closes. A case is configuration, not a durable run artifact, so it carries no envelope and is absent from common.schema.json#/$defs/schema_id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "tags",
+    "execution",
+    "graders"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "The loader's case format, not this package's version -- AUTHORING.md §8 keeps the two independent. Pinned to the one format this schema was written against, so a host that starts emitting a newer one is a deliberate edit here rather than a silent divergence between what the runner accepts and what this file describes.",
+      "const": "1.1"
+    },
+    "name": {
+      "description": "The case's own name, which is not the directory name: the directory equals the `tests[].id` that declares it and is the join `ak validate` checks, while this reads as a sentence about the behavior.",
+      "$ref": "common.schema.json#/$defs/nonempty_string"
+    },
+    "tags": {
+      "description": "Case kind and release-scenario claims. Deliberately unconstrained beyond shape: which kinds a skill must carry is `REQUIRED_CASE_KINDS` in src/validation/evals.ts, and which `scenario-NN` values name a real scenario is `evals.scenario-tag-out-of-range` in the same file. Both are checks with messages that explain themselves, and an enum here would be a second, mute copy of them that could disagree.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+    },
+    "execution": {
+      "description": "What the runner is asked to do. Closed on the three members AUTHORING.md §9 documents: a key the loader accepts and this does not is a schema edit, which is the direction that gets noticed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt", "max_turns", "allowed_tools"],
+      "properties": {
+        "prompt": {
+          "description": "The prompt the case runs. Required, and non-empty, because a case whose prompt is absent is the stub this schema exists to refuse.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "max_turns": {
+          "description": "A cap the runner enforces. An integer count with no currency and no tier, like every other limit in this package.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "allowed_tools": {
+          "description": "The tools the run may use. Not enumerated here: the set is the host's, and a case that needs a tool this package has never heard of is the host's business rather than a defect in the case.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+        }
+      }
+    },
+    "graders": {
+      "description": "How the run is scored. At least one, because a case that grades nothing cannot fail and is therefore not a case.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "description": "Open, not closed, and the reason is a gap rather than a preference. AUTHORING.md §9 lists five grader types and documents the fields of three: `tool` for `tool_used`, `pattern` for `regex`, `expected_outcome` for `llm`. What `file_exists` and `tool_order` take is written down nowhere in this repository, and no case uses either, so closing this object would refuse those two types on a guess at their field names -- authoring a shape into the schema that no run has produced. The three that are documented are required below; the two that are not are left alone, which is visible here rather than silent.",
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+          "type": {
+            "description": "The five types AUTHORING.md §9 lists. §9 also asks for a deterministic grader over `llm` wherever the pass criterion is observable, which is a preference a schema cannot hold.",
+            "enum": ["tool_used", "llm", "regex", "file_exists", "tool_order"]
+          },
+          "weight": { "type": "integer", "minimum": 1 },
+          "expected_outcome": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+          "tool": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+          "pattern": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+        },
+        "allOf": [
+          {
+            "description": "An `llm` grader is its `expected_outcome` -- §9 asks for one 'that a reader could score by hand', and without it there is nothing for a judge to read.",
+            "if": { "properties": { "type": { "const": "llm" } }, "required": ["type"] },
+            "then": { "required": ["expected_outcome"] }
+          },
+          {
+            "description": "A `tool_used` grader that names no tool asserts nothing about any tool. It is the eval-case form of a locator that matches no instance: it cannot fail, so it cannot grade, and nothing in this package would ever have said so because nothing here runs it. Inferred from §9's worked example, which carries `tool: Skill`, rather than measured against the loader, for the reason this object is open.",
+            "if": { "properties": { "type": { "const": "tool_used" } }, "required": ["type"] },
+            "then": { "required": ["tool"] }
+          },
+          {
+            "description": "Same shape for the pattern a `regex` grader matches.",
+            "if": { "properties": { "type": { "const": "regex" } }, "required": ["type"] },
+            "then": { "required": ["pattern"] }
+          }
+        ]
+      }
+    }
+  }
+}

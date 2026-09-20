@@ -4,9 +4,10 @@ import type { ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
 
-import { listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
+import { listDirs, listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
 import { documentFiles, documentShape } from "./documents.ts";
+import { CASE_FILE, EVALS_DIR } from "./evals.ts";
 import { error, note, skipped, type Issue } from "./types.ts";
 
 type AjvInstance = InstanceType<typeof Ajv2020>;
@@ -141,6 +142,17 @@ function documentTargets(ctx: CheckContext): Target[] {
     for (const name of ["pack.yaml", "manifest.yaml"]) {
       const file = `packs/${entry.id}/${name}`;
       if (readTextIfPresent(join(root, file)) !== null) targets.push({ file, schemaId: "pack" });
+    }
+  }
+  // Executable eval cases. Reached through the catalog's skills, the same way
+  // checkEvals reaches them, so a case under a directory no skill claims is
+  // still `evals.case-without-declaration`'s to report and does not become a
+  // schema error as well. The constants come from evals.ts rather than being
+  // spelled again, because the layout is that file's to define.
+  for (const entry of catalog.bySection("skills")) {
+    for (const caseId of listDirs(join(root, EVALS_DIR, entry.id))) {
+      const file = `${EVALS_DIR}/${entry.id}/${caseId}/${CASE_FILE}`;
+      if (readTextIfPresent(join(root, file)) !== null) targets.push({ file, schemaId: "case" });
     }
   }
   return targets;

@@ -767,6 +767,12 @@ schemas:
     batch: 1
     status: authored
     summary: Pack manifest, activation evidence and recorded selection rationale.
+  - id: case
+    batch: 4
+    status: authored
+    summary: >-
+      One executable behavioral case (evals/<skill-id>/<case-id>/case.yaml). Says a case is
+      well-formed, never that it is covered: this package does not run the corpus.
   - id: project
     batch: 1
     status: authored
