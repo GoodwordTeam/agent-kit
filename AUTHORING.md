@@ -344,12 +344,13 @@ the artifact `NOTICE` points a downstream consumer at. `53170e9` repaired both. 
 a repair did, which is the same shape as a repair that parses as done.
 
 **Where a figure is published on more than one surface, repair the surface that enforces it first.**
-The transcript's line count is published in four places: the lock's register, a comment in
-`provenance/conversation-map.yaml`, the `g_locator` pattern in `schemas/common.schema.json`, and
-that pattern's own `description`. Only one of the four rejects anything. Its bound ended at
-`226[0-4]`, so `G:L2265` — the transcript's last line, the line the register exists to make citable
-— was refused outright, in both the single and the range form, while the description beside it
-agreed that the range ended at 2264.
+The transcript's line count is published in the lock's register, a comment in
+`provenance/conversation-map.yaml`, the `g_locator` pattern in `schemas/common.schema.json`, that
+pattern's own `description`, two research documents, and twice more in
+`src/validation/provenance.ts`, which derives it rather than recording it. The pattern's bound ended
+at `226[0-4]`, so `G:L2265` — the transcript's last line, the line the register exists to make
+citable — was refused outright, in both the single and the range form, while the description beside
+it agreed that the range ended at 2264.
 
 That is the configuration in which nothing catches it: the instrument and its documentation wrong
 together, each corroborating the other. A writer who hit the rejection would have read the
@@ -358,6 +359,20 @@ a writer to introduce a defect. The ordering follows from what the two kinds of 
 stale. A stale description misleads a reader who can still turn out to be right; a stale pattern
 overrules a reader who already is. So count the enforcing copies before the describing ones, and
 treat a repair that stopped at the prose as unfinished rather than as partial credit.
+
+**That sentence counted the copies and got both kinds wrong.** This contract said four places and
+named four. The two describing copies it missed — `research/dossiers/protocols.md` and
+`research/dossiers/review-personas.md` — are the two that still say 2264, which is not a
+coincidence: the list had been assembled from the copies someone repaired, and such a list is
+consistent by construction, every item on it correct, so re-reading it finds nothing. And it said
+one surface rejects anything, when `src/validation/provenance.ts` enforces the figure twice more —
+once to bound `G:L` ranges, once to hold the register against the file. A search for the digits
+finds neither, because both compute the figure from the file rather than storing it. A figure is
+published where it is written and where it is derived, and only the first kind greps.
+
+The corrected list is `git grep '226[0-9]'` at `76e57ba` together with those two derivations, and it
+is not offered as complete either. Which surfaces carry a figure is a question for a search over a
+named revision; the memory of whoever last repaired them returns the repaired ones.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
@@ -794,6 +809,24 @@ case depending on its absence fails, delete the branch and the case depending on
 — and states the reason: a constraint test that still passes with the constraint gone is measuring
 nothing. Both were run rather than asserted, which is the difference between a negative test and a
 claim about one.
+
+**A limit is exercised only near its value.** The rule above governs what an instrument asserts, and
+an instrument can satisfy it and still decide nothing, because the same freedom lives in the input:
+an assertion specific to the thing under test, made about a value far from the boundary, is one that
+every candidate boundary produces. `g_locator` in `schemas/common.schema.json` admits `G:L`
+citations up to 2265, and the transcript's last line is 2265 — so that single value is the whole of
+what separates the bound from the 2264 a newline count yields. `tests/provenance.test.ts` exercises
+the bound with `G:L9999`, refused under either, and the tree's own citations reach no higher than
+`G:L2038-2254` (`provenance/adaptations.d/protocols.yaml`, measured at `76e57ba`), admitted under
+either. The same shape sits one surface over: the derivation that computes the figure is covered by
+a fixture of `"line\n"` repeated, which ends in a newline — the one shape in which a newline count
+and a trailing-empty correction agree, so the case cannot tell them apart. The bound shipped wrong
+by one and every citation in the repository passed.
+
+So the population that exercises a limit is not the repository's data, and *every real input passes*
+is not a statement about the limit. Name the input whose verdict changes if the limit is off by one,
+and check that something uses it. Where the tree itself never reaches that neighbourhood no input
+will arrive there by accident, and the limit rests on whoever wrote it.
 
 **A claim that something is checked is the one claim nobody checks.** Every other assertion in a
 comment or a contract gets tested against the code by the next reader who works nearby, because
