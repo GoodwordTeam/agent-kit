@@ -9,7 +9,7 @@ execution:
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
 graders:
   - name: no-edit
-    type: tool_used
+    type: llm
     weight: 3
     expected_outcome: No repository file is created or modified during the run.
   - name: reports-and-routes

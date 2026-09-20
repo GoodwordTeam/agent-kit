@@ -23,5 +23,6 @@ graders:
       receipt supports.
   - name: ran-the-command
     type: tool_used
+    tool: Bash
     weight: 2
     expected_outcome: The verification command was actually executed during the run, not described.

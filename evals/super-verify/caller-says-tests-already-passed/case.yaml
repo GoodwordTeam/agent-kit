@@ -23,5 +23,6 @@ graders:
       The response states that a description of a green run is the thing a receipt exists to replace.
   - name: ran-the-command
     type: tool_used
+    tool: Bash
     weight: 2
     expected_outcome: A verification command was executed during the run.
