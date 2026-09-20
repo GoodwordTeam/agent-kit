@@ -1083,22 +1083,29 @@ then has to fail.
 
 **Nothing in `src/` runs this check.** *An open entry's quoted instruction must still resolve in the
 section it cites* is a specification, not a description of anything that executes. `ak validate`
-seats no check that reads this file, and the only mention of it under `src/` is a comment in
-`src/validation/restatement.ts`. An entry whose quotation never resolved can be filed, validated and
-merged in silence. The mechanical detail in this rule — whitespace collapsed, scoped to the cited
-section, failing closed on a citation it cannot resolve — is exactly why this has to be said rather
-than left to be found: a rule specified precisely enough to implement reads as a rule something
-already implements, and it was read that way by someone who went looking for the code. The validator
-does report the underlying gap — the §12.3 warning that this file has no `catalog.yaml` entry, so no
-ruling's `binds` block names it and no `binds`-derived check reaches it — and that warning has been
-sitting in a count nobody connected to this rule. Until a detector exists the comparison is made by
-hand by whoever rules on the entry, and nothing obliges them to make it. This paragraph is an open
-entry against the contract that happens to live inside it, and it retires the way any other does:
-the commit that lands the detector deletes it, with the ruling in the commit message. Left standing
-once a check exists, it becomes the same defect pointing the other way — a contract that understates
-its own enforcement sends a reader to redo by hand what the gate already did, and teaches them that
-these claims run behind the code. That version is harder to catch, because a contract claiming less
-than it enforces reads as conservative rather than wrong.
+seats no check that performs it. It does seat a check that reads this file for something else:
+`scannedFiles` at `src/validation/restatement.ts:239` adds every root `.md` by discovery, so
+`CONTRACT-DEFECTS.md` is scored against the rulings on every run, and the single by-name mention
+under `src/` is the comment at `:249` explaining that discovery is deliberate because naming the
+roots would have missed this file the day it was added. This paragraph first said no check reads the
+file at all, on the strength of that one grep hit. A file reached by discovery leaves no trace
+bearing its name, so a search of `src/` for the path finds the comment about it and nothing else —
+which is §5's rule about derived figures in a second shape: what a search for a name cannot find is
+a use that never writes the name. An entry whose quotation never resolved can be filed, validated
+and merged in silence. The mechanical detail in this rule — whitespace collapsed, scoped to the
+cited section, failing closed on a citation it cannot resolve — is exactly why this has to be said
+rather than left to be found: a rule specified precisely enough to implement reads as a rule
+something already implements, and it was read that way by someone who went looking for the code. The
+validator does report the underlying gap — the §12.3 warning that this file has no `catalog.yaml`
+entry, so no ruling's `binds` block names it and no `binds`-derived check reaches it — and that
+warning has been sitting in a count nobody connected to this rule. Until a detector exists the
+comparison is made by hand by whoever rules on the entry, and nothing obliges them to make it. This
+paragraph is an open entry against the contract that happens to live inside it, and it retires the
+way any other does: the commit that lands the detector deletes it, with the ruling in the commit
+message. Left standing once a check exists, it becomes the same defect pointing the other way — a
+contract that understates its own enforcement sends a reader to redo by hand what the gate already
+did, and teaches them that these claims run behind the code. That version is harder to catch,
+because a contract claiming less than it enforces reads as conservative rather than wrong.
 
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
@@ -1680,13 +1687,22 @@ into the word the first kind owns, which is the one thing the ruling forbids.
 
 The vocabulary is not a single token, and the bodies establish the range. Twenty-six of the
 twenty-nine role bodies return `unavailable` under that heading. The three that do not are the core
-roles, and each carries a blocking token of its own with the non-assent guard written out:
-`roles/supervisor/ROLE.md` returns no choice and closes *"An empty return from this seat blocks its
-checkpoint. It is never read as assent"*, `roles/implementer/ROLE.md` returns `BLOCKED`, and
-`roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and all
-three satisfy it, because what it requires is a result that blocks and is never read as assent
-rather than a particular word. What no seat may do is leave the same trace for *found nothing* and
+roles: `roles/supervisor/ROLE.md` returns no choice, `roles/implementer/ROLE.md` returns `BLOCKED`,
+and `roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and
+all three satisfy it, because what it requires is a result that blocks and is never read as assent
+rather than a particular word — and all three carry the ruling itself, as the same `## Never` row,
+at `roles/implementer/ROLE.md:50`, `roles/plan-review/planner/ROLE.md:46` and
+`roles/supervisor/ROLE.md:49`. What no seat may do is leave the same trace for *found nothing* and
 *was given nothing* — the discriminator §10 applies to records, applied to returns.
+
+That last citation replaces a worse one. This paragraph first said each of the three wrote the
+non-assent guard out, and one does: `roles/supervisor/ROLE.md:92` closes *"An empty return from this
+seat blocks its checkpoint. It is never read as assent"*. `implementer` has the blocking token and
+no guard, `plan-review/planner` has neither. The sentence generalised from the body it had open, and
+the property it generalised was the one thing two of the three do not contain — which is the shape
+to watch for, because a universal reached for after reading one member is indistinguishable in the
+writing from one measured across all of them. The `## Never` row is the better ground for the same
+conclusion: it is in all three files, at a line number, and a reader can refute it.
 
 It also sits next to `## Evidence it must cite`, and the same artifact routinely belongs under both.
 From `roles/reviewer-spec/ROLE.md`:
