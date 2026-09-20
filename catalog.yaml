@@ -70,7 +70,7 @@ skills:
     profiles: [core]
     batch: 4
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Execute one approved ticket under TDD in an owned worktree. No self-approval, no silent
       scope expansion.

@@ -299,6 +299,30 @@ adaptations:
   - path: skills/super-bound/skill.yaml
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md
     rationale: The hard gate against unfinished-content markers and vague instructions in a shipped ticket, and the behavioral case that exercises the zero-context check.
+  - path: skills/super-build/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/incremental-implementation/SKILL.md
+    rationale: "The donor's scope-discipline reporting block becomes this skill's handling of an out-of-scope observation: file and line, what was noticed, why it is out of scope, routed to a candidate ticket instead of an in-place edit. The donor's numbered rule ordering is not carried, since the rules land here as gates rather than as a sequence."
+  - path: skills/super-build/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-work/references/execution-strategy.md
+    rationale: "Parallel dispatch is adapted from the donor's parallel-safety check: declared files, shared types and interfaces, migrations, generated artifacts and runtime singletons are read before two tickets with no dependency edge run together, uncertainty is resolved by inspection rather than by default, contention that survives inspection serializes exactly the contending pair, and a workspace change no worker accounts for is preserved for reconciliation rather than discarded. The donor's concurrency batch size is carried as guidance without a number this skill would gate on."
+  - path: skills/super-build/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/execute/SKILL.md
+    rationale: "Two boundary statements are adapted as gates: unfinished markers and stubbed or skipped tests are blockers rather than progress, and authoring and approval are separate passes so the lane that produced the work never approves it. research/dossiers/build.md names this donor as independent corroboration rather than the primary mechanism, and it is carried that way — the structural reason self-approval fails is the fresh-context requirement adapted above."
+  - path: skills/super-build/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: "The two-axis split is adapted at the single-ticket scale: the spec axis and the standards axis run at once, neither merges nor re-ranks the other's findings, and one axis passing does not cover the other. The donor's whole-pull-request process belongs to the review lane and is not carried here."
+  - path: skills/super-build/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: "The per-ticket loop is adapted as research/dossiers/build.md directs: the recorded base commit, one implementer holding the ticket as its single source of requirements, the diff handed to the check seats as a file with the ticket's constraints verbatim and no pre-judged findings, the bounded fix loop that resumes the same implementer before dispatching a fresh one, and the round cap that adjudicates every open finding because a silent discard is forbidden. The donor's routing of fix rounds to named tiers is excluded entirely; what is kept is the portable mechanism it wrapped, which is that repeated failure changes the context rather than the standard the change must meet."
+  - path: skills/super-build/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-work/references/execution-strategy.md
+    rationale: The donor's contention surfaces become the ready-set input and the constraint that edgeless tickets may not be assumed independent, and its shared-workspace wave contract becomes the constraint that an unaccounted workspace change is never discarded.
+  - path: skills/super-build/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: "The two-axis split becomes the declared per-ticket check result: findings from each axis with their disposition, emitted as findings rather than as a review artifact, so a later panel never reads a task check as a lane it no longer has to cover."
+  - path: skills/super-build/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: "The donor's loop becomes this manifest's declared limits and their enforcement: fix-rounds 5 and implementers-per-worktree 1, the cap-reached failure outcome carrying every open finding with its adjudication, and the constraint rows that forbid a discard at the cap and forbid the implementer sitting on its own check."
   - path: skills/super-scout/SKILL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/agents/project-grounding-scout.md
     rationale: The gather-not-judge framing, the rule that an artifact's existence is evidence while its text is reported signal, and the dossier-plus-short-gist return split are adapted, as research/dossiers/build.md directs. The donor's fixed line cap on the dossier is replaced by the turn cap in policies/limits.yaml, which bounds what a run costs rather than how long its output is.

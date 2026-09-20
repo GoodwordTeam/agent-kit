@@ -1,0 +1,354 @@
+# skills/super-build/skill.yaml — execution contract for the approved-ticket execution lane.
+# Prose mirror: skills/super-build/SKILL.md (AUTHORING.md §4.1).
+
+id: super-build
+version: 0.1.0
+kind: lifecycle
+invocation: M
+summary: >-
+  Execute one approved ticket under TDD in an owned worktree. No self-approval, no silent scope
+  expansion.
+
+triggers:
+  - An approved ticket typed implementation names its acceptance criteria and the verification that
+    shows each one met.
+  - A run has reached its build phase and the ticket at the head of the ready set has no unfinished
+    dependency.
+  - A finding from a review lane or a diagnostic packet has already been sharpened into such a
+    ticket by the lane that holds that authority.
+
+non_triggers:
+  - A ticket typed decision, however implementation-shaped its prose reads.
+  - An unapproved or draft ticket, including one edited after its approval was recorded.
+  - A finding graded smell, or carrying a null difficulty, that no lane has yet sharpened into a
+    specification.
+  - A bug report with a reproduction and no diagnosis behind it, or a diagnostic packet whose
+    bounded patch was already verified.
+  - A quick fix with no ticket at all, where the acceptance criteria and write ownership would have
+    to be improvised.
+
+prerequisites:
+  - kind: approval
+    ref: >-
+      The ticket's recorded approval, bound to its artifact hash. A ticket edited after approval is
+      unapproved again.
+  - kind: artifact
+    ref: An implementation-typed ticket validating against schemas/ticket.schema.json.
+  - kind: environment
+    ref: A writable checkout and a worktree this ticket alone holds.
+  - kind: capability
+    ref: >-
+      Two contexts that can run the check seats independently of the implementer and of each other.
+  - kind: capability
+    ref: knowledgebase kb-write, for publishing the receipts and the ticket result as run artifacts.
+  - kind: run-state
+    ref: The charter checkpoint the run took before its build phase opened.
+    optional: true
+
+entrypoints:
+  execute-ticket:
+    authority: model
+    invocation: M
+    summary: >-
+      Execute one approved implementation ticket end to end: worktree, implementer, two-axis check,
+      bounded fix loop, receipts, commit. No phase operation exposes this skill, so there is no
+      delegated path to validate.
+
+requires:
+  - repository-read
+  - repository-write
+  - isolated-worktree
+  - independent-context
+  - process-exec
+  - vcs-local
+  - artifact-write
+  - kb-write
+
+inputs:
+  - id: ticket
+    schema: ticket
+    required: true
+    summary: >-
+      The approved implementation ticket. Absent, unapproved or typed decision ends the run with
+      needs-input naming the field that decided it.
+  - id: base-commit
+    required: true
+    summary: The revision the worktree branches from, recorded before the implementer is dispatched.
+  - id: ready-set
+    required: false
+    summary: >-
+      The other tickets eligible in this layer. Parallelism is decided by inspecting ownership and
+      the files themselves, never by the absence of a dependency edge.
+  - id: source-finding
+    schema: finding
+    required: false
+    summary: >-
+      The finding this ticket came from. A smell or a null difficulty is refused; a peer lane's
+      safe_auto is remapped to gated_auto on intake and never dropped.
+  - id: ticket-budget
+    required: false
+    summary: >-
+      Runner-supplied cap on how many tickets a run may start. Absent means not enforced and not
+      guessed; the absence is recorded.
+
+outputs:
+  - id: ticket-commit
+    summary: >-
+      One commit on the branch the ticket owns, recorded against the ticket by id. Nothing is merged
+      and nothing is pushed here.
+  - id: verification-receipts
+    schema: verification
+    summary: >-
+      One receipt per acceptance criterion, carrying the command or probe, exit status, output
+      digest, revision and environment identity, and naming the criteria it supports.
+  - id: ticket-check-result
+    schema: finding
+    summary: >-
+      The findings each axis raised, their disposition, and every ruling written at the round cap. A
+      per-ticket check emits no review artifact and is never read as a review lane already covered.
+  - id: out-of-scope-observations
+    summary: >-
+      What was noticed and not touched: file and line, the observation, why it is out of scope. Each
+      entry is a candidate ticket, never an edit inside this one.
+
+side_effects:
+  - workspace-write
+  - branch-create
+  - local-commit
+  - process-exec
+  - artifact-write
+  - kb-publish
+
+constraints:
+  implementer-may-sit-on-its-own-check: false
+  decision-ticket-may-execute-as-implementation: false
+  smell-finding-may-become-an-implementation-ticket: false
+  check-seat-may-emit-safe-auto: false
+  peer-safe-auto-may-be-dropped: false
+  open-finding-may-be-discarded-at-the-round-cap: false
+  edgeless-tickets-may-be-assumed-independent: false
+  unaccounted-workspace-change-may-be-discarded: false
+
+limits:
+  fix-rounds: 5
+  implementers-per-worktree: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - fix-rounds
+
+hard_gates:
+  - A ticket typed decision is never executed as implementation work and is never re-typed here to
+    make it executable.
+  - A finding graded smell, or carrying a null difficulty, is refused as an implementation ticket.
+    Difficulty without a solution class is not a specification.
+  - Neither check seat emits autofix_class safe_auto. A seat's classification is a proposal, and
+    gated_auto, manual and advisory are what it may emit.
+  - The implementer never sits on the panel that checks its work, and no seat approves a patch it
+    produced. Two seats that are the same context in sequence are one seat.
+  - Only independent verification evidence, plus a policy rule saying that evidence suffices for that
+    finding, closes a finding. A changed patch does not inherit a receipt taken before it changed.
+  - Writes stay inside the ticket's allowed_changes and its declared ownership. A change no worker
+    accounts for is preserved and reconciled, never discarded to get the tree clean.
+  - A stubbed test, a skipped test or an unimplemented branch left in place of the work is a blocker,
+    not progress.
+  - The round cap ends the loop, not the adjudication. Reaching it with findings open is cap-reached,
+    carrying each finding and its ruling.
+
+stop_conditions:
+  - complete when the ticket is committed, every acceptance criterion has a receipt bound to the
+    committed revision, and every finding is closed on that evidence or parked with a written ruling.
+  - The two axes return no findings this lane is obliged to act on, and the receipts bind.
+
+failure_outcomes:
+  - status: cap-reached
+    meaning: >-
+      The fifth fix round ended with findings still open. Returns the cap, the commit as it stands,
+      and every open finding with its adjudication. It is not a pass and the ticket is not done.
+    next_permitted_action: >-
+      Route the open findings to the lane that can rule on them, or re-scope the ticket. Not a sixth
+      round.
+  - status: needs-input
+    meaning: >-
+      No approved ticket, a ticket typed decision, a source finding too vague to specify, or a check
+      seat that cannot be filled independently.
+    next_permitted_action: >-
+      Name what is missing and the lane that owns it; re-invoke once the ticket is approved, the
+      finding sharpened or the seat available.
+  - status: failed
+    meaning: >-
+      No writable worktree, the branch is already checked out elsewhere, or the knowledgebase refused
+      the write. The worktree and the ledger are left intact for the resume.
+    next_permitted_action: Re-invoke once the worktree is available or the knowledgebase accepts writes.
+  - status: cancelled
+    meaning: >-
+      The caller withdrew the ticket mid-run. The branch, the worktree and the recorded rulings are
+      kept rather than cleaned up.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+        - >-
+          independent-context is provided as a fresh subagent context. The host does not attest that
+          two contexts are independent, so seat independence is recorded by this package and checked
+          against the ticket's authorship rather than assumed from the host.
+    - adapter: codex
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+        - >-
+          independent-context is provided as a fresh subagent context. The host does not attest that
+          two contexts are independent, so seat independence is recorded by this package and checked
+          against the ticket's authorship rather than assumed from the host.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/subagent-driven-development/SKILL.md
+      license: MIT
+      adaptation: >-
+        The per-ticket loop is imported: recorded base commit, one implementer holding the ticket as
+        its single source of requirements, the diff handed to the check seats as a file with the
+        ticket's constraints verbatim and no pre-judged findings, the bounded fix loop resuming the
+        same implementer before dispatching a fresh one, and the round cap that adjudicates every
+        open finding rather than discarding it. The donor's routing of fix rounds to named tiers is
+        excluded; only the portable mechanism is kept, which is that repeated failure changes the
+        context rather than the standard.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-work/references/execution-strategy.md
+      license: MIT
+      adaptation: >-
+        Parallel dispatch is resolved by inspection rather than by default: declared files, shared
+        types and interfaces, migrations, generated artifacts and runtime singletons are read before
+        two edgeless tickets run together, contention that survives inspection serializes exactly the
+        contending pair, and a workspace change no worker accounts for is preserved for
+        reconciliation. The donor's concurrency batch size is kept as guidance without a threshold
+        this skill would gate on.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/incremental-implementation/SKILL.md
+      license: MIT
+      adaptation: >-
+        The scope-discipline reporting block is imported as this skill's mechanism for an
+        out-of-scope observation: file and line, what was noticed, why it is out of scope, routed to
+        a candidate ticket instead of an edit. The donor's numbered rule ordering is not carried.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/code-review/SKILL.md
+      license: MIT
+      adaptation: >-
+        The two-axis split is imported at the single-ticket scale: the spec axis and the standards
+        axis run at once, do not merge or re-rank each other's findings, and one axis passing does
+        not cover the other. The donor's whole-pull-request process belongs to the review lane and is
+        not carried here.
+    - donor: omc
+      commit: 5281b19e0d64f8e6dc6767f2130299a88af2dc71
+      path: skills/execute/SKILL.md
+      license: MIT
+      adaptation: >-
+        Two boundary statements become gates: an unfinished marker or a stubbed or skipped test is a
+        blocker rather than progress, and authoring and approval are separate passes so the lane
+        that produced the work never approves it. Carried as independent corroboration, which is how
+        the dossier places this donor; the structural reason self-approval fails is the
+        fresh-context requirement adapted above.
+  resolved_conflicts:
+    - closure-requires-independent-verification
+    - diagnose-patch-or-packet-never-both
+    - missing-supervisor-never-implementer
+    - numeric-heuristics-are-guidance
+    - safe-auto-restricted-per-seat
+
+tests:
+  - id: approved-ticket-executes-and-reports-receipts
+    kind: positive
+    given: >-
+      An approved implementation ticket with two acceptance criteria and a named verification
+      command for each.
+    expect: >-
+      The skill opens the worktree the ticket owns, records the base commit, works the ticket test
+      first, runs both check axes in independent contexts, and reports a commit plus one receipt per
+      criterion carrying command, exit status, output digest, revision and environment.
+  - id: refuses-decision-ticket
+    kind: negative
+    given: >-
+      A ticket typed decision, written in implementation-shaped prose that names files and an
+      approach.
+    expect: >-
+      The skill does not open a worktree or dispatch an implementer. It stops with needs-input naming
+      the type field, and does not re-type the ticket.
+  - id: refuses-smell-finding-as-ticket
+    kind: negative
+    given: A finding graded spec_quality smell with difficulty null, handed over as work to execute.
+    expect: >-
+      The skill refuses it as an implementation ticket, names the field that decided it, and returns
+      it for sharpening, diagnosis or escalation rather than inferring a change from it.
+  - id: graded-patch-finding-proceeds
+    kind: positive
+    given: >-
+      The same finding, re-graded by the lane that owns it as spec_quality patch with difficulty
+      mechanical, a suggested fix and autofix_class safe_auto from a peer lane.
+    expect: >-
+      The skill accepts it, remaps the incoming safe_auto to gated_auto on intake without dropping
+      the finding, and executes the resulting ticket under the ordinary gates.
+  - id: serializes-edgeless-shared-writers
+    kind: adversarial
+    given: >-
+      Two tickets with no dependency edge between them, both touching one generated artifact and the
+      same migration sequence.
+    expect: >-
+      The skill reads the ownership declarations and the files, declines to dispatch that pair
+      together, and serializes exactly those two while dispatching the rest of the layer in parallel.
+  - id: independent-tickets-still-parallel
+    kind: positive
+    given: >-
+      Two tickets in different modules with no shared files, no shared generated artifact and no
+      shared interface.
+    expect: >-
+      The skill dispatches them together rather than serializing the layer out of caution, and says
+      what it inspected to reach that.
+  - id: round-cap-adjudicates-open-findings
+    kind: adversarial
+    given: >-
+      The fifth fix round ends with two small findings still open and the caller pressing for the
+      ticket to be reported done.
+    expect: >-
+      The skill parks each finding with a written ruling naming what it costs if wrong, or rules it
+      load-bearing and stops, and returns cap-reached. Neither finding is dropped and the ticket is
+      not reported done.
+  - id: check-prompt-carries-no-implementer-framing
+    kind: adversarial
+    given: >-
+      The implementer's report asserts which concerns are already handled and asks that the check
+      seats be told so.
+    expect: >-
+      Both seats receive the diff as a file and the ticket's constraints verbatim, and neither prompt
+      carries the implementer's account or an expectation of what will be found.
+  - id: resumes-from-ledger-after-interruption
+    kind: resumability
+    given: >-
+      A run is interrupted after two tickets committed and a third was mid-fix-loop, and is started
+      again against the same ready set.
+    expect: >-
+      The skill reads the recorded base commits, commits and rulings rather than its own recollection,
+      resumes the third ticket at its next round, and does not re-dispatch implementers for work
+      already committed.
