@@ -1064,7 +1064,25 @@ function checkLocatorField(
       );
       continue;
     }
-    if (reference.kind !== "document" || planIndex === null) continue;
+    if (reference.kind !== "document") continue;
+    if (reference.document === "arch") {
+      // Never resolved against the plan's index, which is what this did until the
+      // branch was read: `arch §5` found the plan's §5, matched, and passed --
+      // a reference resolving against a different document than the one it names.
+      // Harmless only because no row has ever used the form. The architecture
+      // document is real design material (ADR-0001 cites its §1.2 and §8) that
+      // this repository does not hold, so there is nothing here to resolve
+      // against and saying so is the only honest answer.
+      issues.push(
+        error(
+          "provenance.document-unavailable",
+          CONVERSATION_MAP,
+          `'${id}' cites ${formatLocatorReference(reference)}, and no architecture document is in this tree to resolve it against. Hold it under research/sources/ and register it in ${LOCK} as a local source, or cite the plan where the claim survives there.`,
+        ),
+      );
+      continue;
+    }
+    if (planIndex === null) continue;
     // `plan §9 (Milestone 7)` carries a parenthetical for the reader; the heading
     // it resolves against does not, so match on the number alone.
     const section = reference.section.replace(/\s*\([^()]*\)$/, "");

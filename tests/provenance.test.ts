@@ -832,3 +832,43 @@ capabilities:
     expect(scenarioIssues("Covers nothing numbered.")).toEqual([]);
   });
 });
+
+describe("a reference resolves against the document it names, or against nothing", () => {
+  function archIssues(locator: string) {
+    const ctx = ctxFor({
+      "research/sources/engineering-skills-repo-plan.md": "# Plan\n\n## 5. A section the plan does have\n\nbody\n",
+      "provenance/conversation-map.yaml": `schema_version: 1
+capabilities:
+  - id: some-capability
+    disposition: retained
+    destination: skills/adapted
+    origin: conversation
+    locator: ${locator}
+`,
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    });
+    return checkProvenance(ctx).filter(
+      (i) => i.rule === "provenance.document-unavailable" || i.rule === "provenance.document-reference-unresolved",
+    );
+  }
+
+  test("arch §5 does not resolve against the plan's §5", () => {
+    // The defect: until this was read, any `arch` reference was checked against
+    // planIndex, so a section number the plan happened to have made an arch
+    // citation pass while naming a document this tree does not hold.
+    const issues = archIssues("arch §5");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.document-unavailable");
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("the plan's own §5 still resolves", () => {
+    expect(archIssues("plan §5")).toEqual([]);
+  });
+
+  test("a plan section that does not exist still fails as unresolved", () => {
+    const issues = archIssues("plan §99");
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.rule).toBe("provenance.document-reference-unresolved");
+  });
+});
