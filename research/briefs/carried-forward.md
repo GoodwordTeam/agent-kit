@@ -239,6 +239,21 @@ narrowed row survived in 29 bodies from `ed81a69` through a writer, two reviewer
 instrument in `src/`. If that gate is not in the tree when a later batch authors a role body, the
 same failure is available again.
 
+**Before commissioning work to close a gap, read every input the consumer receives.** Scenario 7 —
+a one-line fix still gets a delta review — binds no row in `resolved-conflicts.yaml`, and the two
+rulings nearest it govern panel composition and delta scope, neither of which answers it. Batch
+writers do not receive the plan, so the reasoning went: the fact is not in the writer's inputs, the
+nearest thing in them points the wrong way, commission a ruling. The fact was in the writer's
+inputs. `research/dossiers/review-ship.md` pairs scenarios 1 and 7 in one sentence at its line 167
+and grounds scenario 7 in plan §6.3 at line 1196 — the exact disambiguation the ruling would have
+restated, in an input that had not been opened.
+
+The commission was not sent, so this cost nothing but the time to check. It is the same class as
+the absence-claim repaired at `7f159d8`: a search run against where the record was expected to live
+rather than against the population of places it could live. Naming one input a fact ought to be in
+is not declaring the set of inputs the consumer gets, and only the second is checkable. For a lead
+about to commission seven more batches, the population is the brief's own inputs table.
+
 **A validator figure taken from the working tree is a timestamp, not a measurement.** Five lanes
 write to one tree; eleven commits landed in one afternoon inside stretches of two or three minutes.
 Every figure disagreement between lanes so far — three in one day — was a faithful count of a
