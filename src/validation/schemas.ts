@@ -6,6 +6,7 @@ import { parse as parseYaml } from "yaml";
 
 import { listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
+import { documentFiles, documentShape } from "./documents.ts";
 import { error, note, skipped, type Issue } from "./types.ts";
 
 type AjvInstance = InstanceType<typeof Ajv2020>;
@@ -152,18 +153,18 @@ function documentTargets(ctx: CheckContext): Target[] {
  */
 function templateTargets(ctx: CheckContext): Array<Target | Issue> {
   const out: Array<Target | Issue> = [];
-  for (const file of walkFiles(ctx.root, "templates")) {
-    if (!/\.(json|ya?ml)$/.test(file)) continue;
+  for (const file of documentFiles(ctx.root)) {
     const loaded = loadDocument(ctx.root, file);
     if ("failure" in loaded) {
       out.push(loaded.failure);
       continue;
     }
-    const value = loaded.value;
-    if (value === null || typeof value !== "object" || Array.isArray(value)) continue;
-    const declared = (value as Record<string, unknown>)["schema"];
-    if (typeof declared !== "string") continue;
-    out.push({ file, schemaId: declared });
+    const shape = documentShape(loaded.value);
+    // Not a document, so ajv is given nothing to validate. checkTemplateDocuments
+    // (documents.ts) owns every reason a file reaches this line, which is why the
+    // skip loses no evidence; do not add a fourth reason here without adding it there.
+    if (shape.kind !== "document") continue;
+    out.push({ file, schemaId: shape.schema });
   }
   return out;
 }

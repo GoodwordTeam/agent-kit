@@ -1,53 +1,25 @@
-import { join } from "node:path";
-import { parse as parseYaml } from "yaml";
-
 import { artifactHash } from "../util/hash.ts";
-import { readTextIfPresent, walkFiles } from "../util/fs.ts";
+import { loadTemplateDocuments, type TemplateDocument } from "./documents.ts";
 import type { CheckContext } from "./context.ts";
 import { error, type Issue } from "./types.ts";
 
-/** Where example artifacts live (plan §4: "templates/ — KB documents and example artifacts"). */
-const ARTIFACT_DIRS = ["templates"];
-
-export interface LoadedArtifact {
-  file: string;
-  schema: string;
-  value: Record<string, unknown>;
-}
-
-export interface ArtifactSet {
-  artifacts: LoadedArtifact[];
-  issues: Issue[];
-}
+export type LoadedArtifact = TemplateDocument;
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }
 
-export function loadArtifacts(ctx: CheckContext): ArtifactSet {
-  const artifacts: LoadedArtifact[] = [];
-  const issues: Issue[] = [];
-
-  for (const dir of ARTIFACT_DIRS) {
-    for (const file of walkFiles(ctx.root, dir)) {
-      if (!/\.(json|ya?ml)$/.test(file)) continue;
-      const text = readTextIfPresent(join(ctx.root, file));
-      if (text === null) continue;
-      let parsed: unknown;
-      try {
-        parsed = file.endsWith(".json") ? JSON.parse(text) : parseYaml(text);
-      } catch {
-        continue; // checkSchemas owns unparseable documents.
-      }
-      const value = record(parsed);
-      if (value === null) continue;
-      const schema = value["schema"];
-      if (typeof schema !== "string") continue;
-      artifacts.push({ file, schema, value });
-    }
-  }
-
-  return { artifacts, issues };
+/**
+ * The example artifacts under templates/.
+ *
+ * This returns artifacts and nothing else, deliberately. It has three callers
+ * and only two of them propagate issues, so a defect reported from here would
+ * be printed twice or not at all depending on which caller ran. What counts as
+ * a document, and every reason a file is not one, belongs to documents.ts --
+ * `checkTemplateDocuments` is the single owner and reports each reason once.
+ */
+export function loadArtifacts(ctx: CheckContext): LoadedArtifact[] {
+  return loadTemplateDocuments(ctx.root);
 }
 
 /** Walk every nested object, so a grant buried in an approval is still checked. */
@@ -64,8 +36,8 @@ function* walkObjects(value: unknown, path: string): Generator<{ node: Record<st
 }
 
 export function checkArtifacts(ctx: CheckContext): Issue[] {
-  const { artifacts, issues } = loadArtifacts(ctx);
-  const out = [...issues];
+  const artifacts = loadArtifacts(ctx);
+  const out: Issue[] = [];
 
   const charterHashes = new Set(artifacts.filter((a) => a.schema === "charter").map((a) => artifactHash(a.value)));
 

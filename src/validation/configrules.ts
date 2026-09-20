@@ -236,7 +236,7 @@ export function checkPackManifests(ctx: CheckContext): Issue[] {
     }
   }
 
-  const { artifacts } = loadArtifacts(ctx);
+  const artifacts = loadArtifacts(ctx);
   for (const artifact of artifacts) {
     for (const [i, attachment] of arr(artifact.value["packs_attached"]).entries()) {
       const record = obj(attachment);

@@ -17,6 +17,7 @@ import { checkCatalogRules, checkPackManifests, checkSkillManifests } from "./co
 import type { CheckContext } from "./context.ts";
 import { checkContent } from "./content.ts";
 import { checkDocumentRules } from "./docrules.ts";
+import { checkTemplateDocuments } from "./documents.ts";
 import { checkEvals } from "./evals.ts";
 import { checkFrontmatter } from "./frontmatter.ts";
 import { checkInvocation } from "./invocation.ts";
@@ -55,6 +56,7 @@ export const CHECKS: readonly Check[] = [
   { name: "completeness", run: checkCompleteness },
   { name: "catalog-rules", run: checkCatalogRules },
   { name: "schemas", run: checkSchemas },
+  { name: "template-documents", run: checkTemplateDocuments },
   { name: "schema-rule-coverage", run: checkSchemaRuleCoverage },
   { name: "frontmatter", run: checkFrontmatter },
   { name: "budget", run: checkBudget },

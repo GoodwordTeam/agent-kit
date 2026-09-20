@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { checkArtifacts, loadArtifacts } from "../src/validation/artifacts.ts";
+import { checkTemplateDocuments } from "../src/validation/documents.ts";
 import { artifactHash } from "../src/util/hash.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -41,19 +42,22 @@ describe("artifact loading", () => {
   test("loads example artifacts under templates/ and keys them by declared schema", () => {
     const ctx = ctxFor({ "templates/t.json": JSON.stringify(envelope("ticket")) });
     const loaded = loadArtifacts(ctx);
-    expect(loaded.artifacts.map((a) => a.schema)).toEqual(["ticket"]);
-    expect(loaded.artifacts[0]?.file).toBe("templates/t.json");
+    expect(loaded.map((a) => a.schema)).toEqual(["ticket"]);
+    expect(loaded[0]?.file).toBe("templates/t.json");
   });
 
   test("YAML artifacts are loaded too", () => {
     const ctx = ctxFor({ "templates/t.yaml": "schema: ticket\nid: t-1\n" });
-    expect(loadArtifacts(ctx).artifacts.length).toBe(1);
+    expect(loadArtifacts(ctx).length).toBe(1);
   });
 
-  test("a file without a schema field is ignored, not an error", () => {
+  test("a file without a schema field is dropped here and reported by its owner", () => {
+    // The loader stays silent because it has three callers and only two would
+    // propagate what it said. Silence here is only correct while the drop is
+    // reported somewhere, so the two halves are asserted together.
     const ctx = ctxFor({ "templates/notes.yaml": "hello: world\n" });
-    expect(loadArtifacts(ctx).artifacts).toEqual([]);
-    expect(loadArtifacts(ctx).issues).toEqual([]);
+    expect(loadArtifacts(ctx)).toEqual([]);
+    expect(checkTemplateDocuments(ctx).map((i) => i.rule)).toEqual(["schemas.document-no-schema-member"]);
   });
 });
 

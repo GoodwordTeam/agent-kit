@@ -998,9 +998,9 @@ export function checkDocument(file: string, doc: unknown, index: DocIndex, ctx?:
 }
 
 export function checkDocumentRules(ctx: CheckContext): Issue[] {
-  const { artifacts, issues } = loadArtifacts(ctx);
+  const artifacts = loadArtifacts(ctx);
   const index = indexDocuments(artifacts.map((a) => ({ file: a.file, doc: a.value })));
-  const found: Issue[] = [...issues];
+  const found: Issue[] = [];
   for (const artifact of artifacts) {
     found.push(...checkDocument(artifact.file, artifact.value, index, ctx));
   }
