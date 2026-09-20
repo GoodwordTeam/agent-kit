@@ -493,3 +493,25 @@ describe("a file with no catalog entry is reachable from binds (AUTHORING 12.3)"
     expect(errors(checkRulings(ctx)).some((i) => i.rule === "rulings.unknown-universal-kind")).toBe(true);
   });
 });
+
+describe("a rulings file that will not parse", () => {
+  const MALFORMED = "conflicts: [unclosed\n";
+
+  test("is an error on the policy file, and no ruling resolves", () => {
+    const ctx = ctxFor({ "policies/resolved-conflicts.yaml": MALFORMED });
+    const issues = errors(checkRulings(ctx));
+    expect(issues.map((i) => i.rule)).toEqual(["rulings.unparseable"]);
+    expect(issues[0]?.file).toBe(RULINGS_FILE);
+  });
+
+  test("the error carries the parser's own reason", () => {
+    // `line N, column N` can only have come from the parser, so requiring it
+    // rules out a message that dropped the cause and kept the template. It does
+    // not rule out a mis-narrowed cause: `yaml` throws only Error subclasses for
+    // a string input, so every way of reading `.message` off it agrees here.
+    const ctx = ctxFor({ "policies/resolved-conflicts.yaml": MALFORMED });
+    const message = errors(checkRulings(ctx))[0]?.message ?? "";
+    expect(message).toMatch(/line \d+, column \d+/);
+    expect(message).not.toContain("undefined");
+  });
+});

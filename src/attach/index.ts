@@ -231,7 +231,9 @@ function loadManifest(root: string, pack: string, issues: Issue[]): Manifest {
       warning(
         "attach.manifest-unparseable",
         file,
-        `pack manifest could not be parsed (${(cause as Error).message}); built-in signals for ${pack} still apply`,
+        `pack manifest could not be parsed (${
+          cause instanceof Error ? cause.message : String(cause)
+        }); built-in signals for ${pack} still apply`,
       ),
     );
     return { signals: [], enabled: true };

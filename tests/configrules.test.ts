@@ -224,3 +224,39 @@ describe("pack manifest rules", () => {
     expect(rulesOf(checkPackManifests(ctx))).toContain("pack.attachment-records-rationale-and-matched-rule");
   });
 });
+
+describe("a manifest that will not parse", () => {
+  const MALFORMED = "id: [unclosed\n";
+
+  // `line N, column N` can only have come from the parser, so requiring it rules
+  // out a message that dropped the cause and kept the template. It does not rule
+  // out a mis-narrowed cause: `yaml` throws only Error subclasses for a string
+  // input, so every way of reading `.message` off it agrees here.
+  const carriesTheReason = (message: string | undefined) => {
+    expect(message ?? "").toMatch(/line \d+, column \d+/);
+    expect(message ?? "").not.toContain("undefined");
+  };
+
+  test("a skill manifest is reported under the skill's own rule, against the skill's file", () => {
+    const catalog = `${HEAD}skills:
+  - id: triage
+    invocation: U
+    status: contract
+`;
+    const issues = checkSkillManifests(ctxFor({ "catalog.yaml": catalog, "skills/triage/skill.yaml": MALFORMED }));
+    expect(rulesOf(issues)).toEqual(["skill.user-invoked-never-starts-user-invoked"]);
+    expect(issues[0]?.file).toBe("skills/triage/skill.yaml");
+    carriesTheReason(issues[0]?.message);
+  });
+
+  test("a pack manifest is reported under the pack's own rule, against the pack's file", () => {
+    const catalog = `${HEAD}packs:
+  - id: pack-secure
+    status: contract
+`;
+    const issues = checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": MALFORMED }));
+    expect(rulesOf(issues)).toEqual(["pack.activation-requires-artifact-and-semantics"]);
+    expect(issues[0]?.file).toBe("packs/pack-secure/pack.yaml");
+    carriesTheReason(issues[0]?.message);
+  });
+});

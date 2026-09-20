@@ -120,7 +120,9 @@ function readManifest(ctx: CheckContext, file: string, rule: string, issues: Iss
   try {
     parsed = parseYaml(text);
   } catch (cause) {
-    issues.push(error(rule, file, `manifest could not be parsed: ${(cause as Error).message}`));
+    issues.push(
+      error(rule, file, `manifest could not be parsed: ${cause instanceof Error ? cause.message : String(cause)}`),
+    );
     return null;
   }
   const doc = obj(parsed);

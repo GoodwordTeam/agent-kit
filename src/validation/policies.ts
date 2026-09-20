@@ -124,7 +124,13 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
   try {
     parsed = parseYaml(text);
   } catch (cause) {
-    return [error("policy.unparseable", POLICY_FILE, `could not be parsed: ${(cause as Error).message}`)];
+    return [
+      error(
+        "policy.unparseable",
+        POLICY_FILE,
+        `could not be parsed: ${cause instanceof Error ? cause.message : String(cause)}`,
+      ),
+    ];
   }
   const policy = obj(parsed);
   if (policy === null) {

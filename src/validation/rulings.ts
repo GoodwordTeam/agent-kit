@@ -128,7 +128,13 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
   } catch (cause) {
     return {
       rows: [],
-      issues: [error("rulings.unparseable", RULINGS_FILE, `could not be parsed: ${(cause as Error).message}`)],
+      issues: [
+        error(
+          "rulings.unparseable",
+          RULINGS_FILE,
+          `could not be parsed: ${cause instanceof Error ? cause.message : String(cause)}`,
+        ),
+      ],
       present: true,
     };
   }

@@ -292,3 +292,23 @@ policies:`;
     expect(rules).not.toContain("policy.per-entrypoint-misplaced");
   });
 });
+
+describe("a policy file that will not parse", () => {
+  const MALFORMED = "policy: [unclosed\n";
+
+  test("is the only thing reported: nothing downstream is judged against a policy nobody read", () => {
+    const issues = checkPolicies(ctxFor(MALFORMED));
+    expect(rulesOf(issues)).toEqual(["policy.unparseable"]);
+    expect(issues[0]?.file).toBe("policies/invocation.yaml");
+  });
+
+  test("the error carries the parser's own reason", () => {
+    // `line N, column N` can only have come from the parser, so requiring it
+    // rules out a message that dropped the cause and kept the template. It does
+    // not rule out a mis-narrowed cause: `yaml` throws only Error subclasses for
+    // a string input, so every way of reading `.message` off it agrees here.
+    const message = checkPolicies(ctxFor(MALFORMED))[0]?.message ?? "";
+    expect(message).toMatch(/line \d+, column \d+/);
+    expect(message).not.toContain("undefined");
+  });
+});

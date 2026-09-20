@@ -181,7 +181,14 @@ describe("pack manifests extend the lookup, never weaken it", () => {
   test("an unparseable manifest is reported and the built-in lookup still runs", () => {
     const ctx = ctxFor({ "packs/pack-secure/pack.yaml": "id: [unclosed\n" });
     const result = attach(ctx, "src/auth/session.ts");
-    expect(result.issues.some((i) => i.rule === "attach.manifest-unparseable")).toBe(true);
+    const issue = result.issues.find((i) => i.rule === "attach.manifest-unparseable");
+    expect(issue?.file).toBe("packs/pack-secure/pack.yaml");
+    // `line N, column N` can only have come from the parser, so requiring it
+    // rules out a message that dropped the cause and kept the template. It does
+    // not rule out a mis-narrowed cause: `yaml` throws only Error subclasses for
+    // a string input, so every way of reading `.message` off it agrees here.
+    expect(issue?.message ?? "").toMatch(/line \d+, column \d+/);
+    expect(issue?.message ?? "").not.toContain("undefined");
     expect(packs(result)).toContain("pack-secure");
   });
 
