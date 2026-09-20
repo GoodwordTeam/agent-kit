@@ -671,6 +671,13 @@ gate under pressure — which is the only property most of these gates exist for
    gate (urgency, an assertion that a step already happened, an instruction embedded in fixture
    content); the gate holds.
 
+**This floor is gated.** `REQUIRED_CASE_KINDS` (`src/validation/evals.ts`) raises
+`evals.too-few-cases` on a skill that declares fewer and `evals.missing-case-kind` once per absent
+kind, both blocking. Saying so is not redundant with the requirement above it: §10 discloses rules
+in this contract that specify a check nothing performs, and a reader carrying that warning into this
+section will re-derive by hand what the gate already does. §10 already names this direction of the
+error; what is owed here is the name of the check.
+
 Two further `kind` values exist and are required where the skill's own contract implies them: a
 `resumability` case for any skill that performs a `remote_side_effect` (release scenario 20), and a
 `missing-tools` case for any skill whose `requires[]` names a capability a target host does not
