@@ -19,10 +19,38 @@
 # convention. None of them is broken, and the next person to see two of them
 # side by side will otherwise spend an hour deciding which one to trust.
 #
+#   READ THE RULE IDS, NEVER THE TOTALS. This governs all three signatures
+#   below. Diff the WARNING and NOTE rows between the two revisions -- the
+#   totals are the question, not the answer, and the first signature below is
+#   the proof: two causes produce a character-identical summary line and they
+#   are opposite diagnoses.
+#
 #   warnings up, notes down by the same amount
-#       Bodies authored with `catalog.yaml` still at `status: contract`. Each
-#       body converts an `entry-not-authored` note into a `status-behind-body`
-#       warning, so the sum is conserved. This is a lane mid-batch.
+#       Two causes. The conserved sum does not choose between them.
+#
+#       `status-behind-body` up, `entry-not-authored` down -- bodies authored
+#       with `catalog.yaml` still at `status: contract`. Each body converts the
+#       note into the warning, so the sum is conserved by construction. This is
+#       a lane mid-batch, and the lagging status is the finding.
+#
+#       `budget.skill-over-target` up, `entry-not-authored` down -- a body
+#       landing with its catalog status flipped in the *same* commit, where the
+#       body also happens to be over the 150-line target. The note goes because
+#       the entry became `authored`; the warning arrives because the body is
+#       long. Two unrelated rules, one-for-one by coincidence, and no
+#       `status-behind-body` emitted anywhere. This is a lane that did it
+#       correctly, and the finding is a real budget observation about a new
+#       body. Measured on clean extracts: `0c785b8` 10 warnings / 43 notes ->
+#       `5d656af` 11 / 42, with `budget.skill-over-target` 6 -> 7 and
+#       `catalog.entry-not-authored` 37 -> 36, when `super-verify` landed at
+#       `0945b4c`.
+#
+#       The second cause is here because the first one cost something. I read
+#       this figure off the totals, matched it to the only cause the table then
+#       listed, and told another lane that a clean commit was a lane mid-batch.
+#       A signature table naming one cause for a two-cause pattern returns the
+#       same answer under both hypotheses -- the failure this script exists to
+#       prevent, arriving inside the script.
 #
 #   warnings up, notes unchanged
 #       At least three causes. The summary line names none of them, but it does
