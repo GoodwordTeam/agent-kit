@@ -1,0 +1,96 @@
+{
+  "schema": "ticket",
+  "schema_version": 1,
+  "id": "checkpoint-ticket-1",
+  "project": {
+    "id": "tenant-quota",
+    "repo": "checkpoint-fixture"
+  },
+  "run_id": "checkpoint-run-1",
+  "created_by": {
+    "role": "planner"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "checkpoint-fixture",
+    "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "approved",
+  "type": "implementation",
+  "title": "Count usage per tenant",
+  "work_source": {
+    "kind": "requirements",
+    "ref": {
+      "id": "checkpoint-charter",
+      "schema": "charter",
+      "hash": "sha256:f5ecf6e5063f92978e2e87c287f3e065d4145aed1b8c4a68df9d2eebe29b64a5",
+      "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e"
+    }
+  },
+  "goal": "consumed(tenantId) reports only that tenant's recorded usage, and remaining subtracts it from that tenant's limit.",
+  "non_goals": [
+    "Changing how usage is recorded.",
+    "Changing the reporting surface. src/report.ts is a caller of this code and is out of scope for this ticket."
+  ],
+  "acceptance_criteria": [
+    {
+      "id": "AC-1",
+      "text": "consumed(tenantId) returns the sum of units recorded for that tenant and no other."
+    },
+    {
+      "id": "AC-2",
+      "text": "remaining(tenantId) returns that tenant's limit minus that tenant's consumption."
+    }
+  ],
+  "prerequisites": [],
+  "allowed_changes": {
+    "files": [
+      "src/quota.ts",
+      "tests/quota.test.ts"
+    ],
+    "symbols": [
+      "consumed",
+      "remaining"
+    ]
+  },
+  "read_dependencies": [
+    "src/scope.ts",
+    "src/report.ts"
+  ],
+  "write_ownership": {
+    "paths": [
+      "src/quota.ts",
+      "tests/quota.test.ts"
+    ],
+    "generated_artifacts": [],
+    "migration_sequence": null,
+    "interfaces": [
+      {
+        "name": "consumed",
+        "role": "changes"
+      },
+      {
+        "name": "remaining",
+        "role": "changes"
+      }
+    ]
+  },
+  "integration_owner": "the implementer of this ticket; nothing else writes src/quota.ts during this run",
+  "verification": [
+    {
+      "id": "ac-1-per-tenant",
+      "check": "bun test tests/quota.test.ts",
+      "kind": "command",
+      "supports": [
+        "AC-1",
+        "AC-2"
+      ]
+    }
+  ],
+  "stop_conditions": [
+    "A change is needed outside allowed_changes.",
+    "The second fix cycle closes without the acceptance tests passing."
+  ],
+  "kb_refs": []
+}

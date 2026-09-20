@@ -1,0 +1,76 @@
+{
+  "schema": "finding",
+  "schema_version": 1,
+  "id": "checkpoint-finding-1",
+  "project": {
+    "id": "tenant-quota",
+    "repo": "checkpoint-fixture"
+  },
+  "run_id": "checkpoint-run-1",
+  "created_by": {
+    "role": "reviewer"
+  },
+  "inputs": [
+    {
+      "id": "checkpoint-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:63bfaa4a740fe076a7be41247a3bc31431be853d81517887667fffceb6b9c1a2"
+    }
+  ],
+  "source_revision": {
+    "repo": "checkpoint-fixture",
+    "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "open",
+  "title": "The tenant summary reports a limit belonging to a tenant outside the request",
+  "lane": "security",
+  "fingerprint": {
+    "value": "sha256:2877521417cc1bbaf463d369cf54be1019fe1651aaa869c2eb810715f0fa6ffa",
+    "inputs": {
+      "rule": "tenant-isolation",
+      "symbol_or_path": "src/report.ts#buildTenantSummary",
+      "evidence_digest": "sha256:46ca51244c8d4d27db6590f2ef41222b80a416b3cdba5616efb9970d6a370133"
+    }
+  },
+  "severity": "P1",
+  "confidence_anchor": 100,
+  "spec_quality": "patch",
+  "difficulty": "mechanical",
+  "autofix_class": "manual",
+  "evidence": [
+    {
+      "location": {
+        "repo": "checkpoint-fixture",
+        "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e",
+        "path": "src/report.ts",
+        "symbol": "buildTenantSummary",
+        "line_range": {
+          "start": 31,
+          "end": 31
+        }
+      },
+      "observation": "the summary line reports whichever scope the module-level cache last held, which is a tenant the request need not contain",
+      "excerpt": "  const widest = lastScope();"
+    },
+    {
+      "location": {
+        "repo": "checkpoint-fixture",
+        "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e",
+        "path": "src/scope.ts",
+        "symbol": "resolveCached",
+        "line_range": {
+          "start": 26,
+          "end": 26
+        }
+      },
+      "observation": "the cache returns its stored scope without comparing the tenant it was asked for, so the first tenant resolved in a process is returned to every later caller",
+      "excerpt": "  if (lastResolved !== null) return lastResolved;"
+    }
+  ],
+  "verification": [
+    {
+      "check": "bun test tests/isolation.test.ts"
+    }
+  ]
+}

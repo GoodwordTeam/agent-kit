@@ -1,0 +1,130 @@
+{
+  "schema": "charter",
+  "schema_version": 1,
+  "id": "checkpoint-charter",
+  "project": {
+    "id": "tenant-quota",
+    "repo": "checkpoint-fixture"
+  },
+  "run_id": "checkpoint-run-1",
+  "created_by": {
+    "role": "human"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "checkpoint-fixture",
+    "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "active",
+  "immutability": {
+    "immutable": true,
+    "worker_writable": false,
+    "hash": "sha256:f5ecf6e5063f92978e2e87c287f3e065d4145aed1b8c4a68df9d2eebe29b64a5",
+    "location": "checkpoint-kb/projects/tenant-quota/runs/checkpoint-run-1/charter.json"
+  },
+  "work_source": {
+    "kind": "ticket",
+    "ref": {
+      "id": "checkpoint-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:14069429150abcbf244c4c2fb2c4c46a49c93ca9457263ecd9ebb176de3a58bb",
+      "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e"
+    },
+    "summary": "Make usage accounting count per tenant rather than globally."
+  },
+  "repos": [
+    {
+      "repo": "checkpoint-fixture",
+      "base_branch": "main",
+      "work_branch_prefix": "checkpoint/",
+      "paths": [
+        "src/**",
+        "tests/**"
+      ]
+    }
+  ],
+  "artifact_destinations": {
+    "kb_root": "checkpoint-kb",
+    "runs_path": "projects/tenant-quota/runs",
+    "project": "tenant-quota"
+  },
+  "allowed_capabilities": [
+    "repository-read",
+    "repository-write",
+    "isolated-worktree",
+    "isolated-review-context",
+    "process-exec",
+    "vcs-local",
+    "artifact-write"
+  ],
+  "default_grants": [
+    "approve-ticket",
+    "start-implementation-ticket",
+    "adjudicate-finding",
+    "local-commit"
+  ],
+  "denied_actions": [
+    "merge",
+    "deploy",
+    "production-credentials",
+    "force-push",
+    "history-rewrite",
+    "scope-expansion"
+  ],
+  "checkpoints": [
+    "ticket-approval",
+    "finding-adjudication",
+    "delta-closure",
+    "ship-pr"
+  ],
+  "limits": {
+    "fix_cycles": 2,
+    "ci_repair_attempts": 2,
+    "alignment_questions": 3,
+    "tickets": 2,
+    "elapsed_minutes": 60,
+    "review_rounds": 2
+  },
+  "budgets": {
+    "provided_by": "runner",
+    "enforces": [
+      "fix-cycles",
+      "review-rounds",
+      "tickets"
+    ],
+    "on_exhaustion": "cap-reached"
+  },
+  "supervisors": {
+    "seats": [
+      {
+        "id": "seat-one",
+        "role": "supervisor",
+        "filled_by": "supervisor"
+      },
+      {
+        "id": "seat-two",
+        "role": "supervisor",
+        "filled_by": "reviewer-standards"
+      }
+    ],
+    "independence": "declared-independent",
+    "tie_breaker_allowed": false,
+    "may_implement": false,
+    "on_missing_seat": "block-and-escalate"
+  },
+  "ci_repair": {
+    "may_weaken_checks": false,
+    "attempts": 2,
+    "product_code_changes": "re-enter-normal-evidence-path"
+  },
+  "approvals": [
+    {
+      "artifact_hash": "sha256:c9f15fe378e815c1e146402c2b3adeffd4131d7f2d2d6fc323627ac7b4b1fac3",
+      "by": "human",
+      "authority": "explicit",
+      "at": "2026-09-19T09:00:00Z",
+      "note": "Approved for the checkpoint slice. Two fix cycles and no push grant."
+    }
+  ]
+}

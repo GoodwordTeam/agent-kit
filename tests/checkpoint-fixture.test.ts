@@ -1,0 +1,306 @@
+import { describe, expect, test } from "bun:test";
+import { execFileSync, spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+
+import { checkSchemas } from "../src/validation/schemas.ts";
+import { loadCatalog } from "../src/catalog/load.ts";
+import { makeTree } from "./helpers/tree.ts";
+import { canonicalJson, sha256Hex, artifactHash } from "../src/util/hash.ts";
+
+/**
+ * The batch-5 checkpoint fixture, checked rather than described.
+ *
+ * The fixture's job is to let the checkpoint fail. Every assertion here exists
+ * because the corresponding way of getting it wrong produces a fixture that
+ * looks finished and grades nothing: artifacts that do not conform to the
+ * schemas they are meant to exercise, a revision cited by the artifacts that
+ * the repository does not actually have, a seeded defect whose tests pass
+ * before it is fixed, a repair path with no refusal on it, and a repository
+ * with somewhere to push.
+ *
+ * The state machine is the centre of it. A seeded defect that the obvious
+ * repair fully fixes cannot host a refused closure, and a fixture where the
+ * incomplete and complete repairs are indistinguishable returns the same answer
+ * whether the delta verification is independent or not.
+ */
+
+const FIXTURE = join(import.meta.dir, "fixtures", "checkpoint");
+const SCHEMAS_DIR = join(import.meta.dir, "..", "schemas");
+
+function shippedSchemas(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of readdirSync(SCHEMAS_DIR)) {
+    if (name.endsWith(".schema.json")) out[`schemas/${name}`] = readFileSync(join(SCHEMAS_DIR, name), "utf8");
+  }
+  return out;
+}
+
+const CATALOG = `schema_version: 1
+package:
+  id: ak
+  name: agent-kit
+  version: 0.1.0
+  namespace: "/ak:"
+  default_profile: core
+schemas:
+${readdirSync(SCHEMAS_DIR)
+  .filter((n) => n.endsWith(".schema.json"))
+  .map((n) => `  - id: ${n.replace(".schema.json", "")}\n    status: authored`)
+  .join("\n")}
+`;
+
+const artifactNames = readdirSync(join(FIXTURE, "artifacts")).filter((n) => n.endsWith(".json"));
+const artifacts = Object.fromEntries(
+  artifactNames.map((n) => [n, JSON.parse(readFileSync(join(FIXTURE, "artifacts", n), "utf8")) as Record<string, unknown>]),
+);
+
+/** Materialize once; every git assertion reads the same throwaway repository. */
+function materialize(): string {
+  return execFileSync(join(FIXTURE, "materialize.sh"), [], { encoding: "utf8" }).trim();
+}
+const repo = materialize();
+const head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+
+describe("the fixture's artifacts conform to the schemas they exercise", () => {
+  test("every artifact validates", () => {
+    const root = makeTree({
+      "catalog.yaml": CATALOG,
+      ...shippedSchemas(),
+      ...Object.fromEntries(artifactNames.map((n) => [`templates/${n}`, JSON.stringify(artifacts[n])])),
+    });
+    const { catalog } = loadCatalog(root);
+    const errors = checkSchemas({ root, catalog: catalog! })
+      .filter((i) => i.severity === "error" && i.file.startsWith("templates/"))
+      .map((i) => `${i.file}: ${i.message}`);
+    expect(errors).toEqual([]);
+  });
+
+  test("the charter's approval binds to the charter it approved", () => {
+    const charter = artifacts["charter.json"]!;
+    const approvals = charter["approvals"] as Array<Record<string, unknown>>;
+    expect(approvals[0]!["artifact_hash"]).toBe(artifactHash(charter));
+  });
+
+  test("the charter's own digest is the one it carries", () => {
+    const charter = JSON.parse(JSON.stringify(artifacts["charter.json"])) as Record<string, unknown>;
+    const declared = (charter["immutability"] as Record<string, unknown>)["hash"];
+    delete charter["approvals"];
+    (charter["immutability"] as Record<string, unknown>)["hash"] = "";
+    expect(declared).toBe(artifactHash(charter));
+  });
+});
+
+describe("the artifacts and the repository agree about the revision", () => {
+  // An artifact citing a revision the repository does not have cites nothing,
+  // and the failure is silent: every schema check still passes.
+  test("every revision the artifacts cite is the materialized head", () => {
+    const cited = new Set<string>();
+    const walk = (v: unknown): void => {
+      if (Array.isArray(v)) return v.forEach(walk);
+      if (v === null || typeof v !== "object") return;
+      for (const [k, child] of Object.entries(v as Record<string, unknown>)) {
+        if (k === "revision" && typeof child === "string") cited.add(child);
+        else walk(child);
+      }
+    };
+    for (const name of artifactNames) walk(artifacts[name]);
+    expect(cited.size).toBeGreaterThan(0);
+    expect([...cited]).toEqual([head]);
+  });
+
+  test("materializing twice produces the same revision", () => {
+    const second = materialize();
+    const secondHead = execFileSync("git", ["-C", second, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+    rmSync(second, { recursive: true, force: true });
+    expect(secondHead).toBe(head);
+  });
+});
+
+describe("the fixture repository has nowhere to push", () => {
+  // super-ship is dry-run only. This is the difference between "we did not
+  // push" and "we could not have pushed", and it is the one the plan's hard
+  // boundary actually asks for.
+  test("no remote is configured", () => {
+    expect(execFileSync("git", ["-C", repo, "remote"], { encoding: "utf8" }).trim()).toBe("");
+  });
+
+  test("no remote configuration of any kind survives materialization", () => {
+    const config = execFileSync("git", ["-C", repo, "config", "--list"], { encoding: "utf8" });
+    const reaching = config
+      .split("\n")
+      .filter((line) => /^remote\.|insteadof|pushurl/i.test(line));
+    expect(reaching).toEqual([]);
+  });
+});
+
+describe("the fixture can host a refused closure", () => {
+  // The centre of the fixture. Each state is the previous one plus one file,
+  // and what makes the fixture worth anything is that states 3 and 4 differ:
+  // the repair a reader of the finding makes turns the first isolation check
+  // green and leaves the second red. A fixture where the obvious repair closed
+  // the finding would grade a run that never checked independently exactly the
+  // same as one that did.
+  type Outcome = { pass: number; fail: number; failing: string[] };
+
+  function run(files: Record<string, string>, target: string): Outcome {
+    const work = mkdtempSync(join(tmpdir(), "state-"));
+    cpSync(join(FIXTURE, "repo"), work, { recursive: true });
+    for (const [rel, from] of Object.entries(files)) {
+      mkdirSync(dirname(join(work, rel)), { recursive: true });
+      writeFileSync(join(work, rel), readFileSync(from, "utf8"));
+    }
+    // Both streams: bun writes the run summary to stderr, so reading stdout
+    // alone reports zero passes for every state that passed -- which reads as a
+    // broken fixture rather than as a broken harness.
+    const proc = spawnSync(process.execPath, ["test", target], { cwd: work, encoding: "utf8" });
+    const out = `${proc.stdout ?? ""}${proc.stderr ?? ""}`;
+    rmSync(work, { recursive: true, force: true });
+    if (out.trim() === "") throw new Error(`no output from the fixture run in ${work}`);
+    const num = (re: RegExp) => Number(out.match(re)?.[1] ?? "0");
+    return {
+      pass: num(/(\d+) pass/),
+      fail: num(/(\d+) fail/),
+      failing: [...out.matchAll(/\(fail\) (.+?) \[/g)].map((m) => m[1]!),
+    };
+  }
+
+  const ISOLATION = join(FIXTURE, "stages", "finding", "tests", "isolation.test.ts");
+  const TICKET_DONE = join(FIXTURE, "selftest", "ticket-done", "quota.ts");
+  const INCOMPLETE = join(FIXTURE, "selftest", "repair-incomplete", "report.ts");
+  const COMPLETE = join(FIXTURE, "selftest", "repair-complete", "report.ts");
+
+  test("state 1: the ticket's own checks are red before the change", () => {
+    const r = run({}, "tests/quota.test.ts");
+    expect(r.pass).toBe(0);
+    expect(r.fail).toBe(2);
+  });
+
+  test("state 2: the change satisfies the ticket and does not touch the defect", () => {
+    const acceptance = run({ "src/quota.ts": TICKET_DONE }, "tests/quota.test.ts");
+    expect(acceptance.fail).toBe(0);
+    expect(acceptance.pass).toBe(2);
+
+    const isolation = run(
+      { "src/quota.ts": TICKET_DONE, "tests/isolation.test.ts": ISOLATION },
+      "tests/isolation.test.ts",
+    );
+    expect(isolation.fail).toBe(2);
+  });
+
+  test("state 3: the repair the finding points at leaves the independent check red", () => {
+    const r = run(
+      { "src/quota.ts": TICKET_DONE, "src/report.ts": INCOMPLETE, "tests/isolation.test.ts": ISOLATION },
+      "tests/isolation.test.ts",
+    );
+    expect(r.pass).toBe(1);
+    expect(r.fail).toBe(1);
+    // Named, not counted: which one stays red is the whole content of the state.
+    expect(r.failing).toEqual(["the summary's widest limit belongs to a tenant in the request"]);
+  });
+
+  test("state 4: a complete repair closes it", () => {
+    const r = run(
+      { "src/quota.ts": TICKET_DONE, "src/report.ts": COMPLETE, "tests/isolation.test.ts": ISOLATION },
+      "tests/",
+    );
+    expect(r.fail).toBe(0);
+    expect(r.pass).toBe(4);
+  });
+
+  test("the two isolation checks are not the same check", () => {
+    // If the incomplete repair satisfied both, the fixture would have no
+    // refusal on it and this whole block would be measuring nothing.
+    const incomplete = run(
+      { "src/quota.ts": TICKET_DONE, "src/report.ts": INCOMPLETE, "tests/isolation.test.ts": ISOLATION },
+      "tests/isolation.test.ts",
+    );
+    const complete = run(
+      { "src/quota.ts": TICKET_DONE, "src/report.ts": COMPLETE, "tests/isolation.test.ts": ISOLATION },
+      "tests/isolation.test.ts",
+    );
+    expect(incomplete.fail).toBeGreaterThan(complete.fail);
+  });
+});
+
+describe("the findings point at what they say they point at", () => {
+  const findings = artifactNames.filter((n) => n.startsWith("finding."));
+
+  test("every excerpt is at the line its evidence claims, in the materialized repository", () => {
+    const wrong: string[] = [];
+    for (const name of findings) {
+      const evidence = artifacts[name]!["evidence"] as Array<Record<string, any>>;
+      for (const [i, entry] of evidence.entries()) {
+        const { path, line_range } = entry["location"];
+        const lines = readFileSync(join(repo, path), "utf8").split("\n");
+        const actual = lines[line_range.start - 1];
+        if (actual !== entry["excerpt"]) {
+          wrong.push(`${name} evidence[${i}] claims ${path}:${line_range.start} is ${JSON.stringify(entry["excerpt"])}, found ${JSON.stringify(actual)}`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+
+  test("every excerpt occurs exactly once in its file, so the line is not what identifies it", () => {
+    const ambiguous: string[] = [];
+    for (const name of findings) {
+      for (const entry of artifacts[name]!["evidence"] as Array<Record<string, any>>) {
+        const lines = readFileSync(join(repo, entry["location"]["path"]), "utf8").split("\n");
+        const hits = lines.filter((l) => l === entry["excerpt"]).length;
+        if (hits !== 1) ambiguous.push(`${name}: ${JSON.stringify(entry["excerpt"])} occurs ${hits} times`);
+      }
+    }
+    expect(ambiguous).toEqual([]);
+  });
+
+  test("moving the quoted line does not change the fingerprint", () => {
+    // Release scenario 9, made drivable rather than asserted. The staged file
+    // is the same defect with two comment lines added above it. The digest is
+    // taken over the excerpt and the path, which is the domain
+    // schemas/finding.schema.json states, so the identity inputs are unchanged
+    // and the value derived from them is too.
+    const finding = artifacts["finding.tenant-isolation.json"]!;
+    const inputs = (finding["fingerprint"] as Record<string, any>)["inputs"];
+    const excerpt = ((finding["evidence"] as Array<Record<string, any>>)[0]!)["excerpt"];
+
+    const moved = readFileSync(join(FIXTURE, "stages", "line-move", "report.ts"), "utf8").split("\n");
+    const before = readFileSync(join(repo, "src/report.ts"), "utf8").split("\n");
+    const lineBefore = before.findIndex((l) => l === excerpt) + 1;
+    const lineAfter = moved.findIndex((l) => l === excerpt) + 1;
+    expect(lineBefore).toBeGreaterThan(0);
+    expect(lineAfter).toBeGreaterThan(lineBefore);
+
+    // Recomputed over the stated domain at the moved position.
+    const domain = (finding["evidence"] as Array<Record<string, any>>).map((e) => ({
+      path: e["location"]["path"],
+      excerpt: e["excerpt"],
+    }));
+    const recomputed = `sha256:${sha256Hex(canonicalJson(domain))}`;
+    expect(recomputed).toBe(inputs["evidence_digest"]);
+    expect(`sha256:${sha256Hex(canonicalJson(inputs))}`).toBe((finding["fingerprint"] as Record<string, any>)["value"]);
+  });
+});
+
+describe("a required lane can be made unavailable", () => {
+  const lane = join(repo, "tools", "security-lane.sh");
+
+  test("the lane runs and reports the defect by default", () => {
+    const proc = spawnSync(lane, [], { encoding: "utf8", env: { ...process.env, BUN: process.execPath } });
+    expect(proc.status).not.toBe(0);
+    expect(proc.status).not.toBe(70);
+  });
+
+  test("the switch makes it unavailable, distinguishably from finding something", () => {
+    const proc = spawnSync(lane, [], {
+      encoding: "utf8",
+      env: { ...process.env, BUN: process.execPath, CHECKPOINT_SECURITY_LANE: "unavailable" },
+    });
+    // 70, not 1: a lane that cannot tell "the tool is missing" from "the tool
+    // found a problem" turns one into the other, and scenario 4 is exactly
+    // about not letting the first read as the second.
+    expect(proc.status).toBe(70);
+    expect(proc.stderr).toContain("unavailable");
+  });
+});

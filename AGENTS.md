@@ -159,8 +159,26 @@ supplies wrongly if it is left out. Real constraints are set per project, and ex
 ```bash
 bun test                 # validator, selector and packager units, incl. invalid-case fixtures
 bun run ak validate      # catalog complete, schemas valid, links closed, no denylist hits
-bun run ak build --check # dist/ in sync
+bun run ak build         # the packager runs on this tree and writes dist/ for every host
 ```
+
+**The third line is `ak build`, not `ak build --check`, and restoring `--check` here would undo a
+repair.** `dist/` is generated and never committed — the table above says so — which means it does
+not exist in a fresh clone. `--check` there reports 22 `packaging.dist-missing` errors describing
+the absence of a local build rather than anything about the commit. Run `ak build` first and
+`--check` passes because you just built. Green for whoever has built, red for whoever has not, and
+neither answer is about the repository: it is an instrument that returns the same reading under both
+hypotheses, in the one position where the reader most needs it to discriminate.
+
+`ak build` is the check this position wants. It validates first and refuses to write `dist/` while
+errors stand, then runs the packager — which is where relative references are resolved a second time
+after transitive dependencies are copied into `references/shared/`, a property of the source tree
+that nothing else in this block reaches. `--check` has a real job in the release sequence, where
+`dist/` has just been built on purpose and the question is whether it matches; that is where it
+belongs.
+
+Measured on clean `git archive` extracts with `.donors/` copied in: `--check` alone, 22 errors;
+`ak build`, exit 0, `dist/claude-code` and `dist/codex` written; `--check` immediately after, exit 0.
 
 Commit messages end with the session's configured `Co-Authored-By:` attribution trailer. The
 assistant identity in that trailer is supplied by the harness at commit time; it is deliberately

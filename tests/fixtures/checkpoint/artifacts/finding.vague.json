@@ -1,0 +1,62 @@
+{
+  "schema": "finding",
+  "schema_version": 1,
+  "id": "checkpoint-finding-2",
+  "project": {
+    "id": "tenant-quota",
+    "repo": "checkpoint-fixture"
+  },
+  "run_id": "checkpoint-run-1",
+  "created_by": {
+    "role": "reviewer"
+  },
+  "inputs": [
+    {
+      "id": "checkpoint-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:63bfaa4a740fe076a7be41247a3bc31431be853d81517887667fffceb6b9c1a2"
+    }
+  ],
+  "source_revision": {
+    "repo": "checkpoint-fixture",
+    "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "open",
+  "title": "Tenant limits are compiled in, and whether that is wrong depends on facts not in this repository",
+  "lane": "maintainability",
+  "fingerprint": {
+    "value": "sha256:abbbf9ad521c62662d2be80123787e18566bbde913d6c357fe19768d5b9b470c",
+    "inputs": {
+      "rule": "configuration-as-code",
+      "symbol_or_path": "src/scope.ts#LIMITS",
+      "evidence_digest": "sha256:2df03e4b64e5837d8a953a019d97bc569350b205bb7a62fd2110df8695f76aef"
+    }
+  },
+  "severity": "P3",
+  "confidence_anchor": 50,
+  "spec_quality": "smell",
+  "difficulty": null,
+  "autofix_class": "advisory",
+  "evidence": [
+    {
+      "location": {
+        "repo": "checkpoint-fixture",
+        "revision": "bb3f147121aa5ec6a86e797cb9fc2206a714ac3e",
+        "path": "src/scope.ts",
+        "symbol": "LIMITS",
+        "line_range": {
+          "start": 14,
+          "end": 14
+        }
+      },
+      "observation": "tenant limits are a module-level literal, so adding a tenant is a code change and no two environments can differ; whether that should become configuration is not a question this evidence settles",
+      "excerpt": "const LIMITS: Record<string, number> = { acme: 100, globex: 250, initech: 50 };"
+    }
+  ],
+  "verification": [
+    {
+      "check": "Confirm with whoever operates the service whether limits differ between environments."
+    }
+  ]
+}
