@@ -150,8 +150,10 @@ def main():
     # above. Keyed on the source having members rather than on the tally being
     # zero, because a guard that keys on the wrong term reproduces the fault it
     # was added to prevent.
+    silent = False
     for name, total, named in (("rulings", n_rulings, in_rulings), ("map rows", n_rows, in_map)):
         if total > 0 and not named:
+            silent = True
             print(f"SILENT    all {total} {name} exist and none names a scenario; suspect this probe, not the tree.")
     if uncovered:
         print(f"Named by neither: {', '.join(str(n) for n in uncovered)}.")
@@ -163,7 +165,14 @@ def main():
     # a probe produced it. Requested kept verbatim by team-lead; if a later
     # edit needs the wording changed, the claim it makes has to survive.
     print("Named is not satisfied: this reads two indexes, not the bodies they point at.")
-    return 1 if dangling else 0
+    # SILENT exits 1 for the same reason the unparseable-§10 guard above does, and
+    # they were inconsistent until someone described this probe's exit convention
+    # back to me. Both mean the instrument lost its grip on a source, and in both
+    # the coverage numbers underneath are not worth reading. An uncovered scenario
+    # still exits 0: that is a fact about the tree, which this probe reports and
+    # does not gate. The line between them is whether the probe is reporting on
+    # the tree or on itself.
+    return 1 if dangling or silent else 0
 
 
 if __name__ == "__main__":
