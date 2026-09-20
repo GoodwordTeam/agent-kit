@@ -19,7 +19,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 
@@ -53,6 +53,53 @@ function sourcesUnder(dir: string): string[] {
   return out;
 }
 
+/**
+ * A path in the one spelling this file compares in.
+ *
+ * `/var` is a symlink to `/private/var` on macOS, so a directory reached
+ * through `mktemp -d` has two absolute names and string comparison between
+ * them fails while both are correct. Missing paths pass through unchanged:
+ * the caller is comparing, not asserting existence.
+ */
+function canonical(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
+  }
+}
+
+/**
+ * The repo-relative files `tsc` reports having read, invoked from `cwd`.
+ *
+ * Both sides are canonicalised before they meet. `REPO` is already resolved --
+ * Bun realpaths `import.meta.dir` -- but `tsc` prints paths built from `PWD`,
+ * and `spawnSync`'s `cwd` option sets the kernel working directory without
+ * rewriting `PWD` in the inherited environment. So invoking the suite through
+ * any symlinked path gave two correct sets spelled differently, an empty
+ * intersection, and all 78 owned files reported as untypechecked.
+ *
+ * That is a false alarm whose output is indistinguishable from the real
+ * catastrophe this assertion exists to catch, and it fired in a `git archive`
+ * extract under `mktemp -d` -- which is how every lane here verifies anything.
+ * It was first routed around at the call site, by choosing a non-symlinked
+ * extract directory; that left the next caller to pay again, so the comparison
+ * is fixed here instead. See the symlink test below, which is the regression
+ * control and fails without `canonical`.
+ */
+function checkedSet(cwd: string): Set<string> {
+  const run = tsc(["--noEmit", "--listFiles"], cwd);
+  expect(run.status).toBe(0);
+  const root = canonical(cwd);
+  return new Set(
+    run.stdout
+      .split("\n")
+      .map((line) => canonical(line.trim()))
+      .filter((line) => line.startsWith(root))
+      .map((line) => relative(root, line)),
+  );
+}
+
 describe("the tree typechecks, and the typechecker is doing work", () => {
   test("tsc --noEmit reports nothing", () => {
     const run = tsc(["--noEmit"]);
@@ -64,15 +111,7 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     // The population check. A clean typecheck over zero files is byte-identical
     // to a clean typecheck over the whole tree, and `include` is a glob that can
     // silently stop matching a new directory.
-    const run = tsc(["--noEmit", "--listFiles"]);
-    expect(run.status).toBe(0);
-    const checked = new Set(
-      run.stdout
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith(REPO))
-        .map((line) => relative(REPO, line)),
-    );
+    const checked = checkedSet(REPO);
 
     const owned = [...sourcesUnder("src"), ...sourcesUnder("tests")];
     expect(owned.length).toBeGreaterThan(30);
@@ -86,6 +125,24 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     expect(owned.filter((file) => file.startsWith("tests/fixtures"))).toEqual([]);
     expect(owned.some((file) => file.startsWith("src/"))).toBe(true);
     expect(owned.some((file) => file.startsWith("tests/"))).toBe(true);
+  });
+
+  test("the population check survives being reached through a symlink", () => {
+    // The regression control for the paragraph above, and it is a control
+    // rather than a repetition: it is the only test here that fails if
+    // `canonical` is removed, and it fails in the loud direction -- reporting
+    // every owned file as unchecked -- which is what made the original so
+    // expensive to read. A gate that is green where the repository lives and
+    // red wherever it is verified teaches people to skip it, and this file's
+    // own docstring records that happening once already.
+    const dir = mkdtempSync(join(tmpdir(), "ak-tsc-link-"));
+    const link = join(dir, "repo");
+    symlinkSync(REPO, link);
+
+    const checked = checkedSet(link);
+    const owned = [...sourcesUnder("src"), ...sourcesUnder("tests")];
+    expect(owned.length).toBeGreaterThan(30);
+    expect(owned.filter((file) => !checked.has(file))).toEqual([]);
   });
 
   test("a planted error is still reported, so exit 0 means something", () => {
