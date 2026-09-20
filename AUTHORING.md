@@ -371,12 +371,16 @@ treat a repair that stopped at the prose as unfinished rather than as partial cr
 tracked files carry the digits, and three further places derive them and carry none:
 `src/validation/provenance.ts` twice, to bound `G:L` ranges and to hold the register against the
 file, and `src/validation/budget.ts`, which decides whether a body is over its 150-line target. Two
-of the nine are wrong, `research/dossiers/protocols.md` and `research/dossiers/review-personas.md`,
-both still saying 2264, and they are absent from the list for the reason they are still wrong: it
-was assembled from the copies someone had repaired. Such a list is consistent by construction, every
-item on it correct, so re-reading it finds nothing. The three derivations are absent for a different
-reason — a search for the digits cannot find a copy that computes them. A figure is published where
-it is written and where it is derived, and only the first kind greps.
+of the nine were wrong at that revision, `research/dossiers/protocols.md` and
+`research/dossiers/review-personas.md`, both saying 2264, and they were absent from the list for the
+reason they were wrong: it was assembled from the copies someone had repaired. Such a list is
+consistent by construction, every item on it correct, so re-reading it finds nothing. Both were
+repaired at `d3bfacb`, and this sentence went false with them: it named two files in the present
+tense, so another lane's commit falsified it without touching it. That is why both revisions are now
+written down. What the example carries is how the two were found, and that survives the repair. The
+three derivations are absent for a different reason — a search for the digits cannot find a copy
+that computes them. A figure is published where it is written and where it is derived, and only the
+first kind greps.
 
 Nor is that count safe to quote. *Published* was never defined, and the nine include a test fixture,
 this contract's own narration of the defect, and a brief recording the repair. This paragraph has
