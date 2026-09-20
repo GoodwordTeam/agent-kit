@@ -772,8 +772,13 @@ already implements, and it was read that way by someone who went looking for the
 does report the underlying gap — the §12.3 warning that this file has no `catalog.yaml` entry, so no
 ruling's `binds` block names it and no `binds`-derived check reaches it — and that warning has been
 sitting in a count nobody connected to this rule. Until a detector exists the comparison is made by
-hand by whoever rules on the entry, and nothing obliges them to make it. This paragraph is written
-to be deleted.
+hand by whoever rules on the entry, and nothing obliges them to make it. This paragraph is an open
+entry against the contract that happens to live inside it, and it retires the way any other does:
+the commit that lands the detector deletes it, with the ruling in the commit message. Left standing
+once a check exists, it becomes the same defect pointing the other way — a contract that understates
+its own enforcement sends a reader to redo by hand what the gate already did, and teaches them that
+these claims run behind the code. That version is harder to catch, because a contract claiming less
+than it enforces reads as conservative rather than wrong.
 
 This is the reviewer's recorded-revision gate pointed at the defects file instead of at a review,
 and it fails on the same thing: silence, not movement. What it asks for is a ruling, not stillness.
