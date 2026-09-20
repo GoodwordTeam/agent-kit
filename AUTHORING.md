@@ -13,7 +13,12 @@ improvise. See §10.
 
 ## 1. Size and progressive disclosure
 
-`SKILL.md` is **≤150 lines**, hard cap **300**. `ak validate` fails above 300 and warns above 150.
+`SKILL.md` is **≤150 lines**, hard cap **300**. `ak validate` warns above 150
+(`budget.skill-over-target`) and fails above 300 (`budget.skill-over-cap`). The bound is not a
+skill's alone: `BUDGETED` (`src/validation/budget.ts`) carries the same target and cap for
+`protocols` and `roles`, reported under `budget.body-over-target` and `budget.body-over-cap`. §12
+applies this rule to those bodies unchanged rather than setting a second one, so the numbers here
+are the only numbers.
 
 That count is raw lines, blanks and headings included, and it is raw deliberately. Any narrower
 measure — "instruction lines", "lines that could move to a reference" — has to define what counts,
@@ -1159,18 +1164,44 @@ bun run ak validate      # catalog, schemas, frontmatter, links, provenance, den
 bun run ak build --check # dist/ in sync
 ```
 
-Then confirm by reading the file, not by remembering that you wrote it:
+Then confirm by reading the file, not by remembering that you wrote it. The list is in two parts
+because most of it was never yours to check. Hand-verifying what the commands above already decided
+is the cost §9 names, and an undifferentiated list imposes it on every bullet to reach the few that
+need it.
 
-- `SKILL.md` ≤150 lines (300 hard), frontmatter carries spec keys only, `name` equals the directory.
-- The ten required sections are present, in order, spelled exactly.
-- `## Hard gates` has an anti-rationalization table whose rows come from recorded failures.
-- Every artifact in `## Outputs` names a schema and a KB operation, not a repository path.
-- Every `remote_side_effect` names its idempotency key source and read-back.
-- Every ruling the body touches is cited by `id`.
-- Every adapted file has a provenance row, and the cited path exists at the pin.
-- Every donor file cited that the dossier did not name is listed in the handback (§10).
-- Three or more eval cases exist under `evals/<skill-id>/`, tagged with their scenarios.
-- Nothing in the body depends on a file this package does not install.
+**Decided by the commands above.** Read these when one of them reports, not before.
+
+- `SKILL.md` ≤150 lines, hard cap 300 — `budget.skill-over-target` warns, `budget.skill-over-cap`
+  fails.
+- Frontmatter carries spec keys only and `name` equals the directory — `frontmatter.unknown-key`,
+  `frontmatter.host-key-in-canonical`, `frontmatter.name-mismatch`.
+- The ten required sections are present, in order, spelled exactly — `body.missing-section`,
+  `body.sections-out-of-order`, `body.section-inserted`.
+- `## Hard gates` carries an anti-rationalization table — `body.missing-anti-rationalization-table`.
+- Every adapted file has a provenance row and the cited path exists at the pin —
+  `provenance.missing-adaptation`, `provenance.source-not-at-pin`.
+- Three or more eval cases exist, one of each required kind — `evals.too-few-cases`,
+  `evals.missing-case-kind`, both blocking.
+- Nothing in the body links to a file the bundle does not carry — `links.broken-bundle`.
+
+**Not checked by anything. This is the part of the list that is yours**, and each entry says what
+the nearest instrument does instead, so that a clean run is not read as an answer to it.
+
+- **The table's rows come from recorded failures.** The gate sees that a table exists. Whether its
+  rows were invented to fill it is §3.1's question, and no tool can reach it.
+- **Every artifact in `## Outputs` names a schema and a KB operation, not a repository path.** The
+  section's presence is gated; nothing reads its contents.
+- **Every `remote_side_effect` names its idempotency key source and read-back.** The `sideeffects.*`
+  rules check that the prose names the declared effects and that no grant is wider than the skill it
+  covers. No rule reads a skill body for an idempotency key.
+- **Every ruling the body touches is cited by `id`.** `rulings.uncited-restatement` is a warning,
+  not a gate, and `rulings.restatement-scan-coverage` reports its own recall in the run: of eight
+  restatements found in this repository without it, it reports two. A clean run is evidence about
+  that instrument and not about the body.
+- **Every donor file cited that the dossier did not name is recorded where §10 sends it.** Nothing
+  reads the dossier's file list against the body's citations.
+- **The eval cases are tagged with the scenarios they cover.** `evals.uncovered-scenarios` is a
+  note; §10 records why coverage here was ruled a report rather than a gate.
 
 For a protocol, a role or a reference-pack body, §12 replaces this checklist — §12.4 for the first
 two, §12.5 for a reference pack.
