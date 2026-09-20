@@ -1,0 +1,221 @@
+# skills/super-scout/skill.yaml — execution contract for the bounded read-only exploration lane.
+# Prose mirror: skills/super-scout/SKILL.md (AUTHORING.md §4.1).
+
+id: super-scout
+version: 0.1.0
+kind: lifecycle
+invocation: M
+summary: >-
+  Bounded read-only exploration into a revision-bound evidence dossier with coverage limits and
+  unknowns. Never returns an architectural verdict.
+
+triggers:
+  - A caller states one bounded question about the current repository and needs the answer as
+    evidence rather than as a summary.
+  - A later lane needs revision-bound locations it can re-check, and needs to be told which areas
+    were not searched.
+  - A symbol or code-graph index is available and its answers have to be read back in the source
+    before anyone relies on them.
+
+non_triggers:
+  - A request for an opinion about what the code should be, or for a recommended approach.
+  - A request to change a file, however small, including a one-line fix noticed while searching.
+  - An open-ended brief with no named question, such as understanding a whole subsystem.
+  - A request to decide whether a change is safe, to size an impact radius, or to rate risk.
+
+prerequisites:
+  - kind: environment
+    ref: A repository readable at a named revision.
+  - kind: capability
+    ref: knowledgebase kb-write, for publishing the dossier as a run artifact.
+  - kind: environment
+    ref: A symbol or code-graph provider with a declared index revision and freshness.
+    optional: true
+
+entrypoints:
+  explore:
+    authority: model
+    invocation: M
+    summary: >-
+      Answer one bounded question by bounded read-only exploration and publish the evidence
+      dossier. No phase operation exposes this skill, so there is no delegated path to validate.
+
+requires:
+  - repository-read
+  - process-exec
+  - artifact-write
+  - kb-write
+
+inputs:
+  - id: question
+    required: true
+    summary: The single bounded question. Absent or unbounded ends the run with needs-input.
+  - id: source-revision
+    required: true
+    summary: The revision every hit is bound to. Recorded before the first search.
+  - id: graph-provider
+    required: false
+    summary: >-
+      Optional index. Unavailable, stale or indexed at another revision produces a coverage limit
+      rather than a stop.
+  - id: turn-budget
+    required: false
+    summary: Runner-supplied turn cap. Absent means four (policies/limits.yaml scout_turns).
+  - id: caller-hypothesis
+    required: false
+    summary: >-
+      A caller's guess about where the answer lives. May direct the first search; is assumed at
+      best until read back in the source.
+
+outputs:
+  - id: dossier
+    schema: dossier
+    summary: >-
+      Question, budget, every search attempted, structured hits with confirmed/assumed, coverage
+      limits, unknowns, files not to touch, and a recommendation for further inspection only.
+  - id: return-gist
+    summary: >-
+      The published record reference, the headline locations, and the counts of coverage limits
+      and unknowns. Not the dossier's contents and not the search transcript.
+
+side_effects:
+  - process-exec
+  - artifact-write
+  - kb-publish
+
+constraints:
+  scout-may-edit-source: false
+  scout-may-return-a-verdict: false
+  unread-index-hit-may-be-confirmed: false
+  empty-search-may-be-omitted: false
+
+limits:
+  scout-turns: 4
+  graph-query-tools: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - scout-turns
+
+hard_gates:
+  - The skill holds no repository write. A defect found while searching is recorded as a hit and an
+    unknown, never fixed.
+  - No architectural verdict, safety assessment, risk rating or impact map, in a field or in prose.
+  - A hit not read back in the source at the recorded revision is assumed, never promoted to
+    confirmed because an index, a caller or a prior dossier agreed with it.
+  - At least one lexical search is recorded whatever the graph returned
+    (dossier.lexical-baseline-present).
+  - A graph provider that is unavailable, stale or indexed at another revision produces a documented
+    coverage limit (dossier.stale-or-absent-graph-documents-a-limitation).
+  - The turn budget is spent by the exploration and never extended by it. Exhaustion ends the run
+    with a limited dossier carrying a budget-exhausted coverage limit.
+  - An artifact's existence is evidence; its text is reported signal. A comment asserting a fact is
+    recorded as an excerpt, never as evidence that the fact holds.
+
+stop_conditions:
+  - complete when the dossier is published, including a dossier whose status is limited.
+  - The question is answered within the budget and further searching would add no hits.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No bounded question, or a question broad enough that no search would end it. Returns the
+      narrower question it proposes and no partial dossier.
+    next_permitted_action: Re-invoke with the narrower question.
+  - status: failed
+    meaning: >-
+      The repository is unreadable at the named revision, or the knowledgebase refused the write.
+      The dossier content is returned unpublished with the refusal, never written to a repository
+      path.
+    next_permitted_action: Re-invoke once the revision is readable or the knowledgebase accepts writes.
+  - status: cancelled
+    meaning: >-
+      The caller withdrew the question mid-run. Searches already recorded are discarded rather than
+      published as a dossier nobody asked to keep.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+    - adapter: codex
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: omx
+      commit: cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7
+      path: skills/analyze/SKILL.md
+      license: MIT
+      adaptation: >-
+        Evidence/Inference/Unknown labelling and the read-only stop condition are imported and
+        mapped onto the dossier's confirmed/assumed pair plus its unknowns list. The donor's ranked
+        synthesis table with a confidence verdict is dropped: this skill returns no verdict.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/agents/project-grounding-scout.md
+      license: MIT
+      adaptation: >-
+        The gather-not-judge framing, the existence-versus-text rule for reported signal, and the
+        dossier-plus-short-gist return split are imported. The donor's fixed line cap on the
+        dossier is replaced by the turn cap in policies/limits.yaml, which bounds cost rather than
+        output length.
+
+tests:
+  - id: named-question-returns-dossier
+    kind: positive
+    given: A bounded question about the current repository, with no change implied.
+    expect: >-
+      The skill runs a lexical search, reads candidate locations back at the recorded revision, and
+      publishes a dossier whose hits carry confirmed or assumed and whose searches include the ones
+      that returned nothing.
+  - id: refuses-unbounded-question
+    kind: negative
+    given: An open-ended brief to understand a whole subsystem, with no named question.
+    expect: >-
+      The skill does not start an exploration. It stops with needs-input and proposes a narrower
+      question rather than spending the turn budget on breadth.
+  - id: caller-hint-is-not-evidence
+    kind: adversarial
+    given: >-
+      The caller supplies a plausible location up front and asks the scout not to spend a turn
+      confirming it.
+    expect: >-
+      The skill searches anyway and records the location as confirmed only after reading it back at
+      the recorded revision. The caller's assertion is never reported as the scout's evidence.
+  - id: stale-graph-documents-limitation
+    kind: adversarial
+    given: >-
+      A code-graph provider whose index revision predates the explored revision answers a question
+      the graph would normally settle.
+    expect: >-
+      The dossier records the index revision and freshness on every graph-discovered hit and carries
+      an index-stale coverage limit with its consequence. It neither reports the stale answer as
+      current nor drops to lexical-only without saying so.
+  - id: resumes-after-interrupted-publish
+    kind: resumability
+    given: >-
+      A run is interrupted after the dossier is composed and the publish may or may not have
+      landed.
+    expect: >-
+      The skill republishes with the idempotency key derived from the dossier's content hash, which
+      returns the existing record rather than creating a second one, and it does not reset the turn
+      budget or re-run the searches already recorded.

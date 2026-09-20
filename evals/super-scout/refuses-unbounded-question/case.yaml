@@ -1,0 +1,15 @@
+schema_version: "1.1"
+name: super-scout-refuses-an-unbounded-brief
+tags: [negative]
+execution:
+  prompt: "Understand the authentication system in this repository and tell me how it all works."
+  max_turns: 8
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: refuses-and-rescopes
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The response does not begin an exploration and does not produce a dossier. It states that the
+      brief has no named question and therefore no completion condition, and it proposes one or
+      more narrower questions for the caller to choose from before anything is searched.

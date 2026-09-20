@@ -1,0 +1,55 @@
+# Provenance fragment for the "build" batch: four skill bodies with their manifests —
+# super-scout, super-build, super-verify and diagnose.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a file
+# derives from is recorded with a machine-checkable donor@commit:path. That is what
+# NOTICE points a downstream consumer at, so an unverifiable row here would turn a
+# provenance record into a provenance claim.
+#
+# Both the body and its manifest carry rows. A skill.yaml is an adapted file in its own
+# right: its triggers, non-triggers, hard gates and limits are condensations of the same
+# donor text the body adapts, not metadata about it.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below is cited in research/dossiers/build.md and was verified to exist at its pin with
+# `git cat-file -e` in the pinned clone before it was written here; none was re-derived
+# from memory or from a document's description of a donor.
+
+adaptations:
+
+  # --- super-scout ---------------------------------------------------------------
+
+  - path: skills/super-scout/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/analyze/SKILL.md
+    rationale: >-
+      Evidence/Inference/Unknown labelling and the read-only stop condition are adapted into the
+      dossier's confirmed/assumed pair and its unknowns list, as research/dossiers/build.md
+      directs. The donor's ranked-synthesis table with a confidence verdict is dropped: this skill
+      returns no verdict, and schemas/dossier.schema.json has no field that could carry one.
+
+  - path: skills/super-scout/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/agents/project-grounding-scout.md
+    rationale: >-
+      The gather-not-judge framing, the rule that an artifact's existence is evidence while its
+      text is reported signal, and the dossier-plus-short-gist return split are adapted, as
+      research/dossiers/build.md directs. The donor's fixed line cap on the dossier is replaced by
+      the turn cap in policies/limits.yaml, which bounds what a run costs rather than how long its
+      output is.
+
+  - path: skills/super-scout/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/analyze/SKILL.md
+    rationale: >-
+      The donor's stop conditions become this manifest's hard_gates and constraints — no edit, no
+      recommendation the evidence cannot support, report the limit rather than manufacture
+      certainty. Its evidence-labelling vocabulary becomes the confirmed/assumed constraint rows.
+
+  - path: skills/super-scout/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/agents/project-grounding-scout.md
+    rationale: >-
+      The donor's output contract becomes the two declared outputs: the dossier artifact and the
+      short return gist that repeats neither the dossier nor the search transcript.

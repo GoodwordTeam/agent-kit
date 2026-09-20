@@ -59,7 +59,7 @@ skills:
     profiles: [core]
     batch: 4
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Bounded read-only exploration into a revision-bound evidence dossier with coverage limits
       and unknowns. Never returns an architectural verdict.

@@ -299,6 +299,18 @@ adaptations:
   - path: skills/super-bound/skill.yaml
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md
     rationale: The hard gate against unfinished-content markers and vague instructions in a shipped ticket, and the behavioral case that exercises the zero-context check.
+  - path: skills/super-scout/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/agents/project-grounding-scout.md
+    rationale: The gather-not-judge framing, the rule that an artifact's existence is evidence while its text is reported signal, and the dossier-plus-short-gist return split are adapted, as research/dossiers/build.md directs. The donor's fixed line cap on the dossier is replaced by the turn cap in policies/limits.yaml, which bounds what a run costs rather than how long its output is.
+  - path: skills/super-scout/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/analyze/SKILL.md
+    rationale: "Evidence/Inference/Unknown labelling and the read-only stop condition are adapted into the dossier's confirmed/assumed pair and its unknowns list, as research/dossiers/build.md directs. The donor's ranked-synthesis table with a confidence verdict is dropped: this skill returns no verdict, and schemas/dossier.schema.json has no field that could carry one."
+  - path: skills/super-scout/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/agents/project-grounding-scout.md
+    rationale: "The donor's output contract becomes the two declared outputs: the dossier artifact and the short return gist that repeats neither the dossier nor the search transcript."
+  - path: skills/super-scout/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/analyze/SKILL.md
+    rationale: The donor's stop conditions become this manifest's hard_gates and constraints — no edit, no recommendation the evidence cannot support, report the limit rather than manufacture certainty. Its evidence-labelling vocabulary becomes the confirmed/assumed constraint rows.
   - path: skills/wayfind/SKILL.md
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md
     rationale: The whole mechanism, this item's only donor. The five-section map body, the fog-or-ticket test, breadth-first frontier mapping, claim-before-work, one ticket per session with research excepted, and out-of-scope work that never graduates. The donor's local-markdown tracker becomes the external tracker where the project has one and the knowledgebase otherwise; the donor's four ticket types become subtypes of one decision ticket under this package's shared ticket schema; and the donor's in-skill resolution of a grilling ticket becomes a handback, because both skills are user-invoked.
