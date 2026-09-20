@@ -143,14 +143,37 @@ describe("the summary line says which kind, at zero as well as above it", () => 
     expect(code).toBe(0);
   });
 
-  test("the repository's own run names its unavailable checks separately from its skipped ones", () => {
-    const repo = join(import.meta.dir, "..");
-    const io = capture();
-    runCli(["validate"], { cwd: repo, io: io.io });
-    const summary = io.text().split("\n").filter((l) => l.startsWith("ak validate:")).at(-1) ?? "";
-    expect(summary).toMatch(/\d+ checks? skipped/);
-    expect(summary).toMatch(/\d+ checks? unavailable/);
-  });
+  // The only test in the suite that validates the whole repository rather than a
+  // synthetic tree, so it is the only one whose cost grows with the repository.
+  // It was written under bun's default 5s per-test budget, which nobody chose
+  // and which the tree silently outgrew: measured on a clean HEAD extract it
+  // takes 12.2s, and `bun run src/cli.ts validate` on the same extract takes
+  // 13.4s -- the test is the validator, not overhead around it. The dominant
+  // term is `rulings.uncited-restatement`, which scores every window in the tree
+  // against every ruling, so this number rises with any file added anywhere and
+  // is nothing to do with what this test asserts.
+  //
+  // The budget is stated rather than left to the default because an implicit one
+  // turns a passing test red on a commit that did not touch it, which is what
+  // happened here: HEAD fails this test on its own. Raising it does not weaken
+  // the assertion -- the assertion is about two clauses in the summary line, and
+  // no timing claim was ever intended. If this starts timing out again, the
+  // finding is the validator's runtime and belongs in a profile, not in a larger
+  // number here.
+  const WHOLE_REPO_VALIDATE_MS = 60_000;
+
+  test(
+    "the repository's own run names its unavailable checks separately from its skipped ones",
+    () => {
+      const repo = join(import.meta.dir, "..");
+      const io = capture();
+      runCli(["validate"], { cwd: repo, io: io.io });
+      const summary = io.text().split("\n").filter((l) => l.startsWith("ak validate:")).at(-1) ?? "";
+      expect(summary).toMatch(/\d+ checks? skipped/);
+      expect(summary).toMatch(/\d+ checks? unavailable/);
+    },
+    WHOLE_REPO_VALIDATE_MS,
+  );
 });
 
 describe("every skip in the validator is classified, so a new one cannot default quietly", () => {
