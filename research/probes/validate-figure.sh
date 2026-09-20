@@ -139,7 +139,19 @@ if [ -n "$(git status --porcelain)" ]; then
   DIRTY=" (working tree dirty at time of run; not included in this figure)"
 fi
 
-WORK="$(mktemp -d)"
+# `pwd -P`, not a bare `mktemp -d`. On macOS `mktemp -d` returns a path under
+# `/var/folders/...`, and `/var` is a symlink to `/private/var`, so the directory
+# has two names. `ak validate` does not care. Anything that compares a tool's
+# output paths against the extract root does: `tests/typecheck.test.ts` asks
+# `tsc --listFiles` which files it checked and keeps the ones starting with the
+# repo root, and `tsc` prints the resolved name. Under a bare `mktemp -d` that
+# prefix never matches, the checked set reads empty, and its population
+# assertion reports every file in `src/` and `tests/` as untypechecked. Measured:
+# 916 pass 0 fail from an extract under `/Users`, 1 fail from the same revision
+# extracted under `/var`. This script is the convention lanes copy when they want
+# a clean-tree reading of anything, so the resolution belongs here rather than in
+# each copy.
+WORK="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$WORK"' EXIT
 git archive "$SHA" | tar -x -C "$WORK"
 
