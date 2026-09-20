@@ -18,6 +18,11 @@ nested repository and it is not gitignored: committing the *files* keeps the
 fixture reviewable in diffs and shippable to whoever drives the slice, and
 creating the *repository* on demand keeps it disposable.
 
+The path it prints is fully resolved, so it is the same path the tools you run
+inside it will report back. Use it as given rather than re-deriving it: on macOS
+a temporary directory has two names, and comparing one against the other fails
+in a way that looks like a finding and is not.
+
 The initial commit is reproducible — identity and both dates are pinned — so the
 artifacts can cite a revision that exists rather than one invented to fill the field, and
 `tests/checkpoint-fixture.test.ts` asserts that the revision they cite is the

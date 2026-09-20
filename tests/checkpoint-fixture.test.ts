@@ -110,6 +110,17 @@ describe("the artifacts and the repository agree about the revision", () => {
     expect([...cited]).toEqual([head]);
   });
 
+  test("the path the materializer prints is the one its own tools report", () => {
+    // On macOS a mktemp directory has two names -- /var/folders/... and
+    // /private/var/folders/..., because /var is a symlink -- and tools print
+    // the resolved one. A stage that asks git where the repository is and
+    // compares the answer to the path it was handed then finds a mismatch with
+    // no other symptom, and the checkpoint fails for a reason that is not
+    // about the slice. The materializer resolves before it prints; this is
+    // what says so, because nothing else here would notice.
+    expect(execFileSync("git", ["-C", repo, "rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim()).toBe(repo);
+  });
+
   test("materializing twice produces the same revision", () => {
     const second = materialize();
     const secondHead = execFileSync("git", ["-C", second, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();

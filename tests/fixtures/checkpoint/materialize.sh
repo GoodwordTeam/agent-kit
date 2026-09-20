@@ -25,6 +25,18 @@ if [[ -e "$DEST/.git" ]]; then
 fi
 
 mkdir -p "$DEST"
+# Hand out the resolved path, never the one mktemp printed. On macOS `mktemp -d`
+# returns a path under /var/folders, /var is a symlink to /private/var, and the
+# directory therefore has two names. Measured here: git itself disagrees --
+# `git rev-parse --show-toplevel` inside this repository reports the
+# /private/var name, so a stage that asks git where the repository is and
+# compares that to the path this script printed gets a mismatch with no other
+# symptom. The checkpoint is supposed to be able to fail, but not for this.
+# `mktemp` also doubles the separator when TMPDIR ends in one, which `pwd -P`
+# removes in passing. Same defect and same fix as research/probes/
+# validate-figure.sh at e0d7ce4, which reported every file in the tree as
+# untypechecked until it resolved the extraction directory.
+DEST="$(cd "$DEST" && pwd -P)"
 cp -R "$FIXTURE_DIR/repo/." "$DEST/"
 
 # The fixture's acceptance tests are stored under a name the surrounding
