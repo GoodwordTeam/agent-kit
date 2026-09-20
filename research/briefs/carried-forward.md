@@ -390,3 +390,15 @@ count reads 4 where an occurrence count reads 5, because one line carried two. R
 locator is an instance of.** The locator tells you a defect exists; it does not tell you how many.
 It is also where the locator's own bound matters — a line-based count and an occurrence-based count
 are different populations, and neither is wrong.
+
+**The plan's own placeholder gate is green partly because a fifth of its subject does not exist.**
+Verification step 4 is `rg -n "TODO|TBD|lorem|placeholder" skills protocols roles packs references`,
+and it returns nothing today. Counting the files under each of those five directories says why that
+is weaker than it reads: `skills` 13, `protocols` 8, `roles` 29, `references` 4, and **`packs` 0** —
+all eight packs are batch 6 and none is authored. A scan of an empty directory is clean in exactly
+the way a scan of good content is clean, and the command prints no term for the difference. The same
+holds for `skills` until batch 10 lands. So this gate is not evidence until the catalog is complete,
+and reading a green run of it mid-catalogue as a fact about the catalogue is the same error as
+reading `evals.uncovered-scenarios` as a fact about the skill a checkpoint exercises. **Run a
+population count beside any scan whose subject is still being created.** A gate over a directory
+tree is an assertion about the tree's contents and quietly becomes an assertion about nothing.
