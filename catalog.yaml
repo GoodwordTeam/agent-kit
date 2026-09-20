@@ -214,7 +214,7 @@ skills:
     profiles: [core]
     batch: 4
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Reproduce, minimize, hypothesize, instrument, fix, regression-test. Hypothesis before patch.
       Emits a verified bounded patch under grant OR a diagnostic work packet, never both.

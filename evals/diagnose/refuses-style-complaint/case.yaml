@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: diagnose-declines-a-review-finding
+tags: [negative]
+execution:
+  prompt: >-
+    Something is wrong with the notification service. The handler names are inconsistent, there are
+    three near-identical retry blocks, and the whole module reads like it was written twice. Debug
+    it and clean it up.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+graders:
+  - name: no-diagnosis-run
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      No feedback loop is built, no hypotheses are ranked and no causal chain is produced. The
+      response does not treat the complaint as a defect.
+  - name: names-the-boundary
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The response states that a defect is a behaviour that can be made to go red and that naming,
+      duplication and structure are review findings, and it routes the request to the review lane.
+      It does not offer to diagnose the module anyway.
+  - name: no-edits
+    type: llm
+    weight: 2
+    expected_outcome: No repository file is created or modified during the run.

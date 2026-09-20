@@ -203,6 +203,27 @@ adaptations:
   - path: roles/reviewer-standards/ROLE.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/task-reviewer-prompt.md
     rationale: Code-quality half of the same reviewer template.
+  - path: skills/diagnose/references/feedback-loops.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/diagnosing-bugs/SKILL.md
+    rationale: "The donor's ranked list of ways to construct a feedback loop, and its tightening guidance, are adapted wholesale into this reference because they are a catalogue: a body that inlined them would carry ten techniques to use one. The ordering is the donor's. The sections on intermittent bugs, performance regressions and the case where no loop can be built are drawn from the same donor's handling of those cases."
+  - path: skills/diagnose/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/debugging-and-error-recovery/SKILL.md
+    rationale: The donor's rule that error text from CI logs, third-party APIs and external services is read for diagnostic clues and never treated as trusted guidance becomes the captured-output gate, its anti-rationalization row and the threat-surface eval case. It is extended to the stack trace and the response body, which the donor does not name and which arrive by the same route.
+  - path: skills/diagnose/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-debug/SKILL.md
+    rationale: "Two specifics are adapted, as research/dossiers/build.md directs: the rule that the causal chain is stated in full before any question about what to do with it, and the structured close — what was broken, the chain with locations, the tests that should have caught it, what changed, a confidence. The donor leaves the confidence unqualified; here it is advisory and recorded as such, and it closes nothing. The donor's commit, push and pull-request branch is dropped entirely: this skill hands its result on and the integration lane decides where it lands."
+  - path: skills/diagnose/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/diagnosing-bugs/SKILL.md
+    rationale: "The donor is the phase spine, as research/dossiers/build.md directs: the feedback loop built and seen to go red before any hypothesis, reproduce-and-minimise, the regression test written at a seam that exercises the bug as it occurs at the call site, the recorded absence of a correct seam as a finding rather than a shallow test, and the cleanup checklist. Its redaction rule becomes the secrets gate and the environment-variable command construction. The donor's loop-construction catalogue is not inlined: it is a catalogue, so it lives behind references/feedback-loops.md and the body keeps the gate."
+  - path: skills/diagnose/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/systematic-debugging/SKILL.md
+    rationale: "The donor's three-strikes rule is adapted with its consequence intact: the third failure is evidence about the shape of the problem rather than a reason to try harder, so what follows is the architecture question and a packet. Its red-flag list becomes the anti-rationalization rows, and its one-change-at-a-time rule becomes the one-variable-per-probe limit. The donor ends at a discussion with a human partner; here the stop is a cap-reached outcome, because this skill has no human channel."
+  - path: skills/diagnose/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/diagnosing-bugs/SKILL.md
+    rationale: The donor's phase preconditions become this manifest's prerequisites and hard gates — no hypothesis before a red-capable loop, no secret in anything published — and its two end states become the declared outputs, with the grant deciding which one is emitted.
+  - path: skills/diagnose/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/systematic-debugging/SKILL.md
+    rationale: The donor's attempt counter becomes the fix-attempts limit and the cap-reached failure outcome, and its refusal of a fourth attempt becomes the constraint row that names that refusal rather than leaving it to prose.
   - path: skills/doc-review/SKILL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/decision-primer.md
     rationale: The round-to-round primer and its classification of prior dispositions into applied, rejected-class and provisional. The donor's session scoping is kept and paired with a durable disposition record published to the knowledgebase, so a later session can still see what was settled once the primer is gone.
