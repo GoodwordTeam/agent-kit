@@ -900,7 +900,8 @@ caught by knowing about them.
 ## The two bundles differ in one file, and it is the one neither host reads
 
 **Closed at `b46411f`; the code facts below are pinned to `4e45481`.** The packager reads
-`packaging.hosts[]` now -- `src/packaging/plan.ts:344` selects the row for the bundle being built --
+`packaging.hosts[]` now -- `const row = manifest.hosts[host]` in `src/packaging/plan.ts` selects the
+row for the bundle being built --
 so the dead `autonomy` read, the single reachable branch and the uniform `mode: manual` are history.
 The entry is kept for the class it names, not for its description of the code.
 
@@ -1925,3 +1926,24 @@ That is the entry above committed in reverse -- there the revision was never att
 removed in transit -- and the second is the harder one to catch, because the original is still on the
 page and still correct. A figure that names its revision is safe where it sits and unsafe everywhere
 it is quoted, so re-quote the whole sentence or none of it.
+
+## A count whose referent moves while its value holds, and the breakdown that catches it
+
+sweep-reviewer, from the census inside *A test can prove a branch works and the branch still be
+unreachable, if the fixture skips the schema*. That entry counted four occurrences of
+`requires_enforced` and broke them down: twice in prose describing the defect, once in the code that
+reads it, once in a fixture. At `22470e9` the total is still four, and neither the live read nor the
+fixture exists -- the surviving pair are JSDoc comments in `src/packaging/manifest.ts` and
+`src/packaging/plan.ts` recording the removal.
+
+**A revision label does not save this one.** The figure was true when it was written and is true
+now, so nothing about it is stale. What moved is the referent: the terms were replaced one for one
+by terms of a different kind, and the total is invariant under exactly the change the census existed
+to detect. That is a harder failure than staleness, because every check that looks for a changed
+number passes, and so does re-running the count.
+
+So publish the breakdown rather than the total. `2 prose + 1 live read + 1 fixture = 4` makes the
+live read going to zero visible on the next count, where a bare `4` cannot. The general form: a sum
+discards the dimension its terms carried, and a census is quoted for what its terms *were*, so
+wherever the terms are the reason for counting, the sum is a lossy summary of the measurement rather
+than the measurement.
