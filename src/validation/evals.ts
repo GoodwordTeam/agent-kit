@@ -97,6 +97,17 @@ export interface ScenarioTags {
   readonly covered: number[];
   /** Claims that name none, kept verbatim so the report can quote what was typed. */
   readonly rejected: string[];
+  /**
+   * Claims that name a scenario but not the way the number is written, as
+   * `[what was typed, what it should be]`.
+   *
+   * Coverage is unaffected -- `Number("06")` is 6 and always was -- so this is
+   * not a correctness defect in any check. It is a defect in what the corpus
+   * can be read with. A tree carrying both spellings of one scenario answers
+   * `grep scenario-6` with a subset and looks, from the output, exactly like a
+   * tree that has only that subset.
+   */
+  readonly noncanonical: ReadonlyArray<readonly [string, string]>;
 }
 
 /** The release-scenario claims a case carries, split by whether they name one. */
@@ -104,16 +115,21 @@ export function scenarioTags(caseDoc: Record<string, unknown>): ScenarioTags {
   const tags = Array.isArray(caseDoc["tags"]) ? caseDoc["tags"] : [];
   const covered: number[] = [];
   const rejected: string[] = [];
+  const noncanonical: Array<readonly [string, string]> = [];
   for (const tag of tags) {
     if (typeof tag !== "string") continue;
     const raw = tag.trim();
     const claim = SCENARIO_CLAIM.exec(raw)?.[1];
     if (claim === undefined) continue; // not a scenario claim; some other tag.
     const scenario = /^\d+$/.test(claim) ? Number(claim) : Number.NaN;
-    if (RELEASE_SCENARIOS.includes(scenario)) covered.push(scenario);
-    else rejected.push(raw);
+    if (!RELEASE_SCENARIOS.includes(scenario)) {
+      rejected.push(raw);
+      continue;
+    }
+    covered.push(scenario);
+    if (claim !== String(scenario)) noncanonical.push([raw, `scenario-${scenario}`] as const);
   }
-  return { covered, rejected };
+  return { covered, rejected, noncanonical };
 }
 
 /** What the coverage note counted, so it can say so. */
@@ -217,6 +233,15 @@ function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue
           "evals.scenario-tag-out-of-range",
           casePath,
           `tag \`${raw}\` claims a release scenario and names none: plan §10 numbers them 1-${RELEASE_SCENARIOS.length}. The claim contributes nothing to coverage, and \`evals.uncovered-scenarios\` runs over 1-${RELEASE_SCENARIOS.length}, so it cannot report the claim either — a case tagged this way reads exactly like a case that was never tagged. Correct the number, or drop the \`scenario-\` prefix if this tag was not meant as a release-scenario claim.`,
+        ),
+      );
+    }
+    for (const [raw, canonical] of tags.noncanonical) {
+      issues.push(
+        warning(
+          "evals.scenario-tag-noncanonical",
+          casePath,
+          `tag \`${raw}\` names release scenario ${canonical.slice("scenario-".length)} with a padded number. It counts toward coverage and every check here reads it correctly, so nothing is broken — what it costs is that the corpus now spells one scenario two ways, and a reader grepping for \`${canonical}\` gets a subset that looks like the whole. Write it \`${canonical}\`.`,
         ),
       );
     }

@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-executes-the-same-finding-once-it-is-graded-patch
-tags: [positive, scenario-06]
+tags: [positive, scenario-6]
 execution:
   prompt: >-
     The session-handling finding came back from the lane that owns it, re-graded: spec_quality

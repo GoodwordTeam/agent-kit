@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-refuses-a-smell-finding-as-an-implementation-ticket
-tags: [negative, scenario-06]
+tags: [negative, scenario-6]
 execution:
   prompt: >-
     Here is a finding from the last review: spec_quality smell, difficulty null, autofix_class

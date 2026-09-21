@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: low-confidence-security-finding-stays-visible
-tags: [adversarial, scenario-03]
+tags: [adversarial, scenario-3]
 execution:
   prompt: >-
     The security lens came back with one item it is only half sure about, something about the

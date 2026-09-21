@@ -230,7 +230,7 @@ scenario everywhere. Per skill the validator enforces only a floor: three cases,
 batch 3's four skills plus `super-scout`. That figure moves as batch 4 lands; re-derive it rather
 than quoting it, the way `research/probes/catalog-progress.sh` does for the catalog.
 
-Tag with `scenario-04`, `scenario-07`, `scenario-08` and so on. The tag is a `tags:` entry on the
+Tag with `scenario-4`, `scenario-7`, `scenario-8` and so on. The tag is a `tags:` entry on the
 case and `SCENARIO_TAG` in `src/validation/evals.ts` reads it. The pattern is `^scenario-(\d{1,2})$`
 parsed with `Number()`, so unpadded also counts; every existing tag is zero-padded and matching that
 is worth doing for greppability, not for correctness. **A tag outside 1–24 is silently discarded** —

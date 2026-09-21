@@ -278,3 +278,47 @@ describe("absent trees", () => {
     expect(errors(checkEvals(ctx)).filter((i) => i.file === "skills/alpha/skill.yaml")).toEqual([]);
   });
 });
+
+describe("one scenario written two ways", () => {
+  const tagged = (tags: string) => {
+    const files: Record<string, string> = { "skills/alpha/skill.yaml": declare(THREE) };
+    for (const c of THREE) files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = CASE(c.id, tags);
+    return checkEvals(ctxFor(files));
+  };
+  const spelling = (tags: string) => tagged(tags).filter((i) => i.rule === "evals.scenario-tag-noncanonical");
+
+  // `scenarioTags` reads `Number("06")` as 6, so a padded tag has always counted
+  // toward coverage and nothing here changes that. What it costs is readers:
+  // three scenarios in this tree are tagged both ways across different files, and
+  // every ad-hoc `grep scenario-6` over the corpus -- including mine, which is
+  // what produced a false gap report and sent two lanes after it -- silently
+  // excludes one spelling while looking exactly like a search that found
+  // everything. The validator was right and was not consulted.
+  test("a padded tag is reported, naming both spellings", () => {
+    const issue = spelling("[scenario-06]")[0];
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.message).toContain("scenario-06");
+    expect(issue?.message).toContain("scenario-6");
+  });
+
+  test("the canonical spelling is not reported", () => {
+    expect(spelling("[scenario-6]")).toEqual([]);
+  });
+
+  test("a two-digit scenario is canonical as written", () => {
+    // The boundary that separates "strip leading zeros" from "tags must be one
+    // character": 24 has no padded form and must not be reported.
+    expect(spelling("[scenario-24]")).toEqual([]);
+  });
+
+  test("padding still counts toward coverage, because this rule is about spelling", () => {
+    // The control against fixing the spelling by dropping the tag. If a future
+    // change made a padded tag non-covering, this is the assertion that fails.
+    const uncovered = tagged("[scenario-06]").find((i) => i.rule === "evals.uncovered-scenarios");
+    expect(uncovered?.message).not.toMatch(/\b6\b/);
+  });
+
+  test("a tag that is not a scenario claim is left alone", () => {
+    expect(spelling("[smoke, slow]")).toEqual([]);
+  });
+});
