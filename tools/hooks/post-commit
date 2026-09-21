@@ -1,0 +1,65 @@
+#!/bin/sh
+# Repairs an amend that orphaned a published commit.
+#
+# THE DEFECT
+# A lane amending its own most-recent commit is normal and safe. It stops being
+# safe when someone published that commit in the interim, which is invisible from
+# the lane's side: the amend succeeds, the published commit leaves the branch, and
+# the next push is rejected non-fast-forward with no trace of why.
+#
+# WHAT IT DOES
+# Rebuilds the amended content onto the published commit with `git commit-tree`,
+# then moves the branch with `git reset --soft`. The tree is carried across
+# byte-for-byte and the index is untouched, which matters because several lanes
+# share this working tree and it is never clean.
+#
+# THE LOAD-BEARING ASSUMPTION
+# `origin/main` is read from the remote-tracking ref, not from the network. It is
+# current here because one seat publishes and publishes from this clone, so the
+# ref is updated by the same push that makes a commit published. If that ever
+# stops holding -- a second pusher, or a push from another clone -- this hook
+# reads a stale ref and silently stops detecting the case it exists for. It would
+# then need `git ls-remote` per commit, which is why it does not do that now.
+#
+# WHAT IT IS NOT
+# Not a check on contents. `tools/hooks/pre-push` constrains which refspec may
+# publish main; this one constrains what may be amended out from under it.
+# Neither asks whether the commit is any good.
+set -e
+GITDIR=$(git rev-parse --git-dir)
+STAMP="$GITDIR/ak-pre-commit-head"
+
+# Rebase and merge replay commits legitimately; their parents are supposed to move.
+[ -d "$GITDIR/rebase-merge" ] && exit 0
+[ -d "$GITDIR/rebase-apply" ] && exit 0
+[ -f "$GITDIR/MERGE_HEAD" ] && exit 0
+[ -f "$STAMP" ] || exit 0
+
+OLD=$(cat "$STAMP"); rm -f "$STAMP"
+NEW=$(git rev-parse HEAD)
+[ "$(git symbolic-ref --quiet --short HEAD || echo -)" = "main" ] || exit 0
+git rev-parse --verify --quiet origin/main >/dev/null || exit 0
+
+# An ordinary commit leaves OLD reachable from the new head. An amend does not.
+# Ancestry rather than parenthood on purpose: `--no-verify` skips pre-commit but
+# not post-commit, so the stamp can be several commits stale, and a stale OLD is
+# still an ancestor. A parent test would read that as an amend and rebuild the
+# branch onto a commit it never left.
+git merge-base --is-ancestor "$OLD" "$NEW" 2>/dev/null && exit 0
+# An amend of something never published is the lane's own business.
+git merge-base --is-ancestor "$OLD" origin/main 2>/dev/null || exit 0
+
+REBUILT=$(git commit-tree "$NEW^{tree}" -p "$OLD" -m "$(git log -1 --format=%B "$NEW")")
+git reset --soft "$REBUILT"
+cat >&2 <<MSG
+
+  post-commit: that amend removed a published commit from main. Repaired.
+
+    amended away : $(git rev-parse --short "$OLD") (on origin/main; still is)
+    your commit  : $(git rev-parse --short "$NEW") (orphaned, content preserved)
+    now at       : $(git rev-parse --short "$REBUILT") (same tree, parented on the published commit)
+
+  Nothing was lost and the index was not touched. Amending again is fine --
+  $(git rev-parse --short "$REBUILT") is not published yet.
+
+MSG

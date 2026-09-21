@@ -1,0 +1,19 @@
+#!/bin/sh
+# Records HEAD so post-commit can tell an amend from an ordinary commit.
+#
+# It cannot tell them apart by itself, and neither can any hook that runs before
+# the commit. Measured in this repo, 2026-09-21:
+#
+#   git commit -m X            -> prepare-commit-msg $2='message' $3=''
+#   git commit --amend -m X    -> prepare-commit-msg $2='message' $3=''
+#   git commit --amend         -> prepare-commit-msg $2='commit'  $3='HEAD'
+#
+# `-m` wins over `--amend` in the source argument, so the amend every agent
+# actually performs is byte-identical to an ordinary commit at hook time.
+# GIT_REFLOG_ACTION is unset in the hook environment. There is no signal here.
+#
+# That is why the control is a post-commit repair and not a pre-commit refusal.
+# A gate that fired only on `--amend` with no `-m` would cover the path nobody
+# takes and read, in the tree, as though the hole were closed.
+git rev-parse HEAD > "$(git rev-parse --git-dir)/ak-pre-commit-head" 2>/dev/null || true
+exit 0

@@ -1371,3 +1371,88 @@ concurring, one new number dissenting -- is readable at a glance and says which 
 first. It is not that the tree is always right. It is that re-running one command is cheaper than
 theorising a mechanism, and the hunt for a mechanism is self-sustaining in a way the re-run is not:
 every absence you find looks like evidence the mechanism is well hidden.
+
+---
+
+## The safety of an operation can live entirely outside the operation
+
+A lane ran `git commit --amend` on its own most-recent commit. That is a normal, safe thing to do,
+and it is the amend every agent performs a dozen times a day. It was unsafe this once because I had
+published that commit in the interim -- and **nothing about that fact is visible from where the
+amend is performed.** The lane sees its own commit, at the tip, with no marking. The amend succeeds.
+The failure surfaces later, somewhere else, as a non-fast-forward rejection on my push, with no
+trace connecting it back.
+
+This is a different shape from the registers above. Those are all cases where the evidence was
+present and misread. Here the evidence is not present at the site at all: the property that makes
+the operation dangerous is held by another seat, established after the operation's subject was
+created, and never propagated. **You cannot make the lane more careful, because there is nothing
+there for care to act on.**
+
+### The gate does not exist, and I checked before building the substitute
+
+The obvious control is to refuse the amend. Measured here, it cannot be written:
+
+| invocation | `prepare-commit-msg` `$2` | `$3` |
+|---|---|---|
+| `git commit -m X` | `message` | *(empty)* |
+| `git commit --amend -m X` | `message` | *(empty)* |
+| `git commit --amend` | `commit` | `HEAD` |
+
+`-m` wins over `--amend` in the source argument, so the amend agents actually perform is
+byte-identical to an ordinary commit at hook time. `GIT_REFLOG_ACTION` is unset in the hook
+environment. No pre-commit-time signal distinguishes them, and `pre-commit` runs before git has
+decided anything a hook could read.
+
+The tempting move is to ship the gate anyway, since it does fire on `git commit --amend` with no
+`-m`. That would be the anti-correlated control in its purest form: **a gate covering the path
+nobody takes, reading in the tree as though the hole were closed.** The hole would then be harder to
+find than if nothing had been built, because the file's existence answers the question.
+
+So the control is `tools/hooks/post-commit`, and it repairs rather than reports -- `commit-tree` the
+amended tree onto the published commit, `reset --soft` onto the result. It is placed after the
+commit because that is the first moment the amend is unambiguous, not because detection is
+preferable to prevention. The file says so, so that the next reader does not re-derive the table
+above.
+
+Two properties worth keeping. It reads `origin/main` from the remote-tracking ref rather than the
+network, which is only sound because one seat publishes and publishes from this clone -- **a control
+whose correctness rests on a social rule elsewhere in the system**, and which degrades to silence,
+not to noise, if that rule lapses. And it tests *ancestry*, not parenthood: `--no-verify` skips
+`pre-commit` and not `post-commit`, so the recorded head can be several commits stale, and a stale
+head is still an ancestor. A parent test would read staleness as an amend and rebuild the branch
+onto a commit it never left -- a control that manufactures the defect it exists to repair.
+
+### The five controls, and which one carries the weight
+
+Firing: amend a published commit, see the parent restored and the push accepted. Removal: an
+unpublished amend, an ordinary commit, an amend on a side branch -- all silent. Those four leave one
+question open, because each varies several things at once.
+
+The fifth holds everything fixed. Same commit, same amend, same branch, same working tree; the only
+difference is that a push happened in between. Silent before, fires after. **That is the
+discriminator isolated to one variable**, and it is the only one of the five that proves the hook
+keys on publication rather than on something correlated with it.
+
+---
+
+## `:r`, and why the zsh modifier family keeps arriving
+
+Setting up those controls, `git push origin "${A}:refs/heads/main"` -- written `"$A:refs/..."` --
+pushed to `8aec1142...2131abefs/heads/main`. `:r` is the modifier that strips an extension; `$A` has
+no dot, so it returned the sha unchanged and the surviving `efs/heads/main` was appended. Fourth
+member of the family in `research/probes/authoring-format.py`'s `show()` docstring, after `:e`, `:A`
+and `:s`.
+
+Two things it adds to that docstring. **It fired inside double quotes**, which is where the previous
+three were met and where quoting intuition says expansion is already tamed. And it fired *on a
+refspec* -- the construct the whole publication control is written in terms of. The remedy was
+already in the tree, in a file I had read this session, written against exactly this.
+
+The failure also landed the way that docstring predicts: loud on stderr, while the surrounding
+script carried on and printed `published A=8aec114`, a confident line naming a commit that had not
+been published. I read the confident line first. The docstring's formulation holds -- loud and quiet
+are not properties of the trap but of where the failure lands relative to where the figure is read
+-- and the practical consequence is narrower than "quote your variables": **a shell form that has
+worked a hundred times tells you nothing about the next path written the same way**, because whether
+the mangled name resolves is a property of the value, not of the code.
