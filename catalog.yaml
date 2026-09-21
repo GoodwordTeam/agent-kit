@@ -24,6 +24,12 @@ package:
   version: 0.1.0-dev
   namespace: "/ak:"
   default_profile: core
+  # The host-facing description, emitted into both manifests. Deliberately not
+  # package.json's description, which names the npm package: the two are
+  # different texts about different objects, and adapters/codex/CONTRACT.md §5.2
+  # is what keeps them from being forced to agree. Stated verbatim by
+  # adapters/claude-code/CONTRACT.md §1.
+  description: One engineering lifecycle, amalgamated from six MIT donors.
   # Emitted into both host manifests from here, so the two cannot drift apart or
   # drift from the catalog. Both values are specified verbatim by
   # adapters/claude-code/CONTRACT.md §1 and are not chosen here.

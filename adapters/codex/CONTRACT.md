@@ -140,10 +140,22 @@ Tests this adapter owns, in `tests/adapters/`:
 1. **Bundle parity** — the skill id set in `dist/codex` equals the skill id set in
    `dist/claude-code` for the same profile, and the `SKILL.md` bodies are byte-identical below the
    frontmatter.
-2. **Manifest parity** — `name`, `version`, `description` and `license` agree across
-   `package.json`, `dist/claude-code/.claude-plugin/plugin.json` and
-   `dist/codex/.codex-plugin/plugin.json`. Adapted from the donor's own release check
-   (`compound-engineering@05c42da:src/release/components.ts`).
+2. **Manifest parity** — `version` and `license` agree across `package.json`,
+   `dist/claude-code/.claude-plugin/plugin.json` and `dist/codex/.codex-plugin/plugin.json`.
+   `name` and `description` agree between the two manifests and with `catalog.yaml`'s
+   `package.id` and `package.description`, and **`package.json` is not a party to either**:
+   `package.json` names and describes the npm package, a manifest names and describes what the
+   host addresses. They are two names for two objects, so a check that forces them to agree can
+   only be satisfied by renaming one of them to suit the check.
+
+   The donor supports the `version` clause and no other. At
+   `compound-engineering@05c42da:src/release/metadata.ts` the token `compoundPackage.` occurs
+   exactly once — `:283`, comparing `package.json`'s version. Each manifest's description is
+   *derived and written* rather than compared (`:259`, `:291-304`), which is why the donor ships
+   one description in `package.json` and a different one in `.claude-plugin/plugin.json`; manifest
+   `name` is compared manifest-to-manifest (`:403`); and the donor's own `package.json` carries no
+   `license` key at all. The `license` clause is therefore this package's own release condition,
+   `origin: conversation`, and is marked as such rather than attributed upstream.
 3. **No leaked host keys** — the codex bundle contains no `disable-model-invocation` and no
    `allowed-tools`; the claude-code bundle contains both where required. A key from one host's set
    appearing in the other's bundle is a failure.

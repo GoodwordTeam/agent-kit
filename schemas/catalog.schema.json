@@ -22,6 +22,11 @@
           "pattern": "^/[a-z0-9]+(-[a-z0-9]+)*:$"
         },
         "default_profile": { "$ref": "common.schema.json#/$defs/kebab_id" },
+        "description": {
+          "description": "The host-facing description, emitted into every bundle's manifest. Not package.json's description and not required to agree with it: package.json describes the npm package, this describes what the host installs. adapters/codex/CONTRACT.md section 5.2 states which identity fields are compared against package.json and which are not.",
+          "type": "string",
+          "minLength": 1
+        },
         "author": {
           "description": "Who the host manifests name as the package's author. Emitted into every bundle's manifest as {\"name\": <this>}, so it is stated once here rather than per host. Not a kebab_id: it is a display name and carries spaces.",
           "type": "string",

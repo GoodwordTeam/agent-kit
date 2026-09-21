@@ -164,7 +164,7 @@ bun run ak build         # the packager runs on this tree and writes dist/ for e
 
 **The third line is `ak build`, not `ak build --check`, and restoring `--check` here would undo a
 repair.** `dist/` is generated and never committed — the table above says so — which means it does
-not exist in a fresh clone. `--check` there reports 22 `packaging.dist-missing` errors describing
+not exist in a fresh clone. `--check` there reports `packaging.dist-missing` errors describing
 the absence of a local build rather than anything about the commit. Run `ak build` first and
 `--check` passes because you just built. Green for whoever has built, red for whoever has not, and
 neither answer is about the repository: it is an instrument that returns the same reading under both
@@ -177,8 +177,11 @@ that nothing else in this block reaches. `--check` has a real job in the release
 `dist/` has just been built on purpose and the question is whether it matches; that is where it
 belongs.
 
-Measured on clean `git archive` extracts with `.donors/` copied in: `--check` alone, 22 errors;
-`ak build`, exit 0, `dist/claude-code` and `dist/codex` written; `--check` immediately after, exit 0.
+These three lines are a gate, not a report. The condition is that `ak build` exits 0 on a clean
+`git archive` extract of the commit with `.donors/` copied in, writing `dist/claude-code` and
+`dist/codex`; how many errors some tree reports today is a figure about that tree and not evidence
+about the gate, so no count is kept here. `tools/hooks/pre-push` runs the same build against the
+exact commit being published, so a red build is refused at the wire rather than caught in review.
 
 Commit messages end with the session's configured `Co-Authored-By:` attribution trailer. The
 assistant identity in that trailer is supplied by the harness at commit time; it is deliberately
