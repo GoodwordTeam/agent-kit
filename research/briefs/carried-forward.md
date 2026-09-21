@@ -382,8 +382,9 @@ put a length limit on a command whose output you are about to treat as a populat
 then limit for display if the count warrants it.
 
 **A report names a line; the defect is rarely one line wide.** `d3bfacb` converted the absolute path
-at `research/dossiers/protocols.md:15` because that is the line §5 named. Line 14 of the same file,
-in the same bullet list, carried the same absolute path and survived the repair. A grep over the
+in the `G:Lx-Ly` bullet of `research/dossiers/protocols.md` because that is the line §5 named. The
+`plan §x` bullet directly above it, in the same list, carried the same absolute path and survived
+the repair. A grep over the
 whole tracked tree then closed it: five occurrences, four lines, three files — and note that a line
 count reads 4 where an occurrence count reads 5, because one line carried two. Repaired at
 `7a83f25`. **When a report hands you a locator, the first move is to measure the population that
@@ -434,11 +435,15 @@ one rule it does not apply to itself.
 From `batch4-writer`, who found that §11's first half tells a writer the ten required `SKILL.md`
 headings, their order, insertions between them and the anti-rationalization table are "Decided by
 the commands above. Read these when one of them reports, not before" -- and that nothing in `src/`
-performs any of the four for a skill. `bodies.ts:1135` seats `["protocols", "roles"]`;
-`SKILL_SECTIONS` occurs zero times in the tree. The comment on `checkSections`'s own
+performs any of the four for a skill. `src/validation/bodies.ts` seated its sections check over
+`["protocols", "roles"]`; `SKILL_SECTIONS` occurred zero times in the tree. The comment on `checkSections`'s own
 `noInsertions` parameter calls the law "§3's insertion law, which §12.1 inherits for protocols and
 §12.2 does not impose on roles": the kind that inherits it is seated, the kind that declines it is
 seated, and the kind it was written for is not.
+
+**Closed at `f3d7b9b`**, which put `"skills"` into that array and gave `SKILL_SECTIONS` a
+definition. The finding held at `030ec70`, where the loop sat at line 1135 -- the number this entry
+carried, under a path it did not name.
 
 The part worth carrying is the gate I nearly routed. §11's first half names 14 rule ids. I
 extracted all 14 and checked them against every id emitted anywhere in `src/`. **All 14 are
@@ -603,8 +608,8 @@ subject.** Two clean zeroes today, in different registers, neither of which erro
 supported *nothing executes a case* with `grep -rn "graders|expected_outcome|max_turns|prompt|execution" src/`
 -- BRE, so the pipes are literal and it searched for one long literal string that cannot occur. It
 exited 1 by construction, under the sentence *"Verified rather than inferred."* `provmap` reran it
-with `-E`, got nine matches, and confirmed the conclusion by a different route: `caseDoc["tags"]` at
-`src/validation/evals.ts:84` is the only key access on a parsed case. The conclusion was right and
+with `-E`, got nine matches, and confirmed the conclusion by a different route: `caseDoc["tags"]` in
+`scenarioTags`, in `src/validation/evals.ts`, is the only key access on a parsed case. The conclusion was right and
 its evidence never supported it. Then `sweep-reviewer`, auditing themselves against `git show`, wrote
 `A=$(git show $R:AUTHORING.md)`; zsh parsed `$R:A` as its absolute-path modifier, git errored, `$A`
 came out empty, and the three greps that followed returned `0`, `0`, `0` -- the exact shape of their
@@ -832,9 +837,9 @@ the only one where nothing about the measurement is wrong. `&&` is precisely the
 guarantees no branch, which is why `cmd --preview && cmd --do-it` is the canonical shape: a
 checkpoint requires the command to end.
 
-The connection worth keeping is that this is `AUTHORING.md:720`'s property in the procedural
-register. That line says a wrong attribution that is copied *"reads as compliant and greps as
-consistent,"* so the copies become evidence of each other. A truthful preview inside an `&&` chain
+The connection worth keeping is that this is the procedural register of a property `AUTHORING.md`
+already states: a wrong attribution that is copied *"reads as compliant and greps as consistent,"*
+so the copies become evidence of each other. A truthful preview inside an `&&` chain
 reads afterwards as review-then-act, and the transcript is indistinguishable from diligence that
 actually occurred. Both defects are constituted by **how the record reads later** rather than by
 anything wrong at the time, which is why neither is catchable by inspecting the output -- the output
@@ -926,9 +931,12 @@ down, and then emits the same artifact either way. `dist/codex/skills/super-alig
 honour.
 
 **The mechanism that should have acted on it is built, and disconnected one link before the end.**
-`plan.ts:198` derives `unenforceable` from `capabilities.enforces` -- correct, and the ak.json proves
-it ran. `:199` gates it behind `wantsAutonomous`. `wantsAutonomous` reads `manifest.autonomyModes`.
-`manifest.ts:52` takes that from an `autonomy` key that `schemas/skill.schema.json` cannot express:
+In `src/packaging/plan.ts`, `const unenforceable = manifest.requiresEnforced.filter((r) =>
+!capabilities.enforces.has(r))` derives it -- correct, and the ak.json proves it ran. The line
+below, `const wantsAutonomous = manifest.autonomyModes.includes("autonomous")`, gates it, and
+`wantsAutonomous` reads `manifest.autonomyModes`. `const autonomy = record(pick(raw, "autonomy"))`
+in `src/packaging/manifest.ts` takes that from an `autonomy` key that `schemas/skill.schema.json`
+cannot express:
 the top level is `additionalProperties: false` and has no such property. So `unenforceable` is
 computed and discarded, and the governing requirement -- *a host that cannot enforce a required
 restriction exposes the skill in guided or manual mode rather than silently weakening the contract*
@@ -1045,15 +1053,16 @@ two comments in `src/packaging/` recording the history, none in code that reads 
 a fixture. The lesson about branch coverage and a gate upstream of the fixture is untouched by
 that, which is why the entry stays.
 
-The `autonomy` mechanism in `src/packaging/` is dead: `manifest.ts:52` reads a key
-`schemas/skill.schema.json` cannot express, so `plan.ts:199` has one reachable branch and every
-skill ships `mode: manual`. The obvious question is why a suite this thorough never said so. It is
+The `autonomy` mechanism in `src/packaging/` is dead: `const autonomy = record(pick(raw,
+"autonomy"))` in `manifest.ts` reads a key `schemas/skill.schema.json` cannot express, so the
+`wantsAutonomous` ternary in `plan.ts` has one reachable branch and every skill ships
+`mode: manual`. The obvious question is why a suite this thorough never said so. It is
 not that the branch is untested. It is tested, and tested well:
 
 ```
-tests/packaging.test.ts:424
+tests/packaging.test.ts @ cd48f14, the fixture
   "id: beta\nversion: 0.1.0\ninvocation: M\nautonomy:\n  modes: [manual, guided, autonomous]\n  requires_enforced: [filesystem-sandbox]\n"
-tests/packaging.test.ts:440
+tests/packaging.test.ts @ cd48f14, the assertion
   expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["filesystem-sandbox"] }])
 ```
 
@@ -1076,7 +1085,7 @@ one is about the shipped artifact.
 
 **Where this bites next, concretely.** Connecting the reader is not a safe repair, because eight
 manifests were filled in while nothing read them. Five declare `mode: autonomous` and one `guided`
-on **codex**, whose `enforces` list is empty (`src/packaging/hosts.ts:46`). A fix that simply honours
+on **codex**, whose `DEFAULTS` row in `src/packaging/hosts.ts` reads `enforces: []`. A fix that simply honours
 the declared mode would ship four skills claiming autonomy on a host that enforces nothing --
 strictly worse than today's accidental `manual`, and the exact "silently weakening the contract"
 that arch §1.2/§1.3 forbids. Worse, `unsupported` as authored is prose, three sentences per block,
@@ -1095,9 +1104,9 @@ emitted, then change what is emitted.
 
 ## A control can be anti-correlated with the property it guards
 
-`rulings.binding-not-cited` (`src/validation/rulings.ts:478-490`) reads, per ruling, "this skill
-binds twelve rulings and this body cites nine", and reports the gap as an error naming both. It is a
-real check and it closes the population by itself. Line 481 is the whole of it:
+`rulings.binding-not-cited`, in `src/validation/rulings.ts`, reads, per ruling, "this skill binds
+twelve rulings and this body cites nine", and reports the gap as an error naming both. It is a real
+check and it closes the population by itself. One line is the whole of it:
 
 ```ts
 if (text.includes(row.id)) continue;
@@ -1111,28 +1120,41 @@ verifies that a string is somewhere in a file, and the property it stands in for
 
 Batch 5 produced the two bodies that separate those:
 
-- `skills/super-review/SKILL.md:41` **cites** `ci-repair-restricts-purpose-not-permission` and then
-  drops the fourth term of the sequence the ruling states, appending a clause that contradicts it.
-  It passes.
-- `skills/babysit-pr/SKILL.md:122` states all four terms correctly and **does not cite**. It is
-  flagged.
+- `skills/super-review/SKILL.md` **cites** `ci-repair-restricts-purpose-not-permission` and then
+  drops the fourth term of the sequence the ruling states. At `0e68fdc` the line read *"re-enters
+  diagnosis, a bounded patch and new verification -- not another pass of this skill,"* where the
+  ruling names a fourth, affected delta review, and the appended clause contradicts it. It passes.
+  **Closed at `07eca72`**, which restored the fourth term.
+- `skills/babysit-pr/SKILL.md` was reported here as stating all four terms correctly and **not
+  citing**, and as flagged for it. **Withdrawn.** At `0e68fdc`, its first revision, that body cites
+  `ci-repair-restricts-purpose-not-permission` five times, two of them within three lines of the
+  passage in question, and it has cited it at every revision since. There is no revision of that
+  file at which the claim holds.
 
-So on the only two bodies where the proxy and the property come apart, the check is not merely
-uninformative -- it is **inverted**. It catches the obedient body and passes the contradicting one.
+So one half survives, and it is the half that does not need the other: on a body where the proxy
+and the property come apart, the check passed a body that cites a ruling and contradicts it.
+
+**The heading overstates what now survives.** Anti-correlation needs both arms -- a body that
+obeys and is flagged, and a body that disobeys and passes -- and only the second was ever observed.
+The first rested on the withdrawn claim and goes with it. What is demonstrated is a control that is
+silent in the direction that matters, which is weaker than anti-correlation and still enough to
+retire the check as evidence of the property.
 
 That is a third thing a proxy can do, past the two already on this page. A proxy can be silent where
 the property fails, which is a hole. A proxy can decouple at the boundary, which is why fixtures
-find it. And a proxy can point the other way, which is worse than both, because a writer optimising
-against the check is then being trained toward the defect: the cheapest way to a green
-`binding-not-cited` is to paste ids, and pasting ids is exactly what the contradicting body did.
-**Before trusting a control, find the two cases where the proxy and the property disagree and check
-which way it points on each.** If you cannot construct them, the control has not been tested, only
-run.
+find it. And a proxy can *reward* the defect, which is worse than both, because a writer optimising
+against the check is being trained toward it: the cheapest way to a green `binding-not-cited` is to
+paste ids, and pasting the id while contradicting the ruling is exactly what the passing body did.
+That does not require the check to catch an obedient body -- it needs only the one case, where the
+id is present and the obligation is not. **Before trusting a control, construct the cases where the
+proxy and the property disagree and check which way it points on each.** If you cannot construct
+them, the control has not been tested, only run.
 
 ### The companion failure, which was mine
 
 I routed a lane this evidence instruction: cite the clean `ak validate` run over
-`policies/invocation.yaml:213` rather than the implementer's comment above the branch. The instinct
+the `delta-scope-affected-behavior` gate line in `policies/invocation.yaml` rather than the
+implementer's comment above the branch. The instinct
 was right -- a comment is a belief about code -- and the substitute was not evidence at all. They
 checked instead of complying: `rulings.uncited-restatement` fires **nowhere in the tree**, so a
 clean run over that file is equally consistent with a check that never reaches `policies/`. Two
@@ -1150,10 +1172,10 @@ handed one over as evidence inside the remedy for that exact mistake.
 ## When a rule has a canonical example, check the example against the rule
 
 `AUTHORING.md` §5 says twice that a conversation capability is recorded with a `G:L` locator into
-the transcript. The validator's grammar admits three forms (`provenance.ts:1235`): `G:L` ranges,
-`plan §<section>` / `arch §<section>` document references, and `amalgam <dest> + <dest>` seat pairs.
-Five live rows carry no `G:L` and a clean extract validates at zero errors, so they are the contract
-rather than tolerated defects.
+the transcript. The validator's grammar admits three forms, enumerated in the `has locator` error
+message in `src/validation/provenance.ts`: `G:L` ranges, `plan §<section>` / `arch §<section>`
+document references, and `amalgam <dest> + <dest>` seat pairs. Five live rows carry no `G:L` and a
+clean extract validates at zero errors, so they are the contract rather than tolerated defects.
 
 The diagnostic is what makes this worth an entry. §5:431-437 exists for one specific case -- a
 conversation capability landing in a `provenance_origin: donor` entry -- and the clearest live
@@ -1172,7 +1194,8 @@ capabilities absent upstream are recorded "`origin: conversation` with a `G:L` l
 that assumed the transcript was the only non-donor source. It is not. The precedence order puts the
 design document *above* the transcript, so a capability specified there and absent from the
 transcript has no `G:L` to cite, and demanding one would force the fabrication the same section
-forbids. That ordering is stated in the tree, at `provenance.ts:51-53`, as the grammar's own reason
+forbids. That ordering is stated in the tree, in the `DOCUMENT_REFERENCE` comment in
+`src/validation/provenance.ts`, as the grammar's own reason
 for admitting document references: "a document reference is a stronger citation than a transcript
 range, not a weaker one." The implementation generalised correctly and every copy of the prose
 inherited the narrow form. Worth knowing that a contract can be wrong because the brief was wrong,
@@ -1198,13 +1221,13 @@ reader gets an answer. Nothing reports, nothing is skipped, no control can fire,
 instrument's side a resolved reference is indistinguishable from a right one. What it produces is
 confident disagreement between people who have each read their own document carefully.
 
-The repository had already written the warning down, in `provenance.ts:57-68`, in the file that
-parses the name -- including the consequence in full: "anyone reading `plan` as the implementation
-plan misreads every row that cites one." It had also already been bitten once and recorded that too
-(`:76-79`): `arch` reached the plan's index through a default, so `arch §5` matched the plan's §5
-"and passed without either side establishing which document had been named. It was right by
-accident." I made the documented mistake because the documentation lives where the name is parsed,
-and I was citing prose.
+The repository had already written the warning down, in that same `DOCUMENT_REFERENCE` comment, in
+the file that parses the name -- including the consequence in full: "anyone reading `plan` as the
+implementation plan misreads every row that cites one." It had also already been bitten once and
+recorded that too (the `DOCUMENT_FILE` comment below it): `arch` reached the plan's index through a
+default, so `arch §5` matched the plan's §5 "and passed without either side establishing which
+document had been named. It was right by accident." I made the documented mistake because the
+documentation lives where the name is parsed, and I was citing prose.
 
 Operable: **before citing a document by a short name, check what that name denotes in the tree that
 will read the citation, not in the conversation that produced it.** One grep of the consumer. The
@@ -1218,13 +1241,13 @@ this cannot be caught by re-reading what you wrote.
 Three times in one day I stated a contract value from whatever file I happened to be reading rather
 than from the file that governs the artifact, and all three resolved cleanly.
 
-I ruled the plugin manifest's `author` to a literal I invented; `adapters/claude-code/CONTRACT.md:38`
-already specified one. I instructed that claude-code's `plugin.json` be identity-only with no
-`skills` key; that row lives in `adapters/codex/CONTRACT.md` §1 under a heading reading **"Verified
-(donor) at the pin"**, describing `compound-engineering@05c42da`'s repository -- our own contract
-says at length that the package enumerates every skill path explicitly, because the install set is
-profile-dependent. And I cited "the plan's precedence table" when in this tree `plan` denotes the
-architecture document.
+I ruled the plugin manifest's `author` to a literal I invented; `adapters/claude-code/CONTRACT.md`
+already specified one, as `"author": { "name": "agent-kit maintainers" }`. I instructed that
+claude-code's `plugin.json` be identity-only with no `skills` key; that row lives in
+`adapters/codex/CONTRACT.md` §1 under a heading reading **"Verified (donor) at the pin"**,
+describing `compound-engineering@05c42da`'s repository -- our own contract says at length that the
+package enumerates every skill path explicitly, because the install set is profile-dependent. And I
+cited "the plan's precedence table" when in this tree `plan` denotes the architecture document.
 
 The common shape is not carelessness about sources. Each time I had a real document open, read it
 correctly, and quoted it faithfully -- to answer a question it was not the authority for. A donor
@@ -1297,7 +1320,8 @@ not fire, and the record is the only remedy a recurrence tempts you to strengthe
 
 ## A compression can change what kind of claim a sentence is
 
-A review seat quoted `provenance.ts:1125` to me inside quotation marks as *"'not conversation' is
+A review seat quoted the `Named rather than assumed` comment in `src/validation/provenance.ts` to
+me inside quotation marks as *"'not conversation' is
 not 'donor'"*. The source says:
 
 > with three origins in the map, "not conversation" **no longer implies** "donor", and a message
@@ -1380,11 +1404,12 @@ YAML, before doubting the measurement.
 
 What was available before any of that, and needed no theory: **two independent statements in the
 tree agreed with each other and disagreed with one fresh measurement.** §12.3 and
-`resolved-conflicts.yaml:86` both said two files. That configuration -- several settled sources
-concurring, one new number dissenting -- is readable at a glance and says which side to re-take
-first. It is not that the tree is always right. It is that re-running one command is cheaper than
-theorising a mechanism, and the hunt for a mechanism is self-sustaining in a way the re-run is not:
-every absence you find looks like evidence the mechanism is well hidden.
+`policies/resolved-conflicts.yaml`'s own comment -- *"Two standing `doctrine-unreachable` warnings
+are the correct state here, not zero"* -- both said two files. That configuration -- several settled
+sources concurring, one new number dissenting -- is readable at a glance and says which side to
+re-take first. It is not that the tree is always right. It is that re-running one command is cheaper
+than theorising a mechanism, and the hunt for a mechanism is self-sustaining in a way the re-run is
+not: every absence you find looks like evidence the mechanism is well hidden.
 
 ---
 
@@ -1505,10 +1530,11 @@ anything.
 
 ### A warning nobody can clear is a warning everybody learns to ignore
 
-The cost was not the four false reports. It was the fifth line. `super-ship/skill.yaml:156` is a real
-uncited restatement -- a second `hard_gates` item restating the charter ruling without naming it,
-which is the hash-binding defect already routed to batch 5. It sat in the same list as four reports I
-had instructed two lanes in writing to disregard.
+The cost was not the four false reports. It was the fifth line. The second `hard_gates` item in
+`skills/super-ship/skill.yaml` -- *"Each sensitive action needs an explicit charter entry a human
+approved up front"* -- was a real uncited restatement of the charter ruling, which is the
+hash-binding defect already routed to batch 5. **Closed at `b18a418`**, which added the citation. It
+sat in the same list as four reports I had instructed two lanes in writing to disregard.
 
 **I issued the suppression myself, in two messages, with a wrong mechanism attached.** A class that
 cannot be cleared by doing the right thing does not stay quarantined to its false members; it takes
@@ -1609,7 +1635,7 @@ The batch-5 checkpoint gates on nine release scenarios, and I asked sweep-review
 sounded like the right one: for each, would the case fail against a body with its hard gate removed?
 The answer came back no, nine times out of nine, with a table.
 
-Nine identical answers should have been read before the finding was. `AUTHORING.md:143` defines
+Nine identical answers should have been read before the finding was. `AUTHORING.md` defines
 `## Hard gates`, and §3.1 immediately **requires** an anti-rationalization table underneath it whose
 rows cite the same ruling ids; the required-sections list puts the same rules in `## Not for`,
 `## Limits` and `## Stop conditions` as well. The contract mandates that every gate be stated two or
@@ -1641,8 +1667,8 @@ The name is retired.
 ## A figure that cannot name a revision is not stale, it is not a measurement of this repository
 
 provmap found this in the §4 entry and the distinction is exact enough to be a rule. A count taken
-from `dist/claude-code/skills/` names whoever last ran the packager, and `AGENTS.md:113` says
-`dist/` is generated and never committed. There is no commit at which that number was true.
+from `dist/claude-code/skills/` names whoever last ran the packager, and `AGENTS.md`'s `dist/` row says it is
+*"Generated by `ak build`. Never hand-edited, never committed"*. There is no commit at which that number was true.
 
 That is a different fault from decay, and it needs a different remedy. A stale figure is repaired by
 naming the revision it was true at; this one has no such revision, so the repair is to re-state the
@@ -1892,6 +1918,14 @@ here will be wrong again, at a different magnitude, the next time a case is desc
 it is tagged with -- so the repair is the key, not a re-count. Neither number is wrong about the set
 it measured; the five were enumerated by sweep-reviewer, who found the two in `name:`.
 
+One of those two is sharper than key drift. `ultraqa/does-not-run-in-place-of-review` is tagged
+`negative`, and its `name:` field reads `adversarial-qa-does-not-substitute-for-the-review-pass`. A
+text key there does not mis-read a tag; it pulls into the population a case that is not in it, and
+the word is load-bearing in that name because the case is *about* adversarial QA. Neither renaming
+the field nor rewriting the prompt removes the match. Keying on the tags field is the only repair
+that does, which is the difference between a key that is noisy and a key that is measuring a
+different set.
+
 **The operational form, ruled in from sweep-reviewer: group the population by shape, and verify each
 group is classified alike -- preferring a grouping a reader can construct mechanically.** Publishing
 the rule would not have caught this one. The rule *was* published, directly under the figure and
@@ -1947,3 +1981,63 @@ live read going to zero visible on the next count, where a bare `4` cannot. The 
 discards the dimension its terms carried, and a census is quoted for what its terms *were*, so
 wherever the terms are the reason for counting, the sum is a lossy summary of the measurement rather
 than the measurement.
+
+## A ruling that lives only in a commit message is unreachable by the tooling that would enforce it
+
+`CONTRACT-DEFECTS.md` routes its rulings into git history on purpose: an entry is retired by
+deleting it in the commit that resolves it, with the ruling in that commit's message, and there is
+no resolved section. The reasoning is sound and the property is real -- a resolved entry left in
+place is the same artifact as a stale one, so the file refuses to hold one.
+
+The cost is where the ruling then lives. `ak validate` reads the tree; `git log` is not the tree,
+and no check this repository runs opens it. So the contract paragraph an entry was filed against
+sits in a store the tooling reads, the ruling that settled it sits in a store the tooling cannot,
+and **"a contract paragraph outlived the entry filed against it" is not hard to detect here -- it is
+undetectable**, because the two halves a check would have to compare are never in the same place at
+the same time. That is structural, not a gap in the checks.
+
+sweep-reviewer's second half is what makes it an entry rather than a complaint: the generalization
+is *about* a resolution record living where nothing can reach it, and a commit message is exactly
+such a place, so filing it there would make the entry an instance of itself. It is filed here
+instead.
+
+**Where a resolution record and the artifact it resolves live in different stores, no check can
+compare them, and the choice of store is a choice about what can ever be checked.** The remedy is
+not to stop deleting entries -- that property is worth keeping -- but to stop treating the deletion
+as the whole record, and to leave in the tree whatever a later check would need in order to notice
+the disagreement.
+
+## A locator survives a re-pin, because re-pinning a paragraph does not re-measure the numbers in it
+
+sweep-reviewer sampled four of this file's `<file>:<line>` citations after one went stale between
+two commits, found four of four displaced, and declined to generalize from a sample. Resolving all
+24 of them -- 23 distinct -- against the revision each entry names:
+
+- **10** resolve to the text their sentence claims.
+- **3** resolve exactly, and the finding they support has since been closed:
+  `skills/super-review/SKILL.md` at `07eca72`, `skills/super-ship/skill.yaml` at `b18a418`,
+  `src/validation/bodies.ts` at `f3d7b9b`. All three were still written in the present tense.
+- **3** resolve exactly at `cd48f14` and to unrelated text at `4e45481`, the revision their own
+  entry declares.
+- **6** resolve to unrelated text. Two of them, `plan.ts:198` and `:199`, resolve to the code they
+  claim at *no* revision of that file in this history; the nearest is `96f5291`, one line off.
+- **1** resolves to text that falsifies the claim attached to it.
+
+The three-at-`cd48f14` group names the mechanism. That entry opens *"Closed at `b46411f`; the code
+facts below are pinned to `4e45481`."* The pin was written when the entry was closed; the numbers
+were taken when it was opened. Re-pinning is an edit to one sentence, and it does not re-resolve the
+locators in the paragraphs beneath it -- so a pin added to make the figures auditable made
+unresolvable figures look audited instead. **An undated line number announces that it is undated. A
+wrongly dated one does not.**
+
+Which is why dating a locator is not repairing it. **A locator is repaired by replacing it with
+something that carries its own subject** -- the code's text, the heading, the quoted sentence -- and
+all 24 are converted here. The conversion is what surfaced the three closed findings and the false
+one, for the reason that is the whole argument for the form: a by-text citation cannot be written
+without opening the file, and opening the file is the check. A line number can be carried forward by
+a writer who never looked.
+
+And the shape, which sweep-reviewer named against the previous pass: the cause was diagnosed
+correctly on one citation, and the repair was applied to that one citation. **A remedy has to have
+the same extension as the defect it repairs.** Where the cause is a class, the sample rate is the
+finding, and a fix that lands on the reported instance leaves the class exactly as measured.
