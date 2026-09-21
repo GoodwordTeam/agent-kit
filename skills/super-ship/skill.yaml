@@ -153,9 +153,9 @@ hard_gates:
     They are merge, deploy, production credentials, destructive data operations, new dependencies,
     public-contract redesign, sensitive trust-boundary changes, scope expansion, force-push and
     history rewrite.
-  - Each sensitive action needs an explicit charter entry a human approved up front, naming the
-    action and exactly what is permitted, and an explicit human approval bound to that charter's hash,
-    with any expiry or single-use bound. An approval whose charter was amended afterwards no longer
+  - Each sensitive action needs an explicit charter entry a human approved up front (ruling
+    `sensitive-actions-need-approved-charter-entry`), naming the action and exactly what is permitted,
+    and an explicit human approval bound to that charter's hash, with any expiry or single-use bound. An approval whose charter was amended afterwards no longer
     binds, and this run may never enlarge its own authority.
   - dry-run makes no remote call at all. A run that pushed a branch to demonstrate the push was not a
     dry run.
