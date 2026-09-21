@@ -136,6 +136,40 @@ export function scenarioTags(caseDoc: Record<string, unknown>): ScenarioTags {
 interface Coverage {
   readonly scenarios: Set<number>;
   cases: number;
+  /** An `llm` grader's expected outcome -> the case paths asserting it. See `decisiveText`. */
+  readonly byExpectation: Map<string, Set<string>>;
+}
+
+/**
+ * The decisive text of each `llm` grader in a case, normalized for whitespace.
+ *
+ * Not the whole grader set, which was the first thing tried and is the wrong
+ * instrument: it reports only where every grader matches, and the corpus's
+ * actual copies share their heaviest grader and differ in a trailing one. It
+ * found nothing in 102 cases while passing its own fixtures, which is a check
+ * that exists only in its tests.
+ *
+ * Not `tool_used` or `regex` graders either. Those discriminate through `tool:`
+ * and `pattern:`, and `tool_used: Skill` is legitimately the same assertion in
+ * every skill that has one; grouping on it would report the whole corpus.
+ *
+ * `name` never enters. It labels a grader rather than deciding anything, and a
+ * rename is the first edit anybody makes to a copied case.
+ */
+function decisiveText(doc: Record<string, unknown>): string[] {
+  const graders = doc["graders"];
+  if (!Array.isArray(graders)) return [];
+  const out: string[] = [];
+  for (const g of graders) {
+    if (typeof g !== "object" || g === null) continue;
+    const grader = g as Record<string, unknown>;
+    if (grader["type"] !== "llm") continue;
+    const expected = grader["expected_outcome"];
+    if (typeof expected !== "string") continue;
+    const normalized = expected.trim().split(/\s+/).join(" ");
+    if (normalized !== "") out.push(normalized);
+  }
+  return out;
 }
 
 function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue[] {
@@ -225,6 +259,11 @@ function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue
     const doc = readYaml(ctx.root, casePath);
     if (doc === null) continue;
     coverage.cases += 1;
+    for (const expectation of decisiveText(doc)) {
+      const group = coverage.byExpectation.get(expectation);
+      if (group === undefined) coverage.byExpectation.set(expectation, new Set([casePath]));
+      else group.add(casePath);
+    }
     const tags = scenarioTags(doc);
     for (const scenario of tags.covered) coverage.scenarios.add(scenario);
     for (const raw of tags.rejected) {
@@ -261,7 +300,7 @@ function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue
 export function checkEvals(ctx: CheckContext): Issue[] {
   const issues: Issue[] = [];
   const skillIds = new Set(ctx.catalog.bySection("skills").map((e) => e.id));
-  const coverage: Coverage = { scenarios: new Set<number>(), cases: 0 };
+  const coverage: Coverage = { scenarios: new Set<number>(), cases: 0, byExpectation: new Map() };
 
   for (const id of [...skillIds].sort()) issues.push(...checkOneSkill(ctx, id, coverage));
 
@@ -283,6 +322,28 @@ export function checkEvals(ctx: CheckContext): Issue[] {
         "evals.unknown-skill-directory",
         `${EVALS_DIR}/${dir}`,
         `${EVALS_DIR}/${dir}/ holds cases for '${dir}', which catalog.yaml declares no skill for. Cases are addressed by skill id.`,
+      ),
+    );
+  }
+
+  // A copied case is not a defect. Seven skills stating one rule need seven
+  // cases, because a case runs against a body and there are seven bodies. What
+  // it is not is seven tests of the rule, and the only figure in this tree that
+  // reads over scenarios -- `evals.uncovered-scenarios` -- counts tag strings,
+  // so a copy contributes to coverage exactly as an independent case does. The
+  // note exists to make the deflation visible next to the count rather than
+  // recoverable only by someone who thinks to hash the graders.
+  for (const [expectation, paths] of [...coverage.byExpectation].sort()) {
+    if (paths.size < 2) continue;
+    const sorted = [...paths].sort();
+    const quoted = expectation.length > 90 ? `${expectation.slice(0, 90)}...` : expectation;
+    issues.push(
+      note(
+        "evals.duplicate-graders",
+        sorted[0] ?? EVALS_DIR,
+        `${sorted.length} cases assert the same expected outcome — "${quoted}" — in ${sorted.join(
+          ", ",
+        )}. Each runs against its own body, so this is ${sorted.length} tests of ${sorted.length} bodies and one test of the sentence, run ${sorted.length} times. That is the right shape for a rule every body must state; it is the wrong thing to read as ${sorted.length} independent tests of a release scenario, and \`evals.uncovered-scenarios\` counts \`tags:\` and cannot tell the two apart. Nothing here needs fixing — the count does.`,
       ),
     );
   }

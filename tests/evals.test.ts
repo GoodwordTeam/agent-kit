@@ -322,3 +322,105 @@ describe("one scenario written two ways", () => {
     expect(spelling("[smoke, slow]")).toEqual([]);
   });
 });
+
+describe("one case copied across skills", () => {
+  // Seven cases tagged `scenario-20` were read as seven tests of that scenario.
+  // Three of them carried a byte-identical grader set under a byte-identical
+  // directory name. They are seven tests of seven bodies and one test of the
+  // scenario, and nothing in the tree said so: `evals.uncovered-scenarios`
+  // counts tag strings, and a copy carries its tag like any other case.
+  const TWO_SKILLS = CATALOG.replace(
+    "    invocation: U\n",
+    "    invocation: U\n  - id: beta\n    status: authored\n    invocation: U\n",
+  );
+
+  /** The same case body under two skills, with `mutate` applied to beta's. */
+  function pair(mutate: (yaml: string) => string) {
+    // Each case id gets its own expectation, so the only copies in the fixture
+    // are the alpha/beta pairs. Writing all three alike instead made every case
+    // in a skill a copy of its siblings, and the check said so -- correctly,
+    // and in a way that made the removal control below look broken.
+    const body = (name: string) =>
+      `schema_version: "1.1"\nname: ${name}\ntags: [scenario-1]\nexecution:\n  prompt: "resume after the interrupted publish"\ngraders:\n  - name: reads-back-before-writing\n    type: llm\n    expected_outcome: The ${name} key is re-derived from the run id and the input artifact hash.\n`;
+    const root = makeTree({
+      "catalog.yaml": TWO_SKILLS,
+      "skills/alpha/SKILL.md": "# Alpha\n",
+      "skills/beta/SKILL.md": "# Beta\n",
+      "skills/alpha/skill.yaml": declare(THREE),
+      "skills/beta/skill.yaml": declare(THREE).replace("id: alpha", "id: beta"),
+      ...Object.fromEntries(
+        THREE.flatMap((c) => [
+          [`${EVALS_DIR}/alpha/${c.id}/case.yaml`, body(c.id)],
+          [`${EVALS_DIR}/beta/${c.id}/case.yaml`, mutate(body(c.id))],
+        ]),
+      ),
+    });
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    return checkEvals({ root, catalog }).filter((i) => i.rule === "evals.duplicate-graders");
+  }
+
+  test("an identical grader set in two skills is reported, naming both", () => {
+    const [first] = pair((y) => y);
+    expect(first).toBeDefined();
+    expect(first?.severity).toBe("note");
+    expect(first?.message).toContain("evals/alpha/fires-on-trigger");
+    expect(first?.message).toContain("evals/beta/fires-on-trigger");
+  });
+
+  test("the same pair with one grader's expectation changed is not reported", () => {
+    // The removal control. Without it the check could be reporting the pair's
+    // existence rather than its sameness, and would pass this suite either way.
+    expect(pair((y) => y.replace("run id", "operation id"))).toHaveLength(0);
+  });
+
+  test("a tool_used grader shared by every skill is not a copy", () => {
+    // `tool_used: Skill` is the same assertion wherever it appears and must not
+    // group. Without this the check would report the whole corpus as copies of
+    // itself, which is the failure mode that makes a warning class unclearable.
+    const root = makeTree({
+      "catalog.yaml": TWO_SKILLS,
+      "skills/alpha/SKILL.md": "# Alpha\n",
+      "skills/beta/SKILL.md": "# Beta\n",
+      "skills/alpha/skill.yaml": declare(THREE),
+      "skills/beta/skill.yaml": declare(THREE).replace("id: alpha", "id: beta"),
+      ...Object.fromEntries(
+        THREE.flatMap((c) => [
+          [`${EVALS_DIR}/alpha/${c.id}/case.yaml`, CASE(c.id)],
+          [`${EVALS_DIR}/beta/${c.id}/case.yaml`, CASE(c.id)],
+        ]),
+      ),
+    });
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    expect(checkEvals({ root, catalog }).filter((i) => i.rule === "evals.duplicate-graders")).toHaveLength(0);
+  });
+
+  test("renaming the grader does not evade it", () => {
+    // A copy is a copy. `name` is a label on the grader, not a thing it decides.
+    const issues = pair((y) => y.replace("reads-back-before-writing", "derives-the-key"));
+    expect(issues.length).toBeGreaterThan(0);
+  });
+
+  test("a case with no counterpart is not reported", () => {
+    // The population control: one skill's corpus alone can contain no copy.
+    const root = makeTree({
+      "catalog.yaml": CATALOG,
+      "skills/alpha/SKILL.md": "# Alpha\n",
+      "skills/alpha/skill.yaml": declare(THREE),
+      // Distinct expectations per case. Written with `CASE`'s single
+      // `tool_used` grader instead, this control would pass because the check
+      // ignores that grader type -- true, and true whether or not the check
+      // works, so it would certify nothing.
+      ...Object.fromEntries(
+        THREE.map((c) => [
+          `${EVALS_DIR}/alpha/${c.id}/case.yaml`,
+          `schema_version: "1.1"\nname: ${c.id}\ntags: [scenario-1]\nexecution:\n  prompt: "p"\ngraders:\n  - name: g\n    type: llm\n    expected_outcome: The run ${c.id} and stops.\n`,
+        ]),
+      ),
+    });
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    expect(checkEvals({ root, catalog }).filter((i) => i.rule === "evals.duplicate-graders")).toHaveLength(0);
+  });
+});
