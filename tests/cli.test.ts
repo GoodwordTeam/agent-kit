@@ -13,6 +13,11 @@ package:
   version: 0.1.0
   namespace: "/ak:"
   default_profile: core
+  # Here for the same reason NOTICE and LICENSE are in every tree this file
+  # builds: a catalog that declares no author and no licence cannot produce a
+  # compliant host manifest, so it is not a valid fixture for a passing build.
+  author: agent-kit maintainers
+  license: MIT
 skills:
   - id: triage
     invocation: U

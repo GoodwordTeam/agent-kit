@@ -33,6 +33,18 @@ export const HOST_MANIFEST_FILE: Record<HostId, string> = {
 };
 
 /**
+ * The marketplace entry, which only the claude-code bundle carries.
+ *
+ * `adapters/claude-code/CONTRACT.md` §1 puts it in that bundle's shape.
+ * `adapters/codex/CONTRACT.md` §2 does not list it in the codex bundle, and
+ * that host installs through `codex plugin marketplace add <path>` (§4) rather
+ * than from a file of this name -- so emitting it there would be this package
+ * inventing a requirement, which is the mistake in the opposite direction from
+ * the one that produced two identical bundles.
+ */
+const MARKETPLACE_FILE = ".claude-plugin/marketplace.json";
+
+/**
  * Where this package records what its own build decided, beside that host's
  * manifest.
  *
@@ -319,10 +331,14 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     files.set(name, { path: name, contents: text, source: name });
   }
 
+  issues.push(...checkManifestIdentity(ctx.catalog.package));
   files.set(HOST_MANIFEST_FILE[host], {
     path: HOST_MANIFEST_FILE[host],
     contents: pluginManifest(ctx, host, emitted),
   });
+  if (host === "claude-code") {
+    files.set(MARKETPLACE_FILE, { path: MARKETPLACE_FILE, contents: marketplace(ctx) });
+  }
   files.set(BUILD_RECORD_FILE[host], {
     path: BUILD_RECORD_FILE[host],
     contents: buildRecord(host, membership.profile, excluded, decisions, capabilities.enforces, capabilities.notes),
@@ -353,13 +369,98 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
  */
 function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>): string {
   const pkg = ctx.catalog.package;
-  const manifest = {
+  const manifest: Record<string, unknown> = {
     name: pkg.id,
     version: pkg.version,
     description: pkg.name,
-    skills: skillRegistration(host, skills),
   };
+  // Key order follows the contract's own example at
+  // `adapters/claude-code/CONTRACT.md` §1, and these are set before `skills` for
+  // that reason. Each is omitted when the catalog does not declare it rather
+  // than emitted blank -- `"license": ""` would satisfy a check that asks
+  // whether the key is present and fail the comparison §5 requires, which is
+  // the quieter of the two ways to be wrong. `checkManifestIdentity` is what
+  // makes the omission loud.
+  if (declared(pkg.author)) manifest["author"] = { name: pkg.author };
+  if (declared(pkg.license)) manifest["license"] = pkg.license;
+  manifest["skills"] = skillRegistration(host, skills);
   return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+/**
+ * The marketplace file, from the same catalog fields the manifest reads.
+ *
+ * The shape is the donor's, read at the pin the contract cites
+ * (`compound-engineering@05c42da:.claude-plugin/marketplace.json`) rather than
+ * recalled: `name`, `owner`, `metadata`, and one `plugins[]` entry whose
+ * `source` is `"./"`.
+ *
+ * `owner` is the catalog's `author`, not a second identity. The contract states
+ * one identity for this package and the donor uses the same string in both
+ * places; deriving it here means the two cannot disagree, and it avoids
+ * inventing an owner, which would be a claim about a real party in a file that
+ * gets distributed.
+ *
+ * The donor's `homepage`, `tags` and `metadata.description` are not emitted.
+ * This tree states no value for any of them, and the failure this package has
+ * already produced once is a plausible value nobody checked -- so the fields
+ * are absent until something in the tree says what they are.
+ */
+function marketplace(ctx: CheckContext): string {
+  const pkg = ctx.catalog.package;
+  const entry: Record<string, unknown> = { name: pkg.id, description: pkg.name };
+  const doc: Record<string, unknown> = { name: pkg.name };
+  if (declared(pkg.author)) {
+    doc["owner"] = { name: pkg.author };
+    entry["author"] = { name: pkg.author };
+  }
+  doc["metadata"] = { version: pkg.version };
+  entry["source"] = "./";
+  doc["plugins"] = [entry];
+  return `${JSON.stringify(doc, null, 2)}\n`;
+}
+
+/**
+ * The package identity every host manifest is obliged to carry.
+ *
+ * Reported per field, because the fix for each is a different line and a reader
+ * missing one of the two needs to know which. Emitted from `planBundle` rather
+ * than from a validation check so that it fails the build: a bundle whose
+ * manifest omits `license` does not disagree with `package.json`, it removes
+ * the field `adapters/codex/CONTRACT.md` §5 compares, and a check that only
+ * compares present fields would pass over it.
+ */
+function checkManifestIdentity(pkg: CheckContext["catalog"]["package"]): Issue[] {
+  const issues: Issue[] = [];
+  for (const [field, value] of [
+    ["author", pkg.author],
+    ["license", pkg.license],
+  ] as const) {
+    if (declared(value)) continue;
+    issues.push(
+      error(
+        "packaging.manifest-identity-missing",
+        "catalog.yaml",
+        `catalog.yaml's package: block ${value === undefined ? "declares no" : "declares a blank"} '${field}', so every host manifest would ship without it. adapters/claude-code/CONTRACT.md §1 specifies the value; declare '${field}' under package: and both manifests get it from there.`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * Whether the catalog states a value for an identity field.
+ *
+ * One predicate, read by the check and by both emit sites, because "declared"
+ * has to mean the same thing in all three or the build reports an error over a
+ * field and writes it into the manifest anyway. `""` is not a value: it parses,
+ * loads, and is a string -- `loadCatalog` does no schema validation of its own,
+ * so a blank reaches the packager looking exactly like a field someone filled
+ * in, and `"license": ""` satisfies a check that asks whether the key is there
+ * while failing the comparison `adapters/codex/CONTRACT.md` §5.2 requires.
+ */
+function declared(value: string | undefined): value is string {
+  return value !== undefined && value !== "";
 }
 
 /**

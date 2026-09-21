@@ -21,7 +21,17 @@
           "type": "string",
           "pattern": "^/[a-z0-9]+(-[a-z0-9]+)*:$"
         },
-        "default_profile": { "$ref": "common.schema.json#/$defs/kebab_id" }
+        "default_profile": { "$ref": "common.schema.json#/$defs/kebab_id" },
+        "author": {
+          "description": "Who the host manifests name as the package's author. Emitted into every bundle's manifest as {\"name\": <this>}, so it is stated once here rather than per host. Not a kebab_id: it is a display name and carries spaces.",
+          "type": "string",
+          "minLength": 1
+        },
+        "license": {
+          "description": "The package's SPDX licence identifier, emitted into every bundle's manifest. Must agree with package.json and with the LICENSE file the bundle carries; adapters/codex/CONTRACT.md section 5 makes that disagreement release-blocking.",
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "skills": {

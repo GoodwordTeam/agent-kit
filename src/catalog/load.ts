@@ -34,6 +34,23 @@ export interface PackageInfo {
   version: string;
   namespace: string;
   defaultProfile: string;
+  /**
+   * Package identity the host manifests are obliged to carry, stated once here.
+   *
+   * Optional on the type and not defaulted to `""`, so the packager can tell an
+   * absent field from a blank one. Those are different facts with different
+   * fixes, and a blank is the worse of the two: it satisfies a check that asks
+   * whether the key exists and fails the comparison
+   * `adapters/codex/CONTRACT.md` §5.2 actually requires.
+   *
+   * Absent rather than required by the schema on purpose. Requiring them would
+   * add a second, unrelated error to all fourteen `tests/fixtures/invalid/`
+   * catalogs, each of which exists to demonstrate exactly one defect -- so the
+   * failure belongs at the bundle boundary, where a manifest without them is
+   * genuinely wrong, rather than on every catalog in the tree.
+   */
+  author?: string;
+  license?: string;
 }
 
 export class Catalog {
@@ -120,6 +137,10 @@ export function loadCatalog(root: string): LoadResult {
     namespace: typeof pkg["namespace"] === "string" ? pkg["namespace"] : "",
     defaultProfile: typeof pkg["default_profile"] === "string" ? pkg["default_profile"] : "",
   };
+  // Set only when present, so `undefined` means absent and `""` means declared
+  // blank. The packager reports those differently.
+  if (typeof pkg["author"] === "string") packageInfo.author = pkg["author"];
+  if (typeof pkg["license"] === "string") packageInfo.license = pkg["license"];
 
   const entries: CatalogEntry[] = [];
   for (const section of ALL_SECTIONS) {

@@ -18,6 +18,8 @@ package:
   version: 0.1.0
   namespace: "/ak:"
   default_profile: core
+  author: agent-kit maintainers
+  license: MIT
 skills:
   - id: alpha
     status: authored
@@ -215,7 +217,7 @@ describe("bundle planning", () => {
   test("plugin.json carries host keys only; the build's own record sits beside it", () => {
     const plan = planBundle(ctxFor(), "claude-code", {});
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
-    expect(Object.keys(manifest)).toEqual(["name", "version", "description", "skills"]);
+    expect(Object.keys(manifest)).toEqual(["name", "version", "description", "author", "license", "skills"]);
 
     const record = JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
     expect(Object.keys(record).sort()).toEqual(["autonomy_rejected", "excluded", "host", "modes", "profile"]);
@@ -342,6 +344,210 @@ describe("bundle planning", () => {
     const plan = planBundle(ctx, "claude-code", {});
     expect(plan.issues.some((i) => i.rule === "packaging.skill-body-missing")).toBe(true);
     expect([...plan.files.keys()]).not.toContain("skills/beta/SKILL.md");
+  });
+});
+
+/**
+ * Identity the manifests are obliged to carry, from the one place that states it.
+ *
+ * `adapters/claude-code/CONTRACT.md` §1 specifies both values literally:
+ * `"author": { "name": "agent-kit maintainers" }` at :38 and `"license": "MIT"`
+ * at :39. Neither is invented here and neither is written into the packager --
+ * they come from `catalog.yaml`'s `package:` block, which AGENTS.md calls the
+ * single source of truth, so the two manifests cannot drift apart or drift from
+ * the catalog.
+ *
+ * `adapters/codex/CONTRACT.md` §5.2 is why absence is an error rather than an
+ * omission: `name`, `version`, `description` and `license` must agree across
+ * `package.json` and both manifests, and the donor this was adapted from treats
+ * that disagreement as release-blocking rather than a lint. A manifest with no
+ * `license` key does not disagree with anything -- it removes the field the
+ * check compares, which is the quieter way to pass.
+ */
+describe("the identity fields the manifests are obliged to carry", () => {
+  test("both manifests carry the author and licence the contract specifies", () => {
+    const ctx = ctxFor();
+    for (const [host, path] of [
+      ["claude-code", ".claude-plugin/plugin.json"],
+      ["codex", ".codex-plugin/plugin.json"],
+    ] as const) {
+      const manifest = JSON.parse(planBundle(ctx, host, {}).files.get(path)?.contents ?? "{}");
+      expect(`${host}:${JSON.stringify(manifest.author)}`).toBe(`${host}:{"name":"agent-kit maintainers"}`);
+      expect(`${host}:${manifest.license}`).toBe(`${host}:MIT`);
+    }
+  });
+
+  test("the values are read from the catalog, not written into the packager", () => {
+    // The whole point of putting them in `package:` is that one edit moves both
+    // manifests. Asserting the contract's own strings only would pass equally
+    // well over a packager with those strings hardcoded, which is the shape
+    // that cannot be kept in agreement with anything.
+    const ctx = ctxFor({
+      "catalog.yaml": CATALOG.replace("author: agent-kit maintainers", "author: someone else").replace("license: MIT", "license: Apache-2.0"),
+    });
+    const manifest = JSON.parse(planBundle(ctx, "codex", {}).files.get(".codex-plugin/plugin.json")?.contents ?? "{}");
+    expect(manifest.author).toEqual({ name: "someone else" });
+    expect(manifest.license).toBe("Apache-2.0");
+  });
+
+  test("a catalog with no author fails the build rather than shipping a manifest without one", () => {
+    const ctx = ctxFor({ "catalog.yaml": CATALOG.replace("  author: agent-kit maintainers\n", "") });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes("author"));
+    expect(issue?.severity).toBe("error");
+  });
+
+  test("a catalog with no license fails the same way, and the two are reported separately", () => {
+    // Separately, because the fix for each is a different line and a reader
+    // with one of the two needs to know which one they are missing.
+    const ctx = ctxFor({ "catalog.yaml": CATALOG.replace("  license: MIT\n", "") });
+    const missing = planBundle(ctx, "claude-code", {}).issues.filter(
+      (i) => i.rule === "packaging.manifest-identity-missing",
+    );
+    expect(missing.length).toBe(1);
+    expect(missing[0]?.message).toContain("license");
+  });
+
+  test("an absent field is left out of the manifest rather than emitted empty", () => {
+    // Same reasoning as the licence files: `writeBundles` writes dist/ before
+    // its plan errors are reported, so whatever the plan holds reaches disk.
+    // `"license": ""` would satisfy a check that asks whether the key is there
+    // and satisfy §5.2's comparison not at all -- it would disagree with
+    // package.json while looking like a field someone had filled in.
+    //
+    // Both fields, because they are emitted by two separately guarded lines and
+    // a test that drops one of them reports clean over the other losing its
+    // guard. Measured, not assumed: the licence-only version of this test
+    // survived a mutant that emitted `"author": { "name": "" }` for an absent
+    // author. The surviving field is asserted too, so "omit the one that is
+    // missing" cannot pass as "omit both".
+    for (const [field, line, other] of [
+      ["license", "  license: MIT\n", "author"],
+      ["author", "  author: agent-kit maintainers\n", "license"],
+    ] as const) {
+      const ctx = ctxFor({ "catalog.yaml": CATALOG.replace(line, "") });
+      const manifest = JSON.parse(planBundle(ctx, "claude-code", {}).files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      expect(`no ${field}: ${field in manifest}`).toBe(`no ${field}: false`);
+      expect(`kept ${other}: ${other in manifest}`).toBe(`kept ${other}: true`);
+    }
+  });
+
+  test("a field declared blank is a failure, not a value", () => {
+    // The other direction onto the same defect. `author: ""` parses, loads, and
+    // is a string, so it arrives at the packager indistinguishable from a field
+    // someone filled in -- `loadCatalog` runs no schema validation, so
+    // `minLength: 1` in the catalog schema does not stand between this value
+    // and the manifest. A check that asks only whether the field is defined
+    // accepts it and ships `"author": { "name": "" }`.
+    //
+    // Both halves are asserted because they are two decisions: the build has to
+    // report it, and the manifest has to leave the key out. Reporting an error
+    // while writing the blank anyway is what a separate predicate in the check
+    // and at the emit site produces.
+    const ctx = ctxFor({ "catalog.yaml": CATALOG.replace("author: agent-kit maintainers", 'author: ""') });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes("author"));
+    expect(issue?.severity).toBe("error");
+    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    expect("author" in manifest).toBe(false);
+  });
+});
+
+/**
+ * The marketplace entry, which only one of the two bundles carries.
+ *
+ * `adapters/claude-code/CONTRACT.md` §1 puts `.claude-plugin/marketplace.json`
+ * in that bundle's shape; `adapters/codex/CONTRACT.md` §2 does not list it in
+ * the codex bundle at all, and that host installs through
+ * `codex plugin marketplace add <path>` (§4) rather than from a file of this
+ * name. So its presence is a third place the bundles are contractually
+ * different, and it is asserted as a difference rather than assumed.
+ *
+ * The shape is taken from the donor the contract cites,
+ * `compound-engineering@05c42da:.claude-plugin/marketplace.json`, read at the
+ * pin rather than remembered. Every field this package emits has a value the
+ * tree already states. The donor's `homepage`, `tags` and
+ * `metadata.description` are omitted because this tree states no value for
+ * them, and a plausible-looking invented one is the failure mode this package
+ * has already produced once.
+ */
+describe("the marketplace entry the claude-code bundle carries", () => {
+  const marketplaceIn = (plan: ReturnType<typeof planBundle>) =>
+    JSON.parse(plan.files.get(".claude-plugin/marketplace.json")?.contents ?? "{}");
+
+  test("the claude-code bundle carries it and the codex bundle does not", () => {
+    const ctx = ctxFor();
+    expect(planBundle(ctx, "claude-code", {}).files.has(".claude-plugin/marketplace.json")).toBe(true);
+    expect([...planBundle(ctx, "codex", {}).files.keys()].filter((p) => p.endsWith("marketplace.json"))).toEqual([]);
+  });
+
+  test("it lists exactly one plugin, sourced from the bundle root", () => {
+    // "one entry, source ./" is the whole of what
+    // `adapters/claude-code/CONTRACT.md` §1 says about it, so both halves are
+    // asserted. A second entry would point the host at something this bundle
+    // does not contain.
+    const entries = marketplaceIn(planBundle(ctxFor(), "claude-code", {})).plugins;
+    expect(entries.length).toBe(1);
+    expect(entries[0].source).toBe("./");
+    expect(entries[0].name).toBe("ak");
+  });
+
+  test("its identity comes from the same catalog fields the manifest uses", () => {
+    // One source, so the marketplace entry cannot describe a different package
+    // than the manifest beside it. Compared against the manifest rather than
+    // against literals: literals would pass while the two files drifted apart,
+    // which is the defect this pairing exists to prevent.
+    //
+    // Over a catalog that states none of the real values, because comparing two
+    // files built from a fixture carrying the contract's own strings passes
+    // just as well when one of them holds a hardcoded copy of those strings. A
+    // mutant that set `owner` to the literal "agent-kit maintainers" survived
+    // the version of this test that used the unmodified fixture: the literal
+    // equalled the manifest's author, and the comparison could not see it.
+    const ctx = ctxFor({
+      "catalog.yaml": CATALOG.replace("author: agent-kit maintainers", "author: someone else")
+        .replace("  version: 0.1.0\n", "  version: 9.9.9\n")
+        .replace("  id: ak\n", "  id: not-ak\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    const market = marketplaceIn(plan);
+    expect(market.owner).toEqual(manifest.author);
+    expect(market.plugins[0].author).toEqual(manifest.author);
+    expect(market.metadata.version).toBe(manifest.version);
+    expect(market.plugins[0].name).toBe(manifest.name);
+  });
+
+  test("it carries no field this tree has no value for", () => {
+    // The donor carries `homepage`, `tags` and a `metadata.description`. This
+    // tree states none of them, and emitting a plausible one is how a manifest
+    // ends up asserting something nobody checked. Absence is the honest answer
+    // until a value exists, and this test is what stops one being invented
+    // later without a source.
+    const market = marketplaceIn(planBundle(ctxFor(), "claude-code", {}));
+    expect("homepage" in market.plugins[0]).toBe(false);
+    expect("tags" in market.plugins[0]).toBe(false);
+    expect("description" in market.metadata).toBe(false);
+  });
+
+  test("a catalog with no usable author fails rather than shipping an unowned marketplace", () => {
+    // `owner` is an ownership claim in a distributed file. With no author
+    // declared there is nothing to derive it from, and an empty owner is worse
+    // than a failed build.
+    //
+    // Blank as well as absent, at this emit site and not only at the manifest's:
+    // they are two guarded lines, and `{ "name": "" }` in a file that says who
+    // owns a published plugin is the shape that looks answered and is not.
+    for (const catalog of [
+      CATALOG.replace("  author: agent-kit maintainers\n", ""),
+      CATALOG.replace("author: agent-kit maintainers", 'author: ""'),
+    ]) {
+      const plan = planBundle(ctxFor({ "catalog.yaml": catalog }), "claude-code", {});
+      expect(plan.issues.some((i) => i.rule === "packaging.manifest-identity-missing")).toBe(true);
+      const market = marketplaceIn(plan);
+      expect("owner" in market).toBe(false);
+      expect("author" in market.plugins[0]).toBe(false);
+    }
   });
 });
 
