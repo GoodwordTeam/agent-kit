@@ -218,6 +218,13 @@ describe("every skip in the validator is classified, so a new one cannot default
     "sideeffects.vocabulary-unavailable": ["skipped"],
     // Authority absent while the subject is present: these block.
     "role.mandated-rows-unavailable": ["unavailable"],
+    // Both host manifests are in the plan, carrying the four fields
+    // `adapters/codex/CONTRACT.md` §5.2 makes them agree with `package.json`
+    // on. Absent, unparseable, or silent about one of the four, package.json is
+    // the authority that went missing and the manifests are the subject sitting
+    // in front of the check. A non-blocking skip here would let a tree with no
+    // package.json build green over a comparison nobody made.
+    "packaging.manifest-parity-unavailable": ["unavailable"],
     // The bodies are all in the tree; the policy that says which ruling ids
     // exist is what could not be read, so no citation in any of them was
     // checked. The row checks at the same seam stay out of this table: their

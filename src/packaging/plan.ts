@@ -5,7 +5,7 @@ import { readTextIfPresent, walkFiles } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../util/links.ts";
 import type { CheckContext } from "../validation/context.ts";
-import { error, note, type Issue } from "../validation/types.ts";
+import { error, note, unavailable, type Issue } from "../validation/types.ts";
 import { generateHostFrontmatter, type SkillMode } from "./frontmatter.ts";
 import { loadHostCapabilities, type HostId } from "./hosts.ts";
 import { loadSkillManifest } from "./manifest.ts";
@@ -54,6 +54,37 @@ const MARKETPLACE_FILE = ".claude-plugin/marketplace.json";
  * one manifest path became two bundles under one name.
  */
 const EVAL_DIR = "evals";
+
+/** The package manifest §5.2 makes the authority for the four identity fields. */
+const PACKAGE_FILE = "package.json";
+
+/** One term for the summary line, whichever way the authority went missing. */
+const PARITY_CHECK = "manifest parity";
+
+/**
+ * §5.2's four fields, as `<manifest key> -> <the catalog key that feeds it>`.
+ *
+ * The second half is for the message alone: three of the four manifest keys are
+ * not named after the catalog field behind them -- `name` comes from
+ * `package.id`, `description` from `package.name` -- and a reader told only
+ * that `description` disagrees goes looking in `catalog.yaml` for a
+ * `description` that is not there. The comparison itself reads the emitted
+ * object, so a citation that fell out of date would misdirect a reader without
+ * changing a verdict.
+ *
+ * All four, and not just `version`. The donor's release check this was adapted
+ * from (`compound-engineering@05c42da:src/release/components.ts`,
+ * `loadCurrentVersions()`) compares `version` across `package.json` and five
+ * host manifests and compares nothing else; `adapters/codex/CONTRACT.md` §5.2
+ * widened it to four, so the other three are this package's obligation and not
+ * something inherited with the adaptation.
+ */
+const PARITY_FIELDS: ReadonlyArray<readonly [string, string]> = [
+  ["name", "package.id"],
+  ["version", "package.version"],
+  ["description", "package.name"],
+  ["license", "package.license"],
+];
 
 /**
  * Where this package records what its own build decided, beside that host's
@@ -390,9 +421,16 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   }
 
   issues.push(...checkManifestIdentity(ctx.catalog.package));
+  // Built once and then both checked and serialised, rather than built twice.
+  // The parity check's whole claim is about what this bundle ships, and a check
+  // that re-derived the four values from the catalog would agree with the emit
+  // for the same reason the emit agrees with itself -- it would report clean
+  // over a manifest that had stopped matching, because it never looked at one.
+  const manifest = manifestObject(ctx, host, emitted, cases > 0);
+  issues.push(...checkManifestParity(root, manifest));
   files.set(HOST_MANIFEST_FILE[host], {
     path: HOST_MANIFEST_FILE[host],
-    contents: pluginManifest(ctx, host, emitted, cases > 0),
+    contents: `${JSON.stringify(manifest, null, 2)}\n`,
   });
   if (host === "claude-code") {
     files.set(MARKETPLACE_FILE, { path: MARKETPLACE_FILE, contents: marketplace(ctx) });
@@ -425,7 +463,7 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
  * ("Unknown field 'ak'. Claude Code ignores it at load time."), so anything this
  * package wants to record about its own build goes in `buildRecord` instead.
  */
-function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>, hasCorpus: boolean): string {
+function manifestObject(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>, hasCorpus: boolean): Record<string, unknown> {
   const pkg = ctx.catalog.package;
   const manifest: Record<string, unknown> = {
     name: pkg.id,
@@ -456,7 +494,96 @@ function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<s
   // that codex's manifest carries no such key is a test rather than a
   // condition that cannot be observed failing.
   if (hasCorpus) manifest["experimental"] = { evals: EVAL_DIR };
-  return `${JSON.stringify(manifest, null, 2)}\n`;
+  return manifest;
+}
+
+/**
+ * `package.json` as an object, or `null` when it is not one.
+ *
+ * `null` for a throw and `null` for a document that parses to an array, a
+ * string or `null` itself, because the caller does the same thing with all of
+ * them: say the authority could not be read. Caught into `{}` instead, an
+ * unparseable file would arrive at the comparison looking like a package
+ * manifest that simply declares nothing, and the build would report four
+ * missing fields about a file sitting in the tree.
+ */
+function parsePackageJson(text: string): Record<string, unknown> | null {
+  let doc: unknown;
+  try {
+    doc = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  return typeof doc === "object" && doc !== null && !Array.isArray(doc) ? (doc as Record<string, unknown>) : null;
+}
+
+/**
+ * `adapters/codex/CONTRACT.md` §5.2: the four identity fields agree across
+ * `package.json` and both host manifests.
+ *
+ * Emitted from `planBundle` for the reason `checkManifestIdentity` is -- so it
+ * fails the build rather than reporting from `ak validate`, where a bundle is
+ * never planned and nothing would read it.
+ *
+ * The row names `package.json` and not the manifest it was compared against.
+ * Both manifests are generated from the same catalog fields, so the same field
+ * disagrees in both plans and the two rows are identical; `collapseDuplicates`
+ * in build.ts merges them, and a four-field skew reaches the reader as four
+ * failures rather than eight. It is also the honest column: the manifest is
+ * generated, so a reader sent there has nothing they can edit. The message
+ * names the catalog field behind the manifest's value, which is the other of
+ * the two places the fix can go.
+ *
+ * Reported per field rather than as one row for the set, for the same reason
+ * `checkManifestIdentity` is: each disagreement has its own pair of values and
+ * its own decision about which side is wrong, and they are not usually the
+ * same decision.
+ *
+ * What this does NOT check: that the two host manifests agree with each other.
+ * They are built from one object in one place, so they cannot disagree without
+ * the packager being changed, and §5.1's cross-bundle parity is a test
+ * (`the two bundles are the same skills in two shapes`) rather than a
+ * condition this could observe failing.
+ */
+function checkManifestParity(root: string, manifest: Record<string, unknown>): Issue[] {
+  const text = readTextIfPresent(join(root, PACKAGE_FILE));
+  const pkg = text === null ? null : parsePackageJson(text);
+  if (pkg === null) {
+    return [
+      unavailable(
+        "packaging.manifest-parity-unavailable",
+        PACKAGE_FILE,
+        PARITY_CHECK,
+        `${PACKAGE_FILE} is ${text === null ? "not in the source tree" : "not a JSON object"}, so none of the four fields adapters/codex/CONTRACT.md §5.2 requires the host manifests to agree with could be read. The manifests are in the plan and there is nothing to measure them against, which is a check that did not run rather than a check that passed. Write ${PACKAGE_FILE} declaring ${PARITY_FIELDS.map(([f]) => f).join(", ")}.`,
+      ),
+    ];
+  }
+
+  const issues: Issue[] = [];
+  for (const [field, source] of PARITY_FIELDS) {
+    const theirs = pkg[field];
+    if (typeof theirs !== "string") {
+      issues.push(
+        unavailable(
+          "packaging.manifest-parity-unavailable",
+          PACKAGE_FILE,
+          PARITY_CHECK,
+          `${PACKAGE_FILE} states no '${field}', so the '${field}' this bundle's manifest carries had nothing to be compared against. adapters/codex/CONTRACT.md §5.2 requires 'name', 'version', 'description' and 'license' to agree across ${PACKAGE_FILE} and both host manifests; declare '${field}' in ${PACKAGE_FILE}.`,
+        ),
+      );
+      continue;
+    }
+    const ours = manifest[field];
+    if (ours === theirs) continue;
+    issues.push(
+      error(
+        "packaging.manifest-parity",
+        PACKAGE_FILE,
+        `'${field}' disagrees: ${PACKAGE_FILE} declares '${theirs}' and the host manifest ${ours === undefined ? "carries no such key" : `carries '${ours}'`}. adapters/codex/CONTRACT.md §5.2 requires 'name', 'version', 'description' and 'license' to agree across ${PACKAGE_FILE} and both host manifests. The manifest's '${field}' is generated from catalog.yaml's ${source}, so the edit goes there or in ${PACKAGE_FILE} -- not in the bundle, which is rewritten on every build.`,
+      ),
+    );
+  }
+  return issues;
 }
 
 /**

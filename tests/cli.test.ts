@@ -68,6 +68,12 @@ function capture() {
 const BUILDABLE = {
   NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n",
   LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n",
+  // §5.2's authority for the four identity fields the host manifests carry.
+  // The values are the ones CATALOG above produces -- `name` from `package.id`,
+  // `description` from `package.name` -- because a tree whose two sides already
+  // disagree is a tree `ak build` is right to refuse, and these fixtures exist
+  // to exercise everything except that.
+  "package.json": '{\n  "name": "ak",\n  "version": "0.1.0",\n  "description": "agent-kit",\n  "license": "MIT"\n}\n',
   "evals/triage/does-not-start-unasked/case.yaml": 'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
 };
 

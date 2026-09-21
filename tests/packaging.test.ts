@@ -47,8 +47,32 @@ profiles:
     status: authored
 `;
 
+/**
+ * The identity `adapters/codex/CONTRACT.md` §5.2 makes the host manifests agree
+ * with, stated once and reused by the fixtures that perturb it.
+ *
+ * The four values are the ones `CATALOG` above produces: `name` from
+ * `package.id`, `description` from `package.name`, and `version` and `license`
+ * from their namesakes. They have to match, because a fixture whose two sides
+ * already disagree makes every test in this file report a parity failure that
+ * is about the fixture rather than about the code.
+ */
+const PACKAGE_JSON: Record<string, unknown> = {
+  name: "ak",
+  version: "0.1.0",
+  description: "agent-kit",
+  license: "MIT",
+};
+
+const packageJson = (doc: Record<string, unknown>) => `${JSON.stringify(doc, null, 2)}\n`;
+
 const BASE: Record<string, string> = {
   "catalog.yaml": CATALOG,
+  // In every fixture because it is in every real tree: `ak` runs from a package
+  // root. A plan with no package.json to agree with is not a plan with nothing
+  // to check -- it is the manifests sitting in front of the check with no
+  // authority to judge them by, which the check reports rather than passes.
+  "package.json": packageJson(PACKAGE_JSON),
   "skills/alpha/SKILL.md": `${HEAD("alpha")}\nFollow [tdd](../../protocols/tdd/PROTOCOL.md).\n`,
   "skills/alpha/skill.yaml": "id: alpha\nversion: 0.1.0\ninvocation: U\nargument_hint: <ticket>\nallowed_tools: [Read, Grep]\n",
   "skills/beta/SKILL.md": `${HEAD("beta")}\nPlain body.\n`,
@@ -455,6 +479,168 @@ describe("the identity fields the manifests are obliged to carry", () => {
     expect(issue?.severity).toBe("error");
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
     expect("author" in manifest).toBe(false);
+  });
+});
+
+/**
+ * The four fields §5.2 makes `package.json` and both host manifests agree on.
+ *
+ * `adapters/codex/CONTRACT.md` §5.2 names them -- `name`, `version`,
+ * `description`, `license` -- and cites the donor's own release check,
+ * `compound-engineering@05c42da:src/release/components.ts`, as what it was
+ * adapted from. Read at that pin rather than recalled: `loadCurrentVersions()`
+ * compares `version` and nothing else across `package.json` and five host
+ * manifests. The other three are this contract's extension of it, so they are
+ * asserted here one at a time rather than assumed to have arrived with the
+ * adaptation.
+ *
+ * Measured against the object the bundle emits, not against the catalog the
+ * object was built from. Re-derived from the catalog, the check and the emit
+ * would be two readings of one source: they agree with each other whatever the
+ * manifest says, which is an instrument returning the same answer under both
+ * hypotheses.
+ */
+describe("the four fields package.json and the host manifests have to agree on", () => {
+  /** A package.json built from the agreeing one, with fields changed or dropped. */
+  const PKG = (over: Record<string, unknown> = {}, drop: ReadonlyArray<string> = []) => {
+    const doc = { ...PACKAGE_JSON, ...over };
+    for (const key of drop) delete doc[key];
+    return { "package.json": packageJson(doc) };
+  };
+
+  const parity = (plan: ReturnType<typeof planBundle>) => plan.issues.filter((i) => i.rule === "packaging.manifest-parity");
+  const blocked = (plan: ReturnType<typeof planBundle>) =>
+    plan.issues.filter((i) => i.rule === "packaging.manifest-parity-unavailable");
+
+  test("a tree whose two sides agree reports nothing, for either host", () => {
+    const ctx = ctxFor();
+    for (const host of HOST_IDS) {
+      expect(`${host}: ${parity(planBundle(ctx, host, {})).length}`).toBe(`${host}: 0`);
+      expect(`${host}: ${blocked(planBundle(ctx, host, {})).length}`).toBe(`${host}: 0`);
+    }
+  });
+
+  test("each of the four is compared, and the row names the field and both values", () => {
+    // Each one alone, and all four of them. The donor check this was adapted
+    // from compares `version` only; a check that kept that scope while carrying
+    // the wider contract's wording passes any test that perturbs the version
+    // and reports nothing about the other three.
+    for (const [field, wrong] of [
+      ["name", "agent-kit"],
+      ["version", "0.0.0"],
+      ["description", "One engineering lifecycle."],
+      ["license", "Apache-2.0"],
+    ] as const) {
+      const rows = parity(planBundle(ctxFor(PKG({ [field]: wrong })), "claude-code", {}));
+      expect(`${field}: ${rows.length}`).toBe(`${field}: 1`);
+      expect(`${field}: ${rows[0]?.severity}`).toBe(`${field}: error`);
+      expect(`${field}: ${rows[0]?.file}`).toBe(`${field}: package.json`);
+      expect(rows[0]?.message).toContain(field);
+      expect(rows[0]?.message).toContain(wrong);
+      expect(rows[0]?.message).toContain(String(PACKAGE_JSON[field]));
+    }
+  });
+
+  test("the identity compared is the tree's, so a check written against this repo's own strings fails here", () => {
+    // All four different on both sides at once. A comparison hardcoded to `ak`
+    // and `MIT` -- the strings this repo uses, and the strings the fixture above
+    // repeats -- passes the agreeing case and passes each single perturbation
+    // by reporting the field it was handed. It cannot pass this one.
+    //
+    // It also pins which catalog field feeds which manifest key: `description`
+    // comes from `package.name` and `name` from `package.id`, and a check
+    // reading the obvious namesake instead would report two disagreements here.
+    const ctx = ctxFor({
+      "catalog.yaml": CATALOG.replace("id: ak", "id: zzz")
+        .replace("name: agent-kit", "name: Some Other Thing")
+        .replace("version: 0.1.0", "version: 9.9.9")
+        .replace("license: MIT", "license: Apache-2.0"),
+      ...PKG({ name: "zzz", version: "9.9.9", description: "Some Other Thing", license: "Apache-2.0" }),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(parity(plan)).toEqual([]);
+    expect(blocked(plan)).toEqual([]);
+    // The manifest side asserted too, and not only the verdict. "No
+    // disagreement" is also what a check that compared nothing reports, and
+    // this fixture is the only one in the file where the manifest's four values
+    // are none of the strings the rest of the file repeats -- so it is the one
+    // place that can say the values came from this tree's catalog by the route
+    // `PARITY_FIELDS` claims they do.
+    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    expect([manifest.name, manifest.version, manifest.description, manifest.license]).toEqual([
+      "zzz",
+      "9.9.9",
+      "Some Other Thing",
+      "Apache-2.0",
+    ]);
+  });
+
+  test("a field package.json does not state is unavailable, not agreement by default", () => {
+    // The authority went missing, not the subject: the manifest carries a
+    // licence and there is nothing to measure it against. `unavailable` rather
+    // than a note, because `report()` exits non-zero on a blocking skip and on
+    // nothing else that is not an error -- absent the flag, a package.json
+    // with three of the four fields builds green over a field nobody compared.
+    const plan = planBundle(ctxFor(PKG({}, ["license"])), "claude-code", {});
+    const rows = blocked(plan);
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.blocking).toBe(true);
+    expect(rows[0]?.skipped).toBe("manifest parity");
+    expect(rows[0]?.file).toBe("package.json");
+    expect(rows[0]?.message).toContain("license");
+    // The other three still compared: one absent field does not stand the whole
+    // check down.
+    expect(parity(plan)).toEqual([]);
+  });
+
+  test("a field the catalog does not declare disagrees with a package.json that states it", () => {
+    // The manifest side of the same comparison. `checkManifestIdentity` reports
+    // the catalog's silence; this reports what that silence does to §5.2 -- the
+    // bundle ships with no `license` key and package.json says MIT, which is a
+    // disagreement and not an absence. Both rows are expected: they name
+    // different files and different edits.
+    const plan = planBundle(ctxFor({ "catalog.yaml": CATALOG.replace("  license: MIT\n", "") }), "claude-code", {});
+    const rows = parity(plan);
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.severity).toBe("error");
+    expect(rows[0]?.message).toContain("license");
+    expect(plan.issues.some((i) => i.rule === "packaging.manifest-identity-missing")).toBe(true);
+  });
+
+  test("no package.json at all blocks the build rather than passing quietly", () => {
+    const plan = planBundle(ctxFor({}, ["package.json"]), "claude-code", {});
+    const rows = blocked(plan);
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.blocking).toBe(true);
+    expect(rows[0]?.skipped).toBe("manifest parity");
+    // One row about the file, not four about its fields: nothing was read, so
+    // there is one thing to say.
+    expect(parity(plan)).toEqual([]);
+  });
+
+  test("a package.json that is not a JSON object blocks the same way, rather than reading as empty", () => {
+    // The quieter half. `JSON.parse` throwing and being caught into `{}` makes
+    // every field missing, and four unavailable rows about a file sitting right
+    // there in the tree is a report nobody can act on. A document that parses
+    // to an array or a string is the same case: it is not a package manifest.
+    for (const text of ["{ not json\n", "[]\n", '"agent-kit"\n']) {
+      const plan = planBundle(ctxFor({ "package.json": text }), "claude-code", {});
+      expect(`${JSON.stringify(text)}: ${blocked(plan).length}`).toBe(`${JSON.stringify(text)}: 1`);
+      expect(blocked(plan)[0]?.blocking).toBe(true);
+      expect(parity(plan)).toEqual([]);
+    }
+  });
+
+  test("one disagreement is one row, not one row per bundle", () => {
+    // Both manifests are built from the same catalog fields, so the same field
+    // disagrees in both plans. The row names `package.json` -- one of the two
+    // files a reader can actually edit, the manifests being generated -- so the
+    // two are identical and `collapseDuplicates` in build.ts merges them. Named
+    // for the generated manifest they would not be, and a four-field skew would
+    // reach the reader as eight failures.
+    const rows = checkBundles(ctxFor(PKG({ version: "0.0.0" })), {}).filter((i) => i.rule === "packaging.manifest-parity");
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.file).toBe("package.json");
   });
 });
 
