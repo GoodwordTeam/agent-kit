@@ -373,6 +373,16 @@ tests:
       The run selects the always-on correctness seat, plus the standards gate only if the project
       declares standards, and no others. It does not dispatch the conditional seats, and it records
       which signals it evaluated and found absent.
+  - id: new-behavior-without-coverage-selects-the-testing-seat
+    kind: positive
+    given: >-
+      A change that adds a behavioral branch and its config key with no test files touched, where
+      the existing suite still passes, the branch sits behind a flag that is off, and the caller
+      asks for a small panel.
+    expect: >-
+      The testing seat is selected and the signal that selected it is named. The finding names the
+      specific uncovered behavior rather than the absence of tests in general, a passing suite is
+      not read as coverage of what was added, and no finding rests on a test-count or ratio target.
   - id: risk-signals-select-the-conditional-seats
     kind: positive
     given: >-
