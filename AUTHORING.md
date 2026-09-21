@@ -1626,11 +1626,13 @@ skipped: `tdd`, `apply-findings` and `review-delta` each exist because a recorde
 Long material goes behind `protocols/<id>/references/` on §1's rule.
 
 **Five of those obligations are gated, and this section named none of them.** The required sections
-and the `## Authority` → `## Invoked by` substitution are `PROTOCOL_SECTIONS` and
-`PROTOCOL_FORBIDDEN` at `src/validation/bodies.ts:25`, raising `body.missing-section`,
+and the `## Authority` → `## Invoked by` substitution are `PROTOCOL_SECTIONS`
+(`src/validation/bodies.ts:39`) and `PROTOCOL_FORBIDDEN` (`src/validation/bodies.ts:82`), raising
+`body.missing-section`,
 `body.sections-out-of-order` and `body.forbidden-section`; the remedy text the gate prints for
 `## Authority` cites the same ruling the table above cites, so the two cannot drift apart in
-silence. A `protocol.yaml` raises `body.sidecar-forbidden`, from `FORBIDDEN_SIDECAR` at `:182`. A
+silence. A `protocol.yaml` raises `body.sidecar-forbidden`, from `FORBIDDEN_SIDECAR` at
+`src/validation/bodies.ts:226`. A
 `## Hard gates` section present but carrying no three-column table raises
 `body.missing-anti-rationalization-table`. Length is `budget.body-over-target` and
 `budget.body-over-cap`, through `BUDGETED` at `src/validation/budget.ts:22` whose `protocols` row is
@@ -1711,7 +1713,7 @@ worst exactly where the boundaries matter most. A seat that cannot name its neig
 four does not have a sharp enough question, which is a finding about that seat rather than about
 this heading.
 
-Three kinds of confusion belong in this heading, and the budget above governs **only the first**.
+Four kinds of confusion belong in this heading, and the budget above governs **only the first**.
 
 1. **Sibling seats on the same panel.** The adjacency rule above. **Budgeted — and the three-or-four
    count is over sibling seats, nothing else.**
@@ -1735,13 +1737,15 @@ kind 3 or kind 4 and is never charged against it.
 means the entry does not consume one of the three or four sibling slots; it does not mean the entry
 is free of length. No entry here is exempt from the file-length target, and that target is enforced
 against role bodies today rather than someday: `BUDGETED` (`src/validation/budget.ts`) lists `roles`
-beside `skills` and `protocols`, and `budget.body-over-target` fires on every run. §12.2 states this
-correctly where it borrows §1's rule, which is what makes describing it here as a possible future a
-defect rather than a difference of emphasis. If a role is ever over a length bound, **a required
-entry is not what gets cut** — dropping a mandated `## Never` row or a declared counterpart to fit a
-line count is weakening the artifact to satisfy a check, which §10 forbids outright. The material to
-cut is prose the contract does not require. This is what keeps the cap doing the work it was written
-for: sibling enumeration is what grows quadratically with panel size, and cross-panel entries do
+beside `skills` and `protocols`. No role body is over the target at present, so the firings on a
+given run are on skills and protocols; the wiring is what makes this enforcement rather than
+intent. §12.2 states this correctly where it borrows §1's rule, which is what makes describing it
+here as a possible future a defect rather than a difference of emphasis. If a role is ever over a
+length bound, **a required entry is not what gets cut** — dropping a mandated `## Never` row or a
+declared counterpart to fit a line count is weakening the artifact to satisfy a check, which §10
+forbids outright. The material to cut is prose the contract does not require. This is what keeps
+the cap doing the work it was written for: sibling enumeration is what grows quadratically with
+panel size, and cross-panel entries do
 not.
 
 Kinds 2 and 3 are exempt for the same reason, and it is the reason the budget exists at all. Every
@@ -1798,7 +1802,7 @@ an option, because an unexamined candidate is indistinguishable from a declared 
 
 | Candidate pair | Why it is a candidate |
 |---|---|
-| `doc-review/feasibility` / `plan-review/architect` | Both judge whether a proposed approach holds up structurally; the layers differ, and it is not yet established that the questions do. |
+| `doc-review/feasibility` / `plan-review/architect` | Both judge whether a proposed approach holds up structurally. Resolved by the second route: examined and recorded as not a family (`feasibility-vs-plan-review-architect-distinction`, `provenance/conversation-map.yaml`). |
 | `doc-review/design-lens` / `code-review/frontend-races` | Both concern interaction states and UI flows — one as missing design decisions, one as race potential. Possibly adjacent rather than same-named. |
 
 **A pair that reaches backwards into a closed batch is a contract defect routed to the earlier
@@ -1810,8 +1814,8 @@ it. The report names both seats and the distinction the writer believes separate
 batch's fix cycle writes the bullet, because a seat's own writer is the one who can say what that
 seat is not.
 
-**One of those two rows is in that state now, and it is this section's defect rather than a
-writer's.** All four seats are `status: authored`, so the window specified above — while that seat
+**Both of those rows were resolved, and this section said one of them was not.** All four seats
+are `status: authored`, so the window specified above — while that seat
 is still open — has closed for both pairs. For `doc-review/design-lens` /
 `code-review/frontend-races` it closed with the work done. `roles/doc-review/design-lens/ROLE.md`
 and `roles/code-review/frontend-races/ROLE.md` each carry a committed bullet opening *"Examined and
@@ -1820,12 +1824,20 @@ distinction, and `provenance/conversation-map.yaml` carries the reciprocal recor
 `frontend-races-vs-design-lens-boundary` and `design-lens-vs-frontend-races-boundary`. That writer
 took the handback route and left the durable trace as well, unprompted.
 
-`doc-review/feasibility` / `plan-review/architect` is the row with no trace, and there the mechanism
-was defeated by its choice of sink rather than by anyone ignoring it: a pair resolved only in a
-handback and a pair never examined leave a clean checkout the same trace, which is none, and the
-sentence above names that exact equivalence as the reason the rule exists. §10's durable-record rule
-governs the repair of that row and of no other. Asking the writer again does not repair it, because
-what they would produce is another record in the same place.
+`doc-review/feasibility` / `plan-review/architect` was described here as the row with no trace. It
+has two. `roles/doc-review/feasibility/ROLE.md` carries the bullet naming the other seat and the
+confusion it prevents, and `provenance/conversation-map.yaml` carries
+`feasibility-vs-plan-review-architect-distinction` with `disposition: retained`, an acceptance test,
+and an `amalgam` locator naming both seats — the second of the two routes above, taken in full. The
+one asymmetry, that `roles/plan-review/architect/ROLE.md` does not name the other seat back, is what
+that record says it is: *"this row has no partner on the architect side: the finding is that the
+pairing does not exist."* A pair examined and found not to be a pair leaves the second side nothing
+to declare.
+
+The equivalence this section reasons from holds in general — a pair resolved only in a handback and
+a pair never examined leave a clean checkout the same trace, which is none. What failed was the
+example. Both candidates took a durable route, so the tree held no instance of the failure, and this
+section named a row that had one anyway.
 
 **Where the earlier batch has no fix cycle left, the pair escalates instead of routing.** The rule
 above sends a backward-reaching pair to the earlier batch's fix cycle and assumes one is open. Once
@@ -1946,7 +1958,10 @@ condition is a closed list rather than the writer's judgment.
    `code-review/project-standards` (the catalog's only `tier: standards-gate`). They carry *"cites an
    actual project rule or returns empty; an absent standard is never an invented preference."* This
    row is **not** an instance of ruling `required-lane-failure-is-unavailable` and does not cite it.
-   No ruling states it; §12.2 does.
+   No ruling states it; §12.2 does. The two seats are reached by different routes:
+   `code-review/project-standards` is read from the catalog tier, and `reviewer-standards`
+   carries no tier and is named in `NAMED_STANDARDS_SEATS` (`src/validation/bodies.ts`), so a later
+   seat that acquires the tier picks this row up without that file changing.
 
 Beyond those four, **each seat writes its own grounding rule as its own row**: what it may not assert
 without being able to point at something, in its own terms — the spec source, the charter, the frozen
@@ -1965,15 +1980,24 @@ guidance produces rows in the seat's own words. A universal row that needs a bes
 instantiation is the welded form returning: the invariant part gets enforced, and the part that must
 vary is load-bearing and unchecked.
 
-**"Verbatim" is this section's word, not the gate's.** `UNIVERSAL_NEVER_ROWS`
+**"Verbatim" is the gate's word too, and this paragraph used to deny it.** `UNIVERSAL_NEVER_ROWS`
 (`src/validation/bodies.ts`) stores each mandated row as a ruling id plus a list of substrings, and
-`role.missing-universal-never-row` fires only when no row in the body contains all of them. Row 2's
-list is `["lane that could not run", "unavailable"]`, so a body carrying those two fragments beside
-the citation passes while stating none of the rest: not that a required lane which is `unavailable`
-blocks approval, not that it is never downgraded to an empty result, not the four parties who may
-not backfill it (ruling `required-lane-failure-is-unavailable`, cited here because this paragraph
-restates its clauses and a citation in the row above does not reach it). Every one of those clauses
-is contract prose with nothing behind it.
+`role.missing-universal-never-row` fires when no row in the body contains all of them. This
+paragraph used to stop there and conclude that a body carrying Row 2's two fragments beside the
+citation would pass while stating none of the rest. It does not. The substrings are the locator that
+pairs a body's row to its ruling, not the test: the universal rows carry `bar: "block"`, and the
+comparison is string equality against the block form of §12.2's own published item, read out of this
+file while the check runs. An absent row raises `role.missing-universal-never-row`; a row that is
+present and shortened raises `role.never-row-not-verbatim`. Two rule ids, because the gate
+distinguishes the two states.
+
+So the clauses this paragraph called unchecked — that a required lane which is `unavailable` blocks
+approval, that it is never downgraded to an empty result, the four parties who may not backfill it
+(ruling `required-lane-failure-is-unavailable`, cited because this paragraph restates its clauses
+and a citation in the row above does not reach it) — are enforced byte for byte as part of the
+block. Write the row out in full because the gate accepts nothing less. The instruction was right
+and the reason given for it was false, which is the harder direction to catch: a contract claiming
+less than it enforces reads as modesty, and only running the gate contradicts it.
 
 This is §9's disclosure in the opposite direction and it is the worse one. A section understating
 its enforcement makes a reader redo work the gate already did; a section overstating it makes a
@@ -2017,12 +2041,14 @@ This is safe rather than an oversight. `ak validate`'s directory-without-entry c
 `protocols/` root is therefore not an orphan, and **adding a catalog row for it would be the error,
 not the fix.**
 
-**Which trees hold doctrine, and why the rest do not.** The check above walks the five directory
+**Which trees hold doctrine, and why the rest do not.** The doctrine walk — `looseDoctrineFiles`
+in `src/validation/rulings.ts`, behind `rulings.doctrine-unreachable` — reads the five directory
 sections — `skills/`, `packs/`, `protocols/`, `roles/`, `references/` (`DIRECTORY_SECTIONS`,
-`src/catalog/layout.ts`) — and the repository root. `research/` is in neither list, so markdown
-there raises nothing. Until this paragraph that was a consequence of which list the walker iterates
-rather than a decision anybody made, and `rulings.doctrine-unreachable` already cites this section
-for it.
+`src/catalog/layout.ts`) — and the repository root. Not the check in the paragraph above:
+`catalog.directory-without-entry` never reads the root, and naming it here sent a reader to a file
+where the behaviour is absent. `research/` is in neither list, so markdown there raises nothing.
+Until this paragraph that was a consequence of which list the walker iterates rather than a
+decision anybody made, and `rulings.doctrine-unreachable` already cites this section for it.
 
 The exclusion is correct, and the criterion is standing rather than subject matter. **A tree holds
 doctrine when something in it could win a conflict with this contract.** `research/` holds inputs to
