@@ -164,8 +164,15 @@ def parse_host(blob):
     # Control: the frontmatter routing table and the case object are two
     # independent statements of the root key set. If they disagree, one of the
     # two anchors matched something else.
-    if not set(root) <= {k for k, _ in case_pairs}:
-        die(f"the routing table names root keys the case object does not: {sorted(set(root) - {k for k, _ in case_pairs})}.")
+    #
+    # Computed once and tested on the result. Written twice -- once in the
+    # condition, once in the message -- the two can drift, and what that
+    # produces is a guard that fires with an empty list: a correct exit code
+    # under a message naming nothing. That is the blank field this probe exists
+    # to avoid, one level in, and the only defence is to have one expression.
+    missing_from_case = sorted(set(root) - {k for k, _ in case_pairs})
+    if missing_from_case:
+        die(f"the routing table names root keys the case object does not: {missing_from_case}.")
     exec_pairs = pairs(balanced(blob, blob.index("execution:tt({", m.end()) + len("execution:tt(")))
 
     m = re.search(r"context:tt\(\{", blob)
