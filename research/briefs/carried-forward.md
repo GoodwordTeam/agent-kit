@@ -1456,3 +1456,56 @@ are not properties of the trap but of where the failure lands relative to where 
 -- and the practical consequence is narrower than "quote your variables": **a shell form that has
 worked a hundred times tells you nothing about the next path written the same way**, because whether
 the mangled name resolves is a property of the value, not of the code.
+
+---
+
+## Three artifacts said "the same rule as markdown" and one of them decided
+
+`rulings.uncited-restatement` reported five claims in `skills/*/skill.yaml` as uncited while every
+one of them carried its citation two lines up. I had told two lanes to leave those warnings standing
+and carried the item to the tooling lane as mine, on the stated ground that *the check splits per
+physical line and cannot be satisfied by placement.* That ground was wrong. The sentence splitter is
+block-aware and always was.
+
+What was actually true is narrower and only visible in `citationScope`. The markdown branch widens a
+window to its enclosing paragraph, so a citation in the first sentence covers the rest. The YAML
+branch took the window's own lines and nothing else. Those are the same rule for exactly one shape:
+a claim short enough to sit beside its citation on one physical line. Every `skill.yaml` in the tree
+writes the other shape.
+
+The failure is not that someone implemented the wrong rule. It is that **three artifacts stated the
+right rule and none of them tested it**:
+
+- the code comment -- *"a scalar that names its ruling in the sentence is attributed by the same rule
+  markdown uses"*
+- the test name -- *"a citation inline in the scalar clears it, as it does in markdown"*
+- the test body -- a single-line YAML scalar, which is **the one input that passes under any scope at
+  all**, including the broken one
+
+The example does not merely fail to cover the case. It cannot distinguish the implementations. A
+reader auditing this check finds the principle stated twice and demonstrated once, and the
+demonstration is vacuous in the precise sense: it would pass with the widening removed. This is the
+canonical-example heuristic arriving from the other side -- I have been checking examples against
+rules; here the rule was right in all three places it was written down, and only the example decided
+anything.
+
+### A warning nobody can clear is a warning everybody learns to ignore
+
+The cost was not the four false reports. It was the fifth line. `super-ship/skill.yaml:156` is a real
+uncited restatement -- a second `hard_gates` item restating the charter ruling without naming it,
+which is the hash-binding defect already routed to batch 5. It sat in the same list as four reports I
+had instructed two lanes in writing to disregard.
+
+**I issued the suppression myself, in two messages, with a wrong mechanism attached.** A class that
+cannot be cleared by doing the right thing does not stay quarantined to its false members; it takes
+the true ones with it, and the instruction to ignore it is what does the taking. The remedy is not to
+lower the threshold or to annotate the exceptions. It is that a warning class with no reachable clean
+state is a defect in the check, to be fixed or withdrawn, and never to be handed to writers as
+something to live with.
+
+Fixed by widening YAML scope to the enclosing sequence item -- the structural analogue of markdown's
+paragraph -- which is safe for the reason paragraph scope is safe: the scope is searched for the
+*specific* candidate ruling's id, so naming ruling A never attributes a restatement of ruling B.
+Widening cannot launder a citation. Five reports became one, the one is true, and a control that
+strips a citation from a real file in a scratch extract brings the detection back, so the check still
+fires on the shape it exists for.

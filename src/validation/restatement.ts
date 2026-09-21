@@ -402,6 +402,31 @@ function valueEnd(lines: ReadonlyArray<string>, at: number, column: number): num
   return end;
 }
 
+/**
+ * Whether a line opens a new YAML block rather than continuing the one above:
+ * a sequence item, or a key. Continuation lines of a multi-line scalar are
+ * neither, which is what makes this usable as a boundary in both directions.
+ */
+function isBlockStart(line: string): boolean {
+  return /^\s*-\s/.test(line) || /^\s*[^\s:#][^:]*:(\s|$)/.test(line);
+}
+
+/**
+ * The bounds, 0-indexed and inclusive, of the sequence item or scalar a window
+ * sits in. The YAML analogue of markdown's enclosing paragraph.
+ */
+function scalarItem(lines: ReadonlyArray<string>, startLine: number, endLine: number): [number, number] {
+  let first = Math.max(0, startLine - 1);
+  while (first > 0 && !isBlockStart(lines[first] ?? "") && (lines[first - 1] ?? "").trim() !== "") first--;
+  let last = Math.min(lines.length - 1, endLine - 1);
+  while (last < lines.length - 1) {
+    const next = lines[last + 1] ?? "";
+    if (next.trim() === "" || isBlockStart(next)) break;
+    last++;
+  }
+  return [first, last];
+}
+
 function citationScope(file: string, lines: ReadonlyArray<string>, startLine: number, endLine: number): string {
   if (file.endsWith(".md")) {
     let first = Math.max(0, startLine - 1);
@@ -411,10 +436,30 @@ function citationScope(file: string, lines: ReadonlyArray<string>, startLine: nu
     return lines.slice(first, last + 1).join("\n");
   }
 
-  // The window's own lines first: §6's inline form is legal in YAML too, and a
-  // scalar that names its ruling in the sentence is attributed by the same rule
-  // markdown uses.
-  const parts: string[] = [...lines.slice(startLine - 1, endLine)];
+  // The window's own lines, widened to the sequence item or scalar they sit in:
+  // §6's inline form is legal in YAML too, and a scalar that names its ruling is
+  // attributed by the same rule markdown uses.
+  //
+  // Widening is the whole point. Markdown expands to the enclosing paragraph, so
+  // a citation in a paragraph's first sentence covers the rest of it. This branch
+  // used to take the window's own lines and nothing else, which is the same rule
+  // only for a claim short enough to fit beside its citation on one physical
+  // line. Every `skill.yaml` in the tree writes the multi-line form instead --
+  // citation on the item's first line, claim continuing beneath -- so every one
+  // of them was reported as uncited while carrying the citation two lines up. The
+  // test that covered this asserted "as it does in markdown" over a single-line
+  // example, the one shape where no scope at all would have been enough.
+  //
+  // Widening cannot launder a citation, because the scope is searched for the
+  // specific candidate ruling's id: naming ruling A never attributes a
+  // restatement of ruling B. That is the same property paragraph scope relies on
+  // in markdown, and it is why the fix is a widening rather than a suppression.
+  //
+  // It stops at the next block start in either direction, which keeps an item
+  // from reaching its siblings and keeps a parent from borrowing a citation
+  // written on a nested child.
+  const [itemFirst, itemLast] = scalarItem(lines, startLine, endLine);
+  const parts: string[] = [...lines.slice(itemFirst, itemLast + 1)];
   const first = startLine - 1;
   const last = endLine - 1;
 

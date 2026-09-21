@@ -356,6 +356,50 @@ describe("in YAML a citation reaches its own mapping and what is nested under it
     expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc })))).toEqual([]);
   });
 
+  // The test above demonstrates the inline form on a single physical line, which
+  // is the one shape where scope expansion is not needed: the citation is inside
+  // the window's own lines, so it would clear under any scope at all. Every
+  // `skill.yaml` in the tree writes the multi-line form instead -- the citation
+  // on the item's first line, the claim continuing beneath it -- and that shape
+  // was never exercised. The assertion said "as it does in markdown"; the example
+  // could not tell whether it did.
+  test("a citation on a sequence item's first line covers the rest of that item", () => {
+    const doc = [
+      "schema_version: 1",
+      "hard_gates:",
+      "  - Unavailability is the verdict when a lane cannot be filled (ruling `required-lane-failure-is-unavailable`).",
+      "    A required lane that cannot be filled under the declared constraints is unavailable,",
+      "    and unavailability blocks the phase; it is never backfilled by the author who needed it.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc })))).toEqual([]);
+  });
+
+  test("the same item with the citation removed is still reported", () => {
+    const doc = [
+      "schema_version: 1",
+      "hard_gates:",
+      "  - Unavailability is the verdict when a lane cannot be filled.",
+      "    A required lane that cannot be filled under the declared constraints is unavailable,",
+      "    and unavailability blocks the phase; it is never backfilled by the author who needed it.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc }))).length).toBe(1);
+  });
+
+  test("a citation on the item above does not carry into the next item", () => {
+    const doc = [
+      "schema_version: 1",
+      "hard_gates:",
+      "  - Unavailability is the verdict when a lane cannot be filled (ruling `required-lane-failure-is-unavailable`).",
+      "    Nothing further is claimed on this item.",
+      "  - A required lane that cannot be filled under the declared constraints is unavailable,",
+      "    and unavailability blocks the phase; it is never backfilled by the author who needed it.",
+      "",
+    ].join("\n");
+    expect(hits(checkRestatements(ctxFor({ "policies/invocation.yaml": doc }))).length).toBe(1);
+  });
+
   test("a window that starts on the banner above a cited mapping is still covered by it", () => {
     // A window is a run of consecutive sentences and nothing makes it stop at a
     // mapping boundary, so it regularly begins on the `# ---` comment above a
