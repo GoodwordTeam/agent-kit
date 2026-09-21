@@ -95,9 +95,17 @@ def show(rev: str) -> str:
     `R=33e59fe`: `$R:AUTHORING.md` expands to `<repo>/33e59feUTHORING.md`, because `:A` takes
     the absolute path of `$R` and the rest of the word is appended. That one is loud -- no such
     file exists and git refuses. `:e` is the quiet one, because the name it produces can exist.
+    A third member breaks that pairing. `$R:src/denylist.ts` hits `:s`, the substitution modifier,
+    and zsh aborts the word with `bad substitution` -- loud, but only on stderr, while the pipeline
+    it sat in kept running, so `git show ... | grep -c plans` counted an empty stream and printed
+    `0`. Measured in a four-revision loop, it rendered as a clean column of zeros: the answer a
+    working command would have given, in the channel a reader quotes from. So loud and quiet are
+    not properties of the trap. They are properties of where the failure lands relative to where
+    the figure is read, and this member is loud where nobody looks and quiet where it counts.
     So a shell form that worked once is not evidence about the next path written the same way:
-    whether the trap is caught depends on whether the mangled name happens to resolve, which is
-    a property of the tree rather than of the code. `${R}:...` survives all of them.
+    whether the trap is caught depends on whether the mangled name happens to resolve, or on
+    whether the complaint reaches the stream being read -- properties of the run rather than of
+    the code. `${R}:...` survives all of them.
     """
     out = subprocess.run(["git", "-C", str(ROOT), "show", f"{rev}:{FILE}"],
                          capture_output=True, text=True)
