@@ -651,11 +651,12 @@ key form has, read at a finer grain, and it is why the shape is named here rathe
 inferred: a citation that resolves while attributing the wrong sentence is indistinguishable from a
 working one.
 
-`policies/invocation.yaml:213` is this case in the tree, and the evidence is a removal rather than a
-clean run: delete the citation from that line and `ak validate` raises `rulings.binding-not-cited`
-on the file, restore it and that row is gone. The row is the evidence and the total is not — an
-unrelated error elsewhere leaves the run dirty without touching what this line demonstrates. That
-is the instrument accepting the shape, which a comment beside the branch could not establish.
+`policies/invocation.yaml` 's `delta-scope-affected-behavior` gate line is this case in the tree,
+and the evidence is a removal rather than a clean run: delete the ruling citation from it and
+`ak validate` raises `rulings.binding-not-cited` on the file, restore it and that row is gone. The
+row is the evidence and the total is not — an unrelated error elsewhere leaves the run dirty without
+touching what this line demonstrates. That is the instrument accepting the shape, which a comment
+beside the branch could not establish.
 
 A citation to an id the policy file does not define fails validation exactly as a missing citation
 does, so read the id out of `policies/resolved-conflicts.yaml` rather than reconstructing it from the
@@ -857,7 +858,7 @@ directory. The two reasons are stated apart so the second is not read as an omis
 **The prohibition names subtrees, never the segment `docs/`.** A check written against bare `docs/`
 would fire on this package's own `docs/decisions/`, where ADR-0001 lives and which skill bodies cite
 by path because this section sends them there. Measured at `3282296`: `docs/` occurs in skill bodies
-exactly twice, `skills/doc-review/SKILL.md:154` and `skills/super-align/SKILL.md:130`, and both are
+exactly twice, in `skills/doc-review/SKILL.md` and `skills/super-align/SKILL.md`, and both are
 that citation — so the wider term would be wrong on every occurrence it has. `ak validate` scans
 skill bodies for the targets `LOCAL_DOC_TARGET_TERMS` carries (`src/denylist.ts`); read that list
 for the coverage, because naming a path in this paragraph does not put it in the scanner.
@@ -1069,8 +1070,9 @@ transcript is an error naming the bound*, asserting `toContain("2264")` against 
 transcript of `"line\n"` repeated ends in a newline, the one shape in which a newline count and a
 trailing-empty correction return the same number, so the message was identical under the defect and
 the assertion could not move. Dropping that trailing newline was the whole repair, landed at
-`72db157`: `tests/provenance.test.ts:33` now reads `${"line\n".repeat(2263)}line`. The `2264` at
-`:335` stays and is correct — the fixture is a synthetic 2264-line transcript, so the bound its
+`72db157`: the `TRANSCRIPT` constant in `tests/provenance.test.ts` now reads
+`${"line\n".repeat(2263)}line`. The `2264` the out-of-range assertion looks for stays and is
+correct — the fixture is a synthetic 2264-line transcript, so the bound its
 message names is 2264. Which leaves one spelling over two populations: `2264` as the wrong count of
 `research/sources/grok-transcript.md`, and `2264` as the right count of a fixture. Anything sweeping
 for the figure as a defect signature carries that false positive by construction, and the false
@@ -1532,6 +1534,33 @@ gap and not a formal one. It closes on publication, and the seat that publishes 
 closes it — one more reason the readiness statement travels in the commit message rather than in a
 file, where it arrives with the object it describes.
 
+**A citation into the tree names its subject, not its line number.** A `<file>:<line>` locator is
+displaced by every insertion above it, and the insertion that displaces one most often is a comment
+added over the code it points at — the lowest-perceived-blast-radius edit in this repository, and
+the one nothing reviews for downstream effect. So cite code by its text, a section by its heading, a
+sentence by quoting it. `const row = manifest.hosts[host]` in `src/packaging/plan.ts` survives the
+comment, the reordering of the functions around it and the growth of the file; a reader who cannot
+find it learns that the code changed, rather than being sent to a line that is now something else. A
+line number is admissible only where the number is itself the claim, and it then carries the
+revision it was taken at, by the rule above.
+
+**Dating a wrong locator is worse than leaving it undated.** Measured over
+`research/briefs/carried-forward.md` at `f817abe`, whose 24 such citations — 23 distinct — were
+resolved one at a time against the revision each entry names: ten resolved to the text their
+sentence claimed; three resolved exactly, to findings that had since been closed; three resolved
+exactly at `cd48f14` and to unrelated text at `4e45481`, the revision their own entry declares,
+because the pin was written when the entry was closed over numbers taken when it was opened, and
+re-pinning is an edit to one sentence that does not re-resolve the locators beneath it; six resolved
+to unrelated text; one resolved to text that falsified the claim attached to it. An undated line
+number announces that it is undated. A wrongly dated one reads as audited. The conversion is what
+surfaced the closed three and the false one, for the reason that is the whole argument for the form:
+**a by-text citation cannot be written without opening the file, and opening the file is the
+check.**
+
+This file's own citations were converted under the rule. All thirteen of them resolved correctly at
+`f817abe` first, so the change here is preventive rather than a repair — which is the state the rule
+is for, since a locator is exposed from the moment it is written and not from the moment it breaks.
+
 **Two rules in this section still specify a check with no gate, and each says so in its own
 paragraph.** The retirement rule and the entry-quotation rule were gated at `d87f9e9`; the
 recorded-revision rule and the §11 coverage rule were not. **Each disclosure retires on the commit
@@ -1765,18 +1794,16 @@ section is where a reader is entitled to find every condition that stops the pro
 Long material goes behind `protocols/<id>/references/` on §1's rule.
 
 **Five of those obligations are gated, and this section named none of them.** The required sections
-and the `## Authority` → `## Invoked by` substitution are `PROTOCOL_SECTIONS`
-(`src/validation/bodies.ts:39`) and `PROTOCOL_FORBIDDEN` (`src/validation/bodies.ts:82`), raising
-`body.missing-section`,
-`body.sections-out-of-order` and `body.forbidden-section`; the remedy text the gate prints for
+and the `## Authority` → `## Invoked by` substitution are `PROTOCOL_SECTIONS` and
+`PROTOCOL_FORBIDDEN` , both in `src/validation/bodies.ts` , raising `body.missing-section` ,
+`body.sections-out-of-order` and `body.forbidden-section` ; the remedy text the gate prints for
 `## Authority` cites the same ruling the table above cites, so the two cannot drift apart in
-silence. A `protocol.yaml` raises `body.sidecar-forbidden`, from `FORBIDDEN_SIDECAR` at
-`src/validation/bodies.ts:226`. A
-`## Hard gates` section present but carrying no three-column table raises
-`body.missing-anti-rationalization-table`. Length is `budget.body-over-target` and
-`budget.body-over-cap`, through `BUDGETED` at `src/validation/budget.ts:22` whose `protocols` row is
-`:24` — not the `skill-over-*` pair §1 names. One directory per catalog entry is
-`catalog.directory-without-entry`.
+silence. A `protocol.yaml` raises `body.sidecar-forbidden` , from `FORBIDDEN_SIDECAR` in the same
+file. A `## Hard gates` section present but carrying no three-column table raises
+`body.missing-anti-rationalization-table` . Length is `budget.body-over-target` and
+`budget.body-over-cap` , through `BUDGETED` in `src/validation/budget.ts` , whose `protocols` row
+names that pair and not the `skill-over-*` pair §1 names. One directory per catalog entry is
+`catalog.directory-without-entry` .
 
 Naming them is not decoration. A section stating a machine-checked obligation and naming no gate
 sends a writer to verify by hand what `ak validate` already refuses, which is the direction §10
@@ -2049,18 +2076,19 @@ roles: `roles/supervisor/ROLE.md` returns no choice, `roles/implementer/ROLE.md`
 and `roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and
 all three satisfy it, because what it requires is a result that blocks and is never read as assent
 rather than a particular word — and all three carry the ruling itself, as the same `## Never` row,
-at `roles/implementer/ROLE.md:50`, `roles/plan-review/planner/ROLE.md:46` and
-`roles/supervisor/ROLE.md:49`. What no seat may do is leave the same trace for *found nothing* and
+in `roles/implementer/ROLE.md`, `roles/plan-review/planner/ROLE.md` and
+`roles/supervisor/ROLE.md`. What no seat may do is leave the same trace for *found nothing* and
 *was given nothing* — the discriminator §10 applies to records, applied to returns.
 
 That last citation replaces a worse one. This paragraph first said each of the three wrote the
-non-assent guard out, and one does: `roles/supervisor/ROLE.md:92` closes *"An empty return from this
+non-assent guard out, and one does: `roles/supervisor/ROLE.md` closes *"An empty return from this
 seat blocks its checkpoint. It is never read as assent"*. `implementer` has the blocking token and
 no guard, `plan-review/planner` has neither. The sentence generalised from the body it had open, and
 the property it generalised was the one thing two of the three do not contain — which is the shape
 to watch for, because a universal reached for after reading one member is indistinguishable in the
 writing from one measured across all of them. The `## Never` row is the better ground for the same
-conclusion: it is in all three files, at a line number, and a reader can refute it.
+conclusion: it is in all three files, under a heading a reader can go to, and a reader can refute
+it.
 
 It also sits next to `## Evidence it must cite`, and the same artifact routinely belongs under both.
 From `roles/reviewer-spec/ROLE.md`:
