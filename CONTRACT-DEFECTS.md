@@ -67,5 +67,15 @@ its `mode` and `unsupported`. The alternative reading is that `autonomy.modes` i
 and §4 and `schemas/skill.schema.json` both name the wrong field, in which case the schema's closure
 is what makes it unwritable and the fix belongs there. This writer reads the first as correct —
 §4 and the schema agree with each other and the code disagrees with both — but which file is amended
-is not the writer's to decide. Batch 4's four manifests declare `autonomous` on both adapters and
-will need no change under the first reading.
+is not the writer's to decide.
+
+**Correction, from `3b2ed6c`.** This entry said batch 4's four manifests declare `autonomous` on
+both adapters and will need no change under the first reading. The second half is wrong. Measured
+in that lane: eight manifests were filled in while nothing read them, five declaring `autonomous`
+and one `guided` on codex, whose `enforces` list is empty — so connecting the read as written would
+ship four skills claiming autonomy on a host that enforces nothing, which is worse than the defect
+it repairs. `unsupported` is authored as prose and cannot be compared against `enforces` at all.
+The declarations accumulated unreviewed for exactly as long as the branch stayed dead, because the
+authors filling the field got no feedback, and connecting it makes all of them live at once. So the
+repair is two steps — report what the connected read would emit, then emit it — and this entry
+retires on the second, not the first.
