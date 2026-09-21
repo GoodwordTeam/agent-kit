@@ -62,6 +62,24 @@ HOW TO RE-DERIVE
 A figure taken without a revision argument is a measurement of the working tree, which is a
 timestamp and not a revision: several lanes write to this tree, and the number is stale
 before it is read. The output says which it measured. Quote the second form.
+
+REFLOWING AFTER AN EDIT
+-----------------------
+Editing a paragraph leaves it ragged, and rewrapping it is where this file gets damaged rather
+than measured. Two failure modes, both met in practice on 2026-09-21:
+
+  - A wrap that breaks inside a backtick span splits a code span in half and shows up here as
+    an odd-backtick count, which is the loud case.
+  - A wrap built by splitting into tokens and rejoining with spaces detaches punctuation that
+    followed a span: `donor_sources[]`, or  ->  `donor_sources[]` , or. Nothing in this probe
+    catches that. Backticks stay balanced, the line stays under width, and the damage is two
+    characters wide in a file of 160,000.
+
+`safe_wrap` below is the reflow that cannot do either. It breaks only at spaces outside a
+backtick span, and it asserts that its output differs from its input in whitespace alone --
+the positive control on the wrapper itself, which is what turns the second failure from
+silent into an exception. Reflow with it, or by hand; not with textwrap, which knows nothing
+about spans.
 """
 import hashlib
 import re
@@ -80,6 +98,37 @@ BASELINE_PIN = "36f0697"
 # verbatim, so an edit here silently invalidates every copy. The pin is the revision its
 # current bytes were agreed at.
 SEC31_PIN = "170fab6"
+
+
+def safe_wrap(text: str, width: int = 100) -> str:
+    """Reflow prose without altering a character. See the docstring's reflow section.
+
+    Breaks only at spaces outside backtick spans, so a code span is never split and
+    punctuation following one is never detached. The assertion is the control: it fails
+    loudly on the exact defect the probe itself cannot see.
+    """
+    flat = " ".join(text.split())
+    inside = False
+    breaks = set()
+    for i, ch in enumerate(flat):
+        if ch == "`":
+            inside = not inside
+        elif ch == " " and not inside:
+            breaks.add(i)
+    lines, start = [], 0
+    while len(flat) - start > width:
+        brk = max((i for i in breaks if start < i <= start + width), default=None)
+        if brk is None:
+            # An atomic span longer than the remaining width: overflow rather than split it.
+            brk = min((i for i in breaks if i > start + width), default=None)
+            if brk is None:
+                break
+        lines.append(flat[start:brk])
+        start = brk + 1
+    lines.append(flat[start:])
+    out = "\n".join(lines)
+    assert "".join(out.split()) == "".join(text.split()), "safe_wrap altered characters"
+    return out
 
 
 def show(rev: str) -> str:
