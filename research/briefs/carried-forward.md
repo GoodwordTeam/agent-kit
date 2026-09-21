@@ -1982,9 +1982,9 @@ two commits, found four of four displaced, and declined to generalize from a sam
   claim at *no* revision of that file in this history; the nearest is `96f5291`, one line off.
 - **1** resolves to text that falsifies the claim attached to it.
 
-**And the breakdown is load-bearing in a way neither of us saw until sweep-reviewer took the same
-numbers twice.** There are two defensible partitions of those 23, and **13 is the answer under both
-of them, meaning opposite things.**
+**And the breakdown is load-bearing in a way the list above does not show.** There are two
+defensible partitions of those 23, and **13 is the answer under both of them, meaning opposite
+things.**
 
   - *Does the locator resolve to the text its sentence claims, at the revision the entry declares?*
     Passes 10 + 3 = **13**. Fails 3 + 6 + 1 = **10**.
@@ -1995,8 +1995,7 @@ of them, meaning opposite things.**
 A reader who meets *13 of 23* with no rule attached is one coin flip from "most of them are fine"
 and "most of them are broken". This is the census entry's classification clause with the stakes
 visible: a classification rule is not a note attached to a figure, it is half of what the figure
-says, and without it the number is not merely underspecified. It is **reversible**. Filed on
-sweep-reviewer's recommendation that it go on the page in preference to prose about the requirement.
+says, and without it the number is not merely underspecified. It is **reversible**.
 
 **The figure to quote here is the first partition, because this entry is about locators**: *10 of 23
 do not resolve to the text their sentence claims, at the revision the entry declares.* All 23 were
@@ -2006,8 +2005,9 @@ the file in front of you.
 **And their four, placed in it.** `plan.ts:198`, `plan.ts:199` and `hosts.ts:46` fall in the six
 that resolve to unrelated text; `tests/packaging.test.ts:440` falls in the three that resolve at
 `cd48f14` and not at the revision its entry declares. Four drawn from a ten-member failing set,
-selected because they looked wrong, four came back wrong. sweep-reviewer's own reading, which is the
-right one: **it confirms membership and estimates nothing** -- and with the denominator visible,
+selected because they looked wrong, four came back wrong. The reading is sweep-reviewer's, filed as
+a correction against themselves and carried here as one: **it confirms membership and estimates
+nothing** -- and with the denominator visible,
 that method could not have told a ten-failure population from a twenty-failure one. A sample
 selected for suspicion is a search, and a search that finds what it went looking for has measured
 the searcher.
@@ -2047,12 +2047,47 @@ it still stands. The conversion surfaced these three only because resolving 23 l
 files -- a side effect of the sweep, not a property of the form. A sweep is not a repeatable
 control.
 
+sweep-reviewer's general shape, which is the one to carry: **a remedy that works by putting a person
+in front of every instance finds things the remedy does not encode, and those finds belong to the
+sweep rather than to the form.** They cannot be cited as evidence for the form, because the next
+application will not include a person reading 23 files.
+
 So the two defects want two different repairs. A locator is repaired by carrying its own subject.
 **A finding is repaired by carrying its own disposition** -- open, closed at a named revision, or
 withdrawn -- inside the sentence that makes the claim, where a reader meets it, rather than in the
 commit that closed it. sweep-reviewer's recommendation, adopted: file this separately and quote the
 locator figure over the sentence-truth figure, because keeping them in one number is what produced
 the ambiguity above.
+
+## A zero can be correct and still answer a question you did not ask
+
+sweep-reviewer's, against themselves, and it is the complement of every other zero on this page. The
+others are broken instruments -- a pattern that cannot match, a build that failed, a mangled path
+that resolved to nothing. This one is a working instrument, a correct result and a wrong reading,
+and none of the guards above fire on it.
+
+They reported that `scaffold_script` appears zero times in the corpus, zero times in
+`schemas/case.schema.json` and zero times in AUTHORING.md -- *"the key is absent from the
+contract."* All three counts are right. The sentence built on them, that no internal consistency
+check could have surfaced a feature none of the sources names, is also right. Neither is the
+finding. The schema does not omit `scaffold_script`. It **refuses** it, on an
+`additionalProperties: false` standing since `7db25a7`, and a case that declares one fails
+`ak validate`.
+
+**Not specified and forbidden are different findings** -- different causes, different remedies,
+different blame -- and a grep for the key's name cannot separate them, because both produce the same
+zero. The distinguishing evidence is not in the count and never could be: it is a keyword two lines
+up in the same file that does not mention the key at all.
+
+The guard that generalises: **a confident zero is owed the question of what would have had to be
+true for it to be non-zero.** Here the answer is *someone would have had to write the key*, and the
+next question -- what happens to the person who does -- is the whole finding. It is the
+positive-control rule turned inward. A positive control asks whether the instrument had a subject;
+this asks whether the subject could have registered.
+
+And the reason three counts felt like corroboration is already on this page: they were one question
+asked three times. Three sources agreeing is one source whenever the sources share the reading, and
+it makes no difference whether they are documents or greps.
 
 ## A census is four claims, and only two of them are about the number
 
@@ -2398,6 +2433,22 @@ introduced.** The obligation then stops depending on anybody remembering it, whi
 failed: `criteria` would have owed a receipt the day `expected_outcome` was written, and no key in
 that file carries one today.
 
+**And that form, as first stated, would not have caught the three below.** sweep-reviewer's own
+correction, sent before anyone could build it. Annotating the owner of each key *the schema names*
+produces a row only for keys already present; `scaffold_script` is not in the schema, so there is no
+row to annotate, no empty receipt cell to notice, and the key stays exactly as invisible as it is
+today. The version that catches this class runs the other direction: **enumerate the host's keys
+from the host, then reconcile the schema against that list.** Annotating what we have finds
+*unverified* keys. Only reconciling against what they have finds *missing* ones. `criteria` was in
+the first class; `scaffold_script`, `runs` and `timeout_seconds` are in the second, and the second
+is the one that was costing a whole capability. Both arms are needed, and this page's own rule says
+why -- a remedy has to have the same extension as the defect it repairs, and this defect has two.
+
+One limit on the reconciling arm, because it is the arm that has to be built. The only host-side
+enumeration to hand is `claude plugin eval --help`, which names these keys inside flag descriptions
+rather than as a key list. Absence from a help text is not evidence of absence from the loader, so
+that source can report what the schema is missing and cannot certify that it is missing nothing.
+
 **Its first application finds three, and none of them is `criteria`.** `claude plugin eval --help`
 at `claude 2.1.278` names three case keys this repository has never mentioned anywhere:
 `scaffold_script` (`--scaffold`, `--no-scaffold`), `runs` (`--runs`, *"default: case.runs ?? 3"*)
@@ -2431,9 +2482,22 @@ declared safe. The schema closes `execution` because *"a key the loader accepts 
 a schema edit, which is the direction that gets noticed."* It was not noticed, and it could not have
 been. The symptom of refusing a key the host accepts is that nobody ever writes that key, and the
 one author who tries gets a validation error naming their own file and concludes they were wrong.
-**A closed schema fails by making the missing feature look like nobody wanted it.** That is a
-quieter failure than the open grader object's, and the open object is the one that got the paragraph
-of self-criticism.
+**A closed schema fails by making the missing feature look like nobody wanted it.**
+
+sweep-reviewer's property, available now that both failures have occurred in the same file. **An
+open schema's failure leaves an artifact in the tree.** The two surplus `expected_outcome` fields
+existed as bytes, could be grepped, and were in fact found twice independently -- once by an
+over-matching regex, once by the runner refusing them -- so anyone auditing from inside the
+repository could reach them. **A closed schema's failure leaves no artifact anywhere.** The absence
+of `scaffold_script` is byte-identical to the correct absence of a key nobody needs: nothing to
+grep, nothing to over-match into, and the one author who tries gets an error naming their own file
+and concludes they were wrong.
+
+So an external receipt is **necessary** for a closed schema and merely convenient for an open one,
+and the self-criticism landed on the open object because the open object is the one auditable from
+inside. The schema's reasoning -- a divergence would be *"a schema edit, which is the direction that
+gets noticed"* -- is true of the edit and false of the divergence, because the divergence never
+becomes an edit. It becomes a key nobody writes.
 
 Filed here and not fixed: `schemas/` is not mine. Routed to `schemas` and team-lead with the four
 arms above.
