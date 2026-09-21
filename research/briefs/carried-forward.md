@@ -3064,8 +3064,13 @@ force, and it did not survive to the next section.
 
 The honest limit on this section: four data points over a single day and two people, falling into
 three classes -- a rule that failed at twenty minutes, a rule that failed at zero minutes, a check
-that caught what no reader did, and a filed finding that was rediscovered from scratch. That is not
-enough to rank the mechanisms by failure rate. It is enough for the ordering above, which is an
+that caught what no reader did, and a filed finding that was rediscovered from scratch. Add a fifth,
+which I would put first if ranking by embarrassment: **the HEAD-substitution ban has now failed
+three times in one hour, every time to the person who wrote it, and twice inside the command taking
+the receipt for the entry that bans it.** Each was caught only because `validate-figure.sh` prints
+the sha it resolved. A rule written, published and freshly re-read did not survive to the next shell
+prompt, and the instrument caught it every time without being asked. That is not enough to rank the
+mechanisms by failure rate. It is enough for the ordering above, which is an
 argument about what each mechanism *needs* rather than a count of how often each failed, and enough
 to establish that *"we wrote it down"* is not evidence of anything, which is all this section asks
 anyone to stop doing.
@@ -3119,6 +3124,31 @@ agreed. It was caught only because they printed the list and noticed `schema_ver
 **A control that checks the shape of an answer cannot see the subject of it**, and most of our
 controls check shape.
 
+**And there is a sub-class underneath, which schemas found by making its third instance.** They
+dated those six commits by running `git log --oneline -- <path> | head`, reading seven rows and
+asserting *"this session"*. **`--oneline` omits the date.** The field was not wrong; the output has
+no such field, so they supplied it from assumption and the assumption was the entire claim. Their
+sharpening of the rule, which is correct and which I had missed: *resolve the subject at run time,
+name it in the output* **presumes the output has a field for it**, and a great many of the commands
+everyone runs do not.
+
+**My `head -30` is the same thing and it is the cleanest example, because the missing field is not
+the subject but the extent.** Thirty lines of a diff look exactly like a whole diff. There is no
+marker saying *this is all of it*, so I supplied one, silently, and reported the enum change as
+absent. Line up the rest and the pattern is uniform: `git log -1 -- <path>` has no field saying the
+disk may differ from that commit; `gs=new Set([...])` matching has no field saying which `gs`; a
+green `ak validate` has no field saying which tree. **In every case the reader manufactures the
+missing field out of what they expected, and nothing anywhere records that a value was
+manufactured.**
+
+So the class splits cleanly and the halves need different guards. **When the output names a subject,
+read that field before the answer** -- which is the whole reason the HEAD-receipt error was visible.
+**When the output has no field for the subject, the answer is unlabelled, and an unlabelled answer
+must not be reported as labelled.** Either change the invocation until it prints the field
+(`--format` with a date instead of `--oneline`, `wc -l` beside a `head`) or produce the field with a
+second command. The one move never available is inference, and inference is what it feels like to
+have read carefully.
+
 What separates the ones that were caught from the ones that were not is a single property: whether
 the instrument **reported the subject it had resolved** rather than echoing the subject it was
 handed. `validate-figure.sh` prints the sha it resolved, which is the only reason the HEAD-receipt
@@ -3126,7 +3156,8 @@ error surfaced. The `gs` parse was caught by printing its result. The gate error
 re-running at the parent. The four attributions and the address error were caught by another lane,
 late, and never by an instrument. So the rule, which is cheap and general: **make every instrument
 resolve its own subject at run time, name it in the output, and read that field before you read the
-answer.** A receipt that says `0 errors` and not *for what* is not a receipt. Both halves are
+answer -- and when there is no such field, say the answer is unlabelled rather than labelling it
+yourself.** A receipt that says `0 errors` and not *for what* is not a receipt. Both halves are
 load-bearing: a hard-coded subject is named perfectly and never re-checked, which is the failure
 schemas reports against their own regression test.
 
