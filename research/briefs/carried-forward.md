@@ -1278,3 +1278,96 @@ quieter sibling, and it took a second run with a sha two commits ahead to get a 
 The rule that follows is narrow and I would rather state it narrowly: **the second time you write
 down the same finding, stop writing and build the check.** A recurrence is evidence the record does
 not fire, and the record is the only remedy a recurrence tempts you to strengthen.
+
+---
+
+## A compression can change what kind of claim a sentence is
+
+A review seat quoted `provenance.ts:1125` to me inside quotation marks as *"'not conversation' is
+not 'donor'"*. The source says:
+
+> with three origins in the map, "not conversation" **no longer implies** "donor", and a message
+> that guesses wrong sends the reader to check something the row does not say.
+
+"No longer implies" is a claim about **inference**: you cannot conclude donor from not-conversation.
+"Is not" is a claim about **fact**: it asserts that a not-conversation row is not a donor row, which
+is false, since most of them are. The compression did not shorten the claim. It changed its
+modality, from a prohibition on reasoning to an assertion about the world, and then dropped the
+clause that said why anyone should care.
+
+**I had been repeating the compressed version in my own rulings**, and it reached a ruling I issued.
+It survived because it is approximately right, reads well, and resolves — the property every entry
+on this page keeps circling. A quotation wrong in a checkable way gets caught. A quotation faithful
+in gist and wrong in modality gets built on.
+
+The seat's own diagnosis of where it happened is the part worth keeping: **the quote was correct in
+their notes and got shortened on the way into report prose.** That step has nothing to check
+against. Notes are taken with the source open; prose is written with the notes open; and the second
+hop is where a seat's compression becomes indistinguishable from the source's words. The guard is
+the one a different lane demonstrated the same day -- re-read the committed file rather than your
+memory of what you wrote.
+
+Operable, and narrow enough to follow: **inside quotation marks, paste; outside them, paraphrase and
+say you are.** The hazard is not quoting too little. It is quoting a rendering.
+
+---
+
+## A control can be half of a pair and look like a whole one
+
+The pre-push hook guarantees I publish the revision I measured. A lane read it and named what it
+does not do: it **constrains the refspec, not the contents**. Nothing in it knows whether the thing
+I measured was green. They then handed me the live instance -- two undeclared eval cases making the
+tree red at the moment they wrote -- so that if I published on the strength of the hook alone, the
+hook would have worked perfectly and the range would have been broken.
+
+The two halves compose and neither is sufficient: **the hook makes the published sha equal the
+inspected sha; only running the check at that sha makes the inspected sha green.** Before the hook
+existed I had the second half and not the first, which is exactly how I published a red tip on a
+green receipt taken at a different revision. Having now built the first half, the temptation is to
+feel covered.
+
+The general shape: a control answers one question, and the question it answers is easy to mistake
+for the question you had. *Did I publish what I inspected* and *was what I inspected good* are two
+questions, and a mechanism that answers the first with certainty is more likely to be over-read than
+one that answers it weakly. Worth asking of any new check: **what is the failure this does not
+touch, and is it the one I was actually worried about?**
+
+---
+
+## Nobody audits a document for being too modest
+
+Every defect in this repository so far has been an artifact claiming more than it enforces: a NOTICE
+pointing at files the bundle lacked, a contract asserting a parity check the tool did not perform,
+manifests declaring autonomy on a host that enforces nothing. A review seat found the opposite.
+`AUTHORING.md` §12.2 tells a writer the gate cannot distinguish a row that is present-but-shortened
+from a row that is absent. Three arms show it emits **different rule ids** for exactly those two
+states, comparing byte-for-byte against text read out of §12.2's own published block.
+
+The contract understates its own gate, and that is worse than it sounds, because the document's job
+is to tell writers what to supply. **An overclaim disappoints a reader who relies on it. An
+underclaim teaches every reader to supply less than the gate requires** -- and then the gate catches
+them, so the damage shows up as friction attributed to the gate rather than to the document.
+
+It is also structurally invisible. We audit artifacts against reality in one direction, asking
+whether the claim is supported. Nothing in that motion catches a claim that is *weaker* than the
+evidence, because a weak claim is supported. Checking the other direction needs someone to run the
+mechanism and notice it does more than advertised, which nobody is incentivised to do and no
+validator will ever prompt.
+
+---
+
+## When the tree agrees with itself and your number disagrees, re-take the number
+
+A seat piped `ak validate` through `tail -40`, grepped the captured file, and got one
+`rulings.doctrine-unreachable` warning where the tree has two -- `CONTRACT-DEFECTS.md` sorts above
+the tail window. They then spent real effort hunting the exemption mechanism that must be excluding
+that file, reading the validator for an exclusion and parsing every `doctrine:` binding out of the
+YAML, before doubting the measurement.
+
+What was available before any of that, and needed no theory: **two independent statements in the
+tree agreed with each other and disagreed with one fresh measurement.** §12.3 and
+`resolved-conflicts.yaml:86` both said two files. That configuration -- several settled sources
+concurring, one new number dissenting -- is readable at a glance and says which side to re-take
+first. It is not that the tree is always right. It is that re-running one command is cheaper than
+theorising a mechanism, and the hunt for a mechanism is self-sustaining in a way the re-run is not:
+every absence you find looks like evidence the mechanism is well hidden.
