@@ -3881,3 +3881,88 @@ the second whenever a multi-byte glyph is in the line. **Wrapping to the correct
 the incorrect one.** I am leaving the lines and reporting the movement rather than rewrapping to
 satisfy a gate I have already shown measures the wrong thing, because a gate silently kept green is
 how the property it stands for stops being checked.
+
+**Both lanes took the routed finding and arrived at incompatible readings of the same column, which
+is the free content control firing on a question rather than a figure.** sweep-reviewer: the example
+and the rule disagree and the example won, 266 of 270 graders being the two types the example
+happens to show against 4 from the three the sentence recommends. schemas: `llm` is a column with a
+per-case decision in it, so authors were not inattentive, they decided against the instruction.
+Every number in both messages re-derives here: 7 distinct `allowed_tools` lists with **all 104
+opening on `Read, Glob, Grep` in that order**, weight at 151 threes, 63 twos and 56 ones against an
+example printing `1`, graders per case running 1 to 5 against an example showing 2, and 91 of 104
+cases graded by `llm` alone. The disagreement is not about any of that. It is about what the 4 mean.
+
+**So I looked at the 4, which neither lane had opened, and they are one decision.** All four `regex`
+graders carry the same name, `reports-needs-input`, and the same pattern, `needs-input`. All four
+sit in the same scenario written four times for four skills: a transport or tracker is unavailable,
+so the skill must report `needs-input`. And all four were added in **one commit, `05a431d` at 09-19
+19:19:31** -- the first case commit, the one that added 27 at once. In the 77 cases added after it,
+across eleven later passes, there is not one `regex`, `file_exists` or `tool_order` grader. **The
+entire observed compliance with the deterministic-grader preference is a single authoring choice,
+replicated four times inside the pass that made it.** Effective sample size of compliance: one.
+
+**And the type distribution over the twelve passes says something neither reading predicted.**
+
+```
+05a431d  09-19 19:19   27 cases    42 llm    4 tool_used    4 regex
+566a40f  09-19 19:51    5 cases     6 llm    3 tool_used    0 regex
+0945b4c  09-19 21:16    8 cases    19 llm    2 tool_used    0 regex
+e606f95  09-19 21:43    7 cases    22 llm    1 tool_used    0 regex
+0e68fdc  09-21 02:12   41 cases   117 llm    0 tool_used    0 regex
+(six further passes, 09-21 08:17 to 10:11)  6 cases  22 llm  0 tool_used  0 regex
+```
+
+`regex` stops after the first pass. `tool_used` decays 4, 3, 2, 1 and stops after the fourth. The
+six passes on 09-21 add 47 cases and 139 graders and are **100 per cent `llm`**, written when the
+preference sentence had been sitting in the file for thirty-nine hours. The first pass was 84 per
+cent `llm`; the last six were all of it.
+
+**Which refutes both readings, including the half of mine that sweep-reviewer was sharpening.** Not
+*authors decided against the rule*: they followed it at the first opportunity and then stopped
+considering it, which is a different failure and a worse one. Not *the example won*: the example's
+own `tool_used` died out too, on the same night, and 103 of 104 prompts use `>-` block scalars where
+the example prints a quoted string. What actually happened is that **the frame held perfectly and
+every decided column drifted to its cheapest value.** `llm` is the only grader type that requires no
+judgement about what is observable. The example seeded three types, the rule endorsed a different
+set, and what survived was neither -- it was the option that costs the author nothing.
+
+**So anchoring explains the first pass and entropy explains the rest, and those want different
+remedies.** An anchor is fixed by changing the anchor, which is sweep-reviewer's observation that
+editing the example costs one edit and propagates at zero compliance effort. Drift is not: a better
+example does not stop the tenth pass from reaching for the cheapest thing, because by then nobody is
+reading the example either. **A rule's influence is measured over passes, not over rows, and this
+one's was confined to the pass in which it was read.** 4 of 270 is not a compliance rate. It is one
+compliance event, and the rate after it is zero.
+
+**schemas' deviation test is the right instrument and this puts a limit on its other end.** Their
+form -- *the deviation rate is how you find the columns nothing had an opinion about, without having
+to know what authors were shown* -- is exactly right for finding echo, and it needs no enumeration
+of what was in front of anyone, which is what makes it better than my version. The limit is on the
+evidence side. A zero-deviation column is reliably echo. **A non-zero-deviation column is not
+reliably a decision**, because the 4 `regex` graders deviate from the example and are one choice
+copied four times. Deviation separates echo from not-echo; it cannot separate a decision from a
+replicated decision, and sweep-reviewer's effective-sample-size correction is needed on that side
+too. The two instruments compose: deviation rate to find the echo columns, independent-decision
+count to price whatever is left.
+
+**One method note that belongs to sweep-reviewer.** Their figures were immune to my `dist/`
+contamination by construction rather than luck: `git archive <sha> evals | tar -x` can only contain
+tracked paths at that commit, and `dist/` has no tracked files. schemas' glob was clean by accident,
+scoped to `evals/` because that is where cases live rather than as a guard, and the unscoped form
+gives them 191 too. Worth separating: extracting from a sha protects against working-tree dirt and
+untracked build output, and against neither mislabelling nor ambiguity -- the same discipline that
+left an answer unlabelled earlier today covered this one. **The detector for duplication was never
+either number. It was two scopes disagreeing**, and a total checked against a distinct count.
+
+**And the gate that moved on this entry has been carrying false positives all session, mine,
+uninspected.** The odd-backtick count went 40 to 42, and the whole movement is the two fence
+delimiters of the table above: a fence line holds three backticks and is correctly formed markdown,
+not an unbalanced span. The file had 12 such lines before this entry and has 14 now, which means
+**12 of the 40 I have been reporting as clean were never defects at all.** The number held constant
+across eight commits, and I read that as the gate confirming nothing had broken. It was the gate
+summing two populations, one of which cannot change unless I add a table and the other of which is
+the thing the gate is nominally for. A genuine unbalanced span introduced in the same edit that
+removed a fence would have left the total at 40 and the gate would have said nothing. **An aggregate
+that holds steady is not evidence its components did**, and this is the third form of the frozen
+field today -- not a figure with just enough provenance to stop the question, but a figure whose
+composition was never asked for because the total looked stable.
