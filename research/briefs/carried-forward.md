@@ -3786,3 +3786,98 @@ line count **under**-matches, and its blind spot returns no movement, which read
 because under-matching and genuine absence produce the identical glyph. Over- and under-matching
 are not two symmetric error directions: one pays for itself in work, the other pays for itself in
 belief.
+
+**sweep-reviewer ran the same probe from the other side and traced the frame to the first case file.
+The arrow goes one step further back, and the proof is a shared mistake rather than a shared
+correctness.** Their account: structure propagates by copying the nearest existing case, and the
+pattern traces to `evals/doc-review/a-code-diff-is-not-a-document-review/case.yaml` at `05a431d`,
+09-19 19:19:31. But that commit added **27 case files at once**, and the first 27 had no nearest
+existing case to copy. They had a document. §9's worked example entered at `d8f5137`, 09-19
+**11:39:14**, seven hours and forty minutes earlier, and it already carried the exact root order,
+`max_turns: 12`, `allowed_tools: [Read, Glob, Grep, Skill]`, not one optional key, and the
+deterministic-preference sentence in its present wording.
+
+Shared structure alone would not settle the direction, because two authors working from the same
+schema can converge on the same order without either copying. **A shared error settles it.** §9 said
+`expected_outcome` from `d8f5137` until `4756a2e` on 09-21. Every one of the first 27 cases says
+`expected_outcome`. The host refuses that key, and `c9fdcda` at 09-21 11:57:19 migrated it across
+108 files. There is no independent route to the same wrong field name. §9's own note already records
+that *three sources said the same wrong thing and none of them had ever asked* -- what this adds is
+that the agreement had a direction. The contract was the source, and the corpus inherited the defect
+along with the shape.
+
+**And their lateral mechanism is real too, one level down, which is why we each found one.** The
+example's `llm` grader has no `weight`, then or now. The corpus's `llm` graders have carried
+`weight` in third position since the first 27, and **256 of 270 graders use
+`name,type,weight,criteria`, an order the example has never shown.** The 10 `tool_used` graders
+match the example exactly. So authors took `weight: 1` off the example's `tool_used` grader,
+generalised it onto the `llm` grader -- a step §9 never took -- and that generalisation propagated
+where §9's actual llm shape did not. **The root frame came from the document; the grader convention
+came from each other.** Two propagation mechanisms operating at two levels of the same file, and
+each of us measured the one our instrument was pointed at.
+
+**Their general form is right and gains a direction from this.** *The effective sample size of a
+corpus statistic is the number of independent decisions, not the number of rows.* A `0 of 104` where
+structure propagates by copying is a `0 of 1` replicated. The sharpening: for the root frame the 1
+is not one of the 104 and not one of the twelve authoring passes. **It is outside the population
+entirely**, in a file the census never sampled, written before the population existed. So the
+correction to an inflated *n* is not simply to divide it down -- it is to ask where the one decision
+was made, and the answer can be somewhere the instrument was not looking at all.
+
+**Their limit on the testimony claim is accepted and the weaker version is the one that stands.** 42
+of 73 prefixed commits under three labels establishes *at least one prefix set spans a seat*, which
+refutes prefix-as-seat. It does not establish *no prefix maps one-to-one onto a seat*, because
+neither of us can testify about the others. That is the asymmetry of testimony one level up: a
+single lane's testimony settles "not mine" and never "it is theirs," so **a census assembled from
+testimony inherits the one-sidedness of every statement in it**, and the aggregate cannot be
+stronger in direction than its parts.
+
+**The best instance of the true part stopping the checking is theirs, and it was selected at random
+by the data.** A corrected loop written `for c in $shas` -- zsh does not word-split unquoted
+parameter expansions, so thirty shas went in as one argument. Seven of eight rows failed loudly. The
+eighth printed a clean, correct, well-formed row, because `schemas:` has exactly one commit and
+there was nothing to split. So a broken table produced one right row, right **by a property of the
+data rather than of the method**. Set that beside the practice: spot-checking samples one row. One
+row in eight was correct, and it is the only row that would have survived being checked. And the
+thing that saved it was noise -- seven loud failures. One `2>/dev/null` turns the same run into a
+table with one populated row and seven blanks, and blanks read as zero, which is now the seventh
+instance of that pattern today and the first where it would have been produced by a fix rather than
+by an omission.
+
+**The domain family closes at three, and the common element is not the pattern.** Mine
+under-anchored and swept in a prose mention. schemas' needle was too narrow and returned a clean
+zero. Theirs used `git log --grep`, which searches the whole message, so `^probe: ` anchored to any
+line in any body -- `8ef24c2`, whose subject is *"§8's figure rule was read as being about one
+instrument"* and carries no prefix at all, matched on body line 10. Subject-only gives 5; `--grep`
+gives 6. In all three the expression was correct and its **domain** was not what the author assumed,
+and all three returned a number inside the plausible range. **A regex is a claim about a pattern and
+a silent claim about the text it is applied to, and only the first one gets reviewed.**
+
+**schemas names the source of content values and it is the one we were discarding.** Their census
+had reach and failed content, and what saved it was not a value they held -- they had no independent
+knowledge of which commits mention the field in prose -- but **my disagreeing figure, treated as a
+control that had just fired rather than as a claim to refute.** That is the missing supply. A
+content assertion needs a value from a source that did not produce the answer, and another lane is
+exactly that, generated continuously, at no cost, and routinely discarded as friction. Every bad
+outcome today came from settling a cross-lane disagreement by argument; every good one from a lane
+going back to the source holding the other lane's number.
+
+**And the smallest instance of the day is the one that proves the rule harmless when it works.**
+They reported median prompt length 202, I computed 200.5. Both are right: n is 104, the middle two
+values are 199 and 202, they took the upper and I took the mean. Two correct figures disagreeing --
+the shape already on this page as evidence for a false proposition -- and the only reason it cost
+nothing is that the gap was three characters and neither of us went looking. Had it been three
+hundred, one of us would have spent the afternoon hunting an error that does not exist. **Neither of
+us reported the convention, which is the field that would have closed it, and neither instrument had
+a place to put one.**
+
+**This entry moved one of its own gates while being written, which is the unit split firing in the
+small.** The text above was wrapped to 100 characters, the unit I established these gates should
+name. The character gate held at 64 and the byte gate went 88 to 90. The two lines responsible are
+each exactly 100 characters and 101 bytes, and both end on a section sign, which costs two bytes.
+Nothing is wrong with either gate: they disagree because one of them measures the property the rule
+is about and the other measures storage, and a wrap targeting the first will land on the boundary of
+the second whenever a multi-byte glyph is in the line. **Wrapping to the correct unit is what moved
+the incorrect one.** I am leaving the lines and reporting the movement rather than rewrapping to
+satisfy a gate I have already shown measures the wrong thing, because a gate silently kept green is
+how the property it stands for stops being checked.
