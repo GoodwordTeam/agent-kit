@@ -1554,6 +1554,20 @@ more bytes than the file has. And the zero has the exact shape of a true negativ
 known to be in *that file* separates it from a real reading -- the discriminating-control rule
 arriving in a case where the instrument was never pointed at a file at all.
 
+**Sixth member, caught by sweep-reviewer before it inverted a finding.** `$?` after a pipeline is
+the *last element's*. They wrote `grep -rn 'prompt\.md' src/ | head -10`, read the status as grep's,
+and got 0 from `head` -- which would have been reported as *the validator does know about
+`prompt.md`*, the exact inverse of the truth, and load-bearing for the entry it was feeding. The
+guard is not a better exit code: redirect to a file and count the lines, which is what the `0` in
+that entry is.
+
+Three of these now sit together, and they divide by which of the shell's answers got taken for
+yours. `:r` and `:s` answer about a **different path**. `set -e` inside `$( )` answers about a
+**different scope**. `$?` after a pipeline answers about a **different command**. In each the exit
+code is clean, the output is plausible, and the sentence that comes out is about something nobody
+ran. **An exit code is a claim about the last thing the shell did, and the last thing the shell did
+is not always the thing you wrote.**
+
 ---
 
 ## Three artifacts said "the same rule as markdown" and one of them decided
@@ -1774,9 +1788,9 @@ That decisive field was `expected_outcome` when this was written and has been `c
 accepts. The figures above are unaffected, because a rename moves no value. **The rule above is, and
 it is the sharper reading of this entry.** *Run a new check against the real tree before believing
 its tests* was followed here, exactly as written, and the real tree agreed with the check about a
-key `claude plugin eval` rejects outright. A corpus is a population, not an oracle: it can confirm
-that a check finds what exists in the files and say nothing about whether what exists in the files
-is right. The last entry on this page is that interval.
+key the runner refuses on the object the corpus had put it on. A corpus is a population, not an
+oracle: it can confirm that a check finds what exists in the files and say nothing about whether
+what exists in the files is right. The last entry on this page is that interval.
 
 sweep-reviewer's extension, which is the part that changes what anyone does. The rule catches
 exactly one failure class -- the check that passes only its own fixtures -- and it caught it. What
@@ -2351,10 +2365,50 @@ state.
 Also team-lead's, found by running the runner. AUTHORING.md §9 said an `llm` grader takes
 `expected_outcome`. `schemas/case.schema.json` required
 that key. `DECIDED_BY` in `src/validation/evals.ts` was keyed on it. `claude plugin eval` requires
-`criteria` and rejects `expected_outcome` outright as an unrecognized key. Pointed at the corpus for
+`criteria` on an `llm` grader and refuses `expected_outcome` there. Pointed at the corpus for
 the first time, **87 of 87 cases in the shipped bundle failed to load**, and not one of them had
 ever run, while `ak validate` reported 0 errors on all 104 at the same revision. Repaired at
 `c9fdcda`, against the host rather than against §9.
+
+**Corrected by sweep-reviewer, and the correction makes it worse.** This entry first said the host
+rejects `expected_outcome` outright as a key it has never heard of. It does not. Read from the
+loader's own definition, `expected_outcome: ce().optional()` is a valid key **at case root**; the
+six grader variants are each `.strict()`, so the same name is accepted two levels up and refused on
+a grader. The three sources were not agreeing on a field that does not exist. They were agreeing on
+a real field **at the wrong address**.
+
+That is worse because of which check it defeats. The check anyone would actually run against a
+suspect key is *does the host know this name* -- a grep of the binary, a search of the help. Run
+here, it returns **yes**, and yes is wrong. **A name-level check confirms this error rather than
+catching it**, and every instrument in this investigation was name-level: `DECIDED_BY` keyed on the
+name, the dedup check keyed on the name, the schema's `required` keyed on the name, the 258-to-0
+occurrence census counted the name. **A key has a name and an address, and nothing we built reads
+the address.**
+
+Nor would the remedy have. The annotation arm asks whether a key is ours or the host's;
+`expected_outcome` is the host's, and annotating it truthfully would have cleared it. The
+reconciling arm asks which of the host's keys the schema fails to name; the schema named this one.
+Both arms pass a key that is real, correctly attributed, and in the wrong place. The remedy repairs
+ownership, and this defect is not about ownership.
+
+**And it recurred within minutes, in the opposite direction.** `9b12366` declared `scaffold_script`
+at the case root. The host reads it at **`context.scaffold_script`**, inside a `context` member our
+schema does not have at all. So: once a host key written one level too deep, once a host key written
+one level too shallow, both confirmed present by name, four minutes apart, on the same axis nothing
+measures.
+
+Re-measured, since the rename is what the figures rest on: of the `expected_outcome:` lines
+`c9fdcda` removed from `evals/**/case.yaml`, **258 of 258 sit at indent 4**, which is grader level,
+and none at root. Nothing was lost. The same diff adds **256** `criteria:` lines, and the two-line
+difference is the pair of surplus `expected_outcome` keys on `tool_used` graders that were deleted
+rather than renamed -- which is the same pair the open-schema entry below is about, arriving here as
+arithmetic.
+
+One more inversion, from the same reading. The host's case root is open, its `execution` is open and
+its `context` is open; only the grader variants are `.strict()`. `schemas/case.schema.json` closes
+the root and closes `execution`, and leaves the grader object open. **We are inverted against the
+host at every level we model**, and the one place we chose openness *to avoid guessing* is the one
+place the host refuses surplus.
 
 **Three copies of one unverified reading is the number it takes to look settled.** The three did not
 agree by coincidence and their agreement was never evidence: each was written from the one before
@@ -2483,6 +2537,32 @@ enumeration to hand is `claude plugin eval --help`, which names these keys insid
 rather than as a key list. Absence from a help text is not evidence of absence from the loader, so
 that source can report what the schema is missing and cannot certify that it is missing nothing.
 
+**Closed at `394c1b2` by sweep-reviewer, and kept here because it was a correct statement about the
+source then available.** The `claude` binary carries its JS bundle in cleartext, and the eval case
+definition is zod source at bytes **199533294--199535400** of
+`/Users/eduardopicazo/.local/share/claude/versions/2.1.278` -- offsets for that file on this
+machine, not a portable citation. That is the loader's own definition rather than a description of
+it, so the reconciling arm **can** certify completeness, and the limit above no longer binds.
+Re-derived here rather than taken on report: six grader variants, each `.strict()`; root,
+`execution` and `context` open; `runs` at root with `.max(50).default(3)`;
+`execution.timeout_seconds` with `.max(3600).default(300)`; a `superRefine` on `graders` that
+rejects duplicate names.
+
+**The limit was true and was still the wrong limit, which is the part worth keeping.** Both halves
+of it are accurate: `--help` does name keys inside flag descriptions, and absence from it is not
+absence from the loader. But the two things this investigation went on to miss were *in the output I
+had already read*. `baseline` is named on the cost line as a paid grader type. The second case
+format is named in the **third line of the output**, in the command's own first sentence -- *"Run
+eval cases (<eval dir>/**/case.yaml or prompt.md + graders/*.md ...)"*. I read that text to
+enumerate keys, so what I came back with was keys.
+
+**A stated limit can be accurate and still function as the place you stop looking.** Having written
+down why the source could be incomplete, I had an explanation for any gap before any gap appeared,
+and an explanation held in advance is indistinguishable from a search. The guard is not a better
+limit. It is that a limit on an instrument is not a limit on the reading -- **say what you pointed
+it at**, because that is the sentence that would have read *"enumerated keys, did not read the
+format line."*
+
 **Its first application finds three, and none of them is `criteria`.** `claude plugin eval --help`
 at `claude 2.1.278` names three case keys this repository has never mentioned anywhere:
 `scaffold_script` (`--scaffold`, `--no-scaffold`), `runs` (`--runs`, *"default: case.runs ?? 3"*)
@@ -2565,9 +2645,10 @@ commits.
 Fifty-four-with-none-reaching is consistent with *nobody knew the key existed* and with *everybody
 knew and no case wanted a scaffold*, and nothing in the tree separates them. What is established is
 that the three sources an author would consult are silent. That makes the first reading
-parsimonious, not proven. **An
-open schema's failure leaves an artifact in the tree.** The two surplus `expected_outcome` fields
-existed as bytes, could be grepped, and were in fact found twice independently -- once by an
+parsimonious, not proven.
+
+**An open schema's failure leaves an artifact in the tree.** The two surplus `expected_outcome`
+fields existed as bytes, could be grepped, and were in fact found twice independently -- once by an
 over-matching regex, once by the runner refusing them -- so anyone auditing from inside the
 repository could reach them. **A closed schema's failure leaves no artifact anywhere.** The absence
 of `scaffold_script` is byte-identical to the correct absence of a key nobody needs: nothing to grep
@@ -2579,6 +2660,36 @@ and the self-criticism landed on the open object because the open object is the 
 inside. The schema's reasoning -- a divergence would be *"a schema edit, which is the direction that
 gets noticed"* -- is true of the edit and false of the divergence, because the divergence never
 becomes an edit. It becomes a key nobody writes.
+
+**Third member, found by sweep-reviewer, and it breaks the pairing the entry was built on.** There
+is a second authoring surface. `claude plugin eval init --bare` writes no `case.yaml` at all: it
+writes `prompt.md` with YAML frontmatter plus `graders/<name>.md`. The host names the form in the
+first sentence of `claude plugin eval --help` -- *"Run eval cases (<eval dir>/**/case.yaml or
+prompt.md + graders/*.md ...)"* -- and its loader errors treat the two as alternatives, down to *"no
+case definition: case.yaml and prompt.md are empty or missing here"* and *"execution.prompt is
+required (a prompt.md body, or execution.prompt in case.yaml)"*. Verified here from the help output
+and the binary's own error strings. The field mapping -- grader name from the filename, criteria
+from the body -- is sweep-reviewer's reading and I have not re-taken it.
+
+This package cannot see that form. `CASE_FILE = "case.yaml"` in `src/validation/evals.ts` is the
+only discovery path, and `prompt.md` appears nowhere in `src/`: zero matching lines, measured by
+redirecting to a file and counting it, for the reason in the shell entry above. sweep-reviewer put a
+`--bare` case in a scratch extract of `630bad0` under a real skill directory. `ak validate` returned
+`0 errors, 17 warnings, 43 notes`, byte-identical to the baseline for that extract, and the same
+case run on the host scored **1.00** at **$0.06**.
+
+So the asymmetry has three terms. **Open** admits surplus and leaves greppable bytes. **Closed**
+refuses a key and leaves no artifact. **Unmodelled** leaves a complete, valid, host-runnable case
+sitting in the tree that the validator never reports on -- not accepted, not refused, not counted,
+and not a zero either.
+
+**Filed as an open question at sweep-reviewer's request, and left open.** Their own guard -- *what
+would have had to be true for this zero to be non-zero* -- presupposes a zero, and here there is no
+figure at all, because nothing was ever measured. The question that reaches it is one step further
+back: **what would a count of this have been a count of.** Neither of us has a crisp form of that
+yet, and rounding it into a rule that sounds finished is the move this page exists to catch. It
+stays a question until something can be run against it, which is this page's disposition rule
+applied to a finding whose disposition is *unresolved*.
 
 Filed here and not fixed: `schemas/` is not mine. Routed to `schemas` and team-lead with the four
 arms above.
