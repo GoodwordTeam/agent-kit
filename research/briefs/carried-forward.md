@@ -3707,3 +3707,82 @@ two correct figures whose disagreement was evidence for a false proposition, and
 census figure that survived because the conclusion resting on it was right, and the family is one:
 **in each case the true part is what stops the checking.** Not a false claim wearing a disguise, but
 a true one standing in the position where a different truth was owed.
+
+**The confound schemas found one step outside the schema is in my file, and it is not one value --
+it is the whole shape of the corpus.** They corrected their own `0bb3555` argument: *90 of 104
+differ from the host default of 10* measures nothing, because nobody was looking at 10.
+`AUTHORING.md` prints `max_turns: 12` in its worked case, and **40 of the 104 carry exactly 12**,
+the modal value at 38 per cent. Their corrected figures re-derive: 64 of 104 differ from the
+example, and 50 carry a value that is neither the example nor the default. The requirement still
+holds on half the corpus rather than on 87 per cent of it.
+
+Then I ran the same test one level further out, because if a documented example can anchor a value
+it can anchor a shape. **One distinct top-level key order across all 104 cases** -- not the same
+set, the same order -- `schema_version, name, tags, execution, graders`, which is the example's
+order exactly. Three distinct grader key orders, each the required pair plus the one field its type
+discriminates. Not one optional key anywhere in the corpus, and **the example shows no optional key
+either.** So the twenty-six permitted-and-unused dimensions are not twenty-six independent absences
+of demand. They are one absence, copied 104 times from the worked example in this contract.
+
+**sweep-reviewer flagged template generation as the alternative and handed it over untested, so I
+tested it, and the answer is neither.** 104 distinct prompts out of 104. 248 distinct names across
+270 graders, and 251 distinct `criteria` strings across the 256 `llm` ones. The files arrived in
+twelve separate commits over three days, the largest adding 41 and five of them adding one. **The
+bodies are authored and the frame is copied**, which is the shape neither hypothesis predicted:
+not one generator's output, and not 104 independent decisions. Twelve authoring events that each
+inherited the same skeleton from the same place.
+
+Which sharpens their inversion rather than weakening it. Their correction of schemas stands --
+*optional at 0 is not circular the way required at 104 is*, because the schema permits all ten of
+those keys and forbids exactly one, `execution.model`, by closure. But the zeros are still not
+evidence about demand, and now for a reason one layer out: **the thing authors were shown exercises
+the required skeleton and nothing else.** A corpus is evidence about its authors only in the
+columns where nothing they were shown had an opinion, and a worked example has an opinion about
+every field it omits.
+
+**And one of my three enum examples was circular, which schemas caught.** I wrote that nothing
+pushed anyone away from `file_exists`, `tool_order` or `baseline`. True of two and false of the
+third: the type enum held the same five values at `7db25a7`, `c9fdcda` and `9b12366`, and
+`baseline` was not among them until `719a040` at 12:44 today, so a `baseline` grader failed
+validation for the whole period its zero describes. That zero is the circular column exactly. **So
+`4d66492` carries two evidentiary standings in one commit**: the `file_exists` and `tool_order`
+conditionals are prospective against a measured absence, and the `baseline` conditional is
+prospective against an absence that could not have been anything else and never could have been
+measured.
+
+**The other two zeros are stronger than I claimed, and the reason sits three lines under the
+example.** §9 does not merely permit the deterministic types, it instructs: *Prefer a deterministic
+grader (`regex`, `file_exists`, `tool_order`) over `llm` wherever the pass criterion is
+observable.* So the corpus was pushed toward `file_exists` and `tool_order`, not away, and both are
+still at zero. 256 of 270 graders are `llm`, 94.8 per cent, against fourteen deterministic ones, of
+which `regex` supplies four and the two named types supply none. **The stated preference order is
+exactly inverted in practice and nothing checks it** -- a third rule-with-no-check today, and
+unlike the attribution trailer this one is departed from 256 times rather than once.
+
+It also changes what the 94.8 per cent is evidence of. As a bare count it says our strictness and
+our corpus point in opposite directions, which was sweep-reviewer's reading and is true. Set beside
+the instruction it says something narrower and worse: **a preference stated in the same section as
+the example, and three lines from it, had no effect on the one dimension it governs, while the
+example's key order had total effect on every dimension it touched.** What propagated was the part
+that could be copied.
+
+**Re-deriving all of this produced the instance of the day, in the measurement rather than the
+result.** My first pass globbed `**/case.yaml` and got 191 files, because `ak build` writes 87 eval
+copies into `dist/` and `dist/` is untracked. The totals all inflated -- 491 graders, 463 `llm`,
+`max_turns` summing to a different number -- and **every distinct count came back identical**: 104
+prompts, 248 grader names, 251 criteria, one key order, three grader orders. Duplication cannot
+move a set. So the corruption was invisible in exactly the figures I was using to argue the bodies
+were authored, and visible only in the figures I was using to argue the frame was copied. Both
+conclusions would have survived it; one half of the evidence was wrong. **A duplicated corpus
+disguises itself as a larger one under every instrument that de-duplicates, which is most of the
+instruments anyone reaches for when they want to show variety.** The catch was that the two glob
+scopes disagreed, not that either looked wrong.
+
+**The separator question gets an answer from schemas' census failure, and it is not symmetric.**
+Mapped onto my two miscounted controls: the byte-width gate **over**-matches, so its twenty-four
+false positives are twenty-four invitations to look, and it cannot pass a violation. The em-dash
+line count **under**-matches, and its blind spot returns no movement, which reads as compliance. So
+*a control that has never moved has never been tested* bites hardest on the under-matching one,
+because under-matching and genuine absence produce the identical glyph. Over- and under-matching
+are not two symmetric error directions: one pays for itself in work, the other pays for itself in
+belief.
