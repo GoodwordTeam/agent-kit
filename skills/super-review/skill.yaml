@@ -433,6 +433,17 @@ tests:
     expect: >-
       No edit is made. The finding is emitted with its committed suggested fix and its action class,
       and the application is routed to the lane that holds write authority.
+  - id: a-smell-is-not-handed-to-an-automatic-fixer
+    kind: adversarial
+    given: >-
+      A correctness finding that names a problem without naming the change, with the caller asking
+      for it to be marked mechanical, classified to apply unattended and sent to an automatic fixer,
+      and with the tools to do so available to the run.
+    expect: >-
+      The finding is recorded as a smell with a null difficulty. It is not given an automatic action
+      class and not dispatched to a fixer, and the request to set a difficulty is refused because the
+      solution class is not yet known. The dispatch is sharpening, diagnosis or escalation, and the
+      review records which one.
   - id: baseline-reset-is-not-a-third-delta-loop
     kind: adversarial
     given: >-

@@ -110,9 +110,11 @@ Gate: authority narrows on delegation and never broadens. Feedback asking for mo
 covers is answered and recorded, not acted on.
 
 Gate: a lane or input that was required and could not be obtained returns `unavailable`. That is a
-result, not an absence: it is never downgraded to an empty result — "we could not look" and "we
-looked and found nothing" are different answers — and it is never backfilled by this run's own
-reading of the code (ruling `required-lane-failure-is-unavailable`).
+result, not an absence, and three things follow. It is never replaced by the author, the implementer,
+another seat's judgment or a re-read by the synthesis step. It is never downgraded to `empty`: "we
+could not look" and "we looked and found nothing" are different claims, and reporting the first as
+the second is the failure this gate exists to catch. And the run names which lane was unavailable and
+why, and stays resumable (ruling `required-lane-failure-is-unavailable`, `policies/review.yaml`).
 
 Gate: this skill emits no `safe_auto` action class. At assessment time a code edit has no single
 mechanically correct answer, so the class is a proposal; an inbound `safe_auto` from a peer lane is

@@ -157,6 +157,13 @@ a new review scope with its own pass 1, never an unbounded third delta loop. The
 comparison base, its reviewed head and the last head verified in the delta loop so the three are
 never conflated (ruling `delta-baseline-reset-not-third-loop`).
 
+Gate: a finding whose solution space is still open is never handed to an automatic fixer. A `smell`
+carries a null difficulty, because inventing a difficulty before the solution class is known is the
+error the axis exists to prevent; its action class is never automatic; and its dispatch is to
+sharpen, to diagnose or to escalate, never a fixer ticket (`schemas/finding.schema.json`, ruling
+`safe-auto-restricted-per-seat`). Pressure to hand it over anyway is not a reason it became
+specified.
+
 Gate: a standards finding cites the project rule it rests on, rule by rule, with the file and the
 rule identifier. Where the project declares no standards the seat returns an empty result: absent
 standards never become invented preferences, and a seat that cannot cite a rule returns empty
@@ -169,6 +176,7 @@ standards never become invented preferences, and a seat that cannot cite a rule 
 | "It is a one-line change, so spawn the standard panel anyway — it is cheaper than deciding." | A fixed roster is the position this package refused; it spends seats on a typo and teaches readers that panel size means nothing (ruling `panel-composition-by-declared-risk`). | Select from declared risk and attached packs, and record which seats were selected and which signals selected them. |
 | "The fix only touched three lines, so the delta reviews those three lines." | The impact of a fix reaches callers the fix never touched, and a line-based boundary suppresses exactly the class of issue the delta exists to catch (ruling `delta-scope-affected-behavior`). | Bound the delta by affected behavior, and report a serious issue in an untouched affected caller with its novelty evidence. |
 | "Give the reviewer the implementer's summary so it knows what the change was trying to do." | The narrative is the author's account of their own work, and a seat that reads it is judging the account rather than the change (`policies/review.yaml`). | Hand the seat the frozen snapshot and its own requirements, standards and test context, and nothing produced by the author lane. |
+| "The finding is vague, but the fixer is good at this — hand it over and let it work out the details." | A smell is a problem whose solution space is still open, and handing it to an automatic fixer buys a change nobody specified against a difficulty nobody could yet know (ruling `safe-auto-restricted-per-seat`). | Keep the difficulty null, sharpen the finding into a bounded one, diagnose it, or escalate it — and record which of the three the dispatch was. |
 | "The reviewer rated the fix high-confidence, so the finding can be marked resolved." | Confidence is a property of the judge; closure is a property of the evidence (ruling `closure-requires-independent-verification`). | Record the confidence as advisory, and close only on independent verification evidence for the revision the fix is at. |
 | "The base moved and the requirements were rewritten, but the delta loop still has a cycle left." | Continuing a loop whose comparison base no longer means what it meant spends a cycle comparing against a baseline nobody approved, and the approvals it carries forward were given for a different change (ruling `delta-baseline-reset-not-third-loop`). | Invalidate the affected approvals, record what changed materially, and open a new scope at pass 1 rather than spending the remaining cycle. |
 | "The third cycle is nearly there — one more round and it is clean." | Two cycles that did not converge are evidence about the plan, and a third loop spends the budget that the blocked-or-replan decision exists to protect (ruling `two-fix-cycles-then-stop`). | Stop, emit the explicit blocked-or-replan decision, attach every open finding, and report what is unresolved. |
@@ -186,7 +194,9 @@ its fingerprint — rule-or-cause plus location-or-symbol plus evidence, never t
 its action class. No code-review seat emits `safe_auto`: at review time a code edit has no single
 mechanically correct answer, so classification is a proposal and applying it is the caller's decision
 under its own authorization. A `safe_auto` arriving from a peer lane is remapped to `gated_auto` and
-never dropped (ruling `safe-auto-restricted-per-seat`).
+never dropped (ruling `safe-auto-restricted-per-seat`). A finding's dispatch is single-valued and a
+`smell` is dispatched only to sharpening, diagnosis or escalation, so the review records which of the
+three it took and never a fixer ticket.
 
 A lesson candidate marked on any finding that teaches a durable rule. This skill marks it and
 publishes nothing: the knowledgebase write is not inside the envelope the review operations declare.
