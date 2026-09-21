@@ -167,6 +167,15 @@ tests this obligation by searching the section will report it satisfied, which i
 distinction exists for. Which rules stop the skill is the author's judgement; the guarantee is only
 that the ones that do are all here.
 
+**Nothing in the tree records which rulings those are, which bounds what a check of this can do.**
+`policies/resolved-conflicts.yaml` carries `coverage: direct|indirect`, which is about grounding
+rather than stopping, and no field says a ruling halts a run. Measured at `4e45481`: of its 19
+rulings, 10 are named in at least one `Gate:` block under `skills/` and 9 in none. Deriving the
+population from the gates is therefore circular — a ruling would be in scope exactly when it already
+complies — and reading those 9 as 9 missing gates assumes every ruling halts, which is not what this
+section claims. Until a ruling can declare that it stops a run, this obligation is discharged by the
+author and certified by nobody, and a check reporting otherwise is measuring its own definition.
+
 ### `## Outputs`
 
 Every artifact this skill produces: id shape, schema reference, and where it goes. A skill that
