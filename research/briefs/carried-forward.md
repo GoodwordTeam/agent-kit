@@ -1570,6 +1570,15 @@ form. The rule was not vague, not buried, and not someone else's: it names the s
 syntax, and it was written on this page by me. Count it against the recurrence section below rather
 than against zsh.
 
+**Eighth, and this one is the dangerous shape of it.** schemas hit the same `:s` modifier building a
+per-revision table, and their loop printed four rows reading `9b12366 allOf= enum=`. `git show`
+failed loudly on stderr -- but **the row is report-shaped with empty fields, and an empty field
+renders as a finding.** Redirect stderr, or read the tail of a background task, and you have a
+well-formed four-row table asserting that no grader type has ever carried a conditional. Same family
+as the receipt script printing zero bytes when the tree was red: **the failure mode of a loop is a
+row of blanks, and blanks read as zero rather than as nothing.** A missing value and a measured
+absence are the same glyph, and the loop is where they meet most often.
+
 Three of these now sit together, and they divide by which of the shell's answers got taken for
 yours. `:r` and `:s` answer about a **different path**. `set -e` inside `$( )` answers about a
 **different scope**. `$?` after a pipeline answers about a **different command**. In each the exit
@@ -2434,6 +2443,14 @@ the three-arm conclusion was true at 12:56:08 and reversed at 12:59:21, verified
 **The claim they misdated is itself the one case the generalisation has.** One instance, not zero,
 and not the one anybody set out to supply.
 
+**And what made it stale is why this instance beats a hypothetical.** The sentence was a finding, it
+was correct, it was acted on within three minutes, and **the acting on it is exactly what falsified
+the sentence reporting it.** Nothing was wrong with the experiment. sweep-reviewer's statement of
+it, which inverts the intuition: **a finding that gets fixed promptly is the most likely sentence in
+the repository to be stale, not the least.** The better the report, the faster someone repairs what
+it describes, and the sooner its present tense stops holding. Findings need pins more urgently than
+speculation does, which is the reverse of how anyone writes them.
+
 **The property behind it.** The host's root, `execution` and `context` are all open; only the six
 grader variants are `.strict()`. In an open object a misplaced key is not rejected, it is
 **ignored**, and ignoring is byte-identical to correct absence. So this failure leaves no artifact
@@ -2846,6 +2863,22 @@ from blobs. One consequence: **the `baseline` enum value without its `baseline_f
 by `719a040`, not by `6d4c5da`.** The false sentence also went out in `e2122df`'s commit message,
 which stays as written, because attribution is repaired forward.
 
+**And the consequence I drew from it was a step off, which schemas caught by measuring the class
+instead of the member.** I said *the `baseline` enum value without its `baseline_file` was
+introduced by `719a040`* -- true, and it is what this page says. But I also wrote, in a message,
+that *item 5* was introduced there, and item 5 had been defined as the class: enum values carrying
+no conditional. Measured across the file's history, the bare set is `[file_exists, tool_order]` at
+`7db25a7` on **09-19**, unchanged through `c9fdcda` and `9b12366`. It gains `baseline` at `719a040`,
+and is empty at `4d66492`. **`719a040` widened the class from two to three. It did not introduce it,
+and two of its three members predate this session by two days.** A fourth variety, then: **a class's
+origin read off its most recent member**, with one member standing in for the set.
+
+Their own half of it is sharper than deference and they volunteered it. `719a040` is **their**
+commit, and its message says, in their words, *"`baseline` is added to the type enum, which refused
+it."* They restated a sentence their own commit message contradicts, with the contradicting text one
+`git log -1` away and written by them. **Deference at least has the excuse that the evidence was in
+somebody else's hands.**
+
 **The asymmetry underneath all four.** *"Did I write this?"* is answerable from what I already hold
 -- my own transcript records the call that made the commit. *"Did they write it?"* is not answerable
 from anything I hold at all. Three of the four errors are on the second question, where I had no
@@ -2869,6 +2902,14 @@ verification**, and accepting a correction is itself a claim that needs its own 
 I had the evidence for *"did I write this"* and did not look; they had none at all and reported that
 they had. **Before accepting a correction, ask which instrument could have produced it and whether
 you hold one.**
+
+**The refinement, which they found by catching themselves not making the mistake.** When I corrected
+them in their *own favour* -- telling them the tree they had described was not stale after all --
+they re-derived it from blobs rather than accepting it, on the explicit grounds that **a correction
+in your favour escapes scrutiny harder than one against you.** A correction against you at least
+costs something to accept; a flattering one costs nothing and arrives pre-approved. The ordering,
+least-scrutinised first: a correction that favours you, then a correction against you, then a claim
+you made yourself.
 
 **The same move at the next level up, and it nearly cost me a commit.** `4756a2e` was mine and
 `ak validate` reported `1 error` on it. The error was not mine: `2cc3a92`, another lane's, had
@@ -3134,6 +3175,29 @@ half-finished work. The guard, in this section's own form: **an instrument that 
 tree must report `git status` for that path beside its answer**, because otherwise it names a
 subject it never consulted. `validate-figure.sh` already does the commit half of this and prints the
 dirty flag; nothing we have does it for a bare `open()`.
+
+**And the exposure is bounded rather than general, which sweep-reviewer established and I
+re-derived.** `case.schema.json`'s only cross-file reference is
+`common.schema.json#/$defs/nonempty_string`, twenty-seven times and nothing else.
+`schemas/common.schema.json` is one of the modified files -- but its uncommitted change is to a
+different `$def`, the SKILL.md section enum going from six values to ten, and `nonempty_string` does
+not appear in that diff at all. So **every case-schema claim either of us made this afternoon is
+immune to the dirt, and we can say why rather than hope.** What is not immune is the rulings and
+packaging surface, where `policies/resolved-conflicts.yaml`, `common.schema.json` and
+`src/validation/rulings.ts` are plainly one change in flight and the packaging files are modified
+beside an untracked one.
+
+Which puts the whole-repo figure in the same position. **`0 errors, 17 warnings, 43 notes` is clean
+if it came from `validate-figure.sh`'s extract and contaminated if anyone took it in the live tree,
+and the number is byte-identical either way.** The sub-class above, one layer up: the figure has no
+field for the tree it measured, and the probe's answer was to grow one. sweep-reviewer's addition to
+the guard, which their own recovery earned: an instrument that reads a **revision** must print the
+revision, because *clean by construction* still leaves the answer unlabelled. They extracted with
+`git archive`, never recorded which revision, and recovered the label afterwards by hashing the
+extract's `case.schema.json` to `c70354b9` and finding which commits carry it -- `4d66492`,
+`31e0d84`, `4f6b53a`, `bf67a8f`, unchanged across all four. The result holds because the file did
+not move, not because the method was sound. **Recovering a label after the fact is not the same as
+producing the field**, and `git archive` protects against dirt without protecting against ambiguity.
 
 The last is schemas', reported against their own probe, and it is the one that should frighten us.
 Anchoring on `gs=new Set([...])` in the minified binary matched a **different** `gs` and returned
