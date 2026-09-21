@@ -80,6 +80,15 @@ backtick span, and it asserts that its output differs from its input in whitespa
 the positive control on the wrapper itself, which is what turns the second failure from
 silent into an exception. Reflow with it, or by hand; not with textwrap, which knows nothing
 about spans.
+
+A third mode, met the same day and not caught by that assertion: whitespace alone is exactly
+what a paragraph break is made of. Handed two paragraphs, `safe_wrap` flattened the blank line
+between them and welded them into one, and the assertion passed, because it compares
+non-whitespace characters and a lost blank line is invisible to it. The probe passed too --
+`double blank lines` counts breaks that appear, never one that vanishes. So it raises on a
+blank line in its input now, and the caller wraps paragraph by paragraph. The general shape is
+the one this file keeps meeting: a control that compares the thing it was built to protect is
+silent about the dimension it normalises away first.
 """
 import hashlib
 import re
@@ -106,7 +115,16 @@ def safe_wrap(text: str, width: int = 100) -> str:
     Breaks only at spaces outside backtick spans, so a code span is never split and
     punctuation following one is never detached. The assertion is the control: it fails
     loudly on the exact defect the probe itself cannot see.
+
+    Takes one paragraph. A blank line is whitespace, so flattening one is a change the
+    assertion below cannot see and the probe does not count; it is refused here instead.
     """
+    if "\n\n" in text.strip():
+        raise ValueError(
+            "safe_wrap takes one paragraph: a blank line would be flattened, and neither "
+            "the assertion below nor the probe's blank-line count would report it. "
+            "Split on blank lines, wrap each, and rejoin with '\\n\\n'."
+        )
     flat = " ".join(text.split())
     inside = False
     breaks = set()

@@ -149,6 +149,24 @@ anti-rationalization table (§3.1).
 > Gate: a required lane that did not run is `unavailable`, which blocks approval. It never
 > degrades to "the other lanes agreed".
 
+**This section is the completeness guarantee, not the binding statement.** A gate is rarely the only
+statement of its rule: `## Not for`, `## Stop conditions`, `## Limits` and §3.1's table carry the
+same rules in their own forms, and each is required to. What this section adds is that a reader who
+reads it and nothing else holds the whole stop-list. The defect that follows is the inverse of the
+one worth hunting: **a rule that stops the skill and is not stated here as a gate is the defect,
+however many other carriers it has** — and those carriers are the design, not duplication to remove.
+A pass that deletes one for redundancy is removing a copy the section holding it is required to
+carry.
+
+**A table row is not a gate, and it sits under this heading.** §3.1's table is required here, so a
+rule can be present in `## Hard gates` by position and still absent from the stop-list: a row states
+a rationalization and its rebuttal, a gate states a condition and the refusal. Measured in
+`skills/super-review/SKILL.md` at `1b5883b`, `delta-scope-affected-behavior` has exactly two
+carriers — a clause in workflow step 9, and one table row that is inside this section. A check that
+tests this obligation by searching the section will report it satisfied, which is the case the
+distinction exists for. Which rules stop the skill is the author's judgement; the guarantee is only
+that the ones that do are all here.
+
 ### `## Outputs`
 
 Every artifact this skill produces: id shape, schema reference, and where it goes. A skill that
@@ -239,21 +257,20 @@ is where a skill records the degradation its adapter contract describes — a sk
 restriction a host lacks lists it in `unsupported` and drops to `guided` or `manual`, rather than
 claiming a guarantee nothing enforces (`adapters/claude-code/CONTRACT.md` §4).
 
-**Nothing reads that declaration, and until this paragraph is deleted the sentence above describes a
-field with no consumer.** `src/packaging/manifest.ts:52` takes the mode from `autonomy.modes` and
-`autonomy.requires_enforced`, not from `packaging.hosts[]`, and `src/packaging/plan.ts:199` computes
-the bundle's mode from those two alone. No manifest can carry an `autonomy` key —
-`schemas/skill.schema.json` closes the top level with `additionalProperties: false` and has no such
-property — so the read returns empty for every skill in the package and the expression has one
-reachable branch. All eight bodies in `dist/claude-code/skills/` carry `mode: manual`, including
-those whose manifests declare `autonomous`. With them go `rejected` and the whole
-`unsupported`-driven degradation this paragraph describes: a skill declaring a guarantee its host
-cannot enforce and a skill declaring nothing produce the same bundle. Which file is amended is not
-settled here — §4 and the schema agree with each other and the code disagrees with both, which is
-the shape that usually means the code is wrong, but `ak build` reports zero errors either way and a
-writer sees nothing. What is settled is that declaring a `mode` today buys the guarantee §10 says a
-stated-but-ungated rule buys, which is none, and that a writer who fills this block correctly has no
-way to find that out from a clean run.
+**Nothing reads that declaration.** `packaging.hosts[]` has no consumer in the packager: the
+bundle's mode is computed from other fields entirely, so a skill declaring a guarantee its host
+cannot enforce and a skill declaring nothing produce the same bundle, and the `unsupported`-driven
+degradation described just above does not happen. Filling this block correctly buys what §10 says a
+stated-but-ungated rule buys, which is nothing, and `ak build` reports zero errors either way, so no
+clean run will tell you. Which file is amended — the code, §4, or the schema — is not settled here.
+
+**The measurements are in `CONTRACT-DEFECTS.md`, and this paragraph carries none on purpose.** It
+exists to speak at the moment a writer is filling `packaging.hosts[]` in, which is the only moment
+the warning does any good and the reason it is not just a second copy of that entry. Locators are
+what went stale last time: one defect held two records, both carrying line numbers, and only one was
+maintained. A warning carrying none cannot drift. If the entry has left `CONTRACT-DEFECTS.md`, this
+warning was retired with it and belongs deleted — a pointer to an entry that is gone is visible in a
+way a stale line number is not.
 
 `ak validate` cross-checks `catalog.yaml`'s `invocation` against `skill.yaml`'s `invocation` and its
 entrypoint authorities, and fails on disagreement.
@@ -1659,6 +1676,9 @@ Required sections are §3's ten, with one substitution:
 
 §3.1's anti-rationalization table is required under `## Hard gates`. Protocols are where steps get
 skipped: `tdd`, `apply-findings` and `review-delta` each exist because a recorded run skipped one.
+§3's completeness rule applies here unchanged, and the skipping is why: a step this protocol refuses
+to skip is a gate in that section even when `## Not for` or a table row already says so, because the
+section is where a reader is entitled to find every condition that stops the protocol.
 
 Long material goes behind `protocols/<id>/references/` on §1's rule.
 
