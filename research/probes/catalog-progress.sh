@@ -21,14 +21,24 @@
 # of the wrong denominator. A disagreement here is a real finding either way:
 # the catalog gained an entry the plan does not account for, or the plan moved.
 #
-# The schemas target reads 15 and not the plan's 14. The plan moved, and this
-# is the record of that rather than a correction of a miscount. The plan's 14
-# were written before `evals/` existed; `schemas/case.schema.json` was
-# commissioned afterwards because every `case.yaml` in the tree opened with
+# The schemas target reads 16 and not the plan's 14. The plan moved twice, and
+# this is the record of that rather than a correction of a miscount.
+#
+# The plan's 14 were written before `evals/` existed; `schemas/case.schema.json`
+# was commissioned afterwards because every `case.yaml` in the tree opened with
 # `schema_version: "1.1"` and nothing in `src/` had ever heard of it, so a
 # `case.yaml` cut down to its `tags:` line alone validated exactly as the full
-# case beside it did. Moving the target rather than leaving the disagreement to
-# flag is the deliberate part: a permanent DISAGREEMENT row is a broken exit
+# case beside it did.
+#
+# The sixteenth is `schemas/rulings.schema.json`. The plan's 14 govern artifacts
+# and configuration; `policies/resolved-conflicts.yaml` is neither, and it is the
+# file every skill body cites for a ruling id, so its shape was the one nobody
+# had declared. A row could give `binds` as a list where a mapping was meant and
+# bind nothing while reading as bound, and a misspelled field name was dropped in
+# silence -- both measured, and neither visible to any check in `src/`.
+#
+# Moving the target rather than leaving the disagreement to flag is the
+# deliberate part: a permanent DISAGREEMENT row is a broken exit
 # status that everyone learns to read past, which costs more than the one line
 # of provenance it saves. Any other section that moves belongs here the same
 # way, with the reason, and not as a silent edit to the numbers below.
@@ -71,7 +81,7 @@ import os, sys, yaml, collections
 
 TARGETS = {
     "skills": 33, "packs": 8, "protocols": 7, "roles": 29, "references": 4,
-    "schemas": 15, "policies": 5, "profiles": 4, "adapters": 4,
+    "schemas": 16, "policies": 5, "profiles": 4, "adapters": 4,
 }
 
 catalog = yaml.safe_load(open(sys.argv[1]))

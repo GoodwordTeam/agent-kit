@@ -8,6 +8,7 @@ import { listDirs, listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts
 import type { CheckContext } from "./context.ts";
 import { documentFiles, documentShape } from "./documents.ts";
 import { CASE_FILE, EVALS_DIR } from "./evals.ts";
+import { RULINGS_FILE } from "./rulings.ts";
 import { error, note, skipped, type Issue } from "./types.ts";
 
 type AjvInstance = InstanceType<typeof Ajv2020>;
@@ -154,6 +155,13 @@ function documentTargets(ctx: CheckContext): Target[] {
       const file = `${EVALS_DIR}/${entry.id}/${caseId}/${CASE_FILE}`;
       if (readTextIfPresent(join(root, file)) !== null) targets.push({ file, schemaId: "case" });
     }
+  }
+  // The resolved-conflicts policy. Its path comes from rulings.ts, which is the
+  // file that owns where it lives; the other `policies/*.yaml` are not targets
+  // because no schema declares them, and adding one here for a schema that does
+  // not exist would report every policy as validating against nothing.
+  if (readTextIfPresent(join(root, RULINGS_FILE)) !== null) {
+    targets.push({ file: RULINGS_FILE, schemaId: "rulings" });
   }
   return targets;
 }

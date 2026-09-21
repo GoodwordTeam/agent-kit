@@ -287,3 +287,106 @@ describe("executable eval cases are reached through the catalog's skills", () =>
     expect(caseIssues(ctx, stray)).toEqual([]);
   });
 });
+
+/**
+ * The resolved-conflicts policy.
+ *
+ * Reads the shipped `rulings.schema.json`, for the reason the eval cases above
+ * read theirs. What makes this file worth a schema is not the constraints it
+ * restates but the two defects nothing else in the tree could see: `binds`
+ * written as a list binds nothing while reading as bound, and a misspelled field
+ * name is dropped in silence. `src/validation/rulings.ts` coerces both to empty
+ * and carries on, so before this schema each was a green run.
+ */
+const WELL_FORMED_RULINGS = `schema_version: 1
+policy: resolved-conflicts
+rows: 1
+conflicts:
+  - id: supervisor-never-implements
+    tension: The plan gives the supervisor seat approval authority; the donor lets it commit.
+    ruling: The seat that approves a change never writes it.
+    discharged_in: [authority, hard-gates]
+    binds:
+      skills: [super-review]
+    universal: [roles]
+    scenario: 3
+    coverage: direct
+    note: workflow was considered and rejected; the obligation is about who may act, not ordering.
+    source:
+      plan: Seats and authority
+`;
+
+/** A tree holding the policy and the schemas needed to compile it. */
+function rulingsTree(policy: string) {
+  return ctxFor({
+    "catalog.yaml": EVALS_CATALOG,
+    "schemas/common.schema.json": shipped("common.schema.json"),
+    "schemas/rulings.schema.json": shipped("rulings.schema.json"),
+    "schemas/catalog.schema.json": CATALOG_SCHEMA,
+    "policies/resolved-conflicts.yaml": policy,
+  });
+}
+
+/** The issues reported against the policy file itself. */
+const rulingsIssues = (policy: string) =>
+  checkSchemas(rulingsTree(policy)).filter((i) => i.file === "policies/resolved-conflicts.yaml");
+
+/** `WELL_FORMED_RULINGS` with one line swapped, so each case differs in one field. */
+const withRow = (from: string, to: string) => {
+  if (!WELL_FORMED_RULINGS.includes(from)) throw new Error(`fixture no longer contains: ${from}`);
+  return WELL_FORMED_RULINGS.replace(from, to);
+};
+
+describe("the resolved-conflicts policy has a declared shape", () => {
+  // The positive control. Without it every refusal below is satisfied by a
+  // schema that refuses the shipped policy too.
+  test("the well-formed policy produces no issue", () => {
+    expect(rulingsIssues(WELL_FORMED_RULINGS)).toEqual([]);
+  });
+
+  test("binds written as a list is refused", () => {
+    const issues = rulingsIssues(withRow("    binds:\n      skills: [super-review]\n", "    binds: [super-review]\n"));
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("/conflicts/0/binds");
+    expect(issues[0]?.message).toContain("must be object");
+  });
+
+  test("a misspelled field name is refused rather than dropped", () => {
+    const issues = rulingsIssues(withRow("    coverage: direct\n", "    covrage: direct\n"));
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("covrage");
+  });
+
+  test("a row claiming to govern whole sections and naming none is refused", () => {
+    const issues = rulingsIssues(withRow("    universal: [roles]\n", "    universal: []\n"));
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("/conflicts/0/universal");
+  });
+
+  test("a discharged_in member that is not a section name is refused", () => {
+    const issues = rulingsIssues(withRow("    discharged_in: [authority, hard-gates]\n", "    discharged_in: [authority, 3]\n"));
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("/conflicts/0/discharged_in/1");
+  });
+
+  /**
+   * The deferrals, asserted as deferrals.
+   *
+   * Both values below are real defects, and `rulings.malformed-id` and
+   * `rulings.malformed-discharged-in` each report one with a message this file
+   * could not write: they name the vocabulary, the file it was read from, and
+   * why a bare string reads as a narrower claim than its author made. Restating
+   * either constraint here was measured at two errors per defect.
+   *
+   * Asserted rather than left to a comment, because the failure this guards
+   * against is someone tightening the schema for symmetry and reintroducing the
+   * double report with nothing in the suite to say it had been decided.
+   */
+  test("a non-kebab id and a bare-string discharged_in are left to rulings.ts", () => {
+    const loosened = withRow("  - id: supervisor-never-implements\n", "  - id: Supervisor_Never_Implements\n").replace(
+      "    discharged_in: [authority, hard-gates]\n",
+      "    discharged_in: authority\n",
+    );
+    expect(rulingsIssues(loosened)).toEqual([]);
+  });
+});

@@ -759,7 +759,7 @@ references:
       decisions and from code simplification.
 
 # ---------------------------------------------------------------------------
-# Schemas — 14. `common` holds shared $defs and validates no document itself.
+# Schemas — 16. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -784,6 +784,12 @@ schemas:
     summary: >-
       One executable behavioral case (evals/<skill-id>/<case-id>/case.yaml). Says a case is
       well-formed, never that it is covered: this package does not run the corpus.
+  - id: rulings
+    batch: 5
+    status: authored
+    summary: >-
+      The resolved-conflicts policy (policies/resolved-conflicts.yaml), whose ids every skill
+      body cites. States shape only; the cross-references stay in src/validation/rulings.ts.
   - id: project
     batch: 1
     status: authored
