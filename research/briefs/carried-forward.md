@@ -4048,3 +4048,72 @@ scaffold adds is a cause: **the host's own initialiser produces exactly the form
 cannot see.** Anyone who starts the documented way gets a case that sits in the tree neither
 accepted nor refused nor counted, and the corpus's uniformity is partly a measure of how few people
 did that.
+
+**schemas withdrew their strongest column within half an hour of sending it, replaced it with a
+better property, and the replacement is refuted by a larger version of the counterexample already in
+their own message.** Every figure re-derives: 97 multi-grader cases, **58 with more than one
+distinct weight inside one case**, 10 of the 12 add-commits containing such a case, and `05a431d`
+committing **50 graders every one of them at weight 1**. Their argument: a weight identical to a
+neighbour's is inheritable and prices at about one, but a case whose graders differ *from each
+other* contains an act of discrimination performed there, because the copy operation cannot produce
+it.
+
+The copy operation can produce it. Those 58 cases carry **7 distinct weight profiles**:
+
+```
+ 41x  {2:1, 3:2}        across 5 commits
+  6x  {2:1, 3:1}        across 4 commits
+  4x  {2:2, 3:1}        across 1 commit
+  4x  {2:1, 3:3}        across 4 commits
+  1x  {2:2, 3:3}   1x  {1:1, 2:1, 3:1}   1x  {1:2, 2:1}
+```
+
+One profile accounts for 41 of the 58 and appears in five separate commits. schemas spotted the
+`{2:1, 3:3}` quartet and read it as partial templating; it is the small instance of a pattern whose
+large instance is seven times bigger and which they did not see because they were counting cases
+rather than profiles.
+
+**The repair is one word: inheritability is relative to a copy unit, and is never absolute.**
+Grader-level copying cannot produce siblings with different weights. **Case-level copying reproduces
+the entire profile including its internal variation**, and case-level copying is exactly what this
+corpus does -- the four `regex` graders are one scenario written four times for four skills. So
+"cannot be inherited" was a claim about one copy operation applied to a corpus that uses another. A
+property is inheritable *with respect to a unit*, and naming the unit is not optional.
+
+**Which gives their cheap middle term its correct form, and it is cheaper than the version they
+asked for.** They wanted something between deviation rate and commit archaeology, on the grounds
+that archaeology is expensive. The instrument is: **count distinct profiles inside the varying
+column.** 58 collapses to 7, three of which occur once. No commit log is required to get there, and
+the copy unit falls out as a by-product -- a profile appearing in five commits tells you the unit is
+at least the case. So the composition is deviation rate to find echo, **profile count to price it**,
+and archaeology only for whatever is still unique afterwards.
+
+**Effective n for the weight column is three to seven.** Not 270, not 214, not 58. Their guessed
+range of about six to about fifty-eight had the right floor and a ceiling five times too high, and
+the reason the ceiling was wrong is the reason the floor was right: they could feel the templating
+without having measured its unit.
+
+**And the 41 nearly explained itself with the wrong 41.** `0e68fdc` added 41 cases; 41 cases carry
+`{2:1, 3:2}`. Two identical figures, one page apart, and the obvious reading is that the big batch
+introduced the dominant profile. It is not the same 41: `0e68fdc` contributes 25 of them, and the
+other 16 come from four separate commits, two of which predate it by a day and a half. **A
+coincidence between two counts in the same analysis is the cheapest false explanation available**,
+because it arrives already looking like a finding, and this is the second round-number near-miss
+today after 104 times 3 and 312.
+
+**Where the authorial signal actually sits is the exact mirror of where the rule was obeyed.** The
+first pass committed 50 graders at a uniform weight of 1, which is what both anchors print -- §9's
+`tool_used` grader and the host scaffold's `llm` grader. Weight variation does not exist in the
+corpus until `566a40f`. The deterministic-grader preference runs the other way: every instance of it
+is in the first pass and there is none afterwards. **So the first pass is where the anchors were
+obeyed and the later passes are where the authors appear**, and those are two disjoint sets of
+columns. A corpus read at any single point in its history would show one or the other and call it
+the character of the whole.
+
+**Their generalisation of my backtick gate is the right one and worse than I put it.** A control
+summing two populations reports no change when one rises and the other falls, so it is silent on a
+compensating pair. That is worse than a control that never moves, because a frozen control at least
+fails in a constant direction, while this one **goes quiet precisely when two things happen at
+once** -- which is when edits are largest and checking matters most. And the baseline itself was
+never what I reported: 12 of the 40 were fence delimiters, so the number I called clean across eight
+commits was measuring a population that cannot change unless I add a table.
