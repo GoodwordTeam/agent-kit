@@ -55,6 +55,11 @@ const BASE: Record<string, string> = {
   "roles/implementer/ROLE.md": "# Implementer\n",
   "profiles/core.yaml": "id: core\nskills: [alpha, beta]\n",
   "profiles/autonomy.yaml": "id: autonomy\nskills: [beta]\n",
+  // A source tree that cannot produce a licensed distribution is not a valid
+  // fixture for any packaging test, so these are in the base rather than in the
+  // one describe that reads them.
+  NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n\nAdapted from MIT-licensed projects.\n",
+  LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n\nPermission is hereby granted, free of charge...\n",
 };
 
 function ctxFor(overrides: Record<string, string> = {}, drop: string[] = []) {
@@ -98,6 +103,65 @@ describe("host capability honesty", () => {
     const caps = loadHostCapabilities(ctx.root, "codex");
     expect(caps.issues.some((i) => i.rule === "packaging.unknown-restriction")).toBe(true);
     expect(caps.enforces.has("teleportation")).toBe(false);
+  });
+});
+
+/**
+ * Six donors are MIT. MIT requires the copyright notice and the permission
+ * notice accompany the distribution, and `dist/` is the distribution -- so
+ * these are a licensing obligation, not bundle tidiness, and a bundle without
+ * them is defective however clean the rest of the build reports.
+ *
+ * Both host contracts specify them at the bundle root (`NOTICE, LICENSE` in
+ * `adapters/claude-code/CONTRACT.md` §1 and `adapters/codex/CONTRACT.md` §2),
+ * so the filenames and the placement are taken from the contract rather than
+ * chosen here.
+ */
+describe("the licence files the distribution is obliged to carry", () => {
+  test("every host's bundle carries them, byte-identical to the source tree's", () => {
+    // Iterated over HOST_IDS rather than written twice. The defect this package
+    // has already produced once is two host manifests disagreeing about the
+    // same fact, and a test that names one host cannot see it.
+    const ctx = ctxFor();
+    for (const host of HOST_IDS) {
+      const plan = planBundle(ctx, host, {});
+      for (const name of ["NOTICE", "LICENSE"]) {
+        expect(`${host}:${name}=${plan.files.get(name)?.contents}`).toBe(`${host}:${name}=${BASE[name]}`);
+      }
+    }
+  });
+
+  test("a tree with no LICENSE fails the build rather than shipping a distribution without one", () => {
+    const plan = planBundle(ctxFor({}, ["LICENSE"]), "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.licence-file-missing" && i.file === "LICENSE");
+    expect(issue?.severity).toBe("error");
+  });
+
+  test("a tree with no NOTICE fails for the same reason: the donors' notices travel with the copy", () => {
+    const plan = planBundle(ctxFor({}, ["NOTICE"]), "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.licence-file-missing" && i.file === "NOTICE");
+    expect(issue?.severity).toBe("error");
+  });
+
+  test("a licence file that cannot be read is absent from the bundle, never emitted empty", () => {
+    // A zero-byte LICENSE would satisfy every check that asks whether the path
+    // is there and satisfy the obligation not at all, which is worse than the
+    // absence it replaces: absence is legible, an empty file is a forgery of
+    // compliance. It matters here specifically because `writeBundles` writes
+    // dist/ before its plan errors are reported -- so whatever the plan holds
+    // reaches disk, and only the exit code says the build failed.
+    const plan = planBundle(ctxFor({}, ["LICENSE"]), "claude-code", {});
+    expect(plan.files.has("LICENSE")).toBe(false);
+    expect(plan.files.has("NOTICE")).toBe(true);
+  });
+
+  test("the failure names the file that is missing, not the pair", () => {
+    // Reported per file. One message covering both would leave a reader who
+    // has a NOTICE and no LICENSE unable to tell which of the two to write,
+    // and the fix for each is a different file.
+    const plan = planBundle(ctxFor({}, ["LICENSE"]), "claude-code", {});
+    const missing = plan.issues.filter((i) => i.rule === "packaging.licence-file-missing");
+    expect(missing.map((i) => i.file)).toEqual(["LICENSE"]);
   });
 });
 

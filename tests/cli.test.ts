@@ -43,8 +43,22 @@ function capture() {
   };
 }
 
+/**
+ * What every tree `ak build` is expected to succeed on must carry.
+ *
+ * `ak build` refuses to emit a bundle that cannot carry these, because `dist/`
+ * is a distribution and MIT requires the notices travel with the copy. Written
+ * once and spread into each fixture rather than repeated: three fixtures in
+ * this file build for real, and a fourth added later gets it by spreading the
+ * same constant rather than by rediscovering the requirement from a failure.
+ */
+const LICENSED = {
+  NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n",
+  LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n",
+};
+
 function cleanTree(): string {
-  return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL });
+  return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, ...LICENSED });
 }
 
 describe("ak", () => {
@@ -244,7 +258,7 @@ describe("ak build", () => {
       "  - id: core\n    status: contract\n    default: true\n",
       "  - id: core\n    status: contract\n    default: true\n  - id: autonomy\n    status: contract\n",
     );
-    const root = makeTree({ "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL });
+    const root = makeTree({ "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL, ...LICENSED });
     expect(runCli(["build", "--profile", "core"], { cwd: root, io: capture().io })).toBe(0);
     const manifest = JSON.parse(
       readFileSync(join(root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8"),
@@ -276,6 +290,7 @@ describe("ak build", () => {
         "skills/triage/SKILL.md": SKILL,
         "provenance/upstream.lock.yaml": LOCK,
         [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: FRAGMENT,
+        ...LICENSED,
         ...extra,
       });
 

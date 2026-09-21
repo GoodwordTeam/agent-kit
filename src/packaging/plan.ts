@@ -30,6 +30,24 @@ export const HOST_MANIFEST_FILE = ".claude-plugin/plugin.json";
  */
 export const BUILD_RECORD_FILE = ".claude-plugin/ak.json";
 
+/**
+ * The licence files every bundle carries at its root, copied verbatim.
+ *
+ * A licensing obligation rather than bundle tidiness: six donors are MIT, MIT
+ * requires the copyright notice and the permission notice accompany every copy,
+ * and `dist/` is the copy that gets distributed. Absence is an `error()` for
+ * that reason -- a build that quietly omits them reports success over a
+ * distribution that may not lawfully be distributed, which is the worst shape
+ * this package has a name for.
+ *
+ * Emitted from here, once, for every host rather than per adapter. Both host
+ * contracts specify the same two names at the same place
+ * (`adapters/claude-code/CONTRACT.md` §1, `adapters/codex/CONTRACT.md` §2), and
+ * two bundles disagreeing about their own licensing is the defect this package
+ * has already produced once in a different field.
+ */
+const LICENCE_FILES = ["NOTICE", "LICENSE"];
+
 export interface BundleFile {
   /** Path inside dist/<host>/. */
   path: string;
@@ -263,6 +281,21 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
       const published = publishedPathFor(dep, included);
       if (published !== null) pending.push({ source: dep, published });
     }
+  }
+
+  for (const name of LICENCE_FILES) {
+    const text = readTextIfPresent(join(ctx.root, name));
+    if (text === null) {
+      issues.push(
+        error(
+          "packaging.licence-file-missing",
+          name,
+          `${name} is not in the source tree, so the bundle cannot carry it. MIT requires the copyright notice and the permission notice accompany every copy of the software, and dist/ is a copy that gets distributed. Write ${name} at the repository root.`,
+        ),
+      );
+      continue;
+    }
+    files.set(name, { path: name, contents: text, source: name });
   }
 
   files.set(HOST_MANIFEST_FILE, {
