@@ -238,6 +238,7 @@ provenance:
   resolved_conflicts:
     - entrypoint-phase-operation-split
     - two-fix-cycles-then-stop
+    - closure-requires-independent-verification
 
 tests:
   - id: five-cycles-is-the-ceiling

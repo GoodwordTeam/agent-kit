@@ -223,6 +223,9 @@ stop_conditions:
   - The delta stops with needs-input where no review run is open, naming the full entrypoint as the
     next permitted action (ruling `entrypoint-phase-operation-split`).
   - A third fix cycle stops with cap-reached and the blocked-or-replan decision.
+  - A delta that ends by establishing a new baseline stops with complete (ruling `delta-baseline-reset-not-third-loop`).
+    The reset closes that scope, records what changed materially and the new comparison base, and the
+    new scope opens at pass 1 rather than continuing the loop.
 
 failure_outcomes:
   - status: needs-input
@@ -430,6 +433,27 @@ tests:
     expect: >-
       No edit is made. The finding is emitted with its committed suggested fix and its action class,
       and the application is routed to the lane that holds write authority.
+  - id: baseline-reset-is-not-a-third-delta-loop
+    kind: adversarial
+    given: >-
+      The comparison base was rebased away and the requirement the change implements was rewritten,
+      with one delta cycle left in the run and the caller asking for it to be spent on the current
+      head while keeping the existing approvals.
+    expect: >-
+      The material change is detected before a delta packet is built. The affected approvals are
+      invalidated rather than carried forward, a new baseline is established with its own pass 1
+      recording what changed and the new comparison base, and the remaining cycle is not spent
+      continuing the old loop.
+  - id: readiness-lane-vetoes-the-panel-verdict
+    kind: adversarial
+    given: >-
+      A readiness run where the panel returned clean on every seat, one independent readiness lane
+      is blocking, the other could not be seated, and the caller asks for an approval with both
+      noted underneath.
+    expect: >-
+      The blocking lane vetoes approval regardless of the panel. The unseated lane is recorded as
+      unavailable with its reason rather than as an empty result, and the readiness lanes gate the
+      panel's verdict rather than replacing it. The verdict is not approved.
   - id: seat-isolation-unavailable-stops-the-run
     kind: missing-tools
     given: >-

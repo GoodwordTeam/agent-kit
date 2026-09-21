@@ -38,7 +38,8 @@ advisory (ruling `closure-requires-independent-verification`).
 Not for repairing a red pipeline. A failing required check is CI repair's bounded operation, whose
 rule restricts the purpose and scope of the repair and never the standard the change has to meet
 (ruling `ci-repair-restricts-purpose-not-permission`). A product-code change discovered there
-re-enters diagnosis, a bounded patch and new verification — not another pass of this skill.
+re-enters diagnosis, a bounded patch, new verification and affected delta review — this skill's
+`delta` mode over the affected behavior, never a second full panel.
 
 Not for failing a change on its size or its test-ratio shape. A roughly-hundred-line target and a
 test pyramid are configurable starting points carried in `references/engineering-principles`, not
@@ -108,8 +109,12 @@ its input hashes, and the fix diff (`schemas/review.schema.json` `packet`).
 8. Synthesize without merging: deduplicate by fingerprint, keep each seat's evidence attached to its
    finding, and never rewrite a severity to reconcile two seats. Suppression is by the catalogued
    reasons only, and a suppressed finding stays readable with its reason.
-9. For `delta`: build the packet, run the spec and standards lanes over the fix, and bound the scope
-   by affected behavior rather than by changed lines (ruling `delta-scope-affected-behavior`). A
+9. For `delta`: first test whether architecture, requirements, the comparison base or the affected
+   surface changed materially. Where any did, invalidate the affected approvals and establish a new
+   baseline — a new scope with its own pass 1 — instead of continuing this loop (ruling
+   `delta-baseline-reset-not-third-loop`). Otherwise build the packet, run the spec and standards
+   lanes over the fix, and bound the scope by affected behavior rather than by changed lines (ruling
+   `delta-scope-affected-behavior`). A
    continuing seat keeps its earlier finding context, or a replacement receives the durable
    prior-finding packet; independence from the author is mandatory and amnesia is not (ruling
    `reviewer-continuity-not-amnesia`). The mechanics are in `./references/delta.md`.
@@ -121,8 +126,9 @@ its input hashes, and the fix diff (`schemas/review.schema.json` `packet`).
 
 ## Hard gates
 
-Gate: reviewers cannot edit source, and the snapshot is immutable for the length of the run. A
-reviewer that changed what it was reviewing has reviewed nothing.
+Gate: reviewers cannot edit source (`policies/review.yaml` `reviewers_may_edit_source: false`), and
+the snapshot is immutable for the length of the run. A reviewer that changed what it was reviewing
+has reviewed nothing.
 
 Gate: a required lane that returns `unavailable` blocks approval. It is never downgraded to an empty
 result, never backfilled by the author, the implementer, another seat or the synthesis step, and
@@ -134,9 +140,12 @@ blocks the checkpoint rather than falling to whoever is still there (ruling
 `missing-supervisor-never-implementer`).
 
 Gate: an author may never close their own finding, and a finding closes only on independent
-verification evidence plus a policy rule saying that evidence is sufficient for it. A classifier's
-output and a reviewer's confidence are recorded as advisory, and a changed patch does not inherit
-stale receipts (ruling `closure-requires-independent-verification`).
+verification evidence plus a policy rule saying that evidence is sufficient for it. A receipt is the
+unit of that evidence: it carries the command or probe, its exit status, the output digest, the
+revision and the environment identity (`schemas/verification.schema.json`). An agent's description of
+a green run is not a receipt. A classifier's output and a reviewer's confidence are recorded as
+advisory, and a changed patch does not inherit stale receipts (ruling
+`closure-requires-independent-verification`).
 
 Gate: at most two fix-and-verify cycles after the first pass. The third request stops with an
 explicit blocked-or-replan decision and the open findings attached; repeated failure is a signal
@@ -148,8 +157,10 @@ a new review scope with its own pass 1, never an unbounded third delta loop. The
 comparison base, its reviewed head and the last head verified in the delta loop so the three are
 never conflated (ruling `delta-baseline-reset-not-third-loop`).
 
-Gate: a standards finding cites the project rule it rests on. Where the project declares no
-standards, the seat returns an empty result; absent standards never become invented preferences.
+Gate: a standards finding cites the project rule it rests on, rule by rule, with the file and the
+rule identifier. Where the project declares no standards the seat returns an empty result: absent
+standards never become invented preferences, and a seat that cannot cite a rule returns empty
+(`policies/review.yaml`).
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
@@ -159,6 +170,7 @@ standards, the seat returns an empty result; absent standards never become inven
 | "The fix only touched three lines, so the delta reviews those three lines." | The impact of a fix reaches callers the fix never touched, and a line-based boundary suppresses exactly the class of issue the delta exists to catch (ruling `delta-scope-affected-behavior`). | Bound the delta by affected behavior, and report a serious issue in an untouched affected caller with its novelty evidence. |
 | "Give the reviewer the implementer's summary so it knows what the change was trying to do." | The narrative is the author's account of their own work, and a seat that reads it is judging the account rather than the change (`policies/review.yaml`). | Hand the seat the frozen snapshot and its own requirements, standards and test context, and nothing produced by the author lane. |
 | "The reviewer rated the fix high-confidence, so the finding can be marked resolved." | Confidence is a property of the judge; closure is a property of the evidence (ruling `closure-requires-independent-verification`). | Record the confidence as advisory, and close only on independent verification evidence for the revision the fix is at. |
+| "The base moved and the requirements were rewritten, but the delta loop still has a cycle left." | Continuing a loop whose comparison base no longer means what it meant spends a cycle comparing against a baseline nobody approved, and the approvals it carries forward were given for a different change (ruling `delta-baseline-reset-not-third-loop`). | Invalidate the affected approvals, record what changed materially, and open a new scope at pass 1 rather than spending the remaining cycle. |
 | "The third cycle is nearly there — one more round and it is clean." | Two cycles that did not converge are evidence about the plan, and a third loop spends the budget that the blocked-or-replan decision exists to protect (ruling `two-fix-cycles-then-stop`). | Stop, emit the explicit blocked-or-replan decision, attach every open finding, and report what is unresolved. |
 | "The diff is 400 lines, which the engineering principles call too large, so that is a finding." | Size targets and test ratios are configurable starting points, and a finding written from one is a finding about a number nobody agreed to (ruling `numeric-heuristics-are-guidance`). | Review what the change does. Raise size only where it names a concrete review or maintenance consequence in this change. |
 
@@ -166,7 +178,8 @@ standards, the seat returns an empty result; absent standards never become inven
 
 The review (`schemas/review.schema.json`): mode, comparison base, reviewed head, the snapshot with
 its hash and exclusions, the authorship record, one entry per lane with its state and verdict, the
-fix-cycle count, and the verdict.
+fix-cycle count, the verdict, and — where a baseline was reset — what changed materially, which
+approvals it invalidated and the new comparison base.
 
 The findings (`schemas/finding.schema.json`), each with its evidence quoting the line it is about,
 its fingerprint — rule-or-cause plus location-or-symbol plus evidence, never the line number — and
@@ -195,7 +208,9 @@ skill that holds it.
 
 `complete`: every selected lane has a state, every required lane is `complete` or `empty`, the
 verdict is set, and the review and findings are emitted. A run whose verdict is `blocked` is
-complete; the block is the result.
+complete; the block is the result. A delta that ends by establishing a new baseline is complete too:
+the reset closes this scope and the new scope opens at pass 1, which is not a third loop (ruling
+`delta-baseline-reset-not-third-loop`).
 
 `needs-input`: no comparison base or reviewed head was named, or `delta` was invoked with no open
 review run. Returns what it would need and no partial verdict.

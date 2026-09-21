@@ -39,8 +39,8 @@ Not for watching the pull request once it is open. CI results, review comments a
 changes belong to the watch lane, and a ship that opened a PR is not finished until that lane owns
 it.
 
-Not for writing project knowledge into the repository. Decisions, lessons, reviews and receipts are
-owned centrally; this package owns reusable instructions and templates only, and a completed ship is
+Not for writing project knowledge into the repository. Decisions, lessons, reviews and sanitized run
+receipts are owned centrally; this package owns reusable instructions and templates only, and a completed ship is
 not permission to rewrite project knowledge (ruling `central-kb-owns-project-artifacts`).
 
 Not for force-pushing or rewriting history to make a branch land. Both are sensitive actions with the
@@ -109,8 +109,10 @@ The project's own release checks, discovered rather than assumed.
 Gate: merge, deploy, production credentials, destructive data operations, new dependencies,
 public-contract redesign, sensitive trust-boundary changes, scope expansion, force-push and history
 rewrite are never granted by default. Each requires an explicit charter entry a human approved up
-front, naming the action and what is permitted, with any expiry or single-use bound; this run may
-never enlarge its own authority (ruling `sensitive-actions-need-approved-charter-entry`).
+front, naming the action and exactly what is permitted, and an explicit human approval bound to that
+charter's hash, with any expiry or single-use bound. An approval whose charter was amended afterwards
+no longer binds, and this run may never enlarge its own authority (ruling
+`sensitive-actions-need-approved-charter-entry`).
 
 Gate: `dry-run` makes no remote call. Not a reduced one, not a single harmless one — none. A run that
 pushed a branch to show what the push would look like was not a dry run.
@@ -127,7 +129,7 @@ Gate: a candidate secret in what would be committed stops the run. A secret alre
 reported for rotation; removing it from the payload does not un-leak it.
 
 Gate: no project-derived artifact is written to a repository path. Decisions, lessons, reviews and
-receipts go through the knowledgebase adapter, and no application-local documentation tree is created
+sanitized run receipts go through the knowledgebase adapter, and no application-local documentation tree is created
 as a substitute (ruling `central-kb-owns-project-artifacts`).
 
 Gate: the run asks no blocking question mid-flight. Where a decision is genuinely required, it stops
