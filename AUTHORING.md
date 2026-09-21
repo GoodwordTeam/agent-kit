@@ -492,11 +492,14 @@ the ordinary case rather than an exception: of the 69 distinct `destination` val
 `provenance/conversation-map.yaml`, 56 are directories of entries `catalog.yaml` marks
 `provenance_origin: donor`, 2 are `conversation`, and 11 are entries of the declared kinds that
 carry no `provenance_origin` at all. *Several* understated that into sounding like a licensed
-exception. The clearest instance is `guided-checkpoint-mode`, landing in
-`skills/autopilot` — an entry `catalog.yaml` marks `provenance_origin: donor` — on a
-`plan §9` locator. That this paragraph's best example was one its own earlier wording excluded is
-the cheap check worth taking from it: where a rule has a canonical instance in the tree, read the
-instance against the wording before shipping the wording.
+exception. Those four figures are `7155cbd`'s and hold unchanged at `c0ef130`. They shipped carrying
+neither, in a section whose own rule is that *a sweep needs its revision as much as any other
+figure*. The rule is quoted here rather than cited by line number because a line number is itself a
+figure about a tree, and it goes stale on the next edit made above it. The clearest instance is
+`guided-checkpoint-mode`, landing in `skills/autopilot` — an entry `catalog.yaml` marks
+`provenance_origin: donor` — on a `plan §9` locator. That this paragraph's best example was one its
+own earlier wording excluded is the cheap check worth taking from it: where a rule has a canonical
+instance in the tree, read the instance against the wording before shipping the wording.
 
 What has no route is a **loose doctrine file** (§12.3): with no catalog entry there is no directory
 to be a destination, so a design-originated rule in one is recorded by citation in the file itself
