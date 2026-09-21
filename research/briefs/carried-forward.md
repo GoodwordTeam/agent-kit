@@ -1154,6 +1154,16 @@ The first rested on the withdrawn claim and goes with it. What is demonstrated i
 silent in the direction that matters, which is weaker than anti-correlation and still enough to
 retire the check as evidence of the property.
 
+sweep-reviewer's form of the consequence, which says it better than the paragraph above and is
+theirs:
+
+> A control that was never a control means the section's evidence has only one arm. Every pass it
+> has recorded since is consistent with its catching nothing, and no re-run can distinguish the
+> two, because the runs that would have discriminated were never constructed.
+
+The last clause is why this is not a measurement problem. Re-running the check produces more passes
+of unknown value, and no quantity of them separates the hypotheses. The cases have to be built.
+
 That is a third thing a proxy can do, past the two already on this page. A proxy can be silent where
 the property fails, which is a hole. A proxy can decouple at the boundary, which is why fixtures
 find it. And a proxy can *reward* the defect, which is worse than both, because a writer optimising
@@ -1734,6 +1744,18 @@ key `claude plugin eval` rejects outright. A corpus is a population, not an orac
 that a check finds what exists in the files and say nothing about whether what exists in the files
 is right. The last entry on this page is that interval.
 
+sweep-reviewer's extension, which is the part that changes what anyone does. The rule catches
+exactly one failure class -- the check that passes only its own fixtures -- and it caught it. What
+it cannot catch is a premise the check and the tree hold in common, **because the tree was authored
+under that premise**. Agreement between a check and a corpus measures the check's *reach*; it cannot
+measure its *correctness*, and reach is the only thing the rule was ever about. Compactly: **an
+oracle is something that can disagree with your premises**, and a corpus your own team wrote cannot,
+on any question your team settled before writing it.
+
+The operational test, because a limit stated abstractly changes nothing: **ask what could make this
+check wrong that the tree would also be wrong about.** Nothing coming to mind is a description of
+the state, not a clean bill.
+
 ### A control that silently does not run agrees with every hypothesis
 
 The removal control for that check, run against the real corpus: differentiate one member of a
@@ -1960,6 +1982,36 @@ two commits, found four of four displaced, and declined to generalize from a sam
   claim at *no* revision of that file in this history; the nearest is `96f5291`, one line off.
 - **1** resolves to text that falsifies the claim attached to it.
 
+**And the breakdown is load-bearing in a way neither of us saw until sweep-reviewer took the same
+numbers twice.** There are two defensible partitions of those 23, and **13 is the answer under both
+of them, meaning opposite things.**
+
+  - *Does the locator resolve to the text its sentence claims, at the revision the entry declares?*
+    Passes 10 + 3 = **13**. Fails 3 + 6 + 1 = **10**.
+
+  - *Is the sentence carrying the locator true as written, at the revision the entry declares?* True
+    **10**. False 3 + 3 + 6 + 1 = **13**.
+
+A reader who meets *13 of 23* with no rule attached is one coin flip from "most of them are fine"
+and "most of them are broken". This is the census entry's classification clause with the stakes
+visible: a classification rule is not a note attached to a figure, it is half of what the figure
+says, and without it the number is not merely underspecified. It is **reversible**. Filed on
+sweep-reviewer's recommendation that it go on the page in preference to prose about the requirement.
+
+**The figure to quote here is the first partition, because this entry is about locators**: *10 of 23
+do not resolve to the text their sentence claims, at the revision the entry declares.* All 23 were
+converted to by-text form at `f817abe`, so that figure describes the state the pass repaired and not
+the file in front of you.
+
+**And their four, placed in it.** `plan.ts:198`, `plan.ts:199` and `hosts.ts:46` fall in the six
+that resolve to unrelated text; `tests/packaging.test.ts:440` falls in the three that resolve at
+`cd48f14` and not at the revision its entry declares. Four drawn from a ten-member failing set,
+selected because they looked wrong, four came back wrong. sweep-reviewer's own reading, which is the
+right one: **it confirms membership and estimates nothing** -- and with the denominator visible,
+that method could not have told a ten-failure population from a twenty-failure one. A sample
+selected for suspicion is a search, and a search that finds what it went looking for has measured
+the searcher.
+
 The three-at-`cd48f14` group names the mechanism. That entry opens *"Closed at `b46411f`; the code
 facts below are pinned to `4e45481`."* The pin was written when the entry was closed; the numbers
 were taken when it was opened. Re-pinning is an edit to one sentence, and it does not re-resolve the
@@ -1978,6 +2030,29 @@ And the shape, which sweep-reviewer named against the previous pass: the cause w
 correctly on one citation, and the repair was applied to that one citation. **A remedy has to have
 the same extension as the defect it repairs.** Where the cause is a class, the sample rate is the
 finding, and a fix that lands on the reported instance leaves the class exactly as measured.
+
+### A locator that resolves perfectly, attached to a claim that has been closed
+
+The three in the second row are a different defect from the other ten and were counted beside them,
+which is what made *13 of 23* reversible. `skills/super-review/SKILL.md` closed at `07eca72`,
+`skills/super-ship/skill.yaml` at `b18a418`, `src/validation/bodies.ts` at `f3d7b9b`. Every locator
+resolved. Every quotation was accurate. Every sentence was in the present tense about a defect that
+had been repaired. All three now carry a `**Closed at ...**` note in this file, added in the same
+pass that found them.
+
+**A by-text conversion does not catch this class, and that is the limit of the remedy the rest of
+this entry argues for.** The quotation is found and the quotation is correct; what is wrong is the
+tense, and nothing about opening a file to copy a line of code asks whether the finding attached to
+it still stands. The conversion surfaced these three only because resolving 23 locators put me in 23
+files -- a side effect of the sweep, not a property of the form. A sweep is not a repeatable
+control.
+
+So the two defects want two different repairs. A locator is repaired by carrying its own subject.
+**A finding is repaired by carrying its own disposition** -- open, closed at a named revision, or
+withdrawn -- inside the sentence that makes the claim, where a reader meets it, rather than in the
+commit that closed it. sweep-reviewer's recommendation, adopted: file this separately and quote the
+locator figure over the sentence-truth figure, because keeping them in one number is what produced
+the ambiguity above.
 
 ## A census is four claims, and only two of them are about the number
 
@@ -2307,3 +2382,58 @@ comments in `src/packaging/plan.ts` and had never been run. `claude plugin eval`
 written into a contract, a JSON schema and a validator and had never been asked. The cost is not
 symmetric with the effort either way: the eval corpus took three batches to author and one command
 to falsify.
+
+### Two owners, and the keys with no receipt
+
+sweep-reviewer's, and it is a remedy rather than another way of stating the defect. The keys in a
+`case.yaml` have two different owners. `name` and `tags` are **ours** -- the host reads both, but
+only as opaque strings to filter on (`--case <glob>`, `--tag <tag...>`), so their vocabulary is
+settled here and internal agreement genuinely is the authority. `criteria`, the grader `type` enum,
+`scaffold_script`, `runs` and `timeout_seconds` belong to **the host**: their meaning is settled
+somewhere else, and no quantity of internal agreement is evidence about any of them.
+
+**Mark which is which in `schemas/case.schema.json`, and every host-owned key owes an execution
+receipt naming the host version it was confirmed against, once, at the point the key is
+introduced.** The obligation then stops depending on anybody remembering it, which is exactly what
+failed: `criteria` would have owed a receipt the day `expected_outcome` was written, and no key in
+that file carries one today.
+
+**Its first application finds three, and none of them is `criteria`.** `claude plugin eval --help`
+at `claude 2.1.278` names three case keys this repository has never mentioned anywhere:
+`scaffold_script` (`--scaffold`, `--no-scaffold`), `runs` (`--runs`, *"default: case.runs ?? 3"*)
+and `timeout_seconds` (*"runs are already bounded by max_turns and timeout_seconds"*).
+`schemas/case.schema.json` closes both the case object and its `execution` member on
+`additionalProperties: false`, so **`ak validate` errors on a case that declares any of them.**
+Measured one key at a time on a `git archive` extract of `63358b2` with `.donors` copied, against
+`evals/super-verify/named-criterion-gets-a-receipt/case.yaml`:
+
+  - baseline, unmodified: `0 errors, 17 warnings, 43 notes`.
+
+  - `scaffold_script` at the root: `1 error`, `schemas.document-invalid` naming the file and
+    `{"additionalProperty":"scaffold_script"}`.
+
+  - `runs` at the root, and `timeout_seconds` at the root: the same error, naming each key.
+
+  - `timeout_seconds` under `execution`: the same error at `/execution`, so neither position is
+    open.
+
+  - restored: back to `0 errors, 17 warnings, 43 notes`. That is the removal control, and it is why
+    the four arms above are readable.
+
+**So the scaffold blocker has a cause, and it is not that the case authors forgot.** A case
+declaring a scaffold fails `ak validate`, and has since `7db25a7` landed the schema on 19 September.
+team-lead's finding -- the sandbox hands the run an empty git repo, so a case asking for a delta
+review of a change nothing created scores correct refusal as failure -- is downstream of a schema
+that refuses the one key that would fix it.
+
+And the reasoning that closed those objects is this entry again, arriving in the direction it
+declared safe. The schema closes `execution` because *"a key the loader accepts and this does not is
+a schema edit, which is the direction that gets noticed."* It was not noticed, and it could not have
+been. The symptom of refusing a key the host accepts is that nobody ever writes that key, and the
+one author who tries gets a validation error naming their own file and concludes they were wrong.
+**A closed schema fails by making the missing feature look like nobody wanted it.** That is a
+quieter failure than the open grader object's, and the open object is the one that got the paragraph
+of self-criticism.
+
+Filed here and not fixed: `schemas/` is not mine. Routed to `schemas` and team-lead with the four
+arms above.
