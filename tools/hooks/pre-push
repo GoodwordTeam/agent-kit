@@ -1,5 +1,6 @@
 #!/bin/sh
-# Refuse to publish main through a ref that can move between measuring and pushing.
+# Two refusals on the way out: publishing through a ref that can move, and publishing
+# a commit whose own extract does not build.
 #
 # WHY THIS EXISTS, NOT WHAT IT DOES
 # ---------------------------------
@@ -37,6 +38,52 @@
 # main from a tag, and widening the pattern to refuse refs/tags would block the release
 # tagging the plan calls for at v0.1.0. It is a hole and it is here in writing.
 
+# ---------------------------------------------------------------------------
+# SECOND REFUSAL: the commit on the wire has to build
+# ---------------------------------------------------------------------------
+# `ak validate` was run by hand in a clean extract before every publish this
+# session. `ak build` was not, and it is a separate gate -- so a parity check
+# landed, turned the build red, and main was published twice in that state
+# without anyone reading it. The habit covered one of the two gates and nobody
+# noticed which, because the habit was never written down anywhere it could be
+# compared against the gates it was standing in for.
+#
+# It extracts the sha being pushed rather than running in place. Several lanes
+# write to this clone and it is never clean, so `ak build` here measures a
+# timestamp: it mixes the commit on the wire with whatever is dirty or staged
+# when the hook fires, and can pass for a commit that does not build. The whole
+# point of the first refusal is that the subject must be the commit you
+# validated; a second gate measuring the working tree would undo it.
+#
+# It does NOT run `bun test`. The suite needs `.donors/`, which an extract does
+# not have, so it would report a failure that is a property of the extract and
+# not of the commit. A gate that cries wolf is a gate people pass --no-verify to,
+# and that would take the first refusal down with it.
+#
+# It admits the push when it cannot run -- no node_modules, no bun, archive
+# fails. A gate that blocks on its own breakage teaches the bypass.
+build_gate() {
+  sha="$1"
+  root=$(git rev-parse --show-toplevel) || return 0
+  [ -d "$root/node_modules" ] || return 0
+  tmp=$(mktemp -d) || return 0
+  git archive "$sha" 2>/dev/null | tar -x -C "$tmp" 2>/dev/null || { rm -rf "$tmp"; return 0; }
+  ln -s "$root/node_modules" "$tmp/node_modules" 2>/dev/null || { rm -rf "$tmp"; return 0; }
+  out=$(cd "$tmp" && bun run ak build 2>&1)
+  status=$?
+  rm -rf "$tmp"
+  [ "$status" -eq 0 ] && return 0
+  printf '%s\n' "$out" | grep '^ERROR' >&2 || true
+  printf '%s\n' \
+    "" \
+    "pre-push: refusing to publish $(git rev-parse --short "$sha"): ak build fails in a" \
+    "  clean extract of it. The working tree may well build; this is the commit." \
+    "" \
+    "  Re-run it the way the gate did:" \
+    "      git archive <sha> | tar -x -C \$(mktemp -d)   # then bun run ak build there" >&2
+  return 1
+}
+
 refused=0
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ "$remote_ref" = "refs/heads/main" ] || continue
@@ -55,7 +102,14 @@ while read -r local_ref local_sha remote_ref remote_sha; do
         "  To see exactly what that publishes, first:" \
         "      git log --oneline origin/main..<sha>" >&2
       refused=1
+      continue
       ;;
   esac
+  # Only reached by the sha form, which the first refusal admits. Deleting a
+  # branch arrives with an all-zero local sha and nothing to build.
+  case "$local_sha" in
+    "" | 0000000000000000000000000000000000000000) continue ;;
+  esac
+  build_gate "$local_sha" || refused=1
 done
 exit $refused
