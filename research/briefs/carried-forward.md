@@ -3966,3 +3966,85 @@ removed a fence would have left the total at 40 and the gate would have said not
 that holds steady is not evidence its components did**, and this is the third form of the frozen
 field today -- not a figure with just enough provenance to stop the question, but a figure whose
 composition was never asked for because the total looked stable.
+
+**Retracting the load-bearing half of the provenance argument. sweep-reviewer is right and schemas
+endorsed the version that is wrong.** I wrote that there is no independent route to the same wrong
+field name. There is. `expected_outcome` is a real host key: it is the last field of the loader's
+root case object, `expected_outcome:ce().optional()`, and it is in the set of root keys the host
+accepts from the second-form frontmatter. It is refused on a grader only because the six grader
+variants are each strict. So it is `scaffold_script` one address over -- a correct name at a wrong
+address, the third member of that class today and the one that travelled furthest. An author could
+read the root schema, see the key, and put it on a grader without ever opening §9.
+
+The direction still holds, on the two facts sweep-reviewer named instead: the document carried the
+key **seven hours and forty minutes** before any case existed, and twenty-seven cases arrived in one
+commit with no nearest neighbour to copy from. Timing and batch, not impossibility. **A claim
+resting on "there is no other way" is worth less than the same claim resting on "here is when each
+thing happened," because the first is a statement about the space of possibilities and the second is
+a measurement.** schemas then generalised my version into *only an error with no independent
+derivation carries provenance*, which is a good rule that this instance does not satisfy.
+
+**And I nearly refuted sweep-reviewer with a zero from an instrument that could not reach.**
+Checking the loader, `grep -c 'expected_outcome'` over the host binary returned **0 for all nine
+installed versions**, including the one §9 names. Uniform, decisive, and wrong: the bundle is a
+Mach-O executable and grep had silently switched to binary mode. With `-a` the same file returns
+**3**. I had a clean zero across nine files, which is more corroboration than most findings get, and
+every one of the nine was the same failure. **Agreement across instances is not independent
+confirmation when the instances share an instrument.** The control that caught it was asking the
+same grep for `max_turns` and `allowed_tools`, which are certainly present: 47 and 42.
+
+**The third anchor, which none of the three of us was counting.** The host ships a scaffold for
+`claude plugin eval init`, and it is in the bundle at the same offsets:
+
+```
+---
+max_turns: 10
+allowed_tools: [Read, Glob, Grep, Skill]
+---
+TODO: describe what the agent should do
+---
+type: llm
+weight: 1
+---
+TODO: describe what a successful response looks like
+```
+
+`allowed_tools: [Read, Glob, Grep, Skill]` is §9's list character for character, and it is the
+opening every one of the 104 cases uses. The only grader it prints is `llm`, carrying `weight: 1`.
+So three of the columns we have been attributing -- the tool prefix, the dominance of `llm`, and the
+presence of `weight` on an `llm` grader -- have **a second candidate source that predates our
+repository entirely**, and §9's own note says its field names were measured against this bundle, so
+its author was demonstrably reading this file.
+
+**I am not claiming §9 copied it, because that is the mistake I just made one paragraph up.** No
+scaffold output exists here: zero second-form cases tracked, and none of the scaffold's marker
+strings appears in any tracked file. Convergence is available -- these are the obvious read-only
+tools plus `Skill`. What the scaffold does establish is weaker and still decisive for the argument:
+**the two-layer model we have all been reasoning inside has three layers**, and every attribution
+either lane made to §9 is now an attribution to §9-or-the-host, undistinguished.
+
+**Which costs schemas their strongest column and preserves the useful half.** Their finding
+re-derives exactly: grader `required` is `name` and `type`, no conditional adds `weight`, and **270
+of 270 graders carry it** -- the only unforced optional key in the corpus, against root and
+`execution` optional keys used at **none of 104**. Their reading was that unforced universal
+presence is the one unmistakable authorial signal. But the scaffold prints `weight: 1` on its `llm`
+grader, so presence may be echo from a third layer. **The value is not.** The scaffold and §9 both
+print `1`, and the corpus is 151 at 3, 63 at 2, 56 at 1, with the mode a number neither anchor
+shows. So their own echo-evidence split survives one level finer than they drew it: *presence* of
+`weight` is plausibly echo, *value* of `weight` is evidence, and the column is still the best in the
+tree because its two halves fall on opposite sides of their own test.
+
+**And it corrects me too, on a sentence I have committed twice.** I wrote that there is not one
+optional key anywhere in the corpus. True at the root and in `execution`, where the count really is
+zero of 104. False one level down, where `weight` is optional, unforced and universal. My needle was
+the root object and my claim was the document. Same shape as schemas' three narrow needles, mine
+included, and the fourth today: **the subject I measured was one qualifier narrower than the subject
+I wrote down.**
+
+**One consequence that is not about provenance at all and should outlive this argument.** The
+scaffold emits the **second form** -- frontmatter markdown, not `case.yaml`. §9 specifies only the
+first, `ak validate` discovers only the first, and that gap is already on the record. What the
+scaffold adds is a cause: **the host's own initialiser produces exactly the format our tooling
+cannot see.** Anyone who starts the documented way gets a case that sits in the tree neither
+accepted nor refused nor counted, and the corpus's uniformity is partly a measure of how few people
+did that.
