@@ -197,7 +197,20 @@ else
   ln -s "$ROOT/node_modules" "$WORK/node_modules"
 fi
 
-FIGURE="$(cd "$WORK" && bun run src/cli.ts validate 2>&1 | tail -1)"
+# `ak validate` exits non-zero when the tree is red. This script reports a figure
+# rather than gating on it -- the comment below the report says so -- and under
+# `set -euo pipefail` this assignment used to inherit that non-zero status and
+# kill the script one line before the report. The effect was the worst shape a
+# measuring instrument can have: a full report when the tree was green, and zero
+# bytes on both stdout and stderr when it was red, so a blank receipt read as a
+# tooling hiccup rather than as the red gate it was. The empty-FIGURE guard below
+# was written for exactly that case and could never run, because `set -e` fired
+# first. 2cc3a92 was committed red and 4756a2e inherited it, through two lanes
+# taking receipts, for this reason. Capture the status instead of inheriting it.
+set +e
+VALIDATE_OUT="$(cd "$WORK" && bun run src/cli.ts validate 2>&1)"
+set -e
+FIGURE="$(printf '%s\n' "$VALIDATE_OUT" | tail -1)"
 
 echo "$FIGURE"
 echo "  revision: $SHA${DIRTY}"
