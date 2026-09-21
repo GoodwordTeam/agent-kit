@@ -406,11 +406,11 @@ searching for a third. What finally produced a complete answer was neither — i
 every `split("\n")` in `src/`, twenty-one of them at `8ef24c2`, by whether it derives a published
 count or walks a file: three derive, and every other `lines.length` there is a loop bound, an index
 bound or a zero-check. That sweep needs its revision as much as any other figure. The three held at
-every commit measured, while the population around them went from twelve sites to thirteen in a
-working tree an hour later under another lane's uncommitted edit — so a tally over that sweep would
-have disagreed with itself within the hour, and the classification did not, because what it
-publishes is which members sort where rather than how many there are. A population you can enumerate
-and sort is checkable. A pattern you can think of is a sample of what you expected to find.
+every commit measured, while the population around them moved by one in a working tree an hour
+later under another lane's uncommitted edit — so a tally over that sweep would have disagreed with
+itself within the hour, and the classification did not, because what it publishes is which members
+sort where rather than how many there are. A population you can enumerate and sort is checkable. A
+pattern you can think of is a sample of what you expected to find.
 
 The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 
@@ -422,18 +422,40 @@ git -C .donors/EveryInc_compound-engineering-plugin cat-file -e 05c42da:skills/c
 adapted files, and there is nothing to attribute. Record it the way the validator checks it instead:
 the `catalog.yaml` entry declares `provenance_origin: conversation`, and
 `provenance/conversation-map.yaml` carries the capability with that entry's directory as its
-`destination` and a `G:L` locator into `research/sources/grok-transcript.md`. `ak validate` holds the
-two together — a `conversation` entry whose capability the map does not land in that directory, or
-lands there as `origin: donor`, is reported, because one of the two is then wrong about where the
-capability came from. Inventing an `origin:` or `locator:` key on an adaptations row does not
-substitute: nothing reads it.
+`destination` and a locator naming where the capability was specified. `ak validate` holds the two
+together — a `conversation` entry whose capability the map does not land in that directory, or lands
+there as anything other than `origin: conversation`, is reported, because one of the two is then
+wrong about where the capability came from. Inventing an `origin:` or `locator:` key on an
+adaptations row does not substitute: nothing reads it.
+
+The map has three origins, so "not conversation" is not "donor". `src/validation/provenance.ts`
+refuses that narrowing deliberately, in a comment sitting directly above the branch — *"with three
+origins in the map, 'not conversation' no longer implies 'donor', and a message that guesses wrong
+sends the reader to check something the row does not say"* — and this sentence made it anyway, one
+file away. A rule and the check enforcing it do not agree by default, and both of these were
+written carefully.
+
+**The locator has three forms and the transcript is only one of them.** `ak validate` admits
+`G:L<start>[-<end>]` ranges into `research/sources/grok-transcript.md`, `plan §<section>` and
+`arch §<section>` document references, and `amalgam <destination> + <destination>` seat pairs
+(`src/validation/provenance.ts`). Name where the capability was actually specified. Four live
+`conversation` rows record knowledgebase capabilities against `plan §8` and `plan §1.2; plan §8`
+because the transcript does not contain them at all: measured, its 2,264 lines carry zero
+occurrences of `knowledgebase`, `knowledge base`, `knowledge-base`, `central KB` or `KB`. A `G:L`
+for those would have to be invented, which is the fabrication this section forbids under **Never
+fabricate a source path**.
 
 **A donor-origin entry may still contain design-originated capabilities, and the route for them is
 the same one.** The two granularities are independent: `provenance_origin` classifies the *entry*,
 while a conversation-map row records a *capability* landing in that entry's directory. A directory
 adapted from a donor can therefore carry a capability no donor implements, recorded at
-`destination: <entry dir>` with its `G:L` locator, while the entry stays `provenance_origin: donor`
-and its adapted files keep their rows. Nothing forbids the mix and several entries already use it.
+`destination: <entry dir>` with its locator in any of the three forms, while the entry stays
+`provenance_origin: donor` and its adapted files keep their rows. Nothing forbids the mix and
+several entries already use it. The clearest instance is `guided-checkpoint-mode`, landing in
+`skills/autopilot` — an entry `catalog.yaml` marks `provenance_origin: donor` — on a
+`plan §9` locator. That this paragraph's best example was one its own earlier wording excluded is
+the cheap check worth taking from it: where a rule has a canonical instance in the tree, read the
+instance against the wording before shipping the wording.
 What has no route is a **loose doctrine file** (§12.3): with no catalog entry there is no directory
 to be a destination, so a design-originated rule in one is recorded by citation in the file itself
 and nowhere else. If a writer cannot find the route for something, that is a contract defect (§10) —
