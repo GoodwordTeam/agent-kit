@@ -60,6 +60,11 @@ const BASE: Record<string, string> = {
   // A source tree that cannot produce a licensed distribution is not a valid
   // fixture for any packaging test, so these are in the base rather than in the
   // one describe that reads them.
+  // A case for each fixture skill, because the corpus is scoped to the skills
+  // the bundle installs and a fixture carrying one skill's cases cannot show
+  // that scoping happening.
+  "evals/alpha/does-not-start-unasked/case.yaml": 'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
+  "evals/beta/runs-when-asked/case.yaml": 'schema_version: "1.1"\nname: runs-when-asked\ntags: [positive]\n',
   NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n\nAdapted from MIT-licensed projects.\n",
   LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n\nPermission is hereby granted, free of charge...\n",
 };
@@ -217,7 +222,7 @@ describe("bundle planning", () => {
   test("plugin.json carries host keys only; the build's own record sits beside it", () => {
     const plan = planBundle(ctxFor(), "claude-code", {});
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
-    expect(Object.keys(manifest)).toEqual(["name", "version", "description", "author", "license", "skills"]);
+    expect(Object.keys(manifest)).toEqual(["name", "version", "description", "author", "license", "skills", "experimental"]);
 
     const record = JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
     expect(Object.keys(record).sort()).toEqual(["autonomy_rejected", "excluded", "host", "modes", "profile"]);
@@ -552,6 +557,114 @@ describe("the marketplace entry the claude-code bundle carries", () => {
 });
 
 /**
+ * The eval corpus, and the manifest key that points at it.
+ *
+ * One item, because they are one claim. `experimental.evals` tells the host
+ * where the cases are; the cases are what makes the claim true. Shipping the
+ * key over a bundle with no corpus points the host at a directory that is not
+ * there, and shipping the corpus without the key leaves
+ * `claude plugin eval dist/claude-code` (`adapters/claude-code/CONTRACT.md`
+ * §5, the command at :166) with nothing to find. Either half alone is a
+ * bundle that looks evaluable and is not.
+ *
+ * claude-code only, and that is the fourth place the two bundles differ on
+ * purpose. §1's tree lists `evals/<id>/<case>/case.yaml` and its manifest
+ * example carries `"experimental": { "evals": "evals" }`;
+ * `adapters/codex/CONTRACT.md` §2's tree lists neither, and §3's capability
+ * table records **None verified** for a bundled eval runner on that host. §5
+ * closes the question outright: "the behavioral corpus is executed against the
+ * claude-code bundle", and results for codex alone are `not-run` rather than
+ * inferred from the claude-code run.
+ *
+ * Scoped to the skills the bundle installs, not copied wholesale. The install
+ * set is profile-dependent, and `evals/` holds cases for skills core
+ * deliberately excludes -- `profiles/core.yaml`'s `deliberately_excludes`
+ * names `babysit-pr` and `ultraqa`, both of which have cases in the tree. A
+ * wholesale copy would put cases for uninstalled skills in front of a runner
+ * invoked with `--threshold 1.0`, where a case for a skill that is not there
+ * cannot pass.
+ */
+describe("the eval corpus the claude-code bundle carries", () => {
+  const casesIn = (plan: ReturnType<typeof planBundle>) =>
+    [...plan.files.keys()].filter((p) => p.startsWith("evals/")).sort();
+
+  const experimentalIn = (plan: ReturnType<typeof planBundle>, path: string) =>
+    JSON.parse(plan.files.get(path)?.contents ?? "{}").experimental;
+
+  test("the claude-code bundle carries the corpus and the codex bundle carries none of it", () => {
+    const ctx = ctxFor();
+    expect(casesIn(planBundle(ctx, "claude-code", {}))).toEqual([
+      "evals/alpha/does-not-start-unasked/case.yaml",
+      "evals/beta/runs-when-asked/case.yaml",
+    ]);
+    expect(casesIn(planBundle(ctx, "codex", {}))).toEqual([]);
+  });
+
+  test("only the skills the bundle installs bring their cases", () => {
+    // `autonomy` holds beta alone, so alpha's case must not travel. Asserted as
+    // the whole corpus rather than as alpha's absence: "the excluded skill's
+    // cases are gone" also passes over a bundle that dropped every case.
+    const plan = planBundle(ctxFor(), "claude-code", { profile: "autonomy" });
+    expect(casesIn(plan)).toEqual(["evals/beta/runs-when-asked/case.yaml"]);
+  });
+
+  test("the manifest points at the directory the cases are actually in", () => {
+    // The key and the paths come from one constant, so this compares the
+    // manifest against the bundle rather than against the string "evals". A
+    // literal on both sides agrees with itself while pointing at nothing.
+    const plan = planBundle(ctxFor(), "claude-code", {});
+    const dir = experimentalIn(plan, ".claude-plugin/plugin.json").evals;
+    expect(typeof dir).toBe("string");
+    expect(casesIn(plan).every((p) => p.startsWith(`${dir}/`))).toBe(true);
+  });
+
+  test("the codex manifest claims no corpus, because that bundle has none", () => {
+    const manifest = JSON.parse(
+      planBundle(ctxFor(), "codex", {}).files.get(".codex-plugin/plugin.json")?.contents ?? "{}",
+    );
+    expect("experimental" in manifest).toBe(false);
+  });
+
+  test("a case travels verbatim", () => {
+    // Cases are graded input, not prose the packager owns: a rewritten path or
+    // a normalised quote changes what the eval asks. Nothing in the packager
+    // rewrites YAML today, and this is what says so if something starts to.
+    const plan = planBundle(ctxFor(), "claude-code", {});
+    expect(plan.files.get("evals/alpha/does-not-start-unasked/case.yaml")?.contents).toBe(
+      BASE["evals/alpha/does-not-start-unasked/case.yaml"],
+    );
+  });
+
+  test("a bundle with no cases does not claim a corpus it does not carry", () => {
+    // The manifest key is a pointer, and §1 already makes a manifest pointing
+    // at something the bundle does not contain a build failure for `skills`.
+    // Reported rather than silently dropped: a bundle that quietly stops being
+    // evaluable is the same fails-open shape as a check that cannot fail.
+    const ctx = ctxFor({}, ["evals/alpha/does-not-start-unasked/case.yaml", "evals/beta/runs-when-asked/case.yaml"]);
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.eval-corpus-missing");
+    expect(issue?.severity).toBe("error");
+    expect(casesIn(plan)).toEqual([]);
+    // Both halves withheld together. Reporting the error while still writing
+    // the key would leave the pointer on disk -- `writeBundles` writes before
+    // the plan's errors are read -- pointing at a directory that is not there.
+    expect(experimentalIn(plan, ".claude-plugin/plugin.json")).toBeUndefined();
+  });
+
+  test("a bundle that installs nothing claims nothing, and that is not an error", () => {
+    // A profile can narrow to no skills at all, and an empty bundle with no
+    // corpus is consistent rather than defective: there is nothing to evaluate
+    // and it says so by carrying neither half. The error is for the bundle that
+    // installs skills and has no cases for any of them, which is the state that
+    // silently stops being evaluable.
+    const ctx = ctxFor({ "profiles/autonomy.yaml": "id: autonomy\nskills: []\n" });
+    const plan = planBundle(ctx, "claude-code", { profile: "autonomy" });
+    expect(plan.issues.some((i) => i.rule === "packaging.eval-corpus-missing")).toBe(false);
+    expect(experimentalIn(plan, ".claude-plugin/plugin.json")).toBeUndefined();
+  });
+});
+
+/**
  * The two bundles are meant to differ, and the contracts say exactly where.
  *
  * This is the comparison whose absence let a decorative second adapter report
@@ -630,8 +743,15 @@ describe("the two host bundles, compared", () => {
     // `adapters/claude-code/CONTRACT.md` §1 gives to that host alone -- must be
     // added to this exclusion when it lands, and that is the point: it makes
     // whoever adds it say out loud that it belongs to one host.
+    //
+    // It has landed, and this is that saying-out-loud. `experimental` is
+    // excluded from claude-code's side and *not* from codex's: if codex ever
+    // grows the key, it stays in `codexIdentity` and fails here, which is the
+    // asymmetry the exclusion is allowed to have. That codex carries no such
+    // key today is asserted positively in the eval-corpus describe, not left
+    // to this subtraction.
     const { claude, codex } = bundles();
-    const { skills: _enumerated, ...claudeIdentity } = manifestIn(claude, ".claude-plugin/plugin.json");
+    const { skills: _enumerated, experimental: _corpus, ...claudeIdentity } = manifestIn(claude, ".claude-plugin/plugin.json");
     const { skills: _pointer, ...codexIdentity } = manifestIn(codex, ".codex-plugin/plugin.json");
     expect(Object.keys(claudeIdentity).length).toBeGreaterThan(0);
     expect(codexIdentity).toEqual(claudeIdentity);

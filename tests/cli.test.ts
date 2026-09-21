@@ -56,14 +56,23 @@ function capture() {
  * once and spread into each fixture rather than repeated: three fixtures in
  * this file build for real, and a fourth added later gets it by spreading the
  * same constant rather than by rediscovering the requirement from a failure.
+ *
+ * The eval case is here for the same reason and under the same rule. The
+ * claude-code manifest declares `experimental.evals`, so a bundle with no case
+ * under `evals/<id>/` points the host at a directory it does not contain, and
+ * `ak build` reports that rather than shipping the pointer. Named for the
+ * obligation rather than for the licence half once it carried two: a fixture
+ * that cannot produce a compliant bundle is not a fixture for a passing build,
+ * whichever obligation it misses.
  */
-const LICENSED = {
+const BUILDABLE = {
   NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n",
   LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n",
+  "evals/triage/does-not-start-unasked/case.yaml": 'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
 };
 
 function cleanTree(): string {
-  return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, ...LICENSED });
+  return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
 }
 
 describe("ak", () => {
@@ -263,7 +272,7 @@ describe("ak build", () => {
       "  - id: core\n    status: contract\n    default: true\n",
       "  - id: core\n    status: contract\n    default: true\n  - id: autonomy\n    status: contract\n",
     );
-    const root = makeTree({ "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL, ...LICENSED });
+    const root = makeTree({ "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
     expect(runCli(["build", "--profile", "core"], { cwd: root, io: capture().io })).toBe(0);
     const manifest = JSON.parse(
       readFileSync(join(root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8"),
@@ -295,7 +304,7 @@ describe("ak build", () => {
         "skills/triage/SKILL.md": SKILL,
         "provenance/upstream.lock.yaml": LOCK,
         [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: FRAGMENT,
-        ...LICENSED,
+        ...BUILDABLE,
         ...extra,
       });
 

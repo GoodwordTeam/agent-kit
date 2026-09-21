@@ -45,6 +45,17 @@ export const HOST_MANIFEST_FILE: Record<HostId, string> = {
 const MARKETPLACE_FILE = ".claude-plugin/marketplace.json";
 
 /**
+ * The eval corpus directory: where the cases are copied, and what the manifest
+ * says they are.
+ *
+ * One constant for both, because they are one claim. The bundle path and the
+ * `experimental.evals` value are the pointer and the thing pointed at, and two
+ * literals agree with each other while agreeing with nothing -- which is how
+ * one manifest path became two bundles under one name.
+ */
+const EVAL_DIR = "evals";
+
+/**
  * Where this package records what its own build decided, beside that host's
  * manifest.
  *
@@ -316,6 +327,53 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     }
   }
 
+  /**
+   * The eval corpus, for the one host whose contract has a runner for it.
+   *
+   * Scoped to `emitted` rather than copied wholesale: the install set is
+   * profile-dependent and `evals/` holds cases for skills a profile
+   * deliberately excludes (`profiles/core.yaml` names `babysit-pr` and
+   * `ultraqa`, both of which have cases in this tree). Shipped wholesale, those
+   * cases reach `claude plugin eval dist/claude-code --threshold 1.0`
+   * (`adapters/claude-code/CONTRACT.md` §5) naming skills the bundle does not
+   * contain, where they cannot pass.
+   *
+   * Verbatim, with no link rewriting. A case is graded input, not prose this
+   * packager owns; a rewritten path changes what the eval asks.
+   *
+   * The count is what the manifest key is conditioned on, so the pointer and
+   * the corpus are emitted or withheld together. A bundle that installs no
+   * skills at all -- a profile can narrow to that -- carries neither, and says
+   * nothing rather than pointing at an empty directory.
+   *
+   * What this does NOT check: that every installed skill has a case, or that
+   * every U skill has a *non-trigger* case whose prompt comes from its
+   * `## Not for` section. That is `adapters/codex/CONTRACT.md` §5.4 and
+   * `adapters/claude-code/CONTRACT.md` §5.7, and it is not built. One case for
+   * one skill satisfies the check below, which is deliberately only the
+   * pointer-has-a-referent property.
+   */
+  let cases = 0;
+  if (host === "claude-code") {
+    for (const id of emitted) {
+      for (const file of walkFiles(root, `${EVAL_DIR}/${id}`)) {
+        const text = readTextIfPresent(join(root, file));
+        if (text === null) continue;
+        files.set(file, { path: file, contents: text, source: file });
+        cases += 1;
+      }
+    }
+    if (cases === 0 && emitted.length > 0) {
+      issues.push(
+        error(
+          "packaging.eval-corpus-missing",
+          EVAL_DIR,
+          `None of this bundle's ${emitted.length} skill(s) has a case under ${EVAL_DIR}/<id>/, so the bundle carries no eval corpus at all and nothing can be run against it. adapters/claude-code/CONTRACT.md §1 puts ${EVAL_DIR}/<id>/<case>/case.yaml in this bundle's shape; write a case under ${EVAL_DIR}/<id>/ for a skill this bundle installs.`,
+        ),
+      );
+    }
+  }
+
   for (const name of LICENCE_FILES) {
     const text = readTextIfPresent(join(ctx.root, name));
     if (text === null) {
@@ -334,7 +392,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   issues.push(...checkManifestIdentity(ctx.catalog.package));
   files.set(HOST_MANIFEST_FILE[host], {
     path: HOST_MANIFEST_FILE[host],
-    contents: pluginManifest(ctx, host, emitted),
+    contents: pluginManifest(ctx, host, emitted, cases > 0),
   });
   if (host === "claude-code") {
     files.set(MARKETPLACE_FILE, { path: MARKETPLACE_FILE, contents: marketplace(ctx) });
@@ -367,7 +425,7 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
  * ("Unknown field 'ak'. Claude Code ignores it at load time."), so anything this
  * package wants to record about its own build goes in `buildRecord` instead.
  */
-function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>): string {
+function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>, hasCorpus: boolean): string {
   const pkg = ctx.catalog.package;
   const manifest: Record<string, unknown> = {
     name: pkg.id,
@@ -384,6 +442,20 @@ function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<s
   if (declared(pkg.author)) manifest["author"] = { name: pkg.author };
   if (declared(pkg.license)) manifest["license"] = pkg.license;
   manifest["skills"] = skillRegistration(host, skills);
+  // Last, as in §1's example, and conditioned on the corpus alone rather than
+  // on the corpus and the host. The key is a pointer: emitted with nothing
+  // behind it, it is the pointer half of this feature shipping without the
+  // half that makes it true.
+  //
+  // `&& host === "claude-code"` stood here too and has been removed, because it
+  // could not fail. The count is only ever incremented inside the host-gated
+  // copy above, so `hasCorpus` is already false for codex and the second
+  // condition decided nothing -- a guard that reads as load-bearing and is not,
+  // which a mutation surviving is how it was found rather than by reading it.
+  // The host decision now lives in one place, at the copy, and the assertion
+  // that codex's manifest carries no such key is a test rather than a
+  // condition that cannot be observed failing.
+  if (hasCorpus) manifest["experimental"] = { evals: EVAL_DIR };
   return `${JSON.stringify(manifest, null, 2)}\n`;
 }
 
