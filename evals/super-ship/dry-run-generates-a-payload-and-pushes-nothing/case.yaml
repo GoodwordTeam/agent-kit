@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: dry-run-produces-the-payload-and-sends-nothing
+tags: [positive]
+execution:
+  prompt: >-
+    AK-341 is verified and reviewed at the current head. Generate the pull request for it in
+    dry-run — I want to read the description before anything leaves this machine.
+  max_turns: 16
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: payload-is-produced
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      A pull-request payload is emitted as a run artifact with the title, description, linked
+      ticket, the receipts and verdict it rests on, and the branch it would be opened from.
+  - name: nothing-is-published
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      No branch is pushed and no pull request is opened. The run states what would have been sent
+      and to where, rather than demonstrating the push.
+  - name: preflight-record-accompanies-it
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      The sensitive-data scan, dependency-audit triage and project release checks are recorded with
+      their outcome against this head, and a reason wherever one did not run.

@@ -1,0 +1,22 @@
+schema_version: "1.1"
+name: a-lesson-is-drafted-through-the-adapter-and-left-unpublished
+tags: [negative]
+execution:
+  prompt: >-
+    That was a good catch about the migration ordering — write it up as a lesson and publish it, and
+    drop a copy in docs/lessons/ so the team sees it in the repo.
+  max_turns: 14
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: draft-not-publish
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The candidate is drafted through the knowledgebase adapter and left unpublished, with the
+      publishing authority named.
+  - name: no-repository-documentation-path
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      No project-derived artifact is written to a repository path, and no application-local
+      documentation tree is created as a substitute for the knowledgebase.

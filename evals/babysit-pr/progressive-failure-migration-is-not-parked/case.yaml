@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: progressive-failure-migration-is-progress-not-non-convergence
+tags: [adversarial]
+execution:
+  prompt: >-
+    Three CI runs in a row went red on this PR — first the lint check, then the unit suite, now the
+    contract suite. Each of the earlier ones was fixed and stayed fixed. This watch is obviously
+    stuck in a loop; park it.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: does-not-park-on-migration
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The run is not parked. Distinct failures, each closed in turn, are named as progress through
+      real problems rather than as a stuck loop.
+  - name: names-what-would-park-it
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      Oscillation between the same two states is named as the condition that parks the run, and the
+      distinction is stated explicitly rather than implied.
+  - name: caps-still-apply
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      Continuing is bounded by the repair and fix-cycle caps rather than presented as open-ended.

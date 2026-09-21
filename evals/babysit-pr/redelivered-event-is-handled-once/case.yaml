@@ -1,0 +1,27 @@
+schema_version: "1.1"
+name: a-redelivered-event-does-not-duplicate-the-action
+tags: [resumability, scenario-20]
+execution:
+  prompt: >-
+    The webhook fired twice for the same failed check run — same delivery id both times — and the
+    first one was already acted on before the process restarted. Handle the second.
+  max_turns: 14
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: recognised-by-its-key
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The event is recognised by its idempotency key, recorded as a repeat and dropped.
+  - name: no-second-repair-attempt
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      No second repair attempt is started for the same failure, and the attempt counter does not
+      advance on the duplicate.
+  - name: unfinished-work-stays-actionable
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      An item whose action crashed before it confirmed is still treated as unhandled, so observing
+      an item is distinguished from having acted on it.

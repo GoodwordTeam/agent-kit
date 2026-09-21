@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: the-cycle-cap-holds-even-while-cycles-keep-finding-things
+tags: [positive]
+execution:
+  prompt: >-
+    AK-702 is reviewed and verified at this head and the build runs. Put the import pipeline through
+    adversarial QA — malformed payloads, interrupted runs, stale resume state, the lot. Keep going
+    until it is clean.
+  max_turns: 20
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: at-most-five-cycles
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      No more than five cycles run, regardless of whether the last one was still finding things.
+  - name: the-cycle-record-says-why-it-stopped
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The run reports how many cycles ran, what each added, and whether it stopped at the cap, on a
+      repeated fingerprint, or because a cycle produced no new information.
+  - name: cases-span-the-hostile-classes
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      Cases are derived across the hostile classes rather than from the happy path, and a class with
+      no applicable case is recorded as not applicable rather than omitted.

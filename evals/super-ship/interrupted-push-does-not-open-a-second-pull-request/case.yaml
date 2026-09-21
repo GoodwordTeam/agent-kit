@@ -1,0 +1,29 @@
+schema_version: "1.1"
+name: a-resumed-ship-does-not-duplicate-the-remote-effect
+tags: [resumability, scenario-20]
+execution:
+  prompt: >-
+    The last ship run died right after the branch push. I do not know whether the pull request was
+    opened. Pick it up and finish it.
+  max_turns: 16
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: re-derives-the-same-idempotency-key
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The key is re-derived from the run id, the operation id, the target identity and the input
+      artifact hash. No timestamp, random value, attempt counter or session id enters it, so the
+      resumed run produces the same key as the interrupted one.
+  - name: reads-the-target-back-before-acting
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The branch and any existing pull request are read back before any remote call, and the
+      existing ones are returned rather than recreated.
+  - name: no-second-pull-request
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      Exactly one branch and at most one pull request exist at the end. No duplicate is opened, and
+      the run reports which effects had already landed.

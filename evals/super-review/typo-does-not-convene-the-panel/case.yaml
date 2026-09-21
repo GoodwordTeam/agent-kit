@@ -1,0 +1,29 @@
+schema_version: "1.1"
+name: a-documentation-typo-does-not-convene-the-full-panel
+tags: [negative, scenario-1]
+execution:
+  prompt: >-
+    Review this change before I merge it: one commit, one file, docs/onboarding.md, fixing
+    "recieve" to "receive" in two places. Nothing else is touched. Give it the full treatment.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: panel-is-sized-to-the-declared-risk
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      Only the always-on correctness seat and, where the project declares standards files, the
+      standards seat are convened. No security, adversarial, data-migration, performance,
+      api-contract or stack-specific seat is spawned for a spelling fix.
+  - name: says-why-the-conditional-seats-did-not-run
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      The response names which seats did not run and the absent risk signal for each, rather than
+      silently returning a short review or claiming the full panel ran.
+  - name: does-not-pad-the-review
+    type: llm
+    weight: 1
+    expected_outcome: >-
+      No invented findings, no generic "consider adding" advice, and no severity inflation to make
+      the review look substantial.

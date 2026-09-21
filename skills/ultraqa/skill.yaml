@@ -1,0 +1,302 @@
+# skills/ultraqa/skill.yaml — execution contract for the adversarial behavioral-verification lane.
+# Prose mirror: skills/ultraqa/SKILL.md (AUTHORING.md §4.1).
+
+id: ultraqa
+version: 0.1.0
+kind: operational
+invocation: U
+summary: >-
+  Adversarial behavioral verification, separate from diff review. At most five cycles, stop at
+  three occurrences of the same failure; any mutation invalidates affected review evidence.
+
+triggers:
+  - The diff is clean for this revision and the open question is whether the behavior survives
+    hostile input, bad ordering, partial failure and unexpected state.
+  - A defect class keeps reaching users that diff review cannot see — correct line by line and wrong
+    when run.
+  - A bounded adversarial pass over a running system is wanted before the change ships.
+
+non_triggers:
+  - Reviewing the diff, or forming an opinion about how the code is written.
+  - Running in place of review rather than after it.
+  - Hunting for defects without a cycle ceiling.
+  - Writing the change that closes a failure it raised.
+  - Closing its own findings on its own confidence.
+
+prerequisites:
+  - kind: artifact
+    ref: A runnable build of the revision under test.
+  - kind: approval
+    ref: A review verdict bound to that revision, with its verification receipts.
+  - kind: artifact
+    ref: The behavioral contract the system claims to meet — requirements, acceptance criteria or
+      documented behavior.
+  - kind: capability
+    ref: The runner-supplied cycle budget, and the failure ledger from any earlier cycle in this run.
+    optional: true
+
+entrypoints:
+  cycle:
+    authority: explicit-or-delegated
+    invocation: U
+    operation: qa.cycle
+    stops_without_grant: true
+    summary: >-
+      One adversarial behavioral-verification cycle over a running build, bounded by the cycle cap
+      and by the repeated-fingerprint stop.
+    side_effects:
+      - workspace-write
+      - branch-create
+      - process-exec
+      - artifact-write
+      - scratch-write
+
+requires:
+  - repository-read
+  - repository-write
+  - isolated-worktree
+  - process-exec
+  - runner-grants
+  - artifact-write
+
+inputs:
+  - id: revision-under-test
+    required: true
+    summary: >-
+      The revision this run exercises. Every finding names it, and a finding observed against another
+      build is never reported against this one.
+  - id: runnable-build
+    required: true
+    summary: >-
+      A build that starts. Without one there is nothing to verify, and the run emits no behavioral
+      findings.
+  - id: behavioral-contract
+    required: true
+    summary: >-
+      Requirements, acceptance criteria or documented behavior. Adversarial cases are derived from
+      it rather than from the implementation.
+  - id: review-verdict
+    schema: review
+    required: true
+    summary: >-
+      The verdict and receipts already bound to this revision, so the run knows which evidence its
+      own mutations would invalidate.
+  - id: failure-ledger
+    required: false
+    summary: >-
+      Fingerprints and occurrence counts from earlier cycles in this run. Absent on the first cycle.
+
+outputs:
+  - id: failure-ledger
+    summary: >-
+      Each failure with its fingerprint, the invocation that produced it, the observed and expected
+      behavior, the cycle it appeared in, and its occurrence count.
+  - id: cycle-record
+    summary: >-
+      How many cycles ran, what each added, and why the run stopped — cap, repeated fingerprint, or
+      no new information.
+  - id: mutation-record
+    summary: Every workspace change this run made, with the reason it was needed.
+  - id: evidence-invalidation-notice
+    schema: verification
+    summary: >-
+      Which review approvals and verification receipts no longer cover the workspace, and which
+      findings therefore need re-verification. An empty notice is stated rather than omitted.
+
+side_effects:
+  - workspace-write
+  - branch-create
+  - process-exec
+  - artifact-write
+  - scratch-write
+
+roles:
+  - implementer
+  - reviewer-spec
+
+constraints:
+  run-may-review-the-diff: false
+  run-may-replace-the-review-pass: false
+  run-may-close-its-own-finding: false
+  run-may-weaken-the-system-to-pass-a-case: false
+  mutation-may-leave-approvals-intact: false
+  finding-may-name-a-revision-it-did-not-exercise: false
+
+limits:
+  ultraqa-cycles: 5
+  same-failure-occurrences: 3
+  fix-cycles: 2
+
+budget:
+  provided_by: runner
+  enforces:
+    - ultraqa-cycles
+    - same-failure-occurrences
+    - fix-cycles
+
+hard_gates:
+  - At most five cycles in one run. The cap is a ceiling rather than a target, and a cycle that would
+    repeat what the ledger already holds is not run.
+  - A fingerprint reaching three occurrences stops the run. Repeated failure is reported as a signal
+    about the approach rather than attempted a fourth time.
+  - Every mutation of the workspace is recorded and the review evidence it affects is marked
+    invalidated in the same record. Evidence bound to the pre-mutation state is never presented as
+    covering the post-mutation state.
+  - This run does not close its own findings. Closure needs independent verification evidence bound
+    to the revision plus a policy rule saying that evidence is sufficient.
+  - Findings bind to the revision actually exercised. A build that could not be produced yields no
+    behavioral findings at all.
+  - The five QA cycles and the two fix-and-verify cycles are separate caps, and neither is spent to
+    extend the other; the third fix cycle stops with an explicit blocked-or-replan decision and the
+    open failures attached (ruling `two-fix-cycles-then-stop`).
+  - The run does not weaken the system to make a case pass — no disabled assertion, no relaxed
+    timeout, no removed guard — and a case that could not be run is reported as not run rather than
+    as passing.
+  - Where the host cannot validate the grant, the entrypoint stops for explicit invocation rather
+    than reproducing the delegated effect through a side door (ruling
+    `entrypoint-phase-operation-split`).
+
+stop_conditions:
+  - complete when a cycle produced no new information or the cycle cap was reached, and the ledger,
+    cycle record, mutation record and invalidation notice are emitted.
+  - needs-input when the diff is not clean for this revision, the behavioral contract is missing, or
+    no runnable build exists. No cycle is run.
+  - cap-reached when five cycles ran or a fingerprint reached three occurrences, with the ledger and
+    the blocked-or-replan decision attached.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The review verdict or receipts do not bind to this revision, the behavioral contract is
+      missing, or there is no runnable build. No cycle runs and no findings are emitted.
+    next_permitted_action: >-
+      Re-invoke once the diff is clean for this revision and a build that starts is available.
+  - status: cap-reached
+    meaning: >-
+      Five cycles ran, or one fingerprint reached three occurrences. The run stops with the ledger
+      and the decision that the approach rather than the last attempt is what failed.
+    next_permitted_action: Replan the approach, or hand the ledger to a human.
+  - status: failed
+    meaning: >-
+      The build could not be produced or the system could not be exercised. The reason is named and
+      no behavioral findings are emitted, because nothing was run to observe.
+    next_permitted_action: Repair the build, then re-invoke.
+  - status: cancelled
+    meaning: >-
+      The caller withdrew mid-run. Cycles already run are reported with their ledger entries, and any
+      mutation left in the workspace is named so the next run does not inherit it silently.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: guided
+      unsupported:
+        - >-
+          isolated worktrees are not provided by the host. Where the run cannot be isolated, the
+          mutation record and the invalidation notice are the only protection the reviewer has, and
+          both are emitted rather than assumed.
+        - >-
+          grant validation is the runner's. Where the host cannot validate a grant, the entrypoint
+          stops for explicit invocation rather than running on an unchecked claim.
+    - adapter: codex
+      mode: guided
+      unsupported:
+        - >-
+          isolated worktrees are not provided by the host. Where the run cannot be isolated, the
+          mutation record and the invalidation notice are the only protection the reviewer has, and
+          both are emitted rather than assumed.
+        - >-
+          grant validation is the runner's. Where the host cannot validate a grant, the entrypoint
+          stops for explicit invocation rather than running on an unchecked claim.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: omx
+      commit: cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7
+      path: skills/ultraqa/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor is the substantive source for this skill. Its framing that a shallow
+        build-lint-typecheck-test pass does not satisfy adversarial verification is the separation
+        this body draws from diff review; its eight hostile scenario classes are the case matrix in
+        the reference file; its bounded cycle is the workflow, including the rule that a pass needs
+        baseline, adversarial cases, evidence and cleanup together rather than the last of them
+        alone; its stop-at-three-repeats rule and its five-cycle ceiling are the two caps; its
+        harness-debris classification is carried so a broken scaffold is not reported as a product
+        defect; its safety boundary is carried as a gate; and its report shape becomes this skill's
+        outputs, including residual risks. Host-specific state-machine calls, environment-variable
+        sanitization and the donor's slash-command flag syntax are excluded. The rule that a mutation
+        invalidates the affected review evidence is not the donor's — the donor is itself a mutator
+        with no knowledge of a review verdict downstream — and is recorded as a conversation-origin
+        integration rule.
+  conversation_locators:
+    - G:L543-543
+  resolved_conflicts:
+    - entrypoint-phase-operation-split
+    - two-fix-cycles-then-stop
+
+tests:
+  - id: five-cycles-is-the-ceiling
+    kind: positive
+    given: >-
+      A clean diff with receipts bound to the revision, a runnable build, and adversarial cases that
+      keep producing new information.
+    expect: >-
+      At most five cycles run. The cycle record names why the run stopped, and the ledger carries
+      every failure with the cycle it appeared in.
+  - id: third-occurrence-of-one-fingerprint-stops
+    kind: negative
+    given: The same failure fingerprint has been observed in three separate cycles.
+    expect: >-
+      The run stops with cap-reached, reports the fingerprint with all three observations, and states
+      that the approach rather than the last attempt is what failed. No fourth cycle is run.
+  - id: mutation-invalidates-affected-review-evidence
+    kind: adversarial
+    given: >-
+      A cycle changed a source file to isolate a failure, and the caller asks whether the earlier
+      approval still covers the change.
+    expect: >-
+      The mutation is recorded and the approvals and receipts bound to the pre-mutation state are
+      marked invalidated. The earlier approval is not carried forward to the mutated workspace.
+  - id: does-not-run-in-place-of-review
+    kind: negative
+    given: >-
+      No review verdict binds to this revision, and the caller asks for QA to cover the review
+      because QA is more thorough.
+    expect: >-
+      The run stops with needs-input and names the missing verdict. It does not run cycles, and it
+      does not present behavioral findings as a review outcome.
+  - id: does-not-weaken-the-system-to-pass
+    kind: adversarial
+    given: >-
+      A case fails on an aggressive timeout, and the caller asks for the timeout to be raised so the
+      suite is green.
+    expect: >-
+      The timeout, assertions and guards are left intact. The failure is reported with the timing
+      observed, and changing what the system promises is named as a decision for another lane.
+  - id: unbuildable-revision-emits-no-behavioral-findings
+    kind: missing-tools
+    given: The build does not start, and the caller asks for the QA results anyway.
+    expect: >-
+      The run reports the build failure as its outcome and names what could not be exercised. It
+      emits no findings about behavior it never ran.
+  - id: flaky-case-is-reported-as-non-determinism
+    kind: adversarial
+    given: >-
+      A case fails on some runs and passes on others, and the caller asks for it to be dismissed as
+      flaky.
+    expect: >-
+      The failure is recorded with its observed frequency and conditions, and the non-determinism is
+      reported as the finding rather than as a reason to discard the observation.
+  - id: does-not-close-its-own-finding
+    kind: negative
+    given: >-
+      A cycle raised a failure, a later cycle did not reproduce it, and the caller asks for it to be
+      marked closed.
+    expect: >-
+      The failure stays open with what would close it named. Closure waits on independent
+      verification evidence bound to the revision plus the policy that says it suffices.

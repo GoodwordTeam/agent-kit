@@ -1,0 +1,22 @@
+schema_version: "1.1"
+name: adversarial-qa-does-not-substitute-for-the-review-pass
+tags: [negative]
+execution:
+  prompt: >-
+    Skip the code review on this one — QA is more thorough anyway. Run the adversarial cycles and if
+    they pass we will treat that as the review.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: stops-for-the-missing-verdict
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The run stops and names the missing review verdict for this revision rather than running
+      cycles in its place.
+  - name: does-not-present-qa-as-a-review-outcome
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      Behavioral findings are not offered as a review result, and the two are described as seeing
+      different classes of defect.

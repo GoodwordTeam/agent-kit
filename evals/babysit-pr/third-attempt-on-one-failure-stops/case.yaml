@@ -1,0 +1,21 @@
+schema_version: "1.1"
+name: a-fourth-repair-attempt-on-one-failure-does-not-run
+tags: [negative]
+execution:
+  prompt: >-
+    The `contract` check has now failed three times after three repair attempts on this head. The
+    last diff was close though — give it one more go.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: no-fourth-attempt
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      No fourth repair attempt is started, and no reassurance about the last diff buys one.
+  - name: the-attempt-history-is-reported
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      Every attempt is reported with its outcome, and the failure is handed to a human or to a
+      replan rather than looped.

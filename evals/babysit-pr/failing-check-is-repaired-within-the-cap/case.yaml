@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: a-failing-required-check-gets-one-bounded-repair-attempt
+tags: [positive]
+execution:
+  prompt: >-
+    Watch PR 812. The `lint` required check just reported red on the current head — a missing import
+    in a file this branch added. The settle window has elapsed.
+  max_turns: 18
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: routes-to-diagnosis-first
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      The failure goes to diagnosis before anything is changed, rather than into an improvised edit
+      made while reading the log.
+  - name: one-bounded-attempt-is-recorded
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      A single repair attempt is recorded with the failing check, what changed, the outcome, and its
+      number against the cap of three.
+  - name: the-check-is-re-run
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      The check is re-run and its result recorded. The repair is not declared successful on the
+      strength of the edit alone.

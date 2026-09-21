@@ -1,0 +1,440 @@
+# skills/super-review/skill.yaml — execution contract for the review lane.
+# Prose mirror: skills/super-review/SKILL.md (AUTHORING.md §4.1).
+
+id: super-review
+version: 0.1.0
+kind: lifecycle
+invocation: U
+summary: >-
+  Specialist panel over an immutable snapshot (full), two-axis delta over a fix (delta), or the
+  two-lane readiness gate. Reviewers cannot edit. A required-lane failure is unavailable, which
+  blocks approval and never falls back to self-review.
+
+triggers:
+  - A change is ready for judgment and nothing has reviewed it yet against requirements, the
+    project's declared standards and its tests.
+  - An accepted finding has been fixed and the fix needs a bounded second look inside the review run
+    that is already open.
+  - A change is otherwise ready to ship and the question is whether the evidence behind it holds up.
+  - A caller asks whether a change is safe to merge and the answer depends on evidence no reviewer
+    has read yet.
+
+non_triggers:
+  - Producing the fix for an accepted finding.
+  - Running the project's acceptance checks or producing receipts.
+  - Repairing a failing required check on a pull request.
+  - Failing a change on its line count or its test-ratio shape.
+  - Reviewing a requirements document, a plan or an architecture decision record.
+
+prerequisites:
+  - kind: artifact
+    ref: A named comparison base and a named reviewed head.
+  - kind: capability
+    ref: >-
+      An isolated review context per seat, so that seats do not share a scratchpad and independence
+      is structural rather than scheduled.
+  - kind: run-state
+    ref: >-
+      For the delta entrypoint only: an open review run with its persisted finding list, input hashes
+      and dispositions.
+    optional: true
+
+entrypoints:
+  full:
+    authority: explicit-or-delegated
+    invocation: U
+    operation: review.full
+    stops_without_grant: true
+    summary: >-
+      Pass 1. Freeze the snapshot, select the panel from declared risk, dispatch each seat with its
+      own evidence packet, and synthesize a verdict without merging seats.
+    side_effects: [artifact-write]
+  delta:
+    authority: active-review-run
+    invocation: M
+    operation: review.delta
+    stops_without_grant: true
+    summary: >-
+      Two-axis delta over an accepted fix inside an open review run. Invoked with no open run, it
+      stops with needs-input naming the full entrypoint.
+    side_effects: [artifact-write]
+  readiness:
+    authority: explicit-or-delegated
+    invocation: U
+    operation: review.readiness
+    stops_without_grant: true
+    summary: >-
+      The two-lane readiness gate, run over the panel's synthesized verdict rather than in place of
+      it. A missing lane is unavailable and a blocking lane result vetoes approval.
+    side_effects: [artifact-write]
+
+requires:
+  - repository-read
+  - isolated-review-context
+  - independent-context
+  - runner-grants
+  - artifact-write
+
+inputs:
+  - id: comparison-base
+    required: true
+    summary: The revision the change is read against. Absent, the run stops with needs-input.
+  - id: reviewed-head
+    required: true
+    summary: The revision under review, recorded on the snapshot and on every finding.
+  - id: requirements
+    schema: ticket
+    required: false
+    summary: >-
+      The requirements the change claims to satisfy, by id. Where none resolve, the spec lane returns
+      unavailable rather than inventing an intent to review against.
+  - id: project-standards
+    schema: project
+    required: false
+    summary: >-
+      The project's declared standards. Where a project declares none, the standards seat returns an
+      empty result and invents no preferences.
+  - id: attached-packs
+    required: false
+    summary: >-
+      The packs the change earned. Packs are the artifact evidence that selects conditional seats;
+      they are read, never guessed from file names.
+  - id: review-run
+    schema: review
+    required: false
+    summary: >-
+      For delta only: the open run with its finding list, fingerprints, dispositions, input hashes
+      and the fix diff.
+
+outputs:
+  - id: review-record
+    schema: review
+    summary: >-
+      Mode, comparison base, reviewed head, the frozen snapshot with its hash and exclusions, the
+      authorship record, one entry per lane with its state and verdict, the fix-cycle count, and the
+      verdict.
+  - id: findings
+    schema: finding
+    summary: >-
+      One per observation, each quoting the line it rests on, fingerprinted by rule-or-cause plus
+      location-or-symbol plus evidence, and carrying an action class no code-review seat sets to
+      safe_auto.
+  - id: lane-report
+    summary: >-
+      Which seats were selected, which signals selected them, and which lanes were complete, empty or
+      unavailable with the reason. An unavailable lane is named, never omitted.
+  - id: lesson-candidate
+    summary: >-
+      A mark on any finding that teaches a durable rule. This skill marks it and publishes nothing;
+      the knowledgebase write is outside the envelope the review operations declare.
+
+side_effects:
+  - artifact-write
+
+constraints:
+  reviewers-may-edit-source: false
+  author-may-approve-own-change: false
+  author-may-close-own-finding: false
+  unavailable-lane-may-be-backfilled: false
+  panel-may-be-a-fixed-roster: false
+  delta-may-be-bounded-by-changed-lines: false
+  code-review-seat-may-emit-safe-auto: false
+  seat-may-receive-implementer-narrative: false
+
+limits:
+  fix-cycles: 2
+  review-rounds: 3
+
+budget:
+  provided_by: runner
+  enforces:
+    - fix-cycles
+    - review-rounds
+
+packs:
+  - pack-api
+  - pack-secure
+  - pack-data
+  - pack-perf
+  - pack-test
+  - pack-frontend
+
+references:
+  - engineering-principles
+
+roles:
+  - code-review/correctness
+  - code-review/project-standards
+  - code-review/testing
+  - code-review/maintainability
+  - code-review/agent-native
+  - code-review/learnings
+  - code-review/security
+  - code-review/performance
+  - code-review/api-contract
+  - code-review/data-migration
+  - code-review/reliability
+  - code-review/adversarial
+  - code-review/previous-comments
+  - code-review/frontend-races
+  - code-review/swift-ios
+  - reviewer-spec
+  - reviewer-standards
+
+child_operations:
+  - review.delta
+
+hard_gates:
+  - Reviewers cannot edit the source they review, and the snapshot is immutable for the length of the
+    run. A reviewer that changed what it was reviewing has reviewed nothing.
+  - A required lane that returns `unavailable` blocks approval (ruling
+    `required-lane-failure-is-unavailable`). It is never downgraded to an empty result, never
+    backfilled by the author, the implementer, another seat or the synthesis step, and never replaced
+    by self-review.
+  - Unavailability blocks the checkpoint (ruling `missing-supervisor-never-implementer`) — a seat
+    that cannot be filled independently of the author is unavailable, and the security seat is
+    filled by neither the implementer nor the spec approver.
+  - An author may never close their own finding (ruling
+    `closure-requires-independent-verification`). A finding closes only on independent verification
+    evidence plus a policy rule saying that evidence suffices for it; confidence stays advisory.
+  - At most two fix-and-verify cycles follow the first pass; the third stops with an explicit
+    blocked-or-replan decision carrying the open findings (ruling `two-fix-cycles-then-stop`).
+  - A material change to architecture, requirements, the comparison base or the affected surface
+    invalidates the affected approvals (ruling `delta-baseline-reset-not-third-loop`) and
+    establishes a new baseline with its own pass 1, never an unbounded third delta loop.
+  - The panel is selected from declared risk and artifact evidence, never from a fixed roster, and
+    security, API and data facts are never dropped because a classifier was uncertain
+    (ruling `panel-composition-by-declared-risk`).
+  - The delta is bounded by affected behavior rather than changed lines, and a new finding carries
+    novelty evidence (ruling `delta-scope-affected-behavior`).
+  - A continuing seat keeps its prior finding context or a replacement receives the durable
+    prior-finding packet (ruling `reviewer-continuity-not-amnesia`). Independence from the author is
+    mandatory; amnesia is not.
+  - A standards finding cites the project rule it rests on. Where the project declares no standards,
+    the seat returns an empty result and absent standards never become invented preferences.
+  - No code-review seat emits `safe_auto`; an inbound `safe_auto` is remapped to `gated_auto` and the
+    finding is kept (ruling `safe-auto-restricted-per-seat`).
+  - Change size and test ratios are guidance carried per project and are never grounds for a finding
+    on their own (ruling `numeric-heuristics-are-guidance`).
+
+stop_conditions:
+  - complete when every selected lane has a state, every required lane is complete or empty, the
+    verdict is set, and the review and findings are emitted. A blocked verdict is a complete run.
+  - The delta stops with needs-input where no review run is open, naming the full entrypoint as the
+    next permitted action (ruling `entrypoint-phase-operation-split`).
+  - A third fix cycle stops with cap-reached and the blocked-or-replan decision.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No comparison base or reviewed head was named, or the delta was invoked with no open review
+      run. Returns what it would need and no partial verdict.
+    next_permitted_action: Re-invoke with the base and head named, or run the full entrypoint first.
+  - status: cap-reached
+    meaning: >-
+      A third fix cycle was requested. The run stops with an explicit blocked-or-replan decision and
+      every open finding attached.
+    next_permitted_action: Take the blocked-or-replan decision, or establish a new baseline.
+  - status: failed
+    meaning: >-
+      A required lane returned unavailable and the run cannot proceed, or the snapshot could not be
+      frozen. The lane and the reason are named and the run stays resumable.
+    next_permitted_action: Re-invoke once the seat can be filled or the snapshot can be frozen.
+  - status: cancelled
+    meaning: >-
+      The caller withdrew mid-run. Lane results already collected are kept and emitted as what they
+      are.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: guided
+      unsupported:
+        - >-
+          seat isolation is not attested by the host. This package assembles one evidence packet per
+          seat and records what it withheld; it cannot prove the host kept two contexts apart.
+        - >-
+          grant validation is the runner's. Where the host cannot validate a grant, the delegated
+          entrypoints stop for explicit invocation rather than running on an unchecked claim.
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          binding a finding to the snapshot hash is this package's own work.
+    - adapter: codex
+      mode: guided
+      unsupported:
+        - >-
+          seat isolation is not attested by the host. This package assembles one evidence packet per
+          seat and records what it withheld; it cannot prove the host kept two contexts apart.
+        - >-
+          grant validation is the runner's. Where the host cannot validate a grant, the delegated
+          entrypoints stop for explicit invocation rather than running on an unchecked claim.
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          binding a finding to the snapshot hash is this package's own work.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's staged review spine — establish the target, size it, select reviewers, dispatch
+        them, finish the review — is this skill's workflow order. Its report-only default is kept as
+        the rule that this skill classifies and proposes but never applies, and its refusal to ask
+        blocking questions mid-review becomes the needs-input stop rather than a prompt.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/select-and-route.md
+      license: MIT
+      adaptation: >-
+        The donor's layered reviewer selection is the panel tier table in this skill's panel
+        reference, and its rule that silent-pass verification mechanisms are reviewed regardless of
+        diff size is kept as an activation signal rather than a size exception.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/dispatch-reviewers.md
+      license: MIT
+      adaptation: >-
+        The donor's in-turn concurrent dispatch, and its refusal of detached polling, become the
+        dispatch step. The donor's per-reviewer tiering is excluded: independence here is structural
+        and is never expressed as a property of which engine fills a seat.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/finish-review.md
+      license: MIT
+      adaptation: >-
+        The donor's evidence-gated rejection, its rule that a high-severity finding is never silently
+        cleared, and its binding of the verdict to the worst surviving severity become the synthesis
+        step. The donor's corroboration-based validator skip is generalized from cross-provider
+        corroboration to cross-lane corroboration, because independence here is never a model
+        identity.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/action-class-rubric.md
+      license: MIT
+      adaptation: >-
+        The donor's severity ladder and its action-class vocabulary are carried. The donor rejects an
+        inbound safe_auto outright; this package remaps it and keeps the finding, because discarding
+        a finding over its action class loses a true finding on a property that is not about whether
+        it is true.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/depth-paths.md
+      license: MIT
+      adaptation: >-
+        The donor's depth gate — that the smallest path is the same review with the same receipt and
+        dispatches no reviewers — is the mechanism behind selecting no panel for a trivial change and
+        behind a fix getting a delta rather than a repeated full pass.
+    - donor: omx
+      commit: cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7
+      path: skills/code-review/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's fail-closed independent-lane rule is this skill's unavailable result: a lane that
+        cannot be launched or returns no evidence is reported as unavailable, the authoring lane is
+        never substituted, and the change is never marked ready. The donor's block-and-veto table
+        becomes the verdict rule. Its agent names are dropped; the seats are named by role.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/code-review/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's two-axis split — does the change do what was asked, and does it meet the
+        project's standards — is the delta's two lanes, and its rule that the two axes are aggregated
+        without being merged into one judgment is the synthesis constraint.
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - required-lane-failure-is-unavailable
+    - reviewer-continuity-not-amnesia
+    - delta-scope-affected-behavior
+    - closure-requires-independent-verification
+    - numeric-heuristics-are-guidance
+    - ci-repair-restricts-purpose-not-permission
+    - two-fix-cycles-then-stop
+    - delta-baseline-reset-not-third-loop
+    - entrypoint-phase-operation-split
+    - safe-auto-restricted-per-seat
+    - missing-supervisor-never-implementer
+
+tests:
+  - id: typo-does-not-convene-the-panel
+    kind: negative
+    given: >-
+      A single-line documentation typo fix, with the caller asking for a review.
+    expect: >-
+      The run selects the always-on correctness seat, plus the standards gate only if the project
+      declares standards, and no others. It does not dispatch the conditional seats, and it records
+      which signals it evaluated and found absent.
+  - id: risk-signals-select-the-conditional-seats
+    kind: positive
+    given: >-
+      A change that alters a tenancy check and adds a migration, with the security and data packs
+      attached.
+    expect: >-
+      The panel includes correctness, the security seat and the data-migration seat, selected from
+      the attached packs and the touched surface, and the lane report names the signal that selected
+      each one.
+  - id: unavailable-required-lane-blocks-approval
+    kind: adversarial
+    given: >-
+      The security seat cannot be seated independently, every other lane returns clean, and the
+      caller asks for an approval with the gap noted.
+    expect: >-
+      The lane is recorded as unavailable with its reason, the verdict is not approved, and the seat
+      is not backfilled by the implementer, by another seat or by the synthesis step. The run stays
+      resumable and names what would make the lane runnable.
+  - id: one-line-fix-gets-a-delta-not-a-second-panel
+    kind: positive
+    given: >-
+      An accepted finding has been fixed with a one-line change inside an open review run, and the
+      caller asks for the change to be reviewed again.
+    expect: >-
+      The run uses the delta entrypoint with the two lanes over the fix packet. It does not re-convene
+      the pass-1 panel, and it records the prior finding's fingerprint as what the delta is closing
+      against.
+  - id: delta-reaches-an-untouched-affected-caller
+    kind: positive
+    given: >-
+      A fix changes one module and a caller it never touched reads state the fix altered, producing a
+      serious defect in that caller.
+    expect: >-
+      The finding is reported with its novelty evidence naming what changed that makes it new. The
+      run does not suppress it for falling outside the changed lines, and it does not restart
+      discovery for unrelated low-priority issues.
+  - id: third-fix-cycle-does-not-run
+    kind: adversarial
+    given: >-
+      Two fix-and-verify cycles have been spent inside one review run and the caller requests a
+      third, saying the change is nearly clean.
+    expect: >-
+      No third cycle runs. The run returns an explicit blocked-or-replan decision with every open
+      finding attached, and reports the cycles already spent.
+  - id: confidence-does-not-close-a-finding
+    kind: adversarial
+    given: >-
+      A reviewer reports high confidence that a fix resolves an accepted finding, and no verification
+      evidence exists for the revision the fix is at.
+    expect: >-
+      The finding stays open. The confidence is recorded as advisory, closure is refused for want of
+      independent verification evidence, and the author is not permitted to close it.
+  - id: refuses-to-edit-the-source-it-reviews
+    kind: negative
+    given: >-
+      A finding has an obvious one-line fix and the caller asks the reviewer to apply it while it is
+      already reading the file.
+    expect: >-
+      No edit is made. The finding is emitted with its committed suggested fix and its action class,
+      and the application is routed to the lane that holds write authority.
+  - id: seat-isolation-unavailable-stops-the-run
+    kind: missing-tools
+    given: >-
+      The host cannot provide an isolated review context per seat, so every seat would run in one
+      shared context.
+    expect: >-
+      The run reports the missing capability by name and stops rather than running the seats in a
+      shared context and reporting their output as independent lanes.

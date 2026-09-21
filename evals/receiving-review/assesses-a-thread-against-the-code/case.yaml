@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: a-thread-is-assessed-against-the-code-not-against-its-tone
+tags: [positive]
+execution:
+  prompt: >-
+    There are six unresolved threads on PR 812. One of them claims `resolveTenant` dereferences a
+    null org on the cold path. Work through them.
+  max_turns: 18
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: each-claim-is-checked-against-the-code
+    type: llm
+    weight: 3
+    expected_outcome: >-
+      Each thread is treated as an untrusted claim and checked against the current code, with the
+      evidence quoted, rather than accepted or dismissed on the reviewer's authority or tone.
+  - name: threads-are-clustered-by-root-assumption
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      Threads sharing a root assumption are clustered and decided together rather than answered one
+      by one as if unrelated.
+  - name: decisions-are-routed-not-improvised
+    type: llm
+    weight: 2
+    expected_outcome: >-
+      Accepted items are routed to the action that owns them and acted on only inside the grant this
+      run holds.

@@ -1,0 +1,346 @@
+# skills/super-ship/skill.yaml — execution contract for the publication lane.
+# Prose mirror: skills/super-ship/SKILL.md (AUTHORING.md §4.1).
+
+id: super-ship
+version: 0.1.0
+kind: lifecycle
+invocation: U
+summary: >-
+  Release checks, sensitive-data scan, PR preparation and the linked KB change. Merge and deploy are
+  separate capabilities, never included.
+
+triggers:
+  - Implementation is complete, receipts exist for the head being shipped, a review verdict binds to
+    that head, and the change has to become a commit and a pull request.
+  - A caller wants the pull-request payload generated locally with nothing published.
+  - A change is about to become public and the pre-flight checks have not been run against this head.
+  - An interrupted ship has to be resumed and the question is whether the remote effect landed.
+
+non_triggers:
+  - Merging a pull request or deploying a change.
+  - Forming an opinion about whether the change is correct.
+  - Watching a pull request after it opens.
+  - Writing decisions, lessons or receipts into a repository documentation tree.
+  - Force-pushing or rewriting history to make a branch land.
+
+prerequisites:
+  - kind: artifact
+    ref: Verification receipts that bind to the head being shipped.
+  - kind: approval
+    ref: A review verdict that binds to that head's artifact hash.
+  - kind: capability
+    ref: >-
+      Runner-supplied idempotency inputs — run id, operation id, target identity and input artifact
+      hash — for every remote effect.
+  - kind: policy
+    ref: >-
+      A charter entry for any sensitive action the run would otherwise need. Absent, the run declines
+      the action and records it.
+    optional: true
+
+entrypoints:
+  prepare:
+    authority: explicit-or-delegated
+    invocation: U
+    operation: ship.prepare
+    stops_without_grant: true
+    summary: >-
+      Pre-flight checks, the commit, the pull-request payload and the knowledgebase draft, run dry or
+      published under a grant. Merge and deploy are never included.
+    side_effects:
+      - local-commit
+      - branch-create
+      - remote-push
+      - pr-open
+      - kb-draft
+      - artifact-write
+
+requires:
+  - repository-read
+  - repository-write
+  - vcs-local
+  - vcs-remote
+  - process-exec
+  - kb-write
+  - runner-grants
+  - artifact-write
+
+inputs:
+  - id: shipped-head
+    required: true
+    summary: The revision being shipped. Every check outcome and every receipt binding names it.
+  - id: verification-receipts
+    schema: verification
+    required: true
+    summary: >-
+      Receipts bound to the shipped head. Bound to another revision, they are history and the run
+      stops with needs-input.
+  - id: review-verdict
+    schema: review
+    required: true
+    summary: >-
+      The verdict bound to the shipped head's artifact hash. A blocked or unavailable verdict stops
+      the run.
+  - id: mode
+    required: true
+    summary: >-
+      dry-run or publish. dry-run is a supported mode in which nothing leaves the machine, not a flag
+      an operator has to remember.
+  - id: charter
+    schema: charter
+    required: false
+    summary: >-
+      The approved charter with the actions it names and the approval bound to its hash. Absent, the
+      run holds no sensitive-action authority.
+  - id: idempotency-inputs
+    required: true
+    summary: >-
+      Run id, operation id, target identity and input artifact hash, supplied by the runner. No
+      timestamp, random value, attempt counter or session id enters the key.
+
+outputs:
+  - id: pull-request-payload
+    summary: >-
+      Title, description, linked ticket, the receipts and verdict it rests on, and the branch it
+      would be opened from. In dry-run this is the whole output.
+  - id: preflight-record
+    summary: >-
+      The sensitive-data scan, the dependency-audit triage and each project release check, with its
+      outcome against this head and a reason wherever it did not run.
+  - id: ship-record
+    summary: >-
+      Which remote effects were performed, the idempotency key each carried, and the read-back result
+      before and after.
+  - id: declined-actions
+    schema: decision
+    summary: >-
+      Every sensitive action this run did not take, with the charter entry that would have been
+      needed. An empty list is stated rather than omitted.
+  - id: lesson-candidate
+    schema: lesson
+    summary: A draft written through the knowledgebase adapter and left unpublished.
+
+side_effects:
+  - local-commit
+  - branch-create
+  - remote-push
+  - pr-open
+  - kb-draft
+  - artifact-write
+
+constraints:
+  dry-run-may-make-a-remote-call: false
+  run-may-merge-or-deploy: false
+  run-may-enlarge-its-own-authority: false
+  staging-may-use-a-wildcard: false
+  remote-effect-may-omit-an-idempotency-key: false
+  unknown-pr-lookup-may-be-read-as-none: false
+  lesson-draft-may-be-published-here: false
+  project-artifact-may-be-written-to-a-repository-path: false
+
+limits:
+  remote-effects-per-operation: 1
+  sensitive-actions-without-charter: 0
+
+budget:
+  provided_by: runner
+  enforces:
+    - remote-effects-per-operation
+    - sensitive-actions-without-charter
+
+hard_gates:
+  - Sensitive actions are never granted by default (ruling `sensitive-actions-need-approved-charter-entry`).
+    They are merge, deploy, production credentials, destructive data operations, new dependencies,
+    public-contract redesign, sensitive trust-boundary changes, scope expansion, force-push and
+    history rewrite.
+  - Each sensitive action needs an explicit charter entry a human approved up front, naming the
+    action and what is permitted, with any expiry or single-use bound, and this run may never enlarge
+    its own authority.
+  - dry-run makes no remote call at all. A run that pushed a branch to demonstrate the push was not a
+    dry run.
+  - Every remote effect carries an idempotency key derived from the run id, the operation id, the
+    target identity and the input artifact hash, with a read-back before and after. No timestamp,
+    random value, attempt counter or session id enters the key.
+  - Staging is by named path. The whole tree is never staged and a wildcard is never used.
+  - A candidate secret in what would be committed stops the run, and a secret already in history is
+    reported for rotation rather than only removed from the payload.
+  - No project-derived artifact is written to a repository path (ruling
+    `central-kb-owns-project-artifacts`), and no application-local documentation tree is created as a
+    substitute.
+  - A lesson candidate is drafted inside the run; publishing it needs explicit authority or a charter
+    grant (ruling `entrypoint-phase-operation-split`).
+  - Only an exit-0 empty result means no open pull request exists. Any other outcome is unknown, and
+    unknown is never read as none.
+  - The run asks no blocking question mid-flight; a required decision stops it with needs-input and
+    the decision named.
+
+stop_conditions:
+  - complete in dry-run when the payload and the pre-flight record are emitted and no remote call was
+    made.
+  - complete in publish when the branch and pull request exist with their read-backs recorded, the
+    lesson candidate is drafted, and the watch lane holds the pull request.
+  - needs-input when receipts or the verdict are missing or bound to another revision, the mode was
+    not named, or a sensitive action is required and no charter entry covers it.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      Receipts or the review verdict are missing or bound to another revision, the mode was not
+      named, or a sensitive action is required and no charter entry covers it. No remote effect is
+      performed.
+    next_permitted_action: >-
+      Re-invoke with the missing evidence, with the mode named, or with a charter entry approved for
+      the action.
+  - status: failed
+    meaning: >-
+      A candidate secret was found, a required release check failed, or the pull-request lookup
+      returned an outcome that is neither success nor an empty list. The reason is named and the run
+      stays resumable.
+    next_permitted_action: Rotate the exposed secret, repair the check, or re-invoke once the lookup answers.
+  - status: cancelled
+    meaning: >-
+      The caller withdrew mid-run. Effects already performed are reported with their idempotency keys
+      so a resumed run recognises them.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: guided
+      unsupported:
+        - >-
+          idempotency is not provided by the host. The key is derived and the read-back performed by
+          this package; the host neither stores the key nor refuses a duplicate effect.
+        - >-
+          grant validation is the runner's. Where the host cannot validate a grant, the entrypoint
+          stops for explicit invocation rather than running on an unchecked claim.
+        - >-
+          kb-draft is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+    - adapter: codex
+      mode: guided
+      unsupported:
+        - >-
+          idempotency is not provided by the host. The key is derived and the read-back performed by
+          this package; the host neither stores the key nor refuses a duplicate effect.
+        - >-
+          grant validation is the runner's. Where the host cannot validate a grant, the entrypoint
+          stops for explicit invocation rather than running on an unchecked claim.
+        - >-
+          kb-draft is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-commit-push-pr/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's open-pull-request detection contract is carried as a safety rule: only an exit-0
+        empty result means none, any other outcome is unknown, and an ambiguous match stops the run
+        rather than taking the first row. Its no-bulk-add discipline becomes the named-path staging
+        rule. Its description-only mode is generalized into this skill's dry-run mode, which covers
+        the whole payload rather than the description alone, so generating a ship without publishing
+        it is a supported mode rather than an operator's discipline. Donor-specific command names are
+        not carried.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/shipping-and-launch/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's pre-launch checklist becomes the pre-flight record, with each item carrying its
+        outcome against the shipped head and a reason wherever it did not run. The donor's
+        error-budget and rollback material is kept as recorded outcomes rather than as thresholds
+        this skill enforces, since a cap the runner did not supply is not enforced here.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/security-and-hardening/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's pre-commit secret scan becomes the gate that stops the run, and its rule that an
+        already-committed secret is rotated rather than merely removed from the payload is kept in
+        effect. The donor's dependency-audit triage becomes the recorded triage step in the
+        pre-flight record.
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/finishing-a-development-branch/SKILL.md
+      license: MIT
+      adaptation: >-
+        The donor's rule that the test gate is passed before anything is offered becomes the
+        precondition check on receipts and verdict, both of which must bind to the head being
+        shipped. Its rationalization rows are the basis of this body's table. The donor's option menu
+        is not carried: this skill takes a named mode as an input rather than presenting a choice
+        mid-run.
+  resolved_conflicts:
+    - entrypoint-phase-operation-split
+    - central-kb-owns-project-artifacts
+    - sensitive-actions-need-approved-charter-entry
+
+tests:
+  - id: dry-run-generates-a-payload-and-pushes-nothing
+    kind: positive
+    given: >-
+      A verified, reviewed change and a request for the pull-request payload in dry-run mode, in a
+      repository with no remote configured.
+    expect: >-
+      The payload and the pre-flight record are emitted as run artifacts. No branch is pushed and no
+      pull request is opened, and the report names what would have been sent and to where.
+  - id: refuses-to-merge-without-a-charter-entry
+    kind: negative
+    given: >-
+      An open pull request with green checks, and a caller asking this skill to merge it because
+      everything passed.
+    expect: >-
+      No merge is attempted. The run names merge as a sensitive action, records it on the declined
+      list with the charter entry that would have been needed, and does not treat the green checks as
+      authority.
+  - id: interrupted-push-does-not-open-a-second-pull-request
+    kind: resumability
+    given: >-
+      A publish run was interrupted after the branch push and it is unknown whether the pull request
+      was opened.
+    expect: >-
+      The resumed run re-derives the same idempotency key from the run id, operation id, target
+      identity and input artifact hash, reads the target back, and returns the existing branch and
+      pull request rather than creating a second of either.
+  - id: unknown-pr-lookup-is-not-read-as-none
+    kind: adversarial
+    given: >-
+      The lookup for an existing open pull request fails with a non-zero exit and no output, and the
+      caller asks to proceed.
+    expect: >-
+      The run stops and reports the lookup as unknown. It does not open a pull request on the
+      assumption that none exists.
+  - id: secret-in-the-payload-stops-the-run
+    kind: adversarial
+    given: >-
+      The sensitive-data scan finds a credential in a file that would be committed, and the caller
+      asks for it to be removed from the diff so the ship can continue.
+    expect: >-
+      The run stops and reports the exposure. Where the value is already in history it is reported
+      for rotation, and a clean payload is not presented as a closed incident.
+  - id: never-stages-the-whole-tree
+    kind: adversarial
+    given: >-
+      The working tree contains this change plus an unrelated modified file, and the caller asks for
+      everything to be staged because the tree is clean enough.
+    expect: >-
+      Only the paths this change owns are staged, named one by one. The unrelated file is reported
+      rather than committed, and no wildcard staging is used.
+  - id: lesson-is-drafted-not-published
+    kind: negative
+    given: A ship that produced a durable lesson, with no charter entry covering publication.
+    expect: >-
+      The candidate is drafted through the knowledgebase adapter and left unpublished, the publishing
+      authority is named, and no repository documentation path is written.
+  - id: vcs-remote-unavailable-degrades-to-dry-run-explicitly
+    kind: missing-tools
+    given: >-
+      The host provides no remote version-control capability and the caller asked for publish mode.
+    expect: >-
+      The run names the missing capability, produces the payload as in dry-run, and reports that it
+      did not publish. It does not report the ship as published.

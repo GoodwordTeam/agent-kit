@@ -203,6 +203,18 @@ adaptations:
   - path: roles/reviewer-standards/ROLE.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/task-reviewer-prompt.md
     rationale: Code-quality half of the same reviewer template.
+  - path: skills/babysit-pr/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/references/watch-loop.md
+    rationale: The donor's wake-reason taxonomy, claim-act-confirm idempotency rule, settle window, non-convergence protocol with its anti-cry-wolf line, and CI fix-round budget are carried as the classification, deduplication, settle, parking and repair-cap steps.
+  - path: skills/babysit-pr/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/SKILL.md
+    rationale: The donor's deterministic-detector discipline, its per-tick ordering with feedback before CI, its authority-narrows-never-broadens rule and its merge-readiness-is-not-merge-authorization line are carried; donor-specific tool names and slash-command syntax are excluded.
+  - path: skills/babysit-pr/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/references/watch-loop.md
+    rationale: The donor's budgets become the declared limits — three repair attempts per failure — and its residuals become the cap-reached failure outcome that carries the attempt history.
+  - path: skills/babysit-pr/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/SKILL.md
+    rationale: "The declaration's entrypoint pair, hard gates and constraints condense the donor's bounded- authority model: the watch holds no mutation authority, and the repair runs under its own grant rather than inside the watch's."
   - path: skills/diagnose/references/feedback-loops.md
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/diagnosing-bugs/SKILL.md
     rationale: "The donor's ranked list of ways to construct a feedback loop, and its tightening guidance, are adapted wholesale into this reference because they are a catalogue: a body that inlined them would carry ten techniques to use one. The ordering is the donor's. The sections on intermittent bugs, performance regressions and the case where no loop can be built are drawn from the same donor's handling of those cases."
@@ -260,6 +272,18 @@ adaptations:
   - path: skills/doc-review/skill.yaml
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md
     rationale: The triggers and the classify-by-content input, and the completion condition restated as this skill's complete stop condition.
+  - path: skills/receiving-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-resolve-pr-feedback/references/evaluation-rubric.md
+    rationale: The donor's divert signals, outdated-thread anchor search, needs-human payload and cluster-by-root-assumption step are carried as the routing, fingerprint search, escalation output and clustering steps.
+  - path: skills/receiving-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-resolve-pr-feedback/SKILL.md
+    rationale: "The donor's one-shot closer shape is the workflow: judge centrally, dispatch only what was accepted, act inside the grant, then reply and resolve as separate authorized actions."
+  - path: skills/receiving-review/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/receiving-code-review/SKILL.md
+    rationale: The donor's stance that feedback is assessed rather than obeyed, and that a rejected item is answered with reasoning rather than quietly closed, are the decision and reply contract, and its rationalization rows are the basis of this body's table.
+  - path: skills/receiving-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-resolve-pr-feedback/SKILL.md
+    rationale: The declaration's hard gates condense the donor's untrusted-input rule and its separation of replying from resolving into the two-grant contract the entrypoint declares.
   - path: skills/super-align/SKILL.md
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/interview-me/SKILL.md
     rationale: The explicit-yes approval gate, the six-field restatement put in front of the human before anything is written, the want-versus-should-want probe, and the rationalization table the gate rows are drawn from.
@@ -344,6 +368,45 @@ adaptations:
   - path: skills/super-build/skill.yaml
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
     rationale: "The donor's loop becomes this manifest's declared limits and their enforcement: fix-rounds 5 and implementers-per-worktree 1, the cap-reached failure outcome carrying every open finding with its adjudication, and the constraint rows that forbid a discard at the cap and forbid the implementer sitting on its own check."
+  - path: skills/super-review/references/delta.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/finish-review.md
+    rationale: The donor's close-out and re-review handling becomes the delta packet, the continuity rule and the closure rule that a finding does not close on the implementer's word.
+  - path: skills/super-review/references/delta.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md
+    rationale: The donor's two-lane pass over a fix is the delta's lane pair, and its bounce-to-planning outcome is the baseline reset that a third loop is not allowed to impersonate.
+  - path: skills/super-review/references/panel.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md
+    rationale: The donor's action classes supply the rule that an inbound safe-auto from a peer lane is remapped and kept, and that no code-review seat emits safe-auto itself.
+  - path: skills/super-review/references/panel.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/depth-paths.md
+    rationale: "The donor's depth paths become the evidence anchoring rules: quote the motivating line to anchor high, anchor lower rather than fabricating an excerpt, and treat an empty search as evidence about the search."
+  - path: skills/super-review/references/panel.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md
+    rationale: The donor's dispatch contract is the receives/never-receives section, and its per-seat isolation requirement is the reason an unfillable seat is unavailable rather than filled from the author lane.
+  - path: skills/super-review/references/panel.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md
+    rationale: The donor's activation signals are the seat table's activation column, restated against this catalog's own pack vocabulary rather than the donor's.
+  - path: skills/super-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/dispatch-reviewers.md
+    rationale: "The donor's per-seat dispatch contract becomes the one-packet-per-seat rule and the list of what a seat never receives: the implementer's narrative, another seat's findings, and any approval context produced by the author lane."
+  - path: skills/super-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/finish-review.md
+    rationale: The donor's close-out step becomes the verdict and the lane-result vocabulary, with the addition that an unavailable required lane blocks approval instead of being reported as an empty one.
+  - path: skills/super-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/select-and-route.md
+    rationale: The donor's routing by evidence rather than by a fixed roster becomes panel composition from declared risk, so a typo does not convene the full catalog and a substantive change does not get a truncated one.
+  - path: skills/super-review/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/SKILL.md
+    rationale: "The donor's pre-PR discovery pass is the shape of pass 1: an immutable snapshot, a panel of seats over it, and a synthesis that does not re-judge what a seat returned. Reviewers cannot edit is kept as a boundary rather than a convention."
+  - path: skills/super-review/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/SKILL.md
+    rationale: The declaration's triggers, non-triggers and hard gates condense the same donor text the body adapts, expressed as the machine-checkable contract rather than as prose.
+  - path: skills/super-review/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/code-review/SKILL.md
+    rationale: The donor's two-lane fail-closed review supplies the delta entrypoint's lane pair and the rule that a dirty review may bounce back to planning rather than looping on the last patch.
+  - path: skills/super-review/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/code-review/SKILL.md
+    rationale: The donor's two-axis separation of specification compliance from standards compliance is the basis of the delta pass's two lanes and of the standards seat's cite-a-rule-or-return-empty output contract.
   - path: skills/super-scout/SKILL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/agents/project-grounding-scout.md
     rationale: The gather-not-judge framing, the rule that an artifact's existence is evidence while its text is reported signal, and the dossier-plus-short-gist return split are adapted, as research/dossiers/build.md directs. The donor's fixed line cap on the dossier is replaced by the turn cap in policies/limits.yaml, which bounds what a run costs rather than how long its output is.
@@ -356,6 +419,24 @@ adaptations:
   - path: skills/super-scout/skill.yaml
     source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/analyze/SKILL.md
     rationale: The donor's stop conditions become this manifest's hard_gates and constraints — no edit, no recommendation the evidence cannot support, report the limit rather than manufacture certainty. Its evidence-labelling vocabulary becomes the confirmed/assumed constraint rows.
+  - path: skills/super-ship/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+    rationale: "The donor's pre-commit secret scan is the gate that stops the run, and its rotation rule is kept: a secret already in history is reported for rotation rather than only removed from the payload."
+  - path: skills/super-ship/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/shipping-and-launch/SKILL.md
+    rationale: The donor's pre-launch checklist becomes the pre-flight record, each item carrying its outcome against the shipped head and a reason wherever it did not run.
+  - path: skills/super-ship/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-commit-push-pr/SKILL.md
+    rationale: The donor's open-pull-request detection contract, its refusal to stage in bulk and its description-only mode are carried as the unknown-is-never-none gate, the named-path staging rule and the generalized dry-run mode.
+  - path: skills/super-ship/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/finishing-a-development-branch/SKILL.md
+    rationale: The donor's rule that the gate is passed before anything is offered becomes the precondition on receipts and verdict, and its rationalization rows are the basis of this body's table.
+  - path: skills/super-ship/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-commit-push-pr/SKILL.md
+    rationale: The declaration's triggers, non-triggers, hard gates and limits condense the donor's publication contract into the machine-checkable form, including the mode input that replaces the donor's in-run choice.
+  - path: skills/super-ship/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/finishing-a-development-branch/SKILL.md
+    rationale: The donor's completion gate is the declared prerequisite pair — receipts and a verdict bound to the shipped head — and its refusal to offer a finish without them is the needs-input outcome.
   - path: skills/super-verify/SKILL.md
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
     rationale: The donor's discover-the-stack-first rule becomes the gate that this skill runs the project's own commands rather than an ecosystem default, since the command field on a receipt is only meaningful when it names the command the project actually uses. The donor's red-green-refactor cycle is not carried here; it belongs to the test-first protocol the build lane names.
@@ -371,6 +452,15 @@ adaptations:
   - path: skills/super-verify/skill.yaml
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/verification-before-completion/SKILL.md
     rationale: "The donor's completion-claim gate becomes this manifest's hard_gates and constraint rows: a description of a run is not a receipt, a receipt does not outlive the revision it names, and a pass is never selected out of repeated attempts. The donor's step list becomes the required inputs, which are what each step needs before it can run."
+  - path: skills/ultraqa/references/adversarial-cases.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ultraqa/SKILL.md
+    rationale: The donor's eight hostile scenario classes are the case matrix, its evidence and report contract is the evidence and report sections, and its safety boundary is carried close to its original form because the hostile classes make it load-bearing.
+  - path: skills/ultraqa/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ultraqa/SKILL.md
+    rationale: The donor's separation of adversarial verification from a shallow check pass, its bounded cycle, its stop-at-three-repeats rule, its five-cycle ceiling, its harness-debris classification and its safety boundary are the workflow and gates; host-specific state calls and flag syntax are excluded.
+  - path: skills/ultraqa/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ultraqa/SKILL.md
+    rationale: The declaration's limits are the donor's two caps made machine-checkable, and its outputs are the donor's report shape expressed as artifacts, with the evidence-invalidation notice added for the rule no donor states.
   - path: skills/wayfind/SKILL.md
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md
     rationale: The whole mechanism, this item's only donor. The five-section map body, the fog-or-ticket test, breadth-first frontier mapping, claim-before-work, one ticket per session with research excepted, and out-of-scope work that never graduates. The donor's local-markdown tracker becomes the external tracker where the project has one and the knowledgebase otherwise; the donor's four ticket types become subtypes of one decision ticket under this package's shared ticket schema; and the donor's in-skill resolution of a grilling ticket becomes a handback, because both skills are user-invoked.
