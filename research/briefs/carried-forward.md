@@ -986,6 +986,17 @@ taken at the top of a turn and reported at the bottom of it has aged by the leng
 on a tree several lanes write to, that is long enough. The mtime on the cached ref in this case was
 *later* than the reading that produced the claim -- the push had landed and updated it mid-turn.
 
+**Sharpened by the lane that was corrected, and their version is better than mine: it is not the
+length of the turn, it is whether the subject has a name that stops moving.** In one message they
+wrote that `docs/` occurs exactly twice in skill bodies *at `3282296`*, and that was true then, is
+true now and will be true next week. In the same message they wrote that `origin/main` stood at a
+value, and it was false before the paragraph ended. Same turn, same care, same lane. The whole
+difference is that one measurement names a revision and the other names a ref. So the remedy is
+narrower than "re-read before you speak", which would be exhausting and mostly wasted: a claim
+naming a revision never needs re-reading, and a claim naming a ref needs `ls-remote` at the moment
+of speaking however recently you looked. That also sorts a report into the figures a reader can
+trust cheaply and the ones they cannot, which is the part that is actionable for someone else.
+
 Remedy, and it is one word: `git fetch` before reading `origin/main`, or `git ls-remote origin main`
 to ask instead of recall. Prefer the second when the claim is going in a message, because it has no
 cache to be stale and the command names what it did.
@@ -999,6 +1010,16 @@ third lane pushed and carried both. "I will not publish another lane's commit" i
 about an outcome nobody in this tree controls. The achievable version is about *timing*: do not push
 while another lane has unpushed work you have not been told is ready. The instinct was right and the
 formulation was not, which is worth separating, because the instinct is the part that transfers.
+
+**And this promotes the refspec property rather than shrinking it, which is the opposite of how the
+correction reads.** The lane whose rule I corrected made the point and it is right. If ownership of
+what gets published is unachievable, then *knowing the range before you push* is the only control
+left anywhere in the mechanism -- and `HEAD:main` is precisely the spelling that removes it, because
+the range is computed after the decision to push rather than before it. So these are two rules with
+two jobs, not one rule told twice: the timing rule governs **whether** to push, and the refspec
+property governs **whether you can know what you are pushing**. In a private clone the second is
+hygiene. In a shared tree it is the entire control, because it is the only step at which anyone sees
+the set.
 
 **The part worth keeping is the decline, not the correction.** The lane's rule -- do not publish
 another lane's commit on my own judgment of when it is ready -- held on a false premise and would
