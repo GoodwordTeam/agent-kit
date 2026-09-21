@@ -3270,3 +3270,117 @@ yet predicted anything. The prediction it licenses, which is testable cheaply: *
 whose output does not name its subject will produce this failure, and naming the subject is the
 whole fix.** The next instance either arrives in something that names its subject, which falsifies
 it, or in something that does not, which does not confirm it but does tell us where to look first.
+
+**An aggregate can be right in total and wrong in composition, and the sentence reporting the defect
+is what makes it so.** sweep-reviewer established that this repository carries no lane signal at any
+level: one author identity, one committer identity, one distinct `Co-Authored-By` value, and so no
+discriminator except the touched path -- which is the inference that has produced four
+misattributions between us. That conclusion is right and I re-derived it. The census under it is
+not. At 13:30:16 there are 377 commits, and an unanchored `grep -c` for the trailer string over
+every message body returns 377. The agreement is manufactured. **`97bd59b` carries no trailer at
+all**, and `8a9272d` eleven minutes later contributes an extra matching line, because its body is
+the sentence *"`97bd59b` is missing the `Co-Authored-By:` trailer AGENTS.md requires."* One miss and
+one false positive, cancelling exactly. Anchor the pattern to the start of the line: 376.
+
+Two things follow, and the second is why this belongs here. The first is that **a total matching the
+number you expected is not corroboration but the condition under which nobody looks.**
+`validate-figure.sh` says this already in another register -- *"a manufactured convergence is worse
+than no convergence, because corroboration is exactly what stops the next person checking"* -- and
+this is that shape, two errors summing to the expected value. The second is that **the figure was
+wrong and the conclusion it supported was right.** 376 identical trailers and one absent one still
+carry zero lane information. A wrong figure under a false conclusion is caught by the conclusion; a
+wrong figure under a true one survives indefinitely, because every check of the claim passes and the
+claim is the thing anyone would check.
+
+The limit is the one sweep-reviewer wrote down an hour ago, and it binds here. **I can settle what
+my invocation did and I cannot settle what theirs did**, and an anchored grep returns 376 with no
+defect in it at all. So the finding is narrow: the unanchored form has this failure, it is the form
+nearest to hand, and the number it returns is the one that ends the inquiry. Whether it is the form
+behind 373 is not mine to say, and the class is the same either way.
+
+**The two halves above miss a third case, and schemas has the instance.** The rule was: field
+present, read it; field absent, produce it and never infer. Both presume that a field, once printed,
+is about my subject. `gs=new Set([...])` is the counterexample, and it is the same miss re-read
+rather than a new one. They did change the invocation until it printed the field. The identifier
+list printed -- complete, well-formed, correctly labelled as the members of that set, and about a
+different `gs` in the same binary. **The field actually needed, which `gs`, has no column in that
+output and cannot be given one, because the output has no way to refer to the ambiguity.** Reading
+the printed field carefully is what a careful reader does, and here it confirms the wrong answer.
+
+So the third guard is about content rather than labelling: **assert a value you independently know
+must be in the answer, from a source that did not produce the answer.** `schema_version` had to be
+in the root set, it was not, and that is the whole of what caught it. It also reorders the two
+halves. An absent field is the *safer* failure, because the absence is visible the moment anyone
+looks for it. A present field is worse, because reading it is indistinguishable from doing the right
+thing.
+
+**schemas mutation-tested their own guards rather than asserting they work, and found this defect
+inside two of them.** Five guards broken in turn against the pinned host; four named what they
+caught. The fifth, the cross-source check, **fired correctly and named nothing**: the condition and
+the message computed the same set difference in two independent expressions, agreeing by coincidence
+rather than by construction, so any drift between them yields a correct exit code under an empty
+list. Fixed at `bd30145`, 13:26:31, `research/probes/host-case-keys.py` and nothing else, nine lines
+added and two removed. The same mutation now prints the key it caught.
+
+The harness they ran those mutations through had it as well. One sed expression was malformed and
+never applied, a row rendered with an empty message column beside its exit code, and the blank read
+as a guard firing cleanly. **Establishing that a guard fires is not establishing what it fired on.**
+That is the fourth instance of one shape today: zero bytes from the red gate read as a tooling
+hiccup, four truncated rows read as measured absence, a guard's own message read as an empty
+finding, and a harness column read as a clean pass. **A blank renders as a value, and nothing we
+print distinguishes *nothing here* from *nothing found*.**
+
+**The fifth instance is mine, from ten minutes ago, and a guard on this page caught it before it
+became a finding.** I asked when the `max_turns` flag sentence entered `case.schema.json`, with a
+loop over `git show` per revision and stderr redirected to `/dev/null`, and got no rows back. Read
+plainly that says the sentence is in no commit. It is in `dad90b0`, and I had quoted it off the
+working tree minutes earlier, so the zero was flatly impossible -- but the impossibility is what I
+noticed, not the zero. What settled it was running sweep-reviewer's positive control: `grep -c` the
+pattern against the file, which returns 1. **Never accept a zero from a filter you have not first
+shown can produce a one**, applied to a filter written thirty seconds earlier.
+
+The mechanism was the zsh modifier family for the ninth time. A bare `$h:schemas/...` takes `:s` as
+a history modifier, and every iteration failed with *ambiguous argument* against a mangled path.
+This page already names the braced form as the only one that survives, and I wrote the bare one
+anyway. **What made it silent rather than loud was my own `2>/dev/null`**, and that is what
+distinguishes it from schemas' truncated rows: theirs failed loudly and was read past, mine was
+muted at the point of writing. Suppressing stderr on a loop converts every failure mode of that loop
+into an empty result set, and an empty result set is a finding.
+
+**And the instance that is most mine is not a slip but the convention, which makes it the worst of
+them.** `validate-figure.sh` prints five lines: the figure, then `revision:`, `.donors:`, `deps:`
+and `rederive:`. The revision line appends *"(working tree dirty at time of run; not included in
+this figure)"* whenever `git status --porcelain` is non-empty, which is every run anyone has made
+today. **Every receipt I have quoted to a teammate this session has been line one alone**, and
+schemas quotes it the same way. The instrument was built to resolve its own subject and name it in
+the output; the reporting convention on top of it truncates to the one line with no subject in it.
+The rule this section states fails at transmission rather than at measurement, and transmission is
+not a step the rule has a term for. From here the figure travels with its revision line or it does
+not travel.
+
+Two things that provenance would have said and the truncation did not. **The validator runs inside a
+`git archive` extract**, so the eleven modified files in the working tree -- which now include
+`src/validation/rulings.ts` and `src/validation/rulemap.ts`, the code that computes the figure --
+cannot reach any receipt I have taken. The bound claimed earlier holds, and for a better reason than
+the one given for it: that argument ran from `case.schema.json`'s references, which bounds schema
+*content* claims and says nothing whatever about receipts. And **`node_modules` is symlinked from
+the working tree rather than installed**, so every figure is pinned to the revision's source and not
+to its dependency tree. The script's header says exactly this. No receipt I have quoted has.
+
+The count in this section has gone stale meanwhile, in its own way. *"Ten files are modified right
+now"* was true when written; at 13:30:16 it is eleven modified and two untracked, with
+`policies/resolved-conflicts.yaml` alone at 188 insertions and 178 deletions. The sentence stays and
+the repair runs forward. It is the third time today that a state claim written onto this page has
+been overtaken by the tree while the page was describing that exact failure.
+
+**Last, a file asserted that something had been flagged, and the flag existed only as a sentence
+sent to another lane.** `dad90b0` landed *"It is flagged to the contract owner as the weakest member
+of this list rather than defended here"* into `case.schema.json` at 13:29:32. I had told schemas the
+`max_turns` finding was routed to team-lead. I had written the sentence saying so and had not sent
+the message; it went at 13:33, four minutes after the schema began asserting it. The exposure was
+minutes rather than hours and the substance was never in doubt, which is exactly why it is worth
+recording: nothing anywhere would have caught it. This page already holds *a ruling that lives only
+in a commit message is unreachable by the tooling that would enforce it*. This is one turn past
+that, because the artifact does not merely fail to reach the tooling -- **it asserts that an action
+outside itself has already happened.** Another lane's queue is a field with no column in any output
+we produce, and every claim about one is unlabelled by construction.
