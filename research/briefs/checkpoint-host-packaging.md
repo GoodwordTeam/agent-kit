@@ -115,3 +115,83 @@ and its own tests, and it closes only by execution.
 
 Related: [a check that exists only in its own tests], and the rule that a figure
 must name its instrument.
+
+---
+
+# Batch-5 checkpoint — the behavioural half
+
+Run after the packaging half, against `claude 2.1.278`. Total spend ~$1.60.
+
+## The corpus had never been loaded by the runner
+
+87 of 87 cases in the shipped bundle failed to load; none had ever executed.
+`ak validate` reported 0 errors on all 104 at the same revision. One key:
+`llm` graders take `criteria`, every one of the 256 here carried
+`expected_outcome`, and the host refuses it as an unrecognized key.
+
+Fixed at `c9fdcda` against the host rather than against §9. See that commit for
+the three-agreeing-sources argument; it is the register entry.
+
+## Not fixed, and it blocks the behavioural tier by itself
+
+**No case declares a fixture. 0 of 104.** The sandbox hands the run an empty git
+repo — `home/cwd` empty, `home/.git` holding four files and no objects — so a
+case saying "delta review on the retry-policy fix, only the two files in the
+diff are in scope" is asking about a change nothing created.
+
+One case was run end to end. It scored 0.00 on all three graders. The trace
+shows the agent doing the right thing and being marked wrong for it: it named
+the two paths it inspected, said the repo had no commits and no tracked files,
+distinguished read-only filesystem inspection from what `git diff` would have
+told it, named the tool it did not have, and offered three concrete unblocks.
+Then all three `llm` graders failed it, because each one asks whether a review
+was produced.
+
+Two consequences, and the second is worse than the first:
+
+**A corpus with no fixtures scores correct refusal as failure.** It grades
+against `fail closed when required evidence is absent` — the package's own
+ruling — and would reward a skill that invented a review over one that refused.
+
+**It cannot measure triggering either.** The trace shows no `Skill` invocation,
+so `super-review` did not fire. With no fixture present that observation is
+unattributable: "the skill does not trigger" and "there was nothing to trigger
+on" predict the same trace. A case with no fixture is not a weak test. It
+returns the same result under every hypothesis about the skill, which is the
+definition this register already carries for a control that does not run.
+
+## Where `scaffold_script` goes is undetermined — do not guess it
+
+`--scaffold` and `--no-scaffold` are real flags and `scaffold_script` is the
+name in the host's own help text. Two placements were tried, each with a script
+writing a marker file, run under `--scaffold --keep-temp`: at the top level of
+`case.yaml`, and under `execution:`. **Neither ran.** No marker appeared in the
+sandbox or in the bundle.
+
+Both were also *accepted* by the loader, which proves nothing: the host's
+top-level case object is **open**. A key spelled `zzz_not_a_field` is accepted
+there too. Only the grader object is closed, which is where the corrected
+control fired (`Unrecognized key(s) in object: 'zzz_not_a_field'`) and is the
+only reason the acceptance results above are readable at all.
+
+So the placement is unresolved, and the next step is **not** another guess.
+Brute-forcing a host field name is the error that produced this whole section:
+three documents agreed on `expected_outcome` because nobody asked the runner.
+Find the authoritative format for the case file — the host's own documentation
+for `claude plugin eval` — and author fixtures against it. `schemas/case.schema.json`
+closes `execution` on three keys and will refuse `scaffold_script` there, so
+that schema is part of the same change.
+
+## Cost discipline
+
+The before/after figures for the load failure cost $0.00, using
+`--max-cost-usd 0.01`, which loads every case and aborts before launching runs.
+Exactly one run leaks past the ceiling by design ("checked before each run
+launches"), so the ceiling bounds a sweep but never makes one free.
+
+`--case <glob>` filters **before** validation. A load-check narrowed with
+`--case` reports zero failures because it loaded zero cases; only `--case "*"`
+validates the corpus. One reading here was lost to that and one to a failed
+build step feeding an empty grep. Both were caught by asking for the count of
+cases loaded beside the count that failed, which is the only form in which
+either number means anything.
