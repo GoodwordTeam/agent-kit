@@ -4117,3 +4117,68 @@ fails in a constant direction, while this one **goes quiet precisely when two th
 once** -- which is when edits are largest and checking matters most. And the baseline itself was
 never what I reported: 12 of the 40 were fence delimiters, so the number I called clean across eight
 commits was measuring a population that cannot change unless I add a table.
+
+**Retracting the `tool_used` decay. It is an artifact of reading HEAD, and the commit that produced
+it is on the record with its reasoning spelled out.** I reported 4, 3, 2, 1 across four passes and
+called it the example's own second type dying out. As authored, the series is **4, 0, 3, 3, 3, 1**.
+`05ede31` at 09-19 21:35:12, *"batch 4: conform eval graders to case.schema.json"*, converted four
+`tool_used` graders to `llm` -- three from `ff82f1a`, one from `0945b4c`. Totals reconcile two ways:
+252 / 14 / 4 as authored, 256 / 10 / 4 at HEAD, both summing to 270. Three passes running chose
+`tool_used` three times each. There is no declining preference anywhere in the record.
+
+What survives is the cessation, not the decline. `tool_used` appears in five of the six passes on
+09-19 and in **none of the six on 09-21**, which is the claim the argument actually needed. And the
+09-21 figures are untouched: 47 cases, 139 graders, 100 per cent `llm`.
+
+**The reason I had it wrong is the hazard I wrote down eight minutes later without noticing it
+applied to a sentence already in this file.** A corpus read at one point in its history shows one
+state and invites you to call it the character of the whole. I stated that generically about the
+first pass while a specific instance of it sat two entries above, uncorrected, in my own text. **A
+hazard written in the abstract does not search the document for its own instances**, and this is the
+second time today the record has failed to act as a control -- sweep-reviewer repeated the zsh
+word-splitting trap four hours after writing it up, on the same kind of loop.
+
+**And the four conversions are not drift. They are a third category, and the cause is this
+document.** `05ede31`'s message reasons it out plainly: the four asserted a negative over writes,
+and *"no grader type in AUTHORING.md §9's vocabulary expresses a negative over writes."* True of
+this document. False of the runner. From the 2.1.278 bundle:
+
+```
+tool_used:   {type, name, tool, input_match?, min?, max?, weight, arm}.strict()
+file_exists: {type, name, path, exists: default(true), weight, arm}.strict()
+regex:       {type, name, pattern, flags, match: contains|not_contains|count:N, weight, arm}
+```
+
+with `min ?? 1` and `max ?? Infinity` compared against the observed call count. So `min:0,max:0` on
+`Write` asserts that tool was never called, `input_match` narrows that by a regex over the call's
+input, `exists: false` asserts a path is absent, and `match: not_contains` asserts a pattern is
+absent from the output. **Four separate ways to express a negative, none of them documented here.**
+The author reasoned correctly from the contract and the contract undercovered the runner.
+
+**Measured, the gap is not one missing idiom but most of the vocabulary.** Of the sixteen grader
+fields the runner accepts, the corpus uses four: `weight` 270, `criteria` 256, `tool` 10, `pattern`
+4. **Twelve are at zero** -- `arm`, `focus`, `match`, `flags`, `min`, `max`, `input_match`,
+`exists`, `path`, `before`, `after`, `baseline_file`. §9 names six grader types and the one
+discriminating field each; it documents essentially no modifiers. So the twelve zeros are not twelve
+absences of demand, and this is the sharpest instance yet of the thing the deviation test cannot see
+on its own: **a column can be empty because the capability was never written down, and the corpus
+records that as indifference.**
+
+**One correction to sweep-reviewer, in the message that diagnoses the vocabulary gap.** They wrote
+that `file_exists` with `exists: false` has failure text reading `(expected absent)`. That string
+belongs to the **`regex`** grader: the bundle emits it from the `not_contains` branch. `file_exists`
+has its own wording instead. Right string, wrong grader -- the subject-resolution class, inside the
+finding about subjects, which is where it has landed three times today.
+
+**Their trap warning is real and verifies.** `min` is optional in the schema and defaults to **1 at
+evaluation time**, so `max: 0` alone is unsatisfiable: the comparison becomes count at least 1 and
+count at most 0. A negative assertion written that way can never pass, and it would sit in the suite
+looking like a working check that simply never goes green. That is the exact mirror of the note the
+schema already carries about a locator matching no instance: one cannot fail, so it cannot grade;
+the other cannot pass, so it grades everything as failure.
+
+**And their self-criticism of the 266-to-4 is the correct one.** That ratio sums an anchor, a
+cessation and a documentation gap, three causes with three different remedies, and presents them as
+one quantity. It is arithmetically exact and answers a question nobody should ask. The same is true
+of every ratio on this page that divides one census by another: **a ratio is only a finding when its
+numerator and denominator were produced by the same mechanism**, and here they were not.
