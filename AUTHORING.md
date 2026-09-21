@@ -247,9 +247,11 @@ material the prompt merely hands over does not count, and a requester who adopts
 — then at `9ea8b3f`, of the 40 cases tagged `adversarial`, 34 assert the rationalization and 6 do
 not. Read as one undifferentiated string instead, so that a quoted speaker's argument counts as the
 requester's, the same 40 return 37 and 3; the three that move are quoted-comment cases whose
-requester says only *work the threads* or *send the work to the two check seats*. Both readings are
-defensible, and the count cannot say which produced it, so the rule is stated here with the
-population and the revision rather than held beside them.
+requester says only *work the threads* or *send the work to the two check seats*. That second count
+is not a second rule but this one applied unevenly: it excludes the captured-log case for quoting
+and then reads three quoted comments as the caller's own words. Which is why stating the rule is
+necessary and not sufficient — group the cases by shape and check that each group comes out
+classified alike.
 
 The asymmetry runs the way the rule needs — all six belong to skills that do carry
 anti-rationalization rows, five to eight each, so the exception is never that no row exists. It is

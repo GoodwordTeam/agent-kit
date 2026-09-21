@@ -899,6 +899,11 @@ caught by knowing about them.
 
 ## The two bundles differ in one file, and it is the one neither host reads
 
+**Closed at `b46411f`; the code facts below are pinned to `4e45481`.** The packager reads
+`packaging.hosts[]` now -- `src/packaging/plan.ts:344` selects the row for the bundle being built --
+so the dead `autonomy` read, the single reachable branch and the uniform `mode: manual` are history.
+The entry is kept for the class it names, not for its description of the code.
+
 `ak build` writes `dist/claude-code` and `dist/codex` and reports zero errors for both. A full
 compare returns a single line:
 
@@ -1030,6 +1035,14 @@ who has just been told their measurement was stale.
 ---
 
 ## A test can prove a branch works and the branch still be unreachable, if the fixture skips the schema
+
+**Closed at `b46411f`; the code facts below are pinned to `4e45481`.** No code reads `autonomy` any
+more, and the fixture quoted below is gone from `tests/packaging.test.ts`. The entry's own census --
+four occurrences of the key, one of them in the code that reads it and one in a fixture -- is a fair
+example of why a count names a revision: at `22470e9` the occurrences that remain are this file and
+two comments in `src/packaging/` recording the history, none in code that reads the key and none in
+a fixture. The lesson about branch coverage and a gate upstream of the fixture is untouched by
+that, which is why the entry stays.
 
 The `autonomy` mechanism in `src/packaging/` is dead: `manifest.ts:52` reads a key
 `schemas/skill.schema.json` cannot express, so `plan.ts:199` has one reachable branch and every
@@ -1871,9 +1884,13 @@ requester's whole contribution visible, and that residue is what the rule is app
 are cases where the word names a review seat or a QA cycle rather than a tag. Two defensible keys,
 one corpus, and neither number is wrong about the set it actually measured.
 
-The cheap check before quoting anyone's census: apply their stated rule to three cases yourself. If
-the rule is complete you land on their number, and if you do not, the gap names the term they left
-out.
+**The operational form, ruled in from sweep-reviewer: group the population by shape, and verify each
+group is classified alike -- preferring a grouping a reader can construct mechanically.** Publishing
+the rule would not have caught this one. The rule *was* published, directly under the figure and
+with the contrast pair beside it, and its author still applied it unevenly across a group.
+Stripping the quoted spans is such a grouping: it puts the four quoted-temptation prompts in one
+bucket by a procedure anyone can run, and a bucket whose members come out classified two ways is
+the finding.
 
 ## A sweep over a partially-authored tree conditions on what has been authored
 
