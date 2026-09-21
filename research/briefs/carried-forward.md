@@ -1520,6 +1520,40 @@ are not properties of the trap but of where the failure lands relative to where 
 worked a hundred times tells you nothing about the next path written the same way**, because whether
 the mangled name resolves is a property of the value, not of the code.
 
+**Fifth member, and it is the one that produces a valid command.** sweep-reviewer wrote
+`$r:schemas/case.schema.json` while building the blob table for the schema entry and got back
+`7db25a7hema.json`. `:s` takes its delimiter from whatever character follows it, so a path whose own
+slashes fall in the right places is itself a well-formed substitution: `s`, delimiter `c`, pattern
+`hemas/`, replacement `ase.s`, trailing `hema.json`. **A path with the wrong letters after the colon
+is not mangled by the shell -- it is read as an instruction to the shell**, and nothing about the
+path looks like one.
+
+Censused in zsh over ten paths a lane here actually types, as `"$r:<path>"` with `r` a sha:
+
+    SILENT  schemas/case.schema.json            ->  7db25a7hema.json
+    LOUD    src/validation/evals.ts             ->  bad substitution
+    SILENT  src/validation/rulings.ts           ->  7db25a7
+    SILENT  AUTHORING.md                        ->  <cwd>/7db25a7UTHORING.md
+    SILENT  catalog.yaml                        ->  7db25a7atalog.yaml
+    SAFE    policies/invocation.yaml            ->  7db25a7:policies/invocation.yaml
+    SILENT  adapters/codex/CONTRACT.md          ->  <cwd>/7db25a7dapters/codex/CONTRACT.md
+    SILENT  research/briefs/carried-forward.md  ->  7db25a7esearch/briefs/carried-forward.md
+    LOUD    skills/super-verify/SKILL.md        ->  bad substitution
+    SILENT  evals/<skill>/<case>/case.yaml      ->  vals/<skill>/<case>/case.yaml
+
+Seven silent, two loud, one safe. Which one you get is decided entirely by the letters after the
+colon -- whether a third occurrence of the accidental delimiter happens to exist -- and the writer
+controls none of it. Quoting changes nothing; `${r}:<path>` is the only form that does.
+
+**And the third row is worse than anything else on this page.** `src/validation/rulings.ts`
+collapses to nothing at all, so `git show "$r:src/validation/rulings.ts"` becomes `git show 7db25a7`
+-- a different command, entirely valid. Measured: **exit 0, 16305 bytes of commit content, and a
+grep for `dischargedIn`, a real identifier in the file that was asked for, returns 0.** Every guard
+built on this page passes it. The exit code is clean. The byte-count control passes handsomely, on
+more bytes than the file has. And the zero has the exact shape of a true negative. Only a sentinel
+known to be in *that file* separates it from a real reading -- the discriminating-control rule
+arriving in a case where the instrument was never pointed at a file at all.
+
 ---
 
 ## Three artifacts said "the same rule as markdown" and one of them decided
@@ -2471,6 +2505,15 @@ Measured one key at a time on a `git archive` extract of `63358b2` with `.donors
   - restored: back to `0 errors, 17 warnings, 43 notes`. That is the removal control, and it is why
     the four arms above are readable.
 
+sweep-reviewer replicated those arms independently on their own extract, and then did the thing that
+makes a receipt portable: `schemas/case.schema.json` is byte-identical at `c9fdcda`, `63358b2`,
+`c615303` and `630bad0` -- blob `365af8f` at all four -- so a rejection measured at one of them
+holds at the others without re-running. **A receipt transfers across revisions exactly as far as the
+object it measured is byte-identical, and the blob hash is the proof of how far that is.** The file
+has two commits in its entire history: `7db25a7` adds it with both `additionalProperties: false`
+lines already in place, `c9fdcda` edits it. There was never a permissive window to have been caught
+in.
+
 **So the scaffold blocker has a cause, and it is not that the case authors forgot.** A case
 declaring a scaffold fails `ak validate`, and has since `7db25a7` landed the schema on 19 September.
 team-lead's finding -- the sandbox hands the run an empty git repo, so a case asking for a delta
@@ -2480,18 +2523,39 @@ that refuses the one key that would fix it.
 And the reasoning that closed those objects is this entry again, arriving in the direction it
 declared safe. The schema closes `execution` because *"a key the loader accepts and this does not is
 a schema edit, which is the direction that gets noticed."* It was not noticed, and it could not have
-been. The symptom of refusing a key the host accepts is that nobody ever writes that key, and the
-one author who tries gets a validation error naming their own file and concludes they were wrong.
-**A closed schema fails by making the missing feature look like nobody wanted it.**
+been. The symptom of refusing a key the host accepts is that nobody ever writes that key. **A closed
+schema fails by making the missing feature look like nobody wanted it.**
 
-sweep-reviewer's property, available now that both failures have occurred in the same file. **An
+**And nobody ever did, which is the finding rather than a gap in it.** This entry said twice that
+the one author who tries gets an error naming their own file and concludes they were wrong. That has
+no instance. Across every branch and revision, `scaffold_script` occurs in three commits, all of
+them briefs written today about this finding; restricted to `evals/**/case.yaml`, AUTHORING.md and
+`schemas/` it occurs in none, and neither does `timeout_seconds` or a case-level `runs:`. Written in
+the present tense it was a prediction standing where a report belongs -- this page's own move, made
+on this page, caught by sweep-reviewer.
+
+What replaces it is stronger than the counterfactual was. The corpus held **50** cases at `7db25a7`
+and **104** at `c9fdcda`, so **54 cases were authored after the schema closed**, across seven
+commits, the last at 10:11 this morning -- about two hours before the host was first pointed at the
+corpus. Not one of them reaches for any of the three keys. **The closed schema did not punish a try.
+It guaranteed that a try would be punished, so no try ever had to happen.** Fifty-four cases were
+written by authors whose three available sources -- the schema, §9, the corpus beside them -- were
+silent in unison, and the silence sustained itself without ever having to act on anybody. A refusal
+that fires leaves a frustrated author; a refusal that never fires leaves seven ordinary-looking
+commits.
+
+**The limit, which sweep-reviewer attached to the figure and is the reason it can be quoted.**
+Fifty-four-with-none-reaching is consistent with *nobody knew the key existed* and with *everybody
+knew and no case wanted a scaffold*, and nothing in the tree separates them. What is established is
+that the three sources an author would consult are silent. That makes the first reading
+parsimonious, not proven. **An
 open schema's failure leaves an artifact in the tree.** The two surplus `expected_outcome` fields
 existed as bytes, could be grepped, and were in fact found twice independently -- once by an
 over-matching regex, once by the runner refusing them -- so anyone auditing from inside the
 repository could reach them. **A closed schema's failure leaves no artifact anywhere.** The absence
-of `scaffold_script` is byte-identical to the correct absence of a key nobody needs: nothing to
-grep, nothing to over-match into, and the one author who tries gets an error naming their own file
-and concludes they were wrong.
+of `scaffold_script` is byte-identical to the correct absence of a key nobody needs: nothing to grep
+and nothing to over-match into. Fifty-four cases were authored past it without producing one byte to
+find.
 
 So an external receipt is **necessary** for a closed schema and merely convenient for an open one,
 and the self-criticism landed on the open object because the open object is the one auditable from
