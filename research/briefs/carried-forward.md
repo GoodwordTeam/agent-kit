@@ -3054,6 +3054,24 @@ verified against exactly the half it fixed, and the receipt at each step was rea
 scope is chosen by the person who just made the change cannot detect the part they did not think
 about.
 
+**A third direction of reconciliation, which nothing we built can see, and it now has a case file
+instead of an argument.** Both arms we ran ask *which host keys do we fail to name*. Neither asks
+*which of our constraints does the host not have* -- and a schema stricter than the host refuses
+cases the host would run, silently, in the direction that feels safe. sweep-reviewer instantiated
+it: a case with `schema_version`, `name`, `execution.prompt` and one regex grader, and nothing else.
+Our validator refuses it three times over -- missing `tags`, missing `execution.max_turns`, missing
+`execution.allowed_tools`. **The host loaded the same bytes, ran it, and scored it 1.00 for three
+cents.** So the direction is not a hypothesis about what a probe might find; it is a file that runs
+clean on the host and cannot exist in this repository.
+
+The sharpest of the set is `execution.allowed_tools`, which carries `minItems: 1` while the host's
+default for that key is literally `[]`. **We refuse the omission and we refuse the value the host
+substitutes for it, so there is no spelling of "this case grants no tools" that we accept.** All six
+constraints are now recorded at their own sites in `schemas/case.schema.json` rather than held in
+anyone's head, which is the disposition that matters: a floor stricter than the host is this
+package's to set and is a defect only for as long as nobody decided it. Nobody has decided it yet --
+it is with the contract owner, on a printed list rather than on a recollection.
+
 **And the section instantiated its own subject while being written.** The routing paragraph above
 originally read that `validate-figure.sh` *"is unchanged at HEAD"* -- an absence claim, unpinned,
 three screens below the section that had just established that an unpinned absence claim has no
@@ -3148,6 +3166,27 @@ must not be reported as labelled.** Either change the invocation until it prints
 (`--format` with a date instead of `--oneline`, `wc -l` beside a `head`) or produce the field with a
 second command. The one move never available is inference, and inference is what it feels like to
 have read carefully.
+
+**A third variety, and it is the one we were all producing while describing the other two.** Every
+lane has been quoting push state as `0 N` with a careful read time attached. sweep-reviewer checked
+the reflog: `origin/main@{0}` is `6ae7707`, *"update by push"*, with `dae12ad` behind it, and the
+cursor has not moved since 12:06 -- before the publisher ruling took effect. **So the `0` is not a
+measurement. It is a constant, and it could not have read anything else at any point today.** The
+convention we adopted protects `N`, which genuinely varies while nobody is editing, and says nothing
+about the `0`, which is frozen by policy. Not a well-formed answer about the wrong referent, then:
+**a field with no referent at all, carried along by the formatting because the field beside it
+needed one.** The timestamp made it look measured, which is the entire mechanism.
+
+**And the guard for the absent-field half is a positive control on the filter, which sweep-reviewer
+arrived at by making the error twice in twenty minutes.** They grepped the validator's output for a
+case *name* and got zero; the output carries *paths*, and the zero read as *accepted*. Then they
+looked for a note under `$comment` and got zero, because the notes are in `description`, and had
+most of a finding written saying a cross-reference pointed at something that did not exist. Both are
+**a grep against one field name reading its own zero as absence** -- which is this page's
+zero-shaped entry arriving through the field rather than the count. Their rule, which is the
+operational form of everything above: **never accept a zero from a filter you have not first shown
+can produce a one.** A filter that has never returned a one is indistinguishable from a filter
+pointed at the wrong field, and running it once against a case you know matches costs nothing.
 
 What separates the ones that were caught from the ones that were not is a single property: whether
 the instrument **reported the subject it had resolved** rather than echoing the subject it was
