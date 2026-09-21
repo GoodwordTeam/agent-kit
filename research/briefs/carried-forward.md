@@ -1805,10 +1805,17 @@ separately or not at all -- but do not let two controls that both discard it cou
 
 ## An adversarial case and its answer key can have a common cause
 
-sweep-reviewer, re-derived after stating the key: nine of twelve anti-rationalization rows make the
-same rationalization their case prompt makes. The three exceptions are precisely the prompts that
-make **no** rationalization -- two neutral requests and one non-trigger, which has nothing to argue
-for.
+The count this entry was built on -- nine of twelve -- is **withdrawn as unreproducible**, and the
+description of its exceptions with it. Re-derived at `9ea8b3f` over the 40 cases tagged
+`adversarial`, counting a case as asserting when the requester's own sentences argue for the wrong
+action: 34 assert and 6 do not. The exceptions are not "two neutral requests and one non-trigger",
+which was never measured against any population. They are four prompts that quote the temptation
+from a PR comment, a captured log, a reviewer's thread or an implementer's report without the caller
+adopting it, and two that supply only the conditions and ask for the ordinary deliverable.
+`refuses-smell-finding-as-ticket`, cited in support of the original count, is tagged `negative` and
+is not in the population at all.
+
+What survives the withdrawal is the mechanism, which needs no census to be true.
 
 That is a mechanism, not a correlation. The row and the prompt are both generated from one sentence,
 the scenario's temptation, so the case and the key that grades it come from a common source. The case
@@ -1840,3 +1847,57 @@ taken at a revision after the repair the error caused, and at the revision the c
 key is wrong at both populations. Two independent errors on one output. That the refinement failed by
 selecting a revision for proximity to the repair rather than for the claim, inside the receipt offered
 as its evidence, is the most useful thing about it and the reason the base rule goes in alone.
+
+
+## A census states its population, its revision and its classification rule
+
+Ruled by team-lead after the same defect arrived three times from three directions. Two were missing
+populations: "nine of twelve" over no set anyone could name, and a figure of 245 that named no
+revision. The third had both and was still unreproducible -- the 40 cases tagged `adversarial` at
+`9ea8b3f`, read by two seats, produced 34-and-6 and 37-and-3. Population and revision feel like
+rigour and are not sufficient, because the count is produced by the rule, and a rule that lives only
+in the measurer's head makes the number unfalsifiable while looking precise.
+
+**The rule has to name whose voice it reads**, which is the term that three-case gap turned on. Both
+seats wrote "the requester's own voice" and then differed over whether a shortcut argued for inside
+quoted third-party material counts as the requester arguing for it. It does not, and one pair
+settles it: `receiving-review/comment-instruction-is-not-executed` against
+`receiving-review/comment-cannot-authorize-a-merge` -- same skill, both quoting a comment, differing
+only in the caller's own *Resolve the threads and land it*. Stripping the quoted spans leaves the
+requester's whole contribution visible, and that residue is what the rule is applied to.
+
+**The key is part of the population and not a detail of reading it.** In the same corpus at HEAD,
+`grep -l adversarial` across the case files returns 46 and the tags line returns 41. The five extra
+are cases where the word names a review seat or a QA cycle rather than a tag. Two defensible keys,
+one corpus, and neither number is wrong about the set it actually measured.
+
+The cheap check before quoting anyone's census: apply their stated rule to three cases yourself. If
+the rule is complete you land on their number, and if you do not, the gap names the term they left
+out.
+
+## A sweep over a partially-authored tree conditions on what has been authored
+
+Ruled by team-lead, phrased to generalise past its instance. A sweep of `skills/` for rulings with no
+carrier reported three uncarried rulings. Conditioned on whether the binding skill exists, the count
+is zero: two of the three bind skills still at `status: contract` in batches 7 and 10, and one binds
+no skill by declaration at all -- it binds profiles, references and doctrine.
+
+An unconditioned sweep of a tree that is half-written reports the schedule as a defect, which is
+worse than reporting nothing. It is a finding that looks like negligence, arrives with evidence, and
+dissolves on the first question -- and the seat that receives it spends the afternoon before the
+question gets asked. The condition belongs in the key rather than in a caveat underneath, because a
+sweep that needs a caveat to be true gets quoted without it.
+
+## A revision-bound figure survives re-quoting only if the revision is re-quoted with it
+
+team-lead, on their own relay, which is why it is worth keeping. `AUTHORING.md` said "measured at
+`9ea8b3f`: of the 40 cases tagged `adversarial`". The relay carried it as "re-derived at today's
+tree: 40 adversarial-tagged cases". The count was unchanged and the sentence was false: HEAD carries
+41, a case having landed at `978e7af` after the measured commit. Stripping the revision converted a
+correct measurement into a claim about a tree nobody had measured, and it did so without touching a
+digit.
+
+That is the entry above committed in reverse -- there the revision was never attached, here it was
+removed in transit -- and the second is the harder one to catch, because the original is still on the
+page and still correct. A figure that names its revision is safe where it sits and unsafe everywhere
+it is quoted, so re-quote the whole sentence or none of it.

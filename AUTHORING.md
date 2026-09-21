@@ -241,8 +241,17 @@ The row and the case have a common cause. Both are written from the same recorde
 in the same sitting, so the `adversarial` tag marks the cases most likely to carry their answer in
 the body they test. Batches 6 through 10 are unwritten and would reproduce it by default.
 
-Measured at `9ea8b3f`: of the 40 cases tagged `adversarial`, 34 assert the rationalization and 6 do
-not. The asymmetry runs the way the rule needs — all six belong to skills that do carry
+Counting them takes a rule, and the rule has to name whose voice it reads. Counting a case as
+asserting when the **requester's own** sentences argue for the wrong action — an argument inside
+material the prompt merely hands over does not count, and a requester who adopts that material does
+— then at `9ea8b3f`, of the 40 cases tagged `adversarial`, 34 assert the rationalization and 6 do
+not. Read as one undifferentiated string instead, so that a quoted speaker's argument counts as the
+requester's, the same 40 return 37 and 3; the three that move are quoted-comment cases whose
+requester says only *work the threads* or *send the work to the two check seats*. Both readings are
+defensible, and the count cannot say which produced it, so the rule is stated here with the
+population and the revision rather than held beside them.
+
+The asymmetry runs the way the rule needs — all six belong to skills that do carry
 anti-rationalization rows, five to eight each, so the exception is never that no row exists. It is
 that the row exists and the prompt does not state it.
 
@@ -307,28 +316,6 @@ The keys and the intent to emit them are declared in `skill.yaml` under
 is where a skill records the degradation its adapter contract describes — a skill needing a
 restriction a host lacks lists it in `unsupported` and drops to `guided` or `manual`, rather than
 claiming a guarantee nothing enforces (`adapters/claude-code/CONTRACT.md` §4).
-
-**Nothing reads that declaration.** `packaging.hosts[]` has no consumer in the packager: the
-bundle's mode is computed from other fields entirely, so a skill declaring a guarantee its host
-cannot enforce and a skill declaring nothing produce the same bundle, and the `unsupported`-driven
-degradation described just above does not happen. Filling this block correctly buys what §10 says a
-stated-but-ungated rule buys, which is nothing, and `ak build` reports zero errors either way, so no
-clean run will tell you. Which file is amended — the code, §4, or the schema — is not settled here.
-
-**The measurements are in `CONTRACT-DEFECTS.md`, and this paragraph carries none on purpose.** It
-exists to speak at the moment a writer is filling `packaging.hosts[]` in, which is the only moment
-the warning does any good and the reason it is not just a second copy of that entry. Locators are
-what went stale last time: one defect held two records, both carrying line numbers, and only one was
-maintained. A warning carrying none cannot drift.
-
-**Read it through `git log -- CONTRACT-DEFECTS.md`, which that file names as its own index.** An
-entry is retired by deletion, so the open file answers whether this is still a defect and only the
-log answers whether it ever was — which is the difference between a warning whose entry was resolved
-and a warning that never had one. Nothing checks this direction: `defects.entry-quotation-dangling`
-runs from an entry to the contract, and no check runs from the contract back. If this paragraph
-outlives its entry, nothing will say so. The retirement is therefore a reader's obligation and not a
-gate's, and saying otherwise — as this paragraph did until now — describes a check that does not
-exist.
 
 `ak validate` cross-checks `catalog.yaml`'s `invocation` against `skill.yaml`'s `invocation` and its
 entrypoint authorities, and fails on disagreement.
@@ -1518,14 +1505,13 @@ contents it did not read, and not for any state a reader can return to. Taken fr
 `git archive <rev> | tar -x`, the revision and the contents are the same object again.
 
 **Which is why recording the revision means naming the instrument: "no errors" is three claims in
-one sentence.** From the working tree it covers contents nobody can reconstruct. From a bare extract
-it covers the right contents and runs fewer checks — measured at `4e45481`, the extract reports
-`1 check skipped: donor paths at pin`, and the skip's own note says 155 donor rows went unverified,
-because `provenance.source-not-at-pin` cannot read a donor clone that is gitignored. From an extract
-with `.donors/` restored it covers the right contents and every check: 0 errors, 17 warnings, 39
-notes at that revision, all 155 rows checked and passing. The three differ by an error-severity
-check over 155 rows and are indistinguishable in the sentence anyone quotes, so the revision alone
-does not identify what was measured.
+one sentence.** `AGENTS.md`, *Receipts name their instrument*, sets out the three, which of them is
+a receipt, and what restoring the donors takes; it binds every seat, so it is referenced here and
+not restated. What follows from it for this section is only that the revision alone does not
+identify what was measured, so a reviewer records both. The figure quoted below was taken with the
+donors present — 0 errors, 17 warnings, 39 notes at `4e45481`, all 155 donor rows checked and
+passing — and re-derives through `research/probes/validate-figure.sh 4e45481`, which is that
+convention in executable form.
 
 **That zero is controlled, which is the only reason it is quoted here.** Changing one row's cited
 path in one fragment to a plausible rename raises `provenance.source-not-at-pin` at error severity,
