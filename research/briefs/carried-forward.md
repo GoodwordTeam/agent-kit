@@ -1585,3 +1585,137 @@ to a batch that is closing. None of the five is in the checkpoint's gated nine, 
 the checkpoint for them -- which is exactly why 2 is worth naming now rather than at the Phase 5
 release gate, where it would arrive as a catalog-wide coverage failure with no batch left that owns
 it.
+
+Scenario 2 landed at `c532706` while this table was being written, so the row above is the record
+of a gap rather than a live one. The other four stand.
+
+## I asked for a control the contract makes impossible to pass
+
+The batch-5 checkpoint gates on nine release scenarios, and I asked sweep-reviewer the question that
+sounded like the right one: for each, would the case fail against a body with its hard gate removed?
+The answer came back no, nine times out of nine, with a table.
+
+Nine identical answers should have been read before the finding was. `AUTHORING.md:143` defines
+`## Hard gates`, and §3.1 immediately **requires** an anti-rationalization table underneath it whose
+rows cite the same ruling ids; the required-sections list puts the same rules in `## Not for`,
+`## Limits` and `## Stop conditions` as well. The contract mandates that every gate be stated two or
+more times. So deleting one copy tests a property this contract deliberately does not have, and the
+uniform negative is a fact about my question, not about nine cases.
+
+The general form, which is the part worth carrying: **a control that returns the same verdict for
+every member of a population is reporting on the question, not the population.** Independent
+subjects that agree perfectly agree for a reason, and the reason is usually upstream of all of them.
+Before believing such a result, find the thing they have in common -- here, one sentence in the
+contract that every body obeys.
+
+What makes this different from the vacuous control, which it resembles: a vacuous control passes
+without exercising its path. This one exercised its path nine times and the path could not have led
+anywhere else. The check ran. The question had no discriminating power.
+
+The repair is not to delete carriers, and saying so is urgent, because the natural reading of "this
+rule appears five times" is drift to be tidied. A gate is not the binding statement of a rule --
+several sections bind -- it is the **guarantee of completeness**: a reader who reads only
+`## Hard gates` has the whole stop-list. Which inverts the defect I went looking for. It is not a
+gate with too many echoes. It is **a rule that stops the skill and is not in `## Hard gates` at
+all**, and there are four: scenarios 1, 7, 8 and 9. Scenario 8's rule has two carriers in the whole
+body, no gate and one case.
+
+And the corpus never certified any of this. `evals.uncovered-scenarios` says so in its own message
+text -- tagged, not tested -- so "gated scenario" was a name claiming something no check performs.
+The name is retired.
+
+## A figure that cannot name a revision is not stale, it is not a measurement of this repository
+
+provmap found this in the §4 entry and the distinction is exact enough to be a rule. A count taken
+from `dist/claude-code/skills/` names whoever last ran the packager, and `AGENTS.md:113` says
+`dist/` is generated and never committed. There is no commit at which that number was true.
+
+That is a different fault from decay, and it needs a different remedy. A stale figure is repaired by
+naming the revision it was true at; this one has no such revision, so the repair is to re-state the
+claim over something tracked -- 18 of 26 host blocks declare a mode the packager cannot emit -- and
+delete the original rather than date it.
+
+The tell is available before the measurement is taken: ask "true at which commit?" A decayed figure
+answers with the wrong commit. This kind has no answer at all.
+
+## The instrument that failed toward the conclusion I already held
+
+Also provmap's, and it outranks every other instrument note today. Their first pass returned 0
+manifests, 0 host blocks, 0 mode declarations, because `\s` in a `git grep -E` pattern matches
+nothing under the POSIX engine and exits clean. Uniform zero across arms that must differ is the
+tell, and it is now five for five in this repository.
+
+But the direction is the finding. Zero read as *the defect is even worse than recorded*, which was
+the thing they were already arguing. **A broken instrument that fails toward the conclusion you hold
+cannot be caught by finding its result plausible**, because plausibility is precisely the check it
+passes. Nothing but a removal control separates it from a working one -- theirs was dropping
+`guided` from the alternation and requiring 26 to fall to 16.
+
+## A check that exists only in its own tests
+
+I built `evals.duplicate-graders` to catch the scenario-20 pattern -- seven cases tagged as seven
+tests of one scenario, three of them carrying a byte-identical grader under a byte-identical
+directory name. The first version fingerprinted the whole grader set. It passed all five of its
+tests and found **zero** in 102 real cases, because the corpus's copies share their heaviest grader
+and differ in a trailing one.
+
+The fixtures were built to demonstrate the rule, so they made copies that were copies all the way
+through. The corpus makes copies the way people actually make them: take the case, keep the part
+that does the work, change the part that names the skill. The fixture and the population disagreed
+about what the artifact under test looks like, and only the fixture was consulted.
+
+So: **run a new check against the real tree before believing its tests.** A green suite says the
+check does what its author imagined; only the corpus says whether what they imagined exists. The
+second version keys on an `llm` grader's `expected_outcome`, reports 3 groups over 8 cases against
+245 distinct expectations, and excludes `tool_used` and `regex` deliberately -- `tool_used: Skill`
+is legitimately identical everywhere, and grouping on it would report the corpus as a copy of itself,
+which is the unclearable-class shape from three sections up.
+
+### A control that silently does not run agrees with every hypothesis
+
+The removal control for that check, run against the real corpus: differentiate one member of a
+duplicate group and the group must shrink. It reported no change, and for about a minute that read
+as the check being insensitive to exactly what it keys on.
+
+The check was fine. The expectation wraps mid-phrase in the YAML -- `derives the idempotency key
+from the\n      run, the operation` -- so a `sed` for the normalized sentence matched nothing, exited
+0, and the edit never happened. I compared the tree to itself and called it a control.
+
+This will recur here more than anywhere else, because every artifact in this repository is wrapped
+prose and every claim about it is quoted normalized. The guard is to verify the edit, not the
+outcome: `git diff` after the mutation, before the re-measurement. A mutation that changed nothing
+is not evidence about the thing you mutated.
+
+## The path-scoped commit has two exposures, and only one of them is a commit
+
+authoring reported the mechanism from a near miss and then hit the other half of it inside the hour,
+which is why it belongs here rather than in a commit message. Every lane here commits with
+`git commit -F msg -- <path>` out of a working tree that is never clean, and a path-scoped commit
+publishes the **worktree** content of that path.
+
+  - Another lane **commits** a change to your file between your read and your commit: yours reverts
+    theirs, with no conflict and no diff anyone would notice. Caught by
+    `git log <base>..HEAD -- <path>` before committing.
+  - Another lane has **uncommitted** edits in your file: your commit sweeps them in, under your
+    message and your readiness statement. `git log` cannot see this; it reads commits. Caught only
+    by `git diff --stat -- <path>`, treating any hunk you did not write as a stop.
+
+The second is the worse one, and it is the one the first write-up missed. It produces a commit whose
+message is a lie about its contents -- which is how `AUTHORING.md`'s §12 work ended up inside a hooks
+commit this morning, and how it then left the branch when that commit was amended.
+
+Both halves run before the commit, not after. After is a report, not a guard.
+
+## A figure attached to a claim makes the claim feel measured
+
+batch5-writer's, on being handed "scenario 6 is uncovered" with twelve numbers beside it, and it is
+the mechanism behind how that error propagated to two lanes before anyone checked it:
+
+> a figure attached to a claim made me *less* likely to check it, not more. That is backwards, and
+> it is the same shape as the working-tree-figure problem -- a number that is correct about
+> something makes the thing it is attached to feel measured.
+
+The twelve numbers were correct. They were the union of scenario tags over the five batch-5 suites,
+exactly, with nothing over and nothing under. The sentence they were attached to was about the whole
+tree. A precise measurement of a scope nobody named reads identically to a precise measurement of
+the scope that was named, and the precision is what stops the reader asking which.
