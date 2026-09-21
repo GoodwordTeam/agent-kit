@@ -428,6 +428,19 @@ there as anything other than `origin: conversation`, is reported, because one of
 wrong about where the capability came from. Inventing an `origin:` or `locator:` key on an
 adaptations row does not substitute: nothing reads it.
 
+**The entry half of that route exists for five of the nine kinds.** `schemas/catalog.schema.json`
+requires `provenance_origin` on `skills`, `packs`, `protocols`, `roles` and `references`, and
+forbids it on `schemas`, `policies`, `profiles` and `adapters`, whose entries close
+`additionalProperties` without declaring it. The schema gives the reason in its own description:
+the question "is there a donor file behind it" has an answer for authored content and not for a
+schema or a profile. So where a capability lands in one of those four kinds there is no entry to
+declare `provenance_origin: conversation` on, the field cannot be added, and the map row is the
+whole of the record. Fourteen rows sit there today, the four `knowledgebase-*` rows among them,
+and the pairing check above never reaches them: it runs from the catalog side and skips an entry
+with no origin to read (`src/validation/provenance.ts`). Their locators are parsed and range-checked
+like any other row's; what is unchecked is whether the row exists at all, because no entry declares
+the capability that would be missing. Omitting one here is the silent case.
+
 The map has three origins, so "not conversation" is not "donor". `src/validation/provenance.ts`
 refuses that narrowing deliberately, in a comment sitting directly above the branch — *"with three
 origins in the map, 'not conversation' no longer implies 'donor', and a message that guesses wrong
@@ -456,6 +469,7 @@ several entries already use it. The clearest instance is `guided-checkpoint-mode
 `plan §9` locator. That this paragraph's best example was one its own earlier wording excluded is
 the cheap check worth taking from it: where a rule has a canonical instance in the tree, read the
 instance against the wording before shipping the wording.
+
 What has no route is a **loose doctrine file** (§12.3): with no catalog entry there is no directory
 to be a destination, so a design-originated rule in one is recorded by citation in the file itself
 and nowhere else. If a writer cannot find the route for something, that is a contract defect (§10) —
