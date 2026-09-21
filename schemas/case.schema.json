@@ -57,7 +57,7 @@
       "type": "array",
       "minItems": 1,
       "items": {
-        "description": "Open, not closed, and the reason is a gap rather than a preference. AUTHORING.md §9 lists five grader types and documents the fields of three: `tool` for `tool_used`, `pattern` for `regex`, `expected_outcome` for `llm`. What `file_exists` and `tool_order` take is written down nowhere in this repository, and no case uses either, so closing this object would refuse those two types on a guess at their field names -- authoring a shape into the schema that no run has produced. The three that are documented are required below; the two that are not are left alone, which is visible here rather than silent.",
+        "description": "Open, not closed, and that is a known divergence from the host rather than a safe default. AUTHORING.md §9 lists five grader types and documents the fields of three: `tool` for `tool_used`, `pattern` for `regex`, `criteria` for `llm`. Those three names are no longer read from §9 -- they are what `claude plugin eval` accepted at `claude 2.1.278`, measured by loading the whole corpus against it. §9 said `expected_outcome` for `llm`, this schema required it, all 256 `llm` graders carried it, and the host rejects that key outright: 87 of 87 shipped cases failed to load, and none of them had ever been run. What `file_exists` and `tool_order` take is still written down nowhere here and no case uses either, so this object stays open rather than refusing them on a guess. But **the host's grader object is closed** -- it refuses any key it does not define, which is how two surplus `expected_outcome` fields on `tool_used` graders were caught. So the openness here buys no safety against the runner: it postpones one guess and admits exactly the surplus the runner will reject.",
         "type": "object",
         "required": ["name", "type"],
         "properties": {
@@ -67,15 +67,15 @@
             "enum": ["tool_used", "llm", "regex", "file_exists", "tool_order"]
           },
           "weight": { "type": "integer", "minimum": 1 },
-          "expected_outcome": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+          "criteria": { "$ref": "common.schema.json#/$defs/nonempty_string" },
           "tool": { "$ref": "common.schema.json#/$defs/nonempty_string" },
           "pattern": { "$ref": "common.schema.json#/$defs/nonempty_string" }
         },
         "allOf": [
           {
-            "description": "An `llm` grader is its `expected_outcome` -- §9 asks for one 'that a reader could score by hand', and without it there is nothing for a judge to read.",
+            "description": "An `llm` grader is its `criteria` -- §9 asks for one 'that a reader could score by hand', and without it there is nothing for a judge to read. The host requires this exact key and reports a grader missing it as `graders.N.criteria: Required`.",
             "if": { "properties": { "type": { "const": "llm" } }, "required": ["type"] },
-            "then": { "required": ["expected_outcome"] }
+            "then": { "required": ["criteria"] }
           },
           {
             "description": "A `tool_used` grader that names no tool asserts nothing about any tool. It is the eval-case form of a locator that matches no instance: it cannot fail, so it cannot grade, and nothing in this package would ever have said so because nothing here runs it. Inferred from §9's worked example, which carries `tool: Skill`, rather than measured against the loader, for the reason this object is open.",

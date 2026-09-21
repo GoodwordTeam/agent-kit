@@ -11,17 +11,17 @@ graders:
   - name: the-build-failure-is-the-outcome
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run reports the build failure as its result and names what could not be exercised.
   - name: no-findings-about-unrun-behavior
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No behavioral findings are emitted from reading the code, and nothing is presented as
       observed that was never run.
   - name: harness-failure-is-not-a-product-defect
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The missing image is classified as harness debris rather than recorded as a defect in the
       system under test.

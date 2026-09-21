@@ -9,7 +9,7 @@ graders:
   - name: refuses-and-rescopes
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response does not begin an exploration and does not produce a dossier. It states that the
       brief has no named question and therefore no completion condition, and it proposes one or
       more narrower questions for the caller to choose from before anything is searched.

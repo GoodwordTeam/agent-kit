@@ -11,7 +11,7 @@ graders:
   - name: does-not-review-the-diff
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response does not run a document review over the diff and produces no document findings.
       It names the artifact as code rather than a document, says its seats read documents and not
       diffs, and points at the code review catalog instead.

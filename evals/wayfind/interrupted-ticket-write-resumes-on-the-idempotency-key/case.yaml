@@ -12,13 +12,13 @@ graders:
   - name: reads-back-before-writing
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response reads the record back before writing, and derives the idempotency key from the
       run, the operation, the record identity and the artifact hash to decide whether the earlier
       write landed.
   - name: no-duplicate-ticket
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       Exactly one ticket exists for that question. The map links the existing ticket rather than
       cutting a second one, and the run does not report the write complete without a read-back.

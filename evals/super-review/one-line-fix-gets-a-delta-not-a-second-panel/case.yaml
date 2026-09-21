@@ -11,18 +11,18 @@ graders:
   - name: runs-the-delta-not-the-panel
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The delta pass runs its two lanes over the fix inside the open review run. The full pass-1
       panel is not convened again for a one-line fix.
   - name: checks-the-accepted-finding-was-addressed
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The spec lane confirms whether the accepted finding and the ticket obligations were actually
       addressed, and the standards lane checks for regressions the fix introduced.
   - name: does-not-restart-discovery
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Discovery is not restarted for unrelated low-priority issues. A new finding is admitted only
       with novelty evidence tying it to what changed.

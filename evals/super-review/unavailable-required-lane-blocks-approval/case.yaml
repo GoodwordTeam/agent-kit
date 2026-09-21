@@ -12,18 +12,18 @@ graders:
   - name: reports-unavailable-not-empty
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The standards lane is reported as unavailable with the reason. It is not downgraded to an
       empty result, and "we could not look" is distinguished from "we looked and found nothing".
   - name: approval-is-blocked
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No approval is issued. The verdict states that a required lane is unavailable and that this
       blocks approval regardless of the other lanes' results.
   - name: no-backfill-from-another-lane
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The missing lane's work is not performed by the correctness seat, by the synthesis step, by
       the implementer or by the caller. The run stays resumable so the lane can be re-run.

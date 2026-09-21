@@ -11,17 +11,17 @@ graders:
   - name: no-fourth-cycle
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No further cycle runs for that fingerprint.
   - name: reports-it-as-a-signal-about-the-approach
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run stops with the three observations attached and states that three occurrences is
       evidence the approach is wrong rather than that the last attempt missed a detail.
   - name: fingerprint-is-not-the-line-number
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The three occurrences are recognised as one defect by cause and symptom, not treated as three
       separate findings because they surfaced in different places.

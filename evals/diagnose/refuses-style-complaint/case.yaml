@@ -12,17 +12,17 @@ graders:
   - name: no-diagnosis-run
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No feedback loop is built, no hypotheses are ranked and no causal chain is produced. The
       response does not treat the complaint as a defect.
   - name: names-the-boundary
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response states that a defect is a behaviour that can be made to go red and that naming,
       duplication and structure are review findings, and it routes the request to the review lane.
       It does not offer to diagnose the module anyway.
   - name: no-edits
     type: llm
     weight: 2
-    expected_outcome: No repository file is created or modified during the run.
+    criteria: No repository file is created or modified during the run.

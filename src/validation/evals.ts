@@ -166,11 +166,20 @@ interface DecisiveField {
  * The field each grader type is decided by.
  *
  * AUTHORING.md §9 lists five grader types and documents the field of three:
- * `tool` for `tool_used`, `pattern` for `regex`, `expected_outcome` for `llm`.
+ * `tool` for `tool_used`, `pattern` for `regex`, `criteria` for `llm`.
  * `schemas/case.schema.json` says the same in its own words and leaves the
  * grader object open for it -- "what `file_exists` and `tool_order` take is
  * written down nowhere in this repository". This table records the three that
  * are written down and refuses the rest.
+ *
+ * `llm`'s field was `expected_outcome` here until the host was run against the
+ * corpus for the first time and rejected every case: `claude plugin eval`
+ * requires `criteria` and refuses `expected_outcome` as an unrecognized key,
+ * so 87 of 87 shipped cases failed to load. This table, §9 and
+ * `case.schema.json` had agreed with each other about a name the runner does
+ * not accept -- three copies of one unverified reading, which is the number of
+ * agreeing sources it takes to look settled. The names here are now what the
+ * host accepted at `claude 2.1.278`, not what §9 says.
  *
  * Free text is where repetition means something, because somebody typed it for
  * this case. `tool` is not free text: its vocabulary belongs to the harness,
@@ -187,7 +196,7 @@ interface DecisiveField {
  * not written the type yet, so whoever introduces it picks, by adding a row.
  */
 const DECIDED_BY: Readonly<Record<string, DecisiveField>> = {
-  llm: { field: "expected_outcome", free: true },
+  llm: { field: "criteria", free: true },
   regex: { field: "pattern", free: true },
   tool_used: { field: "tool", free: false },
 };
@@ -223,7 +232,7 @@ interface GraderKeys {
  * is not a reason to compare two spellings of one sentence as two sentences.
  *
  * An empty value is grouped rather than skipped. The skip that used to be here
- * was justified on the schema permitting an empty `expected_outcome`; it does
+ * was justified on the schema permitting an empty `criteria`; it does
  * not -- `common.schema.json#/$defs/nonempty_string` requires `minLength: 1`
  * and a `\S`. So the filter could only ever have acted on a case the schema
  * check already errors on, and what it bought was two checks disagreeing about
@@ -373,7 +382,7 @@ function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue
         error(
           "evals.grader-type-unclassified",
           casePath,
-          `grader \`${grader}\` has type \`${type}\`, which this check has no decisive field for. AUTHORING.md §9 documents the field of three of the five grader types — \`tool\` for \`tool_used\`, \`pattern\` for \`regex\`, \`expected_outcome\` for \`llm\` — and schemas/case.schema.json leaves the grader object open rather than guess the other two. So this check cannot tell whether two graders of this type assert the same thing, and it refuses rather than guess: reading an unknown type as free text would group a sequence of tool names and report the corpus as a copy of itself, and reading it as a closed vocabulary would let a free-text type through unexamined. Add a row to \`DECIDED_BY\` in src/validation/evals.ts naming the field this type is decided by and whether that field is text written per case.`,
+          `grader \`${grader}\` has type \`${type}\`, which this check has no decisive field for. AUTHORING.md §9 documents the field of three of the five grader types — \`tool\` for \`tool_used\`, \`pattern\` for \`regex\`, \`criteria\` for \`llm\` — and schemas/case.schema.json leaves the grader object open rather than guess the other two. So this check cannot tell whether two graders of this type assert the same thing, and it refuses rather than guess: reading an unknown type as free text would group a sequence of tool names and report the corpus as a copy of itself, and reading it as a closed vocabulary would let a free-text type through unexamined. Add a row to \`DECIDED_BY\` in src/validation/evals.ts naming the field this type is decided by and whether that field is text written per case.`,
         ),
       );
     }

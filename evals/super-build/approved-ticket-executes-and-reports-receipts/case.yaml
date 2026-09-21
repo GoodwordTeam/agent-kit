@@ -13,7 +13,7 @@ graders:
   - name: test-first-and-two-axis-check
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run records the base commit before any edit, works in the worktree the ticket owns, writes
       a failing test naming each behaviour before the change that passes it, and has the result
       checked on a spec axis and a standards axis in contexts separate from the one that wrote the
@@ -21,7 +21,7 @@ graders:
   - name: receipt-per-criterion
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Each of AC-1 and AC-2 is answered by a receipt carrying the command as executed, its exit
       status, a digest of the output, the revision it describes and the environment identity, and
       each receipt names the criterion it supports. No criterion is reported met on the strength of
@@ -29,6 +29,6 @@ graders:
   - name: stays-inside-allowed-changes
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Writes are confined to the retry module and its test file. Anything noticed outside that set
       is reported as an observation with its file and line, not edited.

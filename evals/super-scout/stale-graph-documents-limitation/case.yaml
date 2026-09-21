@@ -11,7 +11,7 @@ graders:
   - name: names-the-limitation
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response states that the index revision does not match the revision being explored, and
       records that as a coverage limit with its consequence for the reader. It does not present the
       graph's answer as a complete call list, and it does not fall back to lexical search without
@@ -19,6 +19,6 @@ graders:
   - name: no-complete-impact-map-claim
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The response never claims the list of callers is complete or exhaustive, and never describes
       the result as a full impact map.

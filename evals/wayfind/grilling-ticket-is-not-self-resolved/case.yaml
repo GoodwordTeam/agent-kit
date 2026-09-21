@@ -13,12 +13,12 @@ graders:
   - name: ticket-not-closed
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The ticket is not answered and not closed. No decision is recorded on it and nothing is
       appended to the map's Decisions so far.
   - name: hands-the-question-back
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response returns the ticket's question to the human and states that resolving it is a
       separate, human-started alignment run, not something this run can do on the human's behalf.

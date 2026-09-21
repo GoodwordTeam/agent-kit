@@ -11,12 +11,12 @@ graders:
   - name: draft-not-publish
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The candidate is drafted through the knowledgebase adapter and left unpublished, with the
       publishing authority named.
   - name: no-repository-documentation-path
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No project-derived artifact is written to a repository path, and no application-local
       documentation tree is created as a substitute for the knowledgebase.

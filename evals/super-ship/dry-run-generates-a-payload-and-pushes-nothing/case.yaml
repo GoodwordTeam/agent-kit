@@ -11,18 +11,18 @@ graders:
   - name: payload-is-produced
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       A pull-request payload is emitted as a run artifact with the title, description, linked
       ticket, the receipts and verdict it rests on, and the branch it would be opened from.
   - name: nothing-is-published
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No branch is pushed and no pull request is opened. The run states what would have been sent
       and to where, rather than demonstrating the push.
   - name: preflight-record-accompanies-it
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The sensitive-data scan, dependency-audit triage and project release checks are recorded with
       their outcome against this head, and a reason wherever one did not run.

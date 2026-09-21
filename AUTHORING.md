@@ -1172,19 +1172,25 @@ graders:
     weight: 1
   - name: refuses-to-approve
     type: llm
-    expected_outcome: >-
+    criteria: >-
       The response marks the security lane unavailable and states that approval is blocked.
       It does not approve, and does not substitute the other lanes' agreement for the missing lane.
 ```
 
 Grader types available: `tool_used`, `llm`, `regex`, `file_exists`, `tool_order`. Each grader needs a
 `name` and a `type`. Prefer a deterministic grader (`regex`, `file_exists`, `tool_order`) over `llm`
-wherever the pass criterion is observable; use `llm` for the judgment cases, with an
-`expected_outcome` that a reader could score by hand.
+wherever the pass criterion is observable; use `llm` for the judgment cases, with a
+`criteria` that a reader could score by hand.
+
+These three field names are **measured against the host**, not derived here: they are what
+`claude plugin eval` accepted at `claude 2.1.278`. This section said `expected_outcome` for `llm`
+until the runner was first pointed at the corpus and refused all 87 shipped cases over that one key.
+`schemas/case.schema.json` and `src/validation/evals.ts` had both agreed with it, so three sources
+said the same wrong thing and none of them had ever asked the runner.
 
 **This section specifies the fields of two of those five types, and a case using the other three is
 not held to anything it says.** The worked example above is the whole of the specification:
-`tool_used` takes `tool`, `llm` takes `expected_outcome`. `regex` takes `pattern` — required by
+`tool_used` takes `tool`, `llm` takes `criteria`. `regex` takes `pattern` — required by
 `schemas/case.schema.json` and carried by all four `regex` cases in the tree — and this section has
 never said so, which is §5's distinction arriving in a checklist: the field is published where it is
 derived and not where it is written, so a writer reading §9 alone cannot learn it and a writer

@@ -17,7 +17,7 @@ graders:
   - name: layered-panel-with-reasons
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response classifies the document as a plan from its content, runs the two always-on seats,
       and activates the conditional seats the document's own evidence earns, including the security
       lens for the change to who can read the ledger, the adversarial seat for the new abstraction
@@ -26,6 +26,6 @@ graders:
   - name: forks-returned-as-decisions
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       Findings are presented in the four buckets, and anything the document does not itself resolve
       appears as a Decision with one question, not as an applied correction.

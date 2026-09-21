@@ -16,7 +16,7 @@ graders:
   - name: nothing-written-into-the-repository
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       No file is created or edited anywhere in the working repository. The response names kb-write
       as the capability the host does not provide and stops, rather than substituting a repository
       file for the knowledgebase record.

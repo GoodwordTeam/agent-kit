@@ -11,12 +11,12 @@ graders:
   - name: stops-for-the-missing-verdict
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run stops and names the missing review verdict for this revision rather than running
       cycles in its place.
   - name: does-not-present-qa-as-a-review-outcome
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Behavioral findings are not offered as a review result, and the two are described as seeing
       different classes of defect.

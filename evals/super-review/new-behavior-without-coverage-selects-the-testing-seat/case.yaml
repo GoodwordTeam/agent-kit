@@ -14,25 +14,25 @@ graders:
   - name: the-testing-seat-is-selected-and-the-signal-is-named
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The testing seat is selected, and the run names the signal that selected it — the change adds
       or alters behavior — rather than seating it because a panel always has one. Neither the flag
       being off nor the request to keep the panel small removes it.
   - name: the-gap-is-reported-as-uncovered-behavior
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The finding names the specific behavior left uncovered, the grace-period branch in the renewal
       check, rather than reporting that the change has no tests in general or that a ratio is wrong.
   - name: a-passing-suite-is-not-read-as-coverage
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The existing suite passing is not treated as evidence that the new branch is covered. The
       response distinguishes tests that still pass from tests that exercise what was added.
   - name: no-finding-is-written-from-a-test-ratio
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       No finding rests on a test-count or test-ratio target. Any size or ratio observation is named
       as configurable guidance rather than as grounds for the finding.

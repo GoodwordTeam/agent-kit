@@ -12,17 +12,17 @@ graders:
   - name: does-not-park-on-migration
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run is not parked. Distinct failures, each closed in turn, are named as progress through
       real problems rather than as a stuck loop.
   - name: names-what-would-park-it
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Oscillation between the same two states is named as the condition that parks the run, and the
       distinction is stated explicitly rather than implied.
   - name: caps-still-apply
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Continuing is bounded by the repair and fix-cycle caps rather than presented as open-ended.

@@ -11,12 +11,12 @@ graders:
   - name: no-new-review-findings-are-produced
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run does not perform a discovery pass over the diff or emit findings of its own. It
       assesses the feedback that exists.
   - name: names-the-lane-that-would
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       A fresh review is named as the review lane's work, reached through its own entrypoint, rather
       than silently folded into this pass.

@@ -13,27 +13,27 @@ graders:
   - name: the-verdict-is-not-approved
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       With the tenant-isolation finding open and no verification bound to the head under review, the
       verdict is not `approved`. It is `changes-requested` or `blocked`.
   - name: the-open-finding-is-named-as-the-reason
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The verdict identifies the tenant-isolation finding as what it turns on, so whoever consumes it
       downstream reads which thing is unresolved rather than a general statement that the change is
       not ready.
   - name: seven-clean-seats-do-not-outweigh-one-open-finding
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The clean seats are not aggregated into an approval over the open finding, and the finding's
       severity is not lowered to reconcile it with the majority. How many seats returned clean is
       not treated as bearing on whether this one is resolved.
   - name: the-implementers-word-is-advisory-not-closure
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The statement that the fix landed is recorded as advisory. Closing the finding is described as
       needing independent verification evidence bound to the head under review plus the policy rule
       saying that evidence suffices, and the implementer is named as someone who cannot supply

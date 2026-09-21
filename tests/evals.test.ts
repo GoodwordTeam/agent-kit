@@ -341,7 +341,7 @@ describe("one case copied across skills", () => {
     // in a skill a copy of its siblings, and the check said so -- correctly,
     // and in a way that made the removal control below look broken.
     const body = (name: string) =>
-      `schema_version: "1.1"\nname: ${name}\ntags: [scenario-1]\nexecution:\n  prompt: "resume after the interrupted publish"\ngraders:\n  - name: reads-back-before-writing\n    type: llm\n    expected_outcome: The ${name} key is re-derived from the run id and the input artifact hash.\n`;
+      `schema_version: "1.1"\nname: ${name}\ntags: [scenario-1]\nexecution:\n  prompt: "resume after the interrupted publish"\ngraders:\n  - name: reads-back-before-writing\n    type: llm\n    criteria: The ${name} key is re-derived from the run id and the input artifact hash.\n`;
     const root = makeTree({
       "catalog.yaml": TWO_SKILLS,
       "skills/alpha/SKILL.md": "# Alpha\n",
@@ -415,7 +415,7 @@ describe("one case copied across skills", () => {
       ...Object.fromEntries(
         THREE.map((c) => [
           `${EVALS_DIR}/alpha/${c.id}/case.yaml`,
-          `schema_version: "1.1"\nname: ${c.id}\ntags: [scenario-1]\nexecution:\n  prompt: "p"\ngraders:\n  - name: g\n    type: llm\n    expected_outcome: The run ${c.id} and stops.\n`,
+          `schema_version: "1.1"\nname: ${c.id}\ntags: [scenario-1]\nexecution:\n  prompt: "p"\ngraders:\n  - name: g\n    type: llm\n    criteria: The run ${c.id} and stops.\n`,
         ]),
       ),
     });
@@ -461,7 +461,7 @@ describe("what decides a grader, and what a shared name decides", () => {
     // without asserting the new behavior would swap an untested filter for an
     // untested absence, which is the same thing nobody is watching.
     const issues = rule(
-      twoSkills(() => caseWith("c", `  - name: g\n    type: llm\n    expected_outcome: ""\n`)),
+      twoSkills(() => caseWith("c", `  - name: g\n    type: llm\n    criteria: ""\n`)),
       "evals.duplicate-graders",
     );
     expect(issues).toHaveLength(1);
@@ -522,7 +522,7 @@ describe("what decides a grader, and what a shared name decides", () => {
     // similarity score over one text, because any threshold gets tuned until it
     // reports nothing and the tuning looks like calibration.
     const issues = twoSkills((skill, caseId) =>
-      caseWith(caseId, `  - name: reads-back\n    type: llm\n    expected_outcome: The ${skill} run stops at ${caseId}.\n`),
+      caseWith(caseId, `  - name: reads-back\n    type: llm\n    criteria: The ${skill} run stops at ${caseId}.\n`),
     );
     const names = rule(issues, "evals.duplicate-case-names");
     expect(names).toHaveLength(THREE.length);
@@ -540,7 +540,7 @@ describe("what decides a grader, and what a shared name decides", () => {
     expect(
       rule(
         twoSkills((skill, caseId) =>
-          caseWith(caseId, `  - name: reads-back-${skill}\n    type: llm\n    expected_outcome: The ${skill} run stops at ${caseId}.\n`),
+          caseWith(caseId, `  - name: reads-back-${skill}\n    type: llm\n    criteria: The ${skill} run stops at ${caseId}.\n`),
         ),
         "evals.duplicate-case-names",
       ),
@@ -558,7 +558,7 @@ describe("what decides a grader, and what a shared name decides", () => {
       "skills/beta/skill.yaml": declare(THREE.map((c) => ({ ...c, id: `${c.id}-b` }))).replace("id: alpha", "id: beta"),
     };
     for (const c of THREE) {
-      const grader = `  - name: reads-back\n    type: llm\n    expected_outcome: The run stops at ${c.id}.\n`;
+      const grader = `  - name: reads-back\n    type: llm\n    criteria: The run stops at ${c.id}.\n`;
       files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = caseWith(c.id, grader);
       files[`${EVALS_DIR}/beta/${c.id}-b/case.yaml`] = caseWith(`${c.id}-b`, grader.replace("stops at", "halts at"));
     }
@@ -593,17 +593,17 @@ describe("what decides a grader, and what a shared name decides", () => {
       // shares gamma's sentence.
       files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = caseWith(
         c.id,
-        `  - name: reads-back\n    type: llm\n    expected_outcome: The alpha run stops at ${c.id}.\n`,
+        `  - name: reads-back\n    type: llm\n    criteria: The alpha run stops at ${c.id}.\n`,
       );
       files[`${EVALS_DIR}/beta/${c.id}/case.yaml`] = caseWith(
         c.id,
-        `  - name: reads-back\n    type: llm\n    expected_outcome: ${shared(c.id)}\n`,
+        `  - name: reads-back\n    type: llm\n    criteria: ${shared(c.id)}\n`,
       );
     }
     for (const c of GAMMA) {
       files[`${EVALS_DIR}/gamma/${c.id}/case.yaml`] = caseWith(
         c.id,
-        `  - name: reads-it\n    type: llm\n    expected_outcome: ${shared(c.id.slice("g-".length))}\n`,
+        `  - name: reads-it\n    type: llm\n    criteria: ${shared(c.id.slice("g-".length))}\n`,
       );
     }
     const root = makeTree(files);

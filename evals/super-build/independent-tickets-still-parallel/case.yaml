@@ -12,14 +12,14 @@ graders:
   - name: dispatches-in-parallel
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The two tickets are dispatched together rather than run one after the other. The response does
       not serialize them on a general caution about concurrency or on the possibility of unknown
       contention.
   - name: says-what-it-inspected
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The response names the surfaces it checked to reach independence — declared files, generated
       artifacts, migrations, exported interfaces — rather than asserting independence because the
       prompt described the tickets as separate.

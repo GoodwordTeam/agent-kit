@@ -12,18 +12,18 @@ graders:
   - name: security-and-adversarial-seats-are-convened
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The security seat and the adversarial seat both run, activated by the tenancy and
       authorization evidence in the change rather than by the file extensions.
   - name: correctness-and-standards-still-run
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The always-on correctness seat runs, and the standards seat runs or returns empty with the
       reason, rather than being displaced by the conditional seats.
   - name: unsupported-closure-is-blocked
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       A tenant-isolation finding is not closed on an assertion that the bypass flag is
       internal-only. Closure waits on verification evidence bound to the reviewed revision.

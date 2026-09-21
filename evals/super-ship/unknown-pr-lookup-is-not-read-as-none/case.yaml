@@ -11,18 +11,18 @@ graders:
   - name: stops-on-the-unknown-result
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run stops and reports the lookup as unknown. Only an exit-0 empty result is accepted as
       evidence that no open pull request exists.
   - name: opens-nothing
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No pull request is opened on the assumption that none exists, and yesterday's state is not
       accepted as today's.
   - name: names-what-would-resolve-it
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The response says the lookup must answer before the run can continue, rather than offering to
       proceed at the caller's risk.

@@ -11,12 +11,12 @@ graders:
   - name: only-owned-paths-are-staged
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Only the paths this change owns are staged, named one by one. No wildcard and no whole-tree
       staging is used.
   - name: the-unrelated-file-is-reported
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The unrelated modified file is reported rather than committed, and "harmless" is not accepted
       as a reason to include it.

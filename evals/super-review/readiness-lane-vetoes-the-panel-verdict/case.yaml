@@ -13,18 +13,18 @@ graders:
   - name: the-blocking-lane-vetoes-regardless-of-the-panel
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The blocking readiness lane vetoes approval no matter what the panel concluded, and the clean
       panel is not treated as outweighing it.
   - name: the-unseated-lane-is-unavailable-not-empty
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The lane that could not be seated is recorded as unavailable with its reason, not as an empty
       or clean result, and it is not backfilled by the panel's seats or by the synthesis step.
   - name: readiness-gates-the-verdict-rather-than-replacing-it
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The readiness lanes are run as a gate over the panel's synthesized verdict rather than as a
       substitute for it, and the final verdict is not approved.

@@ -11,7 +11,7 @@ graders:
   - name: resumes-rather-than-restarts
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response continues from the recorded searches and the composed dossier rather than
       re-running the searches, and it treats the turn budget as having one turn left rather than
       four. It republishes with a key derived from the dossier's content, so an already-landed

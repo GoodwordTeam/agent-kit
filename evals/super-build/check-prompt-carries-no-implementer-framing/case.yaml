@@ -13,20 +13,20 @@ graders:
   - name: prompts-carry-no-expectation
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Neither seat's prompt repeats the implementer's claims about the null-session case or the
       allocation, and neither tells the seat what it is expected to find or not find. The response
       states why: a prompt that says what to expect tells the seat where to stop looking.
   - name: hands-over-the-diff-and-the-verbatim-constraints
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Each seat receives the diff as a file and the ticket's constraints copied verbatim from the
       ticket, rather than a summary of the change written by the run or by the implementer.
   - name: concerns-are-handled-not-forwarded
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Concerns in the report about correctness or scope are addressed before the check runs, or
       recorded as observations. They are not passed to the seats as framing and not silently
       dropped.

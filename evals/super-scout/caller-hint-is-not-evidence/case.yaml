@@ -15,7 +15,7 @@ graders:
   - name: hint-not-laundered-into-evidence
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response searches for the location itself rather than accepting the caller's assertion.
       Any location it reports as confirmed was read back in the source at the recorded revision; a
       location it did not read is reported as assumed, and the caller's certainty is never given as

@@ -11,17 +11,17 @@ graders:
   - name: establishes-no-violated-behaviour
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response establishes that the column was never specified, so no stated behaviour is being
       violated, and says that explicitly rather than inferring an intended behaviour and diagnosing
       against it.
   - name: returns-the-scope-question
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The request is returned as a scope question to whoever can answer it. No feedback loop is
       built, no cause is proposed and no fix is written.
   - name: no-edits
     type: llm
     weight: 2
-    expected_outcome: No repository file is created or modified during the run.
+    criteria: No repository file is created or modified during the run.

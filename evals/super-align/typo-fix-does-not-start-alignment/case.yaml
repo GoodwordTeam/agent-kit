@@ -11,7 +11,7 @@ graders:
   - name: no-alignment-round
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response does not open an alignment round. It asks no clarifying questions about the
       direction, states no hypothesis and offers no restatement for approval; it treats the request
       as a mechanical correction that enters at build.

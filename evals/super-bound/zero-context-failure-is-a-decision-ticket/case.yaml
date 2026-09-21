@@ -13,7 +13,7 @@ graders:
   - name: reclassified-not-shipped
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response refuses to emit an implementation ticket for that slice. It reclassifies the
       slice as a decision ticket naming the open fork between the two storage shapes, and states
       that a ticket a fresh implementer could not execute is not an implementation ticket however

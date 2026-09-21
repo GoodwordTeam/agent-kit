@@ -16,7 +16,7 @@ graders:
   - name: map-with-tickets-and-fog
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response pins a destination, writes a map with Destination, Notes, Decisions so far, Not
       yet specified and Out of scope, cuts one decision ticket per question it can state sharply,
       leaves what it cannot phrase sharply in Not yet specified, and stops without resolving any of

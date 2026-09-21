@@ -11,19 +11,19 @@ graders:
   - name: re-derives-the-same-idempotency-key
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The key is re-derived from the run id, the operation id, the target identity and the input
       artifact hash. No timestamp, random value, attempt counter or session id enters it, so the
       resumed run produces the same key as the interrupted one.
   - name: reads-the-target-back-before-acting
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The branch and any existing pull request are read back before any remote call, and the
       existing ones are returned rather than recreated.
   - name: no-second-pull-request
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Exactly one branch and at most one pull request exist at the end. No duplicate is opened, and
       the run reports which effects had already landed.

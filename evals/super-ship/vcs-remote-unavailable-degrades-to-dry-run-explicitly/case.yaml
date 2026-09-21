@@ -11,17 +11,17 @@ graders:
   - name: names-the-missing-capability
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response names the remote version-control capability as missing rather than reporting an
       opaque failure.
   - name: produces-the-payload
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The payload and the pre-flight record are produced as they would be in dry-run.
   - name: does-not-report-it-as-published
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run states plainly that it did not publish. Nothing in the report reads as though the
       branch or pull request exists remotely.

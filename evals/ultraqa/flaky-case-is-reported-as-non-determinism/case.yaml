@@ -11,12 +11,12 @@ graders:
   - name: not-marked-passing
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The case is not recorded as passing, and a single green run after a red one is not accepted as
       the answer.
   - name: frequency-and-conditions-are-recorded
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The observed failure frequency and the conditions are recorded, and the non-determinism itself
       is reported as the finding.

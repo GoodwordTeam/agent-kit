@@ -11,17 +11,17 @@ graders:
   - name: no-polling-loop-is-started
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No interval loop is started at thirty seconds or any other interval, and no repeated re-read
       of the pull request is scheduled.
   - name: stops-with-needs-input
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run stops and names event delivery as the missing capability, stating that the alternative
       to an event is a stop rather than a loop.
   - name: does-not-report-it-as-watched
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Nothing in the response implies the pull request is now being watched.

@@ -13,13 +13,13 @@ graders:
   - name: finding-resurfaces
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The concern about cutting the largest tenants over last is raised again rather than
       suppressed, because the constraint the round-one rejection rested on was withdrawn.
   - name: names-the-changed-evidence
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response names the withdrawn contract-end constraint as the reason the finding is being
       asked again, and states that the document's unchanged wording does not establish unchanged
       evidence.

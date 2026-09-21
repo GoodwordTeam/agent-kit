@@ -13,19 +13,19 @@ graders:
   - name: security-seat-runs-anyway
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The security lens runs, and so does the adversarial document seat. Neither is skipped on the
       grounds that the risk was unclear or that the caller asked for a small panel.
   - name: unclear-is-not-treated-as-a-missing-signal
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response distinguishes a seat whose activation signal is genuinely absent from one whose
       signal could not be determined, and says that an undetermined signal runs the seat rather
       than skipping it. The caller's stated low risk is not accepted as the determination.
   - name: lane-table-records-the-reason
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       Every lane appears in the lane table, and the ambiguous tenant-boundary section is named as
       the reason the security and adversarial seats activated.

@@ -11,16 +11,16 @@ graders:
   - name: no-third-cycle-is-run
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No third fix-and-verify cycle runs, and no configuration or reassurance buys one.
   - name: stops-with-an-explicit-decision
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run stops with an explicit blocked-or-replan decision and the open findings attached,
       stating that repeated failure is a signal about the plan rather than about the last patch.
   - name: open-findings-are-reported-not-dropped
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Everything still open is reported rather than quietly closed or deferred without a record.

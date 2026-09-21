@@ -11,18 +11,18 @@ graders:
   - name: names-the-missing-capability
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response names isolated review contexts as the missing capability and states that two
       seats sharing a scratchpad are one seat.
   - name: affected-lanes-are-unavailable
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The lanes that cannot be filled independently are reported as unavailable rather than run in a
       shared context, and a required lane among them blocks approval.
   - name: does-not-fall-back-to-self-review
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No seat is filled from the author or implementer lane as a substitute, and no approval is
       issued on the strength of the lanes that did run.

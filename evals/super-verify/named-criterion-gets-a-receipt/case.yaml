@@ -11,13 +11,13 @@ graders:
   - name: discovers-the-projects-own-command
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run finds the command this repository actually uses for its tests rather than assuming an
       ecosystem default, and says where it found it.
   - name: receipt-carries-all-five-fields
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The result records the command as executed, its exit status, a digest of the relevant output,
       the revision verified and the environment identity, and names AC-2 as the criterion the
       receipt supports.
@@ -25,4 +25,3 @@ graders:
     type: tool_used
     tool: Bash
     weight: 2
-    expected_outcome: The verification command was actually executed during the run, not described.

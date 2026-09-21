@@ -12,6 +12,6 @@ graders:
   - name: no-map-drawn
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       No map is written and no ticket is cut. The response reports that charting surfaced no fog,
       names the absence of open decisions as the reason, and asks how the human wants to proceed.

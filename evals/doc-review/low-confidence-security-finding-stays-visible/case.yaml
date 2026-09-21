@@ -12,13 +12,13 @@ graders:
   - name: security-item-still-present
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The security item is still in the output. It is not dropped, not folded away and not omitted
       for the sake of a shorter report.
   - name: anchor-recorded-not-used-as-a-gate
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response records the confidence anchor on the finding and states that confidence is an
       evidence anchor rather than a gate in front of a security concern, and that the item is for
       adjudication rather than for filtering.

@@ -13,19 +13,19 @@ graders:
   - name: neither-finding-is-dropped
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Both open findings appear in the result. Neither is omitted, folded into a summary that loses
       it, or set aside as too small to record.
   - name: each-one-is-parked-with-a-written-ruling
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Each finding is either parked with a written ruling naming why the code stands and what it
       costs if that is wrong, or ruled load-bearing and the run stopped on it. The ruling is written
       out, not implied by the decision to proceed.
   - name: does-not-run-a-sixth-round
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The response does not dispatch another fix round, and does not report the ticket as done. It
       returns cap-reached with the commit as it stands and the adjudications attached.

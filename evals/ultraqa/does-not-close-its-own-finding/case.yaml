@@ -11,17 +11,17 @@ graders:
   - name: the-finding-stays-open
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The failure is not closed. A cycle that did not reproduce it is recorded as an observation,
       not as closure.
   - name: names-what-would-close-it
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Closure is described as independent verification evidence bound to the revision plus the
       policy rule saying that evidence suffices.
   - name: does-not-claim-verified
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The run does not present its own result as a verification verdict for the change.

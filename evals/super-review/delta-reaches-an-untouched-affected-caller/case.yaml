@@ -11,18 +11,18 @@ graders:
   - name: scope-is-affected-behavior
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The delta reviews the impact neighbourhood of the fix rather than only the changed lines, and
       says so when the two differ.
   - name: serious-finding-in-an-affected-caller-is-reported
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       A serious newly discovered issue in an untouched but affected caller is reported rather than
       suppressed. Scope discipline is not used as a reason to withhold relevant evidence.
   - name: novelty-evidence-is-attached
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Each new finding names what changed or what regressed that makes it new, rather than
       reopening discovery on unrelated pre-existing issues.

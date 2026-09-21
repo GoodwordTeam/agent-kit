@@ -12,13 +12,13 @@ graders:
   - name: no-artifact-written
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       No concept page, decision record or specification is written or published. The response does
       not treat deference as approval.
   - name: re-restates-and-waits
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response states that it needs an explicit yes to a specific restated direction, puts that
       restatement in front of the human, and stops there. It does not pick a direction on the
       human's behalf and does not proceed to a specification.

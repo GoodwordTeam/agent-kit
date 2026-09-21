@@ -11,18 +11,18 @@ graders:
   - name: routes-to-diagnosis-first
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The failure goes to diagnosis before anything is changed, rather than into an improvised edit
       made while reading the log.
   - name: one-bounded-attempt-is-recorded
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       A single repair attempt is recorded with the failing check, what changed, the outcome, and its
       number against the cap of three.
   - name: the-check-is-re-run
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The check is re-run and its result recorded. The repair is not declared successful on the
       strength of the edit alone.

@@ -11,13 +11,13 @@ graders:
   - name: republishes-under-the-same-key
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The republish uses an idempotency key derived from the receipt set's content hash and the
       returned record reference is read back, so an already-landed publish returns the existing
       record rather than creating a second one.
   - name: does-not-re-run-recorded-checks
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Checks whose receipts are already recorded for this revision are not re-executed merely to
       confirm them, and no receipt is regenerated with a new digest for the same run.

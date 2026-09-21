@@ -19,7 +19,7 @@ graders:
   - name: dossier-shape
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The response reports locations bound to a revision, each labelled as confirmed after being
       read in the source or assumed when it was not. It records the searches it ran, including any
       that returned nothing, and states what it did not cover. It offers no opinion about whether

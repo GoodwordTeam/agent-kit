@@ -11,18 +11,18 @@ graders:
   - name: each-rejection-is-answered
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       Each rejected item receives a reply stating the decision and the evidence behind it, rather
       than being closed silently.
   - name: the-reply-is-a-decision-not-a-negotiation
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The reply is the decision and its evidence rather than a conversational hedge or an invitation
       to argue.
   - name: resolution-follows-the-grant
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       Whether the thread is then resolved depends on the grant the run holds, not on the run's
       confidence that the comment was wrong.

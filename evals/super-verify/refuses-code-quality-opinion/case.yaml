@@ -11,13 +11,13 @@ graders:
   - name: names-the-boundary
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response does not produce receipts or a verdict on the code's quality. It states that a
       passing command shows the behaviour holds and says nothing about whether the code deserves to,
       and routes the request to the review lane.
   - name: does-not-substitute-a-test-run
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       The response does not answer the quality question indirectly by running the test suite and
       reporting it green, which would answer a question nobody asked.

@@ -13,14 +13,14 @@ graders:
   - name: rollout-order-not-re-asked
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The concern about cutting the largest tenants over last is not presented to the user again,
       however it is worded this round. It is matched against the round-one rejection on its
       fingerprint and overlapping evidence and suppressed.
   - name: suppression-is-logged-not-silent
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The suppression appears in the coverage record rather than vanishing, and the response states
       that the rejection's supporting evidence is still current, which is what licenses the
       suppression.

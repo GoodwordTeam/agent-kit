@@ -15,7 +15,7 @@ graders:
   - name: asks-before-building
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response opens an alignment round: it names what it does not yet know about the request
       and asks about it, and it states a hypothesis with its confidence rather than a plan. It does
       not produce a specification, a ticket breakdown or code, and it does not treat the request as

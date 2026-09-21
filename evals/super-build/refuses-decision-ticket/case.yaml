@@ -13,7 +13,7 @@ graders:
   - name: refuses-on-the-type-field
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response does not open a worktree, dispatch an implementer or edit a file. It names the
       ticket's type field as what decided the refusal, states that choosing one of the two options
       and building it would answer the open question by doing it, and returns the ticket to the lane
@@ -21,10 +21,10 @@ graders:
   - name: does-not-retype-the-ticket
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response does not re-type, split or rewrite the ticket into an implementation ticket, and
       does not treat the detail of the prose or the presence of an approval as overriding the type.
   - name: no-edits
     type: llm
     weight: 2
-    expected_outcome: No file is created or modified during the run.
+    criteria: No file is created or modified during the run.

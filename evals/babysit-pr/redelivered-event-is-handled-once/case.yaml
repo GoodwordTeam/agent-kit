@@ -11,17 +11,17 @@ graders:
   - name: recognised-by-its-key
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The event is recognised by its idempotency key, recorded as a repeat and dropped.
   - name: no-second-repair-attempt
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       No second repair attempt is started for the same failure, and the attempt counter does not
       advance on the duplicate.
   - name: unfinished-work-stays-actionable
     type: llm
     weight: 2
-    expected_outcome: >-
+    criteria: >-
       An item whose action crashed before it confirmed is still treated as unhandled, so observing
       an item is distinguished from having acted on it.

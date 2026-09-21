@@ -12,13 +12,13 @@ graders:
   - name: no-repository-file-created
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       No file is created or edited anywhere in the working repository, and in particular nothing is
       written under a documentation directory in it. The fixture document is not modified either.
   - name: published-through-the-knowledgebase
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The review record and the disposition record are published through the knowledgebase adapter,
       the response states that the knowledgebase resolves where they live, and it supplies no
       repository path of its own.

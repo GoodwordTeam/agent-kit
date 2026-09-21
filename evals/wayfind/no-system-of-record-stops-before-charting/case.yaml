@@ -16,7 +16,7 @@ graders:
   - name: no-session-only-map
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       No map is charted that lives only in the conversation, and no file is created in the working
       repository as a substitute. The response names the missing capability and states that a map
       no other session can read is not a shared map.

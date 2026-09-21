@@ -13,18 +13,18 @@ graders:
   - name: refuses-and-names-the-field
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response refuses to accept the finding as an implementation ticket and names the grading
       that decided it — the smell spec quality, the null difficulty, or both. It states that a
       difficulty without a solution class is not a specification.
   - name: does-not-invent-the-specification
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The response does not infer a change, propose acceptance criteria of its own, or re-grade the
       finding so that it becomes executable. It returns the finding for sharpening, diagnosis or
       escalation, and names which.
   - name: no-edits
     type: llm
     weight: 2
-    expected_outcome: No file is created or modified during the run.
+    criteria: No file is created or modified during the run.

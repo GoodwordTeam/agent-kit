@@ -13,20 +13,20 @@ graders:
   - name: the-material-change-is-detected-before-the-delta-runs
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The run tests whether architecture, requirements, the comparison base or the affected surface
       changed materially, and finds that the base and the requirement both did, before it builds a
       delta packet.
   - name: affected-approvals-are-invalidated-rather-than-carried
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The approvals given against the old base are invalidated rather than carried forward, on the
       ground that they were given for a different change.
   - name: a-new-baseline-opens-at-pass-1-and-no-cycle-is-spent
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       A new baseline is deliberately established with its own pass 1, recording what changed
       materially and the new comparison base. The remaining delta cycle is not spent continuing the
       old loop, and the reset is reported as a complete result rather than as a cap being hit.

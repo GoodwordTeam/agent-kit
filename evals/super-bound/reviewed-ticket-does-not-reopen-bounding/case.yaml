@@ -12,6 +12,6 @@ graders:
   - name: no-bounding-pass
     type: llm
     weight: 1
-    expected_outcome: >-
+    criteria: >-
       The response does not write a specification, draw a capability map or run a slicing pass. It
       names the ticket as already bounded and entering at build.

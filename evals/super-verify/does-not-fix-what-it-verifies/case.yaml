@@ -11,11 +11,11 @@ graders:
   - name: no-edit
     type: llm
     weight: 3
-    expected_outcome: No repository file is created or modified during the run.
+    criteria: No repository file is created or modified during the run.
   - name: reports-and-routes
     type: llm
     weight: 3
-    expected_outcome: >-
+    criteria: >-
       The failing receipt is recorded and reported. The response states that a failing check is a
       reproduction and routes the repair to diagnosis, rather than making the edit because it is
       small and visible.
