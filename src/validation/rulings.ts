@@ -50,6 +50,12 @@ const CITATIONS_CHECK = "ruling citations";
 
 export const RULINGS_FILE = "policies/resolved-conflicts.yaml";
 
+/** The vocabulary source for `discharged_in`. Read, never restated -- see `skillSections`. */
+const COMMON_SCHEMA = "schemas/common.schema.json";
+
+/** The check that reads each row's `discharged_in` against that vocabulary. */
+const DISCHARGE_CHECK = "discharged_in vocabulary";
+
 /** The numbered release scenarios in plan §10. */
 export const RELEASE_SCENARIO_COUNT = 24;
 
@@ -74,6 +80,13 @@ export interface RulingRow {
   /** The `ruling:` prose itself. The restatement scan measures bodies against it. */
   readonly text: string;
   readonly scenario: number | null;
+  /**
+   * The SKILL.md section a bound skill discharges this row in, or `null` when the
+   * row declared none or declared one outside the vocabulary. Independently
+   * derived from the row's prose, so a disagreement with where the bodies
+   * actually cite the row is a finding and not a tautology.
+   */
+  readonly dischargedIn: string | null;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -114,6 +127,33 @@ export function citedRulingsInYaml(text: string): string[] {
   };
   visit(parsed);
   return out;
+}
+
+/**
+ * The closed set of SKILL.MD sections, from
+ * `schemas/common.schema.json#/$defs/skill_section`.
+ *
+ * Read out of the schema rather than spelled again here. A second copy would be
+ * the one that decided: the enum could gain a value and this file would keep
+ * rejecting it, with nothing to say the two had parted. `DOCUMENT_FILE` in
+ * provenance.ts is the same shape for the same reason.
+ *
+ * `null` means the vocabulary could not be read at all, which is reported once
+ * as an unavailable check rather than as nineteen passing rows.
+ */
+function skillSections(root: string): Set<string> | null {
+  const text = readTextIfPresent(join(root, COMMON_SCHEMA));
+  if (text === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const def = record(record(record(parsed)["$defs"])["skill_section"]);
+  const values = Array.isArray(def["enum"]) ? def["enum"] : [];
+  const out = new Set(values.filter((v): v is string => typeof v === "string"));
+  return out.size === 0 ? null : out;
 }
 
 export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[]; present: boolean } {
@@ -174,6 +214,21 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
   const seen = new Set<string>();
 
   const conflicts = Array.isArray(doc["conflicts"]) ? doc["conflicts"] : [];
+
+  // The rows are all here; what may be missing is the vocabulary they are measured
+  // against. That blocks rather than skips, and it is said once instead of per row.
+  const sections = skillSections(root);
+  if (sections === null && conflicts.length > 0) {
+    issues.push(
+      unavailable(
+        "rulings.discharge-vocabulary-unavailable",
+        COMMON_SCHEMA,
+        DISCHARGE_CHECK,
+        `${COMMON_SCHEMA} declares no readable $defs/skill_section enum, so no row's discharged_in was checked against one. The ${conflicts.length} rows are still in ${RULINGS_FILE}; what is missing is the vocabulary that says which values are legal.`,
+      ),
+    );
+  }
+
   for (const [i, entry] of conflicts.entries()) {
     const row = record(entry);
     const id = typeof row["id"] === "string" ? row["id"] : null;
@@ -227,7 +282,41 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
 
     const text = typeof row["ruling"] === "string" ? row["ruling"] : "";
 
-    rows.push({ id, binds, universal, text, scenario });
+    // `discharged_in` names the SKILL.md section a bound skill discharges this row
+    // in. It is required, and a missing value is an error rather than a default,
+    // because the field is only worth having as a statement derived independently
+    // of where the bodies cite the row. A value supplied on a row's behalf -- by a
+    // default here, or by reading the tree -- would agree with the tree by
+    // construction and could never disagree with it, which is the one thing it is
+    // for. The vocabulary is read from the schema, so adding a section there is the
+    // only edit needed to admit one.
+    const dischargedValue = row["discharged_in"];
+    let dischargedIn: string | null = null;
+    if (sections !== null) {
+      if (typeof dischargedValue !== "string" || dischargedValue.trim().length === 0) {
+        issues.push(
+          error(
+            "rulings.missing-discharged-in",
+            RULINGS_FILE,
+            `${id} declares no discharged_in. Every row names the SKILL.md section a bound skill discharges it in, from ${[...sections].join(", ")} (${COMMON_SCHEMA}#/$defs/skill_section). Derive it from this row's own tension and ruling text, not from where the bodies cite it.`,
+          ),
+        );
+      } else if (!sections.has(dischargedValue.trim())) {
+        issues.push(
+          error(
+            "rulings.unknown-discharged-in",
+            RULINGS_FILE,
+            `${id} declares discharged_in: ${dischargedValue.trim()}, which is not one of ${[...sections].join(", ")} (${COMMON_SCHEMA}#/$defs/skill_section).`,
+          ),
+        );
+      } else {
+        dischargedIn = dischargedValue.trim();
+      }
+    } else if (typeof dischargedValue === "string" && dischargedValue.trim().length > 0) {
+      dischargedIn = dischargedValue.trim();
+    }
+
+    rows.push({ id, binds, universal, text, scenario, dischargedIn });
   }
 
   const declared = doc["rows"];

@@ -269,6 +269,11 @@
         "artifact-write"
       ]
     },
+    "skill_section": {
+      "description": "The SKILL.md section an obligation is discharged in. hard-gates: a condition under which the skill refuses to continue and says so -- a rule that changes what the skill does next is not a gate, a gate is the absence of a next. authority: who may invoke, approve or grant. limits: a bound on a count, size, round or budget. not-for: a case the skill declines to handle at all. workflow: an ordering or a step obligation. outputs: a constraint on what the skill emits or records. The enum is statable here; what is not is the requirement that every row of policies/resolved-conflicts.yaml declare one, because that file is not a schema target. src/validation/rulings.ts reads this enum and enforces it there.",
+      "enum": ["hard-gates", "authority", "limits", "not-for", "workflow", "outputs"],
+      "x-validator-rule": "common.ruling-declares-a-discharging-skill-section"
+    },
     "side_effect": {
       "description": "Closed side-effect vocabulary. Remote effects (remote-push, pr-open, pr-comment, pr-thread-resolve, kb-publish, tracker-write) require an idempotency key plus read-back.",
       "enum": [

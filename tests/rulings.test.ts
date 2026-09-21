@@ -22,8 +22,14 @@ function rulings(rows: string): string {
   return `schema_version: 1\npolicy: resolved-conflicts\nrows: ${rows.split("- id:").length - 1}\n\nconflicts:\n${rows}`;
 }
 
-const ROW = (id: string, binds = "", scenario = 3) =>
-  `  - id: ${id}\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n${binds}    scenario: ${scenario}\n    coverage: direct\n`;
+const ROW = (id: string, binds = "", scenario = 3, discharged = "workflow") =>
+  `  - id: ${id}\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n    discharged_in: ${discharged}\n${binds}    scenario: ${scenario}\n    coverage: direct\n`;
+
+/** The vocabulary source. Only the one `$defs` entry the discharge check reads. */
+const COMMON = (values: string[]) =>
+  JSON.stringify({ $defs: { skill_section: { enum: values } } }, null, 2);
+
+const SECTIONS = ["hard-gates", "authority", "limits", "not-for", "workflow", "outputs"];
 
 function ctxFor(files: Record<string, string>) {
   const root = makeTree({ "catalog.yaml": CATALOG_HEAD, ...files });
@@ -121,6 +127,70 @@ describe("the policy file is the authority for ids", () => {
     const { rows } = loadRulings(ctx.root);
     expect(rows.map((r) => r.id)).toEqual(["reconciled-row"]);
     expect(checkRulings(ctx).filter((i) => i.message.toLowerCase().includes("override"))).toEqual([]);
+  });
+});
+
+describe("discharged_in names where a ruling lands, and is required", () => {
+  const load = (rows: string, common: string | null) => {
+    const files: Record<string, string> = { "catalog.yaml": CATALOG_HEAD, [RULINGS_FILE]: rulings(rows) };
+    if (common !== null) files["schemas/common.schema.json"] = common;
+    return loadRulings(makeTree(files));
+  };
+
+  test("a legal value passes and reaches the loaded row", () => {
+    const { rows, issues } = load(ROW("a-thing", "", 3, "hard-gates"), COMMON(SECTIONS));
+    expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+    expect(rows[0]?.dischargedIn).toBe("hard-gates");
+  });
+
+  test("a value outside the vocabulary is an error naming the value and the legal set", () => {
+    const { issues } = load(ROW("a-thing", "", 3, "hardgates"), COMMON(SECTIONS));
+    const found = issues.filter((i) => i.rule === "rulings.unknown-discharged-in");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.severity).toBe("error");
+    expect(found[0]?.message).toContain("hardgates");
+    expect(found[0]?.message).toContain("not-for");
+  });
+
+  // The point of the field is that it is derived from the row's prose rather than
+  // from where the bodies cite it. A default supplied here would agree with the
+  // tree by construction and could never disagree with it, so an absent value has
+  // to be a failure rather than a value this file picks.
+  test("no value at all is an error, not a default", () => {
+    const bare = `  - id: a-thing\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n    scenario: 3\n    coverage: direct\n`;
+    const { rows, issues } = load(bare, COMMON(SECTIONS));
+    const found = issues.filter((i) => i.rule === "rulings.missing-discharged-in");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.severity).toBe("error");
+    expect(rows[0]?.dischargedIn).toBeNull();
+  });
+
+  // The vocabulary is read out of the schema, not spelled again in the validator.
+  // A section added to the enum is admitted with no change here; if this test ever
+  // needs the validator edited to pass, the two copies have parted.
+  test("the vocabulary comes from the schema, so a value added there is admitted", () => {
+    const withExtra = load(ROW("a-thing", "", 3, "observability"), COMMON([...SECTIONS, "observability"]));
+    expect(withExtra.issues.filter((i) => i.severity === "error")).toEqual([]);
+    expect(withExtra.rows[0]?.dischargedIn).toBe("observability");
+
+    const without = load(ROW("a-thing", "", 3, "observability"), COMMON(SECTIONS));
+    expect(without.issues.filter((i) => i.rule === "rulings.unknown-discharged-in")).toHaveLength(1);
+  });
+
+  // The rows are all present; what is missing is the vocabulary they are measured
+  // against. That blocks, and it is said once rather than passing every row.
+  test("an unreadable vocabulary is a blocking unavailable, not nineteen silent passes", () => {
+    const { issues } = load(ROW("a-thing") + ROW("b-thing"), null);
+    const found = issues.filter((i) => i.rule === "rulings.discharge-vocabulary-unavailable");
+    expect(found).toHaveLength(1);
+    expect(hasBlockingSkips(issues)).toBe(true);
+    expect(issues.filter((i) => i.rule === "rulings.missing-discharged-in")).toEqual([]);
+  });
+
+  test("an empty enum reads as no vocabulary rather than as a vocabulary of nothing", () => {
+    const { issues } = load(ROW("a-thing"), COMMON([]));
+    expect(issues.filter((i) => i.rule === "rulings.discharge-vocabulary-unavailable")).toHaveLength(1);
+    expect(issues.filter((i) => i.rule === "rulings.unknown-discharged-in")).toEqual([]);
   });
 });
 

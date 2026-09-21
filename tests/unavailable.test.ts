@@ -230,6 +230,11 @@ describe("every skip in the validator is classified, so a new one cannot default
     // checked. The row checks at the same seam stay out of this table: their
     // subject is the rows, and with no rows there is nothing unexamined.
     "rulings.citations-unavailable": ["unavailable"],
+    // `unavailable` and not `skipped` for the same reason as the line above: the
+    // subject is present -- all nineteen rows are in the policy -- and what is
+    // missing is the vocabulary they are measured against. A row check whose
+    // subject had gone missing would stay out of this table entirely.
+    "rulings.discharge-vocabulary-unavailable": ["unavailable"],
     // Both, and which one depends on whether any open entry went unexamined.
     "defects.contract-unreadable": ["skipped", "unavailable"],
   };
