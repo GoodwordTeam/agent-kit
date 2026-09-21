@@ -1,0 +1,61 @@
+#!/bin/sh
+# Refuse to publish main through a ref that can move between measuring and pushing.
+#
+# WHY THIS EXISTS, NOT WHAT IT DOES
+# ---------------------------------
+# Five lanes commit into one working tree. `git push origin main` publishes whatever
+# the branch points at when it runs, and `git push origin HEAD:main` publishes whatever
+# HEAD resolves to when it runs -- in both cases the set is computed after the decision
+# to push, so a lane that commits in the window between your measurement and your push
+# has its work published by you, unreviewed and unasked.
+#
+# This happened three times in one session. It was written down on the standing brief
+# after the first, correctly, including the remedy; the entry did not stop the second or
+# the third. A record is not a control. This file is the control.
+#
+# THE PROPERTY, WHICH IS NOT THE SYNTAX
+# -------------------------------------
+# The left-hand side of the refspec must name a commit that CANNOT MOVE between the
+# revision you measured and the revision you published. `<sha>:main` has that property.
+# `HEAD:main` is an explicit refspec, satisfies every word of "push by explicit refspec",
+# and does not have it, because HEAD is a name that moves for the same reason main does.
+#
+# HOW IT DISCRIMINATES, MEASURED RATHER THAN ASSUMED
+# --------------------------------------------------
+# git feeds pre-push one line per ref as `<local_ref> <local_sha> <remote_ref> <remote_sha>`.
+# Measured on this repository:
+#     git push origin HEAD:main      -> local_ref='HEAD'
+#     git push origin main           -> local_ref='refs/heads/main'
+#     git push origin <sha>:main     -> no line at all; the loop body never runs
+# So the sha form is admitted by the absence of a moving name, not by a pattern match on
+# forty hex characters.
+#
+# KNOWN HOLE, STATED RATHER THAN PAPERED OVER
+# -------------------------------------------
+# `git push origin <tag>:main` arrives as `refs/tags/<tag>` and is admitted. A tag can be
+# moved, so the property does not strictly hold for it. Nothing in this repository pushes
+# main from a tag, and widening the pattern to refuse refs/tags would block the release
+# tagging the plan calls for at v0.1.0. It is a hole and it is here in writing.
+
+refused=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$remote_ref" = "refs/heads/main" ] || continue
+  case "$local_ref" in
+    HEAD|refs/heads/*)
+      printf '%s\n' \
+        "pre-push: refusing to publish main through '$local_ref', which can move." \
+        "" \
+        "  You measured some revision. '$local_ref' resolves at push time, so what goes" \
+        "  out is whatever the tree holds now -- including other lanes' commits landed" \
+        "  since. Right now that is $(git rev-parse --short "$local_sha")." \
+        "" \
+        "  Push the commit you actually validated, by its sha:" \
+        "      git push origin <sha>:main" \
+        "" \
+        "  To see exactly what that publishes, first:" \
+        "      git log --oneline origin/main..<sha>" >&2
+      refused=1
+      ;;
+  esac
+done
+exit $refused
