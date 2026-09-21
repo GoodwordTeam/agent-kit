@@ -2399,6 +2399,48 @@ name, the dedup check keyed on the name, the schema's `required` keyed on the na
 occurrence census counted the name. **A key has a name and an address, and nothing we built reads
 the address.**
 
+**Run rather than reasoned, by sweep-reviewer, three arms on one case with `--scaffold` on an
+extract of `b8aa447`:**
+
+    A  scaffold_script at case root       ak validate: clean   host: clean   1.00, fixture never ran
+    B  context.scaffold_script            ak validate: ERROR   host: reads it
+    C  context.scaffold_script: stage.sh  ak validate: ERROR   host: runs it, marker written, 1.00
+
+**Our schema accepts the address that does nothing and refuses the address that works.** Arm A is
+what `9b12366` ships and what `case.schema.json` still carries at HEAD: no error from `ak validate`,
+no error from the host, a scored run, and the fixture silently absent. Arm B is refused here --
+`(root) must NOT have additional properties {"additionalProperty":"context"}` -- and read by the
+host.
+
+**The property behind it.** The host's root, `execution` and `context` are all open; only the six
+grader variants are `.strict()`. In an open object a misplaced key is not rejected, it is
+**ignored**, and ignoring is byte-identical to correct absence. So this failure leaves no artifact
+either, and it leaves none *for the same reason the closed-schema failure left none* -- which puts
+the address class beside the closed class rather than beside the open one, against the grain of the
+entry below. Name-level instruments cannot reach it by construction, and neither remedy arm can:
+annotation asks whose key it is and gets the right answer, reconciliation asks which host keys we
+fail to name and gets *none*. Both pass a key that is real, correctly attributed, and dead.
+
+**So the only instrument that reads an address is one that observes an effect the key is supposed to
+cause, with a control at the address you were about to use.** Arm A is that control. It cost $0.06.
+That is the positive-control rule with the subject changed: not *could the instrument have
+registered a hit* but *does the thing the key claims to do actually happen*, and there is no way to
+ask that by reading.
+
+**And a second error fell out of the same three runs, which is the sharper half.** `scaffold_script`
+holds a **path to a script file**, not inline bash. The description `9b12366` ships says
+*"Author-supplied bash that stages the workspace"* -- which is what arm B wrote, and at the right
+address it fails `path "..." does not exist`. The receipt attached to that description is
+`claude plugin eval --help` at `claude 2.1.278`, and the line it rests on, *"runs author-supplied
+bash as you"*, is **true of what the script contains and false of what the key holds**.
+
+That receipt is mine in form: *"confirmed against `claude plugin eval --help`... The receipt covers
+the key's existence and its meaning, not its position in a `case.yaml`."* It covered existence. It
+did not cover meaning, and it said it did. **A receipt names a claim, and a true sentence about the
+wrong referent satisfies it exactly as well as a true sentence about the right one** -- so a receipt
+stated one notch broader than what was actually checked makes the unchecked part look checked, and
+here it made two independent errors look confirmed at once.
+
 Nor would the remedy have. The annotation arm asks whether a key is ours or the host's;
 `expected_outcome` is the host's, and annotating it truthfully would have cleared it. The
 reconciling arm asks which of the host's keys the schema fails to name; the schema named this one.
@@ -2594,6 +2636,19 @@ limit. It is that a limit on an instrument is not a limit on the reading -- **sa
 it at**, because that is the sentence that would have read *"enumerated keys, did not read the
 format line."*
 
+**And it is not mine alone, which is what makes it a property of the instrument rather than of the
+reader.** sweep-reviewer read the same `--help` output, with `baseline` on the cost line and the
+second case format in the third line of the first paragraph, and came back with neither -- because
+they were reading it to answer *where does `scaffold_script` live*. Two readers, one output, the
+same two omissions, each scoped to the question they arrived with.
+
+What broke it was not reading more carefully. It was running `claude plugin eval init --bare` --
+**asking the tool to act rather than to describe itself.** The host's blank case cannot omit the
+format, because it has to be *in* some format. So the pair: *say what you pointed it at* converts an
+unfalsifiable limit into a checkable scope statement, and **make the thing produce an instance** is
+what you do when you suspect the scope is the problem. A description answers the question you asked;
+an artifact has to be complete enough to exist.
+
 **Its first application finds three, and none of them is `criteria`.** `claude plugin eval --help`
 at `claude 2.1.278` names three case keys this repository has never mentioned anywhere:
 `scaffold_script` (`--scaffold`, `--no-scaffold`), `runs` (`--runs`, *"default: case.runs ?? 3"*)
@@ -2689,6 +2744,19 @@ rather than reconstructed from a coincidence -- this page's retrofitted-provenan
 against the person who wrote it down, since evidence has to be created by the act and not inferred
 from its side effects.
 
+**The same move at the next level up, and it nearly cost me a commit.** `4756a2e` was mine and
+`ak validate` reported `1 error` on it. The error was not mine: `2cc3a92`, another lane's, had
+landed it two minutes earlier, and I established that only by extracting the parent and running the
+validator there before running it on my own. sweep-reviewer's general form, which is the one to
+keep: **in a tree with concurrent lanes, a gate result is a property of the tree and not of your
+commit, unless you measured the parent too.**
+
+Both are the same error wearing different clothes -- reading a property of a shared object as a
+property of a particular author. A `-S` census over a repository with one git identity attributes by
+proximity; a red gate on a shared branch attributes by whoever ran it. Neither object has an
+author-shaped field, and in both cases the repair is a second measurement taken at a point the other
+lane could not have touched.
+
 What replaces it is stronger than the counterfactual was. The corpus held **50** cases at `7db25a7`
 and **104** at `c9fdcda`, so **54 cases were authored after the schema closed**, across seven
 commits, the last at 10:11 this morning -- about two hours before the host was first pointed at the
@@ -2782,6 +2850,22 @@ able to, and every entry above is a record of that reader failing. Weight an ins
 loudly over a rule that asks for recall, and when an entry here can be turned into a check, the
 entry is not finished until it has been.
 
-The honest limit on this section: it is two data points, one in each direction, over a single day
-and two people. What it establishes is that *"we wrote it down"* is not evidence of anything, which
-is enough to stop treating it as though it were.
+**A third data point, and it is about routing rather than recall.**
+`research/probes/validate-figure.sh` prints nothing and exits 1 when the tree is red. I found it
+today while closing a limit. sweep-reviewer had already found it and filed it earlier the same day,
+and it is unchanged at HEAD -- `set -euo pipefail` at `:139`, the assignment at `:200`, the
+unreachable guard at `:212`, last touched at `4312769`, 09-19 21:23. Two lanes, one open finding,
+rediscovered from scratch.
+
+Their framing, adopted: **a finding that is independently rediscovered while still open is a routing
+failure, not a second discovery.** The second discovery costs what the first cost and adds nothing,
+and what it tells you is that the first report went somewhere that does not act on the thing it was
+about. That is a third failure mode beside the two above -- the rule that was written and forgotten,
+the check that fired unattended, and now the finding that was filed and did not arrive -- and it is
+the only one of the three in which nobody forgot anything.
+
+The honest limit on this section: three data points over a single day and two people -- a rule that
+failed at twenty minutes, a check that caught what no reader did, and a filed finding that was
+rediscovered from scratch. That is not enough to rank the mechanisms against each other. It is
+enough to establish that *"we wrote it down"* is not evidence of anything, which is all this section
+asks anyone to stop doing.
