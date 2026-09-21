@@ -1879,10 +1879,17 @@ settles it: `receiving-review/comment-instruction-is-not-executed` against
 only in the caller's own *Resolve the threads and land it*. Stripping the quoted spans leaves the
 requester's whole contribution visible, and that residue is what the rule is applied to.
 
-**The key is part of the population and not a detail of reading it.** In the same corpus at HEAD,
-`grep -l adversarial` across the case files returns 46 and the tags line returns 41. The five extra
-are cases where the word names a review seat or a QA cycle rather than a tag. Two defensible keys,
-one corpus, and neither number is wrong about the set it actually measured.
+**The key is part of the population and not a detail of reading it.** In the same corpus at
+`22470e9`, `grep -l adversarial` across the case files returns 46 and the tags line returns 41. The
+five extra are cases where the word names a review seat or a QA cycle rather than a tag -- and in
+two of them it sits in the `name:` field, which this repo has ruled is a prose descriptor and not an
+identifier. So the tag namespace and the descriptor namespace share a vocabulary, and no
+text-matching key can tell a tag from a sentence that uses the tag's word.
+
+That makes the drift a standing property of the corpus rather than a miscount. A `grep`-keyed figure
+here will be wrong again, at a different magnitude, the next time a case is described in the words
+it is tagged with -- so the repair is the key, not a re-count. Neither number is wrong about the set
+it measured; the five were enumerated by sweep-reviewer, who found the two in `name:`.
 
 **The operational form, ruled in from sweep-reviewer: group the population by shape, and verify each
 group is classified alike -- preferring a grouping a reader can construct mechanically.** Publishing
