@@ -132,16 +132,78 @@ export function scenarioTags(caseDoc: Record<string, unknown>): ScenarioTags {
   return { covered, rejected, noncanonical };
 }
 
+/** One group of cases that assert the same decisive text. */
+interface TextGroup {
+  readonly field: string;
+  readonly text: string;
+  readonly paths: Set<string>;
+}
+
+/** One group of cases carrying the same case directory name and grader name. */
+interface NameGroup {
+  readonly caseId: string;
+  readonly grader: string;
+  readonly paths: Set<string>;
+}
+
 /** What the coverage note counted, so it can say so. */
 interface Coverage {
   readonly scenarios: Set<number>;
   cases: number;
-  /** An `llm` grader's expected outcome -> the case paths asserting it. See `decisiveText`. */
-  readonly byExpectation: Map<string, Set<string>>;
+  /** A decisive field and its normalized text -> the cases asserting it. See `graderKeys`. */
+  readonly byDecisiveText: Map<string, TextGroup>;
+  /** A case directory name and a grader name -> the cases carrying both. See the second key below. */
+  readonly byNames: Map<string, NameGroup>;
+}
+
+/** What decides a grader, and whether that field is text somebody writes per case. */
+interface DecisiveField {
+  readonly field: string;
+  readonly free: boolean;
 }
 
 /**
- * The decisive text of each `llm` grader in a case, normalized for whitespace.
+ * The field each grader type is decided by.
+ *
+ * AUTHORING.md §9 lists five grader types and documents the field of three:
+ * `tool` for `tool_used`, `pattern` for `regex`, `expected_outcome` for `llm`.
+ * `schemas/case.schema.json` says the same in its own words and leaves the
+ * grader object open for it -- "what `file_exists` and `tool_order` take is
+ * written down nowhere in this repository". This table records the three that
+ * are written down and refuses the rest.
+ *
+ * Free text is where repetition means something, because somebody typed it for
+ * this case. `tool` is not free text: its vocabulary belongs to the harness,
+ * `tool: Skill` is legitimately the same assertion in every skill that has one,
+ * and grouping on it would report the corpus as a copy of itself -- the shape
+ * that makes a note class unclearable.
+ *
+ * An unrecognized type is refused rather than defaulted, and the two available
+ * defaults are the argument. Read it as free text and a future `tool_order`
+ * grader groups on a sequence of tool names, which is the corpus-reports-itself
+ * failure arriving by another door. Read it as closed and a future free-text
+ * type escapes unexamined, which is the `regex` gap this table was written to
+ * close, pre-installed. Neither is safe to pick on behalf of someone who has
+ * not written the type yet, so whoever introduces it picks, by adding a row.
+ */
+const DECIDED_BY: Readonly<Record<string, DecisiveField>> = {
+  llm: { field: "expected_outcome", free: true },
+  regex: { field: "pattern", free: true },
+  tool_used: { field: "tool", free: false },
+};
+
+/** The two keys a case's graders contribute, and the types neither key can read. */
+interface GraderKeys {
+  /** `[decisive field, normalized value]` for every free-text decisive field. */
+  readonly texts: ReadonlyArray<readonly [string, string]>;
+  /** Every grader name, whatever the type: half of the second key. */
+  readonly names: ReadonlyArray<string>;
+  /** `[grader name, type]` for every type `DECIDED_BY` has no row for. */
+  readonly unclassified: ReadonlyArray<readonly [string, string]>;
+}
+
+/**
+ * The keys a case is grouped by.
  *
  * Not the whole grader set, which was the first thing tried and is the wrong
  * instrument: it reports only where every grader matches, and the corpus's
@@ -149,27 +211,61 @@ interface Coverage {
  * found nothing in 102 cases while passing its own fixtures, which is a check
  * that exists only in its tests.
  *
- * Not `tool_used` or `regex` graders either. Those discriminate through `tool:`
- * and `pattern:`, and `tool_used: Skill` is legitimately the same assertion in
- * every skill that has one; grouping on it would report the whole corpus.
+ * `name` decides nothing on its own -- a rename is the first edit anybody makes
+ * to a copied case -- so it never enters the text key. It enters the second key
+ * only in conjunction with the case directory name, where what is reported is
+ * two matches at once rather than either.
  *
- * `name` never enters. It labels a grader rather than deciding anything, and a
- * rename is the first edit anybody makes to a copied case.
+ * Whitespace normalization is kept and is inert: at `22470e9` the corpus's 256
+ * `llm` graders carry 251 distinct expectations read raw and the same 251 read
+ * normalized, so nothing here has ever depended on it. It stays because the
+ * corpus will not be hand-formatted forever, and an equality that holds today
+ * is not a reason to compare two spellings of one sentence as two sentences.
+ *
+ * An empty value is grouped rather than skipped. The skip that used to be here
+ * was justified on the schema permitting an empty `expected_outcome`; it does
+ * not -- `common.schema.json#/$defs/nonempty_string` requires `minLength: 1`
+ * and a `\S`. So the filter could only ever have acted on a case the schema
+ * check already errors on, and what it bought was two checks disagreeing about
+ * the same string: one calling it an error, the other quietly dropping it from
+ * the population it counts. At `22470e9` no case carries one, so removing it
+ * changes nothing in this corpus and the test is what watches that.
  */
-function decisiveText(doc: Record<string, unknown>): string[] {
+function graderKeys(doc: Record<string, unknown>): GraderKeys {
+  const texts: Array<readonly [string, string]> = [];
+  const names: string[] = [];
+  const unclassified: Array<readonly [string, string]> = [];
   const graders = doc["graders"];
-  if (!Array.isArray(graders)) return [];
-  const out: string[] = [];
+  if (!Array.isArray(graders)) return { texts, names, unclassified };
   for (const g of graders) {
     if (typeof g !== "object" || g === null) continue;
     const grader = g as Record<string, unknown>;
-    if (grader["type"] !== "llm") continue;
-    const expected = grader["expected_outcome"];
-    if (typeof expected !== "string") continue;
-    const normalized = expected.trim().split(/\s+/).join(" ");
-    if (normalized !== "") out.push(normalized);
+    const name = typeof grader["name"] === "string" ? grader["name"] : null;
+    if (name !== null) names.push(name);
+    const type = grader["type"];
+    if (typeof type !== "string") continue; // a grader with no type is the schema check's.
+    const decided = DECIDED_BY[type];
+    if (decided === undefined) {
+      unclassified.push([name ?? "(unnamed)", type] as const);
+      continue;
+    }
+    if (!decided.free) continue;
+    const value = grader[decided.field];
+    if (typeof value !== "string") continue; // a grader missing its field is the schema check's.
+    texts.push([decided.field, value.trim().split(/\s+/).join(" ")] as const);
   }
-  return out;
+  return { texts, names, unclassified };
+}
+
+/** The skill a case path belongs to: `evals/<skill>/<case-id>/case.yaml`. */
+function skillOf(casePath: string): string {
+  return casePath.split("/")[1] ?? casePath;
+}
+
+/** What a group's text reads as in a message, including when there is none. */
+function quoteText(text: string): string {
+  if (text === "") return "an empty string";
+  return `"${text.length > 90 ? `${text.slice(0, 90)}...` : text}"`;
 }
 
 function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue[] {
@@ -259,10 +355,27 @@ function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue
     const doc = readYaml(ctx.root, casePath);
     if (doc === null) continue;
     coverage.cases += 1;
-    for (const expectation of decisiveText(doc)) {
-      const group = coverage.byExpectation.get(expectation);
-      if (group === undefined) coverage.byExpectation.set(expectation, new Set([casePath]));
-      else group.add(casePath);
+    const keys = graderKeys(doc);
+    for (const [field, text] of keys.texts) {
+      const key = `${field}\u0000${text}`;
+      const group = coverage.byDecisiveText.get(key);
+      if (group === undefined) coverage.byDecisiveText.set(key, { field, text, paths: new Set([casePath]) });
+      else group.paths.add(casePath);
+    }
+    for (const grader of keys.names) {
+      const key = `${caseId}\u0000${grader}`;
+      const group = coverage.byNames.get(key);
+      if (group === undefined) coverage.byNames.set(key, { caseId, grader, paths: new Set([casePath]) });
+      else group.paths.add(casePath);
+    }
+    for (const [grader, type] of keys.unclassified) {
+      issues.push(
+        error(
+          "evals.grader-type-unclassified",
+          casePath,
+          `grader \`${grader}\` has type \`${type}\`, which this check has no decisive field for. AUTHORING.md §9 documents the field of three of the five grader types — \`tool\` for \`tool_used\`, \`pattern\` for \`regex\`, \`expected_outcome\` for \`llm\` — and schemas/case.schema.json leaves the grader object open rather than guess the other two. So this check cannot tell whether two graders of this type assert the same thing, and it refuses rather than guess: reading an unknown type as free text would group a sequence of tool names and report the corpus as a copy of itself, and reading it as a closed vocabulary would let a free-text type through unexamined. Add a row to \`DECIDED_BY\` in src/validation/evals.ts naming the field this type is decided by and whether that field is text written per case.`,
+        ),
+      );
     }
     const tags = scenarioTags(doc);
     for (const scenario of tags.covered) coverage.scenarios.add(scenario);
@@ -300,7 +413,12 @@ function checkOneSkill(ctx: CheckContext, id: string, coverage: Coverage): Issue
 export function checkEvals(ctx: CheckContext): Issue[] {
   const issues: Issue[] = [];
   const skillIds = new Set(ctx.catalog.bySection("skills").map((e) => e.id));
-  const coverage: Coverage = { scenarios: new Set<number>(), cases: 0, byExpectation: new Map() };
+  const coverage: Coverage = {
+    scenarios: new Set<number>(),
+    cases: 0,
+    byDecisiveText: new Map(),
+    byNames: new Map(),
+  };
 
   for (const id of [...skillIds].sort()) issues.push(...checkOneSkill(ctx, id, coverage));
 
@@ -333,17 +451,61 @@ export function checkEvals(ctx: CheckContext): Issue[] {
   // so a copy contributes to coverage exactly as an independent case does. The
   // note exists to make the deflation visible next to the count rather than
   // recoverable only by someone who thinks to hash the graders.
-  for (const [expectation, paths] of [...coverage.byExpectation].sort()) {
-    if (paths.size < 2) continue;
-    const sorted = [...paths].sort();
-    const quoted = expectation.length > 90 ? `${expectation.slice(0, 90)}...` : expectation;
+  for (const [, group] of [...coverage.byDecisiveText].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    if (group.paths.size < 2) continue;
+    const sorted = [...group.paths].sort();
     issues.push(
       note(
         "evals.duplicate-graders",
         sorted[0] ?? EVALS_DIR,
-        `${sorted.length} cases assert the same expected outcome — "${quoted}" — in ${sorted.join(
+        `${sorted.length} cases assert the same \`${group.field}\` — ${quoteText(group.text)} — in ${sorted.join(
           ", ",
         )}. Each runs against its own body, so this is ${sorted.length} tests of ${sorted.length} bodies and one test of the sentence, run ${sorted.length} times. That is the right shape for a rule every body must state; it is the wrong thing to read as ${sorted.length} independent tests of a release scenario, and \`evals.uncovered-scenarios\` counts \`tags:\` and cannot tell the two apart. Nothing here needs fixing — the count does.`,
+      ),
+    );
+  }
+
+  // The second key: the same case directory name and the same grader name, in
+  // two different skills. Exact and non-tunable, which is the whole reason it
+  // is a conjunction of two names rather than a similarity score over one text
+  // -- any threshold would get tuned until it reported nothing, and the tuning
+  // would look like calibration.
+  //
+  // It sees what the text key cannot: a copy whose graders were reworded keeps
+  // its directory name and its grader names. It misses what the text key sees:
+  // a copy renamed on the way in. The two are different projections of one
+  // family and neither contains the other, so each note says what the other one
+  // holds rather than leaving a reader to join them.
+  for (const [, group] of [...coverage.byNames].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    const paths = [...group.paths].sort();
+    if (new Set(paths.map(skillOf)).size < 2) continue;
+
+    const related: string[] = [];
+    for (const other of coverage.byDecisiveText.values()) {
+      if (other.paths.size < 2) continue;
+      if (!paths.some((path) => other.paths.has(path))) continue;
+      const extra = [...other.paths].filter((path) => !group.paths.has(path)).sort();
+      const missing = paths.filter((path) => !other.paths.has(path));
+      const also = extra.length === 0 ? "" : ` names ${extra.join(", ")} beside these`;
+      const not = missing.length === 0 ? "" : `${also === "" ? " does" : " and does"} not name ${missing.join(", ")}`;
+      related.push(
+        also === "" && not === ""
+          ? `\`evals.duplicate-graders\` reports these same ${paths.length} cases keyed on \`${other.field}\`, so one family is two notes here.`
+          : `\`evals.duplicate-graders\` reports an overlapping group keyed on \`${other.field}\` that${also}${not} — neither group contains the other, and they are one family.`,
+      );
+    }
+
+    issues.push(
+      note(
+        "evals.duplicate-case-names",
+        paths[0] ?? EVALS_DIR,
+        `${paths.length} cases in different skills carry the same case directory name and the same grader name — \`${
+          group.caseId
+        }\` graded by \`${group.grader}\` — in ${paths.join(
+          ", ",
+        )}. Neither name is evidence alone: directory names repeat because the behavior repeats, and a grader name is a label on a grader rather than a thing it decides. Both matching at once is what a copied case looks like before anyone edits it.${
+          related.length === 0 ? "" : ` ${related.join(" ")}`
+        } Two limits to read the count with: a copy whose directory was renamed on the way in is invisible to this key, and one copied case produces one note per shared grader name, so the number of notes is not the number of copies. Nothing here needs fixing — what needs reading differently is any count that treats these as independent tests.`,
       ),
     );
   }

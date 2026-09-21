@@ -424,3 +424,202 @@ describe("one case copied across skills", () => {
     expect(checkEvals({ root, catalog }).filter((i) => i.rule === "evals.duplicate-graders")).toHaveLength(0);
   });
 });
+
+describe("what decides a grader, and what a shared name decides", () => {
+  const TWO = CATALOG.replace(
+    "    invocation: U\n",
+    "    invocation: U\n  - id: beta\n    status: authored\n    invocation: U\n",
+  );
+
+  /** A case file carrying exactly the graders given. */
+  const caseWith = (name: string, graders: string) =>
+    `schema_version: "1.1"\nname: ${name}\ntags: [scenario-1]\nexecution:\n  prompt: "p"\ngraders:\n${graders}`;
+
+  /** Two skills with the same three case ids, each case written by `body`. */
+  function twoSkills(body: (skill: string, caseId: string) => string) {
+    const files: Record<string, string> = {
+      "catalog.yaml": TWO,
+      "skills/alpha/SKILL.md": "# Alpha\n",
+      "skills/beta/SKILL.md": "# Beta\n",
+      "skills/alpha/skill.yaml": declare(THREE),
+      "skills/beta/skill.yaml": declare(THREE).replace("id: alpha", "id: beta"),
+    };
+    for (const skill of ["alpha", "beta"]) {
+      for (const c of THREE) files[`${EVALS_DIR}/${skill}/${c.id}/case.yaml`] = body(skill, c.id);
+    }
+    const root = makeTree(files);
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    return checkEvals({ root, catalog });
+  }
+
+  const rule = (issues: ReturnType<typeof checkEvals>, name: string) => issues.filter((i) => i.rule === name);
+
+  test("an empty expected outcome groups instead of vanishing", () => {
+    // Decision 1's positive test. The filter this replaces was justified on the
+    // schema permitting an empty expectation, which it does not; deleting it
+    // without asserting the new behavior would swap an untested filter for an
+    // untested absence, which is the same thing nobody is watching.
+    const issues = rule(
+      twoSkills(() => caseWith("c", `  - name: g\n    type: llm\n    expected_outcome: ""\n`)),
+      "evals.duplicate-graders",
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.message).toContain("an empty string");
+    expect(issues[0]?.message).toContain("evals/alpha/fires-on-trigger");
+    expect(issues[0]?.message).toContain("evals/beta/fires-on-trigger");
+  });
+
+  test("a regex pattern shared across skills is reported, naming the field it keyed on", () => {
+    // Decision 2. `regex.pattern` is free text authored per case, so repetition
+    // there means what repetition in an expectation means. Excluded before, on
+    // the reasoning that applied to `tool`.
+    const issues = rule(
+      twoSkills((_skill, caseId) => caseWith(caseId, `  - name: g\n    type: regex\n    pattern: needs-${caseId}\n`)),
+      "evals.duplicate-graders",
+    );
+    expect(issues).toHaveLength(THREE.length);
+    expect(issues[0]?.message).toContain("`pattern`");
+  });
+
+  test("the same pair with the patterns differentiated is not reported", () => {
+    // The removal control: without it the check could be reporting that two
+    // regex graders exist rather than that they say the same thing.
+    expect(
+      rule(
+        twoSkills((skill, caseId) => caseWith(caseId, `  - name: g\n    type: regex\n    pattern: needs-${skill}-${caseId}\n`)),
+        "evals.duplicate-graders",
+      ),
+    ).toHaveLength(0);
+  });
+
+  test("a tool named identically in every skill is still not a copy", () => {
+    // `tool` is a closed vocabulary the harness owns. Grouping on it would
+    // report the corpus as a copy of itself, which is what makes a note class
+    // unclearable. Decision 2 widens the check; it must not widen to this.
+    expect(
+      rule(
+        twoSkills((_skill, caseId) => caseWith(caseId, `  - name: g\n    type: tool_used\n    tool: Skill\n`)),
+        "evals.duplicate-graders",
+      ),
+    ).toHaveLength(0);
+  });
+
+  test("a grader type the table has no row for is refused rather than guessed", () => {
+    const issues = twoSkills((_skill, caseId) => caseWith(caseId, `  - name: g\n    type: file_exists\n    path: out.md\n`));
+    const refusals = rule(issues, "evals.grader-type-unclassified");
+    expect(refusals).toHaveLength(2 * THREE.length);
+    expect(refusals[0]?.severity).toBe("error");
+    expect(refusals[0]?.message).toContain("file_exists");
+    expect(refusals[0]?.message).toContain("DECIDED_BY");
+    // And it does not quietly group them on a field nobody has said decides
+    // anything: six identical unknown graders produce six refusals and no note.
+    expect(rule(issues, "evals.duplicate-graders")).toHaveLength(0);
+  });
+
+  test("the same case directory name and grader name in two skills is reported", () => {
+    // Decision 3. Exact and non-tunable: two names matching at once, not a
+    // similarity score over one text, because any threshold gets tuned until it
+    // reports nothing and the tuning looks like calibration.
+    const issues = twoSkills((skill, caseId) =>
+      caseWith(caseId, `  - name: reads-back\n    type: llm\n    expected_outcome: The ${skill} run stops at ${caseId}.\n`),
+    );
+    const names = rule(issues, "evals.duplicate-case-names");
+    expect(names).toHaveLength(THREE.length);
+    expect(names[0]?.severity).toBe("note");
+    expect(names[0]?.message).toContain("evals/alpha/fires-on-trigger");
+    expect(names[0]?.message).toContain("evals/beta/fires-on-trigger");
+    // The expectations differ, so the text key is silent and this note is the
+    // only thing that sees the copy. That is the recall this key was added for.
+    expect(rule(issues, "evals.duplicate-graders")).toHaveLength(0);
+  });
+
+  test("differing grader names under the same directory name are not reported", () => {
+    // Removal control on half the conjunction. A directory name repeats because
+    // the behavior repeats; on its own it is not evidence of anything.
+    expect(
+      rule(
+        twoSkills((skill, caseId) =>
+          caseWith(caseId, `  - name: reads-back-${skill}\n    type: llm\n    expected_outcome: The ${skill} run stops at ${caseId}.\n`),
+        ),
+        "evals.duplicate-case-names",
+      ),
+    ).toHaveLength(0);
+  });
+
+  test("the same grader name under differing directory names is not reported", () => {
+    // Removal control on the other half, and the miss stated in the note: a
+    // copy renamed on the way in is invisible to this key.
+    const files: Record<string, string> = {
+      "catalog.yaml": TWO,
+      "skills/alpha/SKILL.md": "# Alpha\n",
+      "skills/beta/SKILL.md": "# Beta\n",
+      "skills/alpha/skill.yaml": declare(THREE),
+      "skills/beta/skill.yaml": declare(THREE.map((c) => ({ ...c, id: `${c.id}-b` }))).replace("id: alpha", "id: beta"),
+    };
+    for (const c of THREE) {
+      const grader = `  - name: reads-back\n    type: llm\n    expected_outcome: The run stops at ${c.id}.\n`;
+      files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = caseWith(c.id, grader);
+      files[`${EVALS_DIR}/beta/${c.id}-b/case.yaml`] = caseWith(`${c.id}-b`, grader.replace("stops at", "halts at"));
+    }
+    const root = makeTree(files);
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    expect(rule(checkEvals({ root, catalog }), "evals.duplicate-case-names")).toHaveLength(0);
+  });
+
+  test("the name note says what the text note holds that it does not, and the reverse", () => {
+    // The two keys are different projections of one family and neither contains
+    // the other. Reported as two notes over two subsets with nothing joining
+    // them, one family reads as two findings.
+    const THREE_SKILLS = TWO.replace(
+      "  - id: beta\n",
+      "  - id: gamma\n    status: authored\n    invocation: U\n  - id: beta\n",
+    );
+    const GAMMA = THREE.map((c) => ({ ...c, id: `g-${c.id}` }));
+    /** One sentence per case id, so each text group is exactly one pair. */
+    const shared = (caseId: string) => `The ${caseId} record is read back before it is written.`;
+    const files: Record<string, string> = {
+      "catalog.yaml": THREE_SKILLS,
+      "skills/alpha/SKILL.md": "# Alpha\n",
+      "skills/beta/SKILL.md": "# Beta\n",
+      "skills/gamma/SKILL.md": "# Gamma\n",
+      "skills/alpha/skill.yaml": declare(THREE),
+      "skills/beta/skill.yaml": declare(THREE).replace("id: alpha", "id: beta"),
+      "skills/gamma/skill.yaml": declare(GAMMA).replace("id: alpha", "id: gamma"),
+    };
+    for (const c of THREE) {
+      // alpha and beta share the directory name and the grader name; only beta
+      // shares gamma's sentence.
+      files[`${EVALS_DIR}/alpha/${c.id}/case.yaml`] = caseWith(
+        c.id,
+        `  - name: reads-back\n    type: llm\n    expected_outcome: The alpha run stops at ${c.id}.\n`,
+      );
+      files[`${EVALS_DIR}/beta/${c.id}/case.yaml`] = caseWith(
+        c.id,
+        `  - name: reads-back\n    type: llm\n    expected_outcome: ${shared(c.id)}\n`,
+      );
+    }
+    for (const c of GAMMA) {
+      files[`${EVALS_DIR}/gamma/${c.id}/case.yaml`] = caseWith(
+        c.id,
+        `  - name: reads-it\n    type: llm\n    expected_outcome: ${shared(c.id.slice("g-".length))}\n`,
+      );
+    }
+    const root = makeTree(files);
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    const issues = checkEvals({ root, catalog });
+    const names = rule(issues, "evals.duplicate-case-names");
+    expect(names).toHaveLength(THREE.length);
+    const message = names[0]?.message ?? "";
+    // The text key holds gamma, which this key cannot reach because gamma's
+    // directory was renamed; this key holds alpha, which the text key cannot
+    // reach because alpha's sentence was reworded. Two subsets of one family,
+    // neither inside the other, and each note now names the difference.
+    expect(message).toContain("names evals/gamma/g-fires-on-trigger/case.yaml beside these");
+    expect(message).toContain("does not name evals/alpha/fires-on-trigger/case.yaml");
+    expect(message).toContain("neither group contains the other");
+    expect(rule(issues, "evals.duplicate-graders")).toHaveLength(THREE.length);
+  });
+});
