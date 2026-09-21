@@ -3384,3 +3384,79 @@ in a commit message is unreachable by the tooling that would enforce it*. This i
 that, because the artifact does not merely fail to reach the tooling -- **it asserts that an action
 outside itself has already happened.** Another lane's queue is a field with no column in any output
 we produce, and every claim about one is unlabelled by construction.
+
+**And then measuring the world inverted a conclusion instead of confirming one, which is the first
+time that has happened today.** sweep-reviewer counted the corpus the enum class governs. I
+re-derived it independently, parsing rather than grepping, with a positive control on the file count
+and a filter shown to produce a one before any zero was accepted: 104 `case.yaml`, 104 parsed, 0
+unparseable, 270 graders. `file_exists`: zero uses. `tool_order`: zero uses. `baseline`: zero uses.
+**Not one case in the corpus uses any grader type that was missing its conditional, at any point in
+the thirty-nine and a half hours the defect existed.** Three lanes spent an afternoon dating,
+correcting and re-correcting the origin of a defect that could not have admitted a malformed case,
+because nobody writes those types. The `4d66492` fix is right and worth having; its entire value is
+prospective, and none of us established that before spending the afternoon on its provenance.
+
+The generalisation is sweep-reviewer's and it is the sharpest thing on this page. **A defect's
+presence is a property of the schema. Its exposure is a property of the corpus. Every instrument
+built this session reads schemas.** That is the same shape as every other item here -- our controls
+check the artifact and not the world it governs -- except that this one is not a wrong answer about
+a wrong subject but a *correct* answer to a question whose importance nobody measured. It does not
+make the schema work wasted: a schema that admits malformed cases is a defect whether or not anyone
+has tripped it, and the dating exercise produced three generalisations worth more than the fix. What
+it establishes is that presence and exposure are two questions, and we had instruments for one.
+
+**The counts say where strictness would buy something, and it is not where any of it went.** Of 270
+graders, 256 are `llm`: **94.8 per cent**. The whole suite holds fourteen graders that are free and
+deterministic, 10 `tool_used` and 4 `regex`, across 104 cases. Every other assertion in this corpus
+is a paid, non-deterministic judgement by a second model, and the `llm` conditional requires exactly
+one field with nothing constraining what a usable criterion looks like. No cost figure here on
+purpose: sweep-reviewer measured a floor for one run of one case with a free grader and declined to
+extrapolate it across the suite, which is the right call and the same discipline as refusing to date
+a class from its newest member.
+
+**The corpus also decides a question that was routed on the schema's own reasoning, and it decides
+it against the schema.** `execution.required` carries `max_turns` on the argument that *a case that
+leans on that default is the stub this schema exists to refuse*. Two counts from the same parse.
+Every one of the 104 cases sets `max_turns` explicitly; not one leans on the default. **And not one
+of the 104 sets `runs`**, which defaults to 3, sits at the root, and is not required by this schema
+at all. So the rule is applied to one default and withheld from the adjacent one, and the corpus
+behaves the exact opposite way on each. By the argument as written, all 104 cases are stubs. Both
+directions of the decision also have zero present exposure: requiring `max_turns` refuses nothing
+that exists, and dropping it changes nothing that exists. That is the shape of the finding to hand
+over -- not that the requirement is wrong, but that its stated reason is contradicted by the key
+beside it.
+
+**Getting those two counts is where I nearly produced this section's own failure, as a correction to
+a teammate.** I computed the sum of `max_turns` across the corpus and got 1438. sweep-reviewer had
+reported *sum of per-case runs at the host's defaults is 312*. Two numbers, one subject-shaped
+comparison, and the reflex was to report a discrepancy. They are answers to different questions:
+312 is 104 cases times the `runs` default of 3, and 1438 is a turn budget. Both correct, neither
+comparable. What caught it was the arithmetic being too clean -- 104 times 3 is exactly 312 -- and
+not any instrument. **A disagreement between two correct figures is this class arriving as a
+conflict rather than as a wrong answer**, and it is the most dangerous packaging yet, because a
+discrepancy is the thing a careful reader escalates.
+
+**Their sixth blank, and it adds a generator we had not named.** Counting grader types,
+sweep-reviewer piped an archive through `tar -xO --wildcards`, which is a GNU option that the bsdtar
+on this machine does not have. Zero output, an error not noticed, and the zero rendered as a corpus
+with no graders at all. They caught it because the rule had just been written down, and redid the
+count with an extract to disk and controls in both directions. The new part is the source:
+**a platform divergence is a blank generator that fires on one machine and not another**, so a
+command that worked in somebody's transcript is not evidence that it works here, and the failure it
+produces is the silent kind rather than the loud kind.
+
+**And the last one is the control block at the bottom of every commit I have made today.** Four
+format invariants ride on each of these, and two of them measure a property other than the one they
+name. `awk` counts bytes, an em-dash is three of them, and this file has em-dashes on 67 lines. So
+**the 88 that I have held constant across eight commits is a count of lines over 100 *bytes*, while
+the file has 64 lines over 100 *characters*** -- twenty-four of the eighty-eight are not over-width
+at all. The em-dash figure is the same error one step smaller: `grep -c` returns 67 lines containing
+at least one, and the file holds 71. Neither guard ever moved, and that is exactly why: a
+conservative wrong measurement is indistinguishable from a right one for as long as nothing crosses
+the boundary between them.
+
+What surfaced it was editing a second file whose em-dash density is higher. The byte count moved and
+the character count did not, and the byte count was about to send me rewrapping a line 99 characters
+long. **A control that has never moved has never been tested**, which is the positive-control rule
+aimed at a guard rather than at a filter, and the four numbers at the foot of every commit today
+have been carrying a name that does not describe them.
