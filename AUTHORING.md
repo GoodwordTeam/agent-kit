@@ -1179,14 +1179,27 @@ graders:
 
 Grader types available: `tool_used`, `llm`, `regex`, `file_exists`, `tool_order`. Each grader needs a
 `name` and a `type`. Prefer a deterministic grader (`regex`, `file_exists`, `tool_order`) over `llm`
-wherever the pass criterion is observable; use `llm` for the judgment cases, with a
-`criteria` that a reader could score by hand.
+wherever the pass criterion is observable; use `llm` for the judgment cases, with `criteria` that a
+reader could score by hand.
 
 These three field names are **measured against the host**, not derived here: they are what
-`claude plugin eval` accepted at `claude 2.1.278`. This section said `expected_outcome` for `llm`
-until the runner was first pointed at the corpus and refused all 87 shipped cases over that one key.
-`schemas/case.schema.json` and `src/validation/evals.ts` had both agreed with it, so three sources
-said the same wrong thing and none of them had ever asked the runner.
+`claude plugin eval` accepted at `claude 2.1.278`, loading the built bundle. This section said
+`expected_outcome` for `llm` until the runner was first pointed at the corpus, and it refused every
+case over that one key. `schemas/case.schema.json` and `src/validation/evals.ts` had both agreed
+with this section rather than with the runner, so three sources said the same wrong thing and none
+of them had ever asked.
+
+The figure that records it is **87 of 87**, and the population is part of it: 87 is the bundle, not
+the tree. `evals/` ships scoped to the installed skill set, so `profiles/core.yaml` — which excludes
+`babysit-pr` and `ultraqa`, holding 17 cases between them — leaves 87 of the tree's 104 in
+`dist/claude-code/evals`. All 87 carry an `llm` grader, which is why the one key accounts for every
+failure and leaves no case needing a second explanation.
+
+A name on this list is measured only against the version named above. What `file_exists` and
+`tool_order` accept is still unmeasured, and nothing in this repository re-takes the measurement or
+notices when the host moves one of the three: the check that reads these names reads them from a
+table, and a table agreeing with this section is the failure that produced the paragraph you are
+reading.
 
 **This section specifies the fields of two of those five types, and a case using the other three is
 not held to anything it says.** The worked example above is the whole of the specification:
