@@ -23,6 +23,7 @@ package:
   version: 0.1.0
   namespace: "/ak:"
   default_profile: core
+  description: What the host is told, which is a different sentence again.
   author: agent-kit maintainers
   license: MIT
 skills:
@@ -53,19 +54,26 @@ profiles:
 `;
 
 /**
- * The identity `adapters/codex/CONTRACT.md` §5.2 makes the host manifests agree
- * with, stated once and reused by the fixtures that perturb it.
+ * The npm package's own identity, which §5.2 makes a party to two fields and
+ * not to the other two.
  *
- * The four values are the ones `CATALOG` above produces: `name` from
- * `package.id`, `description` from `package.name`, and `version` and `license`
- * from their namesakes. They have to match, because a fixture whose two sides
- * already disagree makes every test in this file report a parity failure that
- * is about the fixture rather than about the code.
+ * `version` and `license` match `CATALOG` above because they are compared; a
+ * fixture whose two sides already disagreed would make every test in this file
+ * report a parity failure about the fixture rather than about the code.
+ *
+ * `name` and `description` deliberately do NOT match, and that is the whole
+ * point of the fixture. `adapters/codex/CONTRACT.md` §5.2 says "`package.json`
+ * is not a party to either": package.json names and describes the npm package,
+ * a manifest names and describes what the host addresses, and a check forcing
+ * them to agree is satisfiable only by renaming one of them to suit the check.
+ * Stated here as a divergence rather than as one test, so a check that
+ * re-acquired either comparison fails every test in the file instead of the one
+ * written to catch it.
  */
 const PACKAGE_JSON: Record<string, unknown> = {
-  name: "ak",
+  name: "fixture-package",
   version: "0.1.0",
-  description: "agent-kit",
+  description: "What the npm registry is told, which is a different sentence.",
   license: "MIT",
 };
 
@@ -488,16 +496,24 @@ describe("the identity fields the manifests are obliged to carry", () => {
 });
 
 /**
- * The four fields §5.2 makes `package.json` and both host manifests agree on.
+ * §5.2's two parity rules, which have two different party sets.
  *
- * `adapters/codex/CONTRACT.md` §5.2 names them -- `name`, `version`,
- * `description`, `license` -- and cites the donor's own release check,
- * `compound-engineering@05c42da:src/release/components.ts`, as what it was
- * adapted from. Read at that pin rather than recalled: `loadCurrentVersions()`
- * compares `version` and nothing else across `package.json` and five host
- * manifests. The other three are this contract's extension of it, so they are
- * asserted here one at a time rather than assumed to have arrived with the
- * adaptation.
+ * `version` and `license` agree across `package.json` and both host manifests.
+ * `name` and `description` agree between the two manifests and with
+ * `catalog.yaml`'s `package.id` and `package.description`, and package.json is
+ * not a party to either -- it names and describes the npm package, a manifest
+ * names and describes what the host addresses, and they are two names for two
+ * objects.
+ *
+ * The donor supports the `version` clause and no other, read at the pin rather
+ * than recalled. At `compound-engineering@05c42da:src/release/metadata.ts` the
+ * token `compoundPackage.` occurs exactly once, `:283`, comparing
+ * `package.json`'s version. Each manifest's description is derived and written
+ * rather than compared (`:259`, `:291-304`), which is why the donor ships one
+ * description in `package.json` and a different one in its manifest, and
+ * manifest `name` is compared manifest-to-manifest (`:403`). This file
+ * previously cited `src/release/components.ts`, which does version bookkeeping
+ * and holds no parity logic at all.
  *
  * Measured against the object the bundle emits, not against the catalog the
  * object was built from. Re-derived from the catalog, the check and the emit
@@ -505,7 +521,7 @@ describe("the identity fields the manifests are obliged to carry", () => {
  * manifest says, which is an instrument returning the same answer under both
  * hypotheses.
  */
-describe("the four fields package.json and the host manifests have to agree on", () => {
+describe("the two fields package.json is a party to, and the two it is not", () => {
   /** A package.json built from the agreeing one, with fields changed or dropped. */
   const PKG = (over: Record<string, unknown> = {}, drop: ReadonlyArray<string> = []) => {
     const doc = { ...PACKAGE_JSON, ...over };
@@ -525,15 +541,13 @@ describe("the four fields package.json and the host manifests have to agree on",
     }
   });
 
-  test("each of the four is compared, and the row names the field and both values", () => {
-    // Each one alone, and all four of them. The donor check this was adapted
-    // from compares `version` only; a check that kept that scope while carrying
-    // the wider contract's wording passes any test that perturbs the version
-    // and reports nothing about the other three.
+  test("version and license are each compared, and the row names the field and both values", () => {
+    // Each one alone, and both of them. The donor check this was adapted from
+    // compares `version` only; a check that kept that scope while carrying the
+    // contract's wording passes any test that perturbs the version and reports
+    // nothing about the licence.
     for (const [field, wrong] of [
-      ["name", "agent-kit"],
       ["version", "0.0.0"],
-      ["description", "One engineering lifecycle."],
       ["license", "Apache-2.0"],
     ] as const) {
       const rows = parity(planBundle(ctxFor(PKG({ [field]: wrong })), "claude-code", {}));
@@ -546,38 +560,72 @@ describe("the four fields package.json and the host manifests have to agree on",
     }
   });
 
-  test("the identity compared is the tree's, so a check written against this repo's own strings fails here", () => {
-    // All four different on both sides at once. A comparison hardcoded to `ak`
-    // and `MIT` -- the strings this repo uses, and the strings the fixture above
-    // repeats -- passes the agreeing case and passes each single perturbation
-    // by reporting the field it was handed. It cannot pass this one.
+  test("name and description are not compared against package.json, however far apart they are", () => {
+    // The clause that was withdrawn, asserted as a property rather than left to
+    // the absence of a test. `ak` addresses the plugin and the `/ak:`
+    // namespace; `agent-kit` names the npm package. Forcing them equal means
+    // renaming one to suit a check, which is the shape §5.2 now names outright.
+    const far = PKG({ name: "something-else-entirely", description: "A sentence sharing no word with the other." });
+    for (const host of HOST_IDS) {
+      const plan = planBundle(ctxFor(far), host, {});
+      expect(`${host}: ${parity(plan).length}`).toBe(`${host}: 0`);
+      expect(`${host}: ${blocked(plan).length}`).toBe(`${host}: 0`);
+    }
+    // And package.json missing them entirely is not an unavailable authority
+    // either, because it was never the authority for them.
+    const plan = planBundle(ctxFor(PKG({}, ["name", "description"])), "claude-code", {});
+    expect(parity(plan)).toEqual([]);
+    expect(blocked(plan)).toEqual([]);
+  });
+
+  test("the manifest's name and description come from package.id and package.description", () => {
+    // Which catalog field feeds which manifest key, pinned. `description` was
+    // sourced from `package.name` and shipped the literal string `agent-kit` as
+    // the bundle's description into every build; nothing downstream complained,
+    // because the parity check that would have caught it was comparing against
+    // the same wrong field's value in package.json.
     //
-    // It also pins which catalog field feeds which manifest key: `description`
-    // comes from `package.name` and `name` from `package.id`, and a check
-    // reading the obvious namesake instead would report two disagreements here.
+    // The catalog here states none of the strings the rest of the file repeats,
+    // so a generator hardcoded to this repo's own values diverges. That is the
+    // arm the previous version of this test carried and it is kept.
     const ctx = ctxFor({
       "catalog.yaml": CATALOG.replace("id: ak", "id: zzz")
         .replace("name: agent-kit", "name: Some Other Thing")
+        .replace("description: What the host is told, which is a different sentence again.", "description: Nine nine nine.")
         .replace("version: 0.1.0", "version: 9.9.9")
         .replace("license: MIT", "license: Apache-2.0"),
-      ...PKG({ name: "zzz", version: "9.9.9", description: "Some Other Thing", license: "Apache-2.0" }),
+      ...PKG({ version: "9.9.9", license: "Apache-2.0" }),
     });
     const plan = planBundle(ctx, "claude-code", {});
     expect(parity(plan)).toEqual([]);
     expect(blocked(plan)).toEqual([]);
-    // The manifest side asserted too, and not only the verdict. "No
-    // disagreement" is also what a check that compared nothing reports, and
-    // this fixture is the only one in the file where the manifest's four values
-    // are none of the strings the rest of the file repeats -- so it is the one
-    // place that can say the values came from this tree's catalog by the route
-    // `PARITY_FIELDS` claims they do.
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
     expect([manifest.name, manifest.version, manifest.description, manifest.license]).toEqual([
       "zzz",
       "9.9.9",
-      "Some Other Thing",
+      "Nine nine nine.",
       "Apache-2.0",
     ]);
+    // Not the catalog's `name`, which is the field it used to read.
+    expect(manifest.description).not.toBe("Some Other Thing");
+  });
+
+  test("the two manifests carry the same name and description, which is the half §5.2 still asserts", () => {
+    // §5.2's `name`/`description` clause is manifest-to-manifest. Both are built
+    // from one object in one place, so this cannot fail without the packager
+    // being changed -- which is the reason to assert it here rather than to
+    // write a check that re-derives both sides from the catalog and agrees with
+    // itself whatever the manifests say.
+    const ctx = ctxFor();
+    const read = (host: (typeof HOST_IDS)[number]) => {
+      const dir = host === "codex" ? ".codex-plugin" : ".claude-plugin";
+      return JSON.parse(planBundle(ctx, host, {}).files.get(`${dir}/plugin.json`)?.contents ?? "{}");
+    };
+    const cc = read("claude-code");
+    const cx = read("codex");
+    expect([cc.name, cc.description]).toEqual([cx.name, cx.description]);
+    expect(cc.name).toBe("ak");
+    expect(cc.description).toBe("What the host is told, which is a different sentence again.");
   });
 
   test("a field package.json does not state is unavailable, not agreement by default", () => {
@@ -593,9 +641,12 @@ describe("the four fields package.json and the host manifests have to agree on",
     expect(rows[0]?.skipped).toBe("manifest parity");
     expect(rows[0]?.file).toBe("package.json");
     expect(rows[0]?.message).toContain("license");
-    // The other three still compared: one absent field does not stand the whole
-    // check down.
+    // `version` still compared: one absent field does not stand the whole check
+    // down. And the row names only the fields package.json is a party to -- an
+    // instruction to declare `name` and `description` there would make the tree
+    // wrong under the clause that withdrew them.
     expect(parity(plan)).toEqual([]);
+    expect(rows[0]?.message).not.toContain("description");
   });
 
   test("a field the catalog does not declare disagrees with a package.json that states it", () => {
@@ -618,9 +669,10 @@ describe("the four fields package.json and the host manifests have to agree on",
     expect(rows.length).toBe(1);
     expect(rows[0]?.blocking).toBe(true);
     expect(rows[0]?.skipped).toBe("manifest parity");
-    // One row about the file, not four about its fields: nothing was read, so
-    // there is one thing to say.
+    // One row about the file, not one per field: nothing was read, so there is
+    // one thing to say.
     expect(parity(plan)).toEqual([]);
+    expect(rows[0]?.message).not.toContain("description");
   });
 
   test("a package.json that is not a JSON object blocks the same way, rather than reading as empty", () => {

@@ -51,6 +51,16 @@ export interface PackageInfo {
    */
   author?: string;
   license?: string;
+  /**
+   * What the host is told this package is, which is not what the npm registry
+   * is told.
+   *
+   * `adapters/codex/CONTRACT.md` §5.2 makes this and `id` the authority for the
+   * two manifest fields `package.json` is not a party to. Optional here for the
+   * same reason as the two above, and read by the packager through the same
+   * `declared()` predicate.
+   */
+  description?: string;
 }
 
 export class Catalog {
@@ -141,6 +151,7 @@ export function loadCatalog(root: string): LoadResult {
   // blank. The packager reports those differently.
   if (typeof pkg["author"] === "string") packageInfo.author = pkg["author"];
   if (typeof pkg["license"] === "string") packageInfo.license = pkg["license"];
+  if (typeof pkg["description"] === "string") packageInfo.description = pkg["description"];
 
   const entries: CatalogEntry[] = [];
   for (const section of ALL_SECTIONS) {

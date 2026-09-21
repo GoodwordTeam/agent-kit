@@ -55,34 +55,45 @@ const MARKETPLACE_FILE = ".claude-plugin/marketplace.json";
  */
 const EVAL_DIR = "evals";
 
-/** The package manifest §5.2 makes the authority for the four identity fields. */
+/** The npm package manifest, which §5.2 makes a party to two fields of four. */
 const PACKAGE_FILE = "package.json";
 
 /** One term for the summary line, whichever way the authority went missing. */
 const PARITY_CHECK = "manifest parity";
 
 /**
- * §5.2's four fields, as `<manifest key> -> <the catalog key that feeds it>`.
+ * The two fields `package.json` is a party to, as
+ * `<manifest key> -> <the catalog key that feeds it>`.
  *
- * The second half is for the message alone: three of the four manifest keys are
- * not named after the catalog field behind them -- `name` comes from
- * `package.id`, `description` from `package.name` -- and a reader told only
- * that `description` disagrees goes looking in `catalog.yaml` for a
- * `description` that is not there. The comparison itself reads the emitted
- * object, so a citation that fell out of date would misdirect a reader without
- * changing a verdict.
+ * `name` and `description` are deliberately not here.
+ * `adapters/codex/CONTRACT.md` §5.2: they "agree between the two manifests and
+ * with `catalog.yaml`'s `package.id` and `package.description`, and
+ * **`package.json` is not a party to either**" -- package.json names and
+ * describes the npm package, a manifest names and describes what the host
+ * addresses, and `ak` and `agent-kit` are two names for two objects. A check
+ * forcing them equal is satisfiable only by renaming one to suit the check.
  *
- * All four, and not just `version`. The donor's release check this was adapted
- * from (`compound-engineering@05c42da:src/release/components.ts`,
- * `loadCurrentVersions()`) compares `version` across `package.json` and five
- * host manifests and compares nothing else; `adapters/codex/CONTRACT.md` §5.2
- * widened it to four, so the other three are this package's obligation and not
- * something inherited with the adaptation.
+ * The donor supports the `version` clause and no other. At
+ * `compound-engineering@05c42da:src/release/metadata.ts` the token
+ * `compoundPackage.` occurs exactly once, `:283`, comparing `package.json`'s
+ * version; each manifest's description is derived and written rather than
+ * compared (`:259`, `:291-304`), which is why the donor ships one description
+ * in `package.json` and a different one in its manifest, and manifest `name` is
+ * compared manifest-to-manifest (`:403`). `license` is this package's own
+ * release condition rather than donor practice -- the donor's `package.json`
+ * carries no `license` key at all -- and is kept on that footing.
+ *
+ * This constant previously carried all four and cited
+ * `src/release/components.ts`, which does version bookkeeping and holds no
+ * parity logic. The wider rule and the citation for it were both wrong, and the
+ * check enforcing them is what turned `main` red.
+ *
+ * The second half is for the message alone: a reader told `version` disagrees
+ * should be sent to the catalog field behind it. The comparison reads the
+ * emitted object, so a stale citation misdirects without changing a verdict.
  */
 const PARITY_FIELDS: ReadonlyArray<readonly [string, string]> = [
-  ["name", "package.id"],
   ["version", "package.version"],
-  ["description", "package.name"],
   ["license", "package.license"],
 ];
 
@@ -546,8 +557,16 @@ function manifestObject(ctx: CheckContext, host: HostId, skills: ReadonlyArray<s
   const manifest: Record<string, unknown> = {
     name: pkg.id,
     version: pkg.version,
-    description: pkg.name,
   };
+  // From `package.description` and not `package.name`, which is the defect the
+  // withdrawn parity clause was masking: the manifest shipped the literal
+  // `agent-kit` as the bundle's description into every build, and the check
+  // that would have caught it was comparing that value against the same wrong
+  // field in package.json, so the two agreed and nothing complained.
+  //
+  // Omitted rather than emitted blank when the catalog states none, for the
+  // reason `author` and `license` are below.
+  if (declared(pkg.description)) manifest["description"] = pkg.description;
   // Key order follows the contract's own example at
   // `adapters/claude-code/CONTRACT.md` §1, and these are set before `skills` for
   // that reason. Each is omitted when the catalog does not declare it rather
@@ -596,8 +615,18 @@ function parsePackageJson(text: string): Record<string, unknown> | null {
 }
 
 /**
- * `adapters/codex/CONTRACT.md` §5.2: the four identity fields agree across
+ * `adapters/codex/CONTRACT.md` §5.2: `version` and `license` agree across
  * `package.json` and both host manifests.
+ *
+ * `name` and `description` are §5.2's other rule and are not checked here,
+ * because within one plan they cannot fail. Both are generated from
+ * `catalog.package.id` and `catalog.package.description` a few lines above, so
+ * comparing the emitted object back against those fields is the emit and the
+ * check reading one source and agreeing with each other whatever the manifest
+ * says. The half of that clause that can fail is manifest-to-manifest, which
+ * needs both plans at once and belongs in `planAll`; it is held by
+ * `tests/packaging.test.ts` today and is not a runtime check. Reported as a gap
+ * rather than written here as a comparison that cannot come out false.
  *
  * Emitted from `planBundle` for the reason `checkManifestIdentity` is -- so it
  * fails the build rather than reporting from `ak validate`, where a bundle is
@@ -632,7 +661,7 @@ function checkManifestParity(root: string, manifest: Record<string, unknown>): I
         "packaging.manifest-parity-unavailable",
         PACKAGE_FILE,
         PARITY_CHECK,
-        `${PACKAGE_FILE} is ${text === null ? "not in the source tree" : "not a JSON object"}, so none of the four fields adapters/codex/CONTRACT.md §5.2 requires the host manifests to agree with could be read. The manifests are in the plan and there is nothing to measure them against, which is a check that did not run rather than a check that passed. Write ${PACKAGE_FILE} declaring ${PARITY_FIELDS.map(([f]) => f).join(", ")}.`,
+        `${PACKAGE_FILE} is ${text === null ? "not in the source tree" : "not a JSON object"}, so neither of the fields adapters/codex/CONTRACT.md §5.2 requires the host manifests to agree with it on could be read. The manifests are in the plan and there is nothing to measure them against, which is a check that did not run rather than a check that passed. Write ${PACKAGE_FILE} declaring ${PARITY_FIELDS.map(([f]) => f).join(" and ")}.`,
       ),
     ];
   }
@@ -646,7 +675,7 @@ function checkManifestParity(root: string, manifest: Record<string, unknown>): I
           "packaging.manifest-parity-unavailable",
           PACKAGE_FILE,
           PARITY_CHECK,
-          `${PACKAGE_FILE} states no '${field}', so the '${field}' this bundle's manifest carries had nothing to be compared against. adapters/codex/CONTRACT.md §5.2 requires 'name', 'version', 'description' and 'license' to agree across ${PACKAGE_FILE} and both host manifests; declare '${field}' in ${PACKAGE_FILE}.`,
+          `${PACKAGE_FILE} states no '${field}', so the '${field}' this bundle's manifest carries had nothing to be compared against. adapters/codex/CONTRACT.md §5.2 requires 'version' and 'license' to agree across ${PACKAGE_FILE} and both host manifests; declare '${field}' in ${PACKAGE_FILE}.`,
         ),
       );
       continue;
@@ -657,7 +686,7 @@ function checkManifestParity(root: string, manifest: Record<string, unknown>): I
       error(
         "packaging.manifest-parity",
         PACKAGE_FILE,
-        `'${field}' disagrees: ${PACKAGE_FILE} declares '${theirs}' and the host manifest ${ours === undefined ? "carries no such key" : `carries '${ours}'`}. adapters/codex/CONTRACT.md §5.2 requires 'name', 'version', 'description' and 'license' to agree across ${PACKAGE_FILE} and both host manifests. The manifest's '${field}' is generated from catalog.yaml's ${source}, so the edit goes there or in ${PACKAGE_FILE} -- not in the bundle, which is rewritten on every build.`,
+        `'${field}' disagrees: ${PACKAGE_FILE} declares '${theirs}' and the host manifest ${ours === undefined ? "carries no such key" : `carries '${ours}'`}. adapters/codex/CONTRACT.md §5.2 requires 'version' and 'license' to agree across ${PACKAGE_FILE} and both host manifests. The manifest's '${field}' is generated from catalog.yaml's ${source}, so the edit goes there or in ${PACKAGE_FILE} -- not in the bundle, which is rewritten on every build.`,
       ),
     );
   }
