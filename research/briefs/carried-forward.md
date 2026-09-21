@@ -3555,3 +3555,84 @@ nowhere under `src/` or `tests/`. So the rule has no check; the single violation
 found by a person reading commit bodies; the finding was recorded in another commit body; and that
 recording is what corrupts the count that would have found it. Rule, violation, detection and
 contamination, all in the same medium, none of it reachable by anything that runs.
+
+**Second retraction, and this one takes an argument rather than an instance: the corpus cannot
+decide anything about the schema, because it is a photograph of it.** I read *all 104 cases set
+`max_turns`, none sets `runs`* as evidence that the stub rule was applied to one default and
+withheld from the adjacent one. schemas checked the column neither of us had looked at, and I
+re-derived it: **one distinct root key-set across all 104 cases, one distinct `execution` key-set,
+and not a single optional key anywhere.** `runs`, `description`, `plugins`, `context`,
+`expected_outcome`, `model`: 0 of 104 each. A required key sits at 104 and an optional key at 0 by
+construction, and the correlation is exactly 1.0 for reasons that have nothing to do with what any
+author wanted. **`runs` is not a key the rule was withheld from; it is a key nobody has been asked
+to think about.**
+
+The generalisation is schemas' and it subsumes two things already on this page. **A schema that
+requires or omits a key produces a corpus with no counter-instances, and the empty column reads as
+no demand.** That is `scaffold_script`, and it is the enum class, and it is now the shape of the
+entire corpus rather than a property of one key. Every presence count we quoted this afternoon runs
+through it.
+
+**But the exposure finding survives, and stating why is the part worth keeping.** Not every empty
+column is circular. The test is whether the schema determines the column before you read it as
+evidence. A *presence* count under a required-or-optional decision is determined by that decision
+and settles nothing about it. A count of which values a permitted enum actually takes is not:
+nothing in the schema pushed authors away from `file_exists`, `tool_order` or `baseline`, so zero
+uses there is a fact about the corpus and the exposure argument holds. And the column that is
+non-circular in the other direction is **value under a required key**, where the schema compels the
+author to write a number and says nothing about which. So the same corpus is evidence in one column
+and a mirror in the next, and the discriminator is one question asked before the count, not after.
+
+**schemas ran that column and it reversed their own recommendation.** `max_turns` takes nine
+distinct values from 8 to 30 -- 12 forty times, 14 twenty-one, 10 fourteen, then 16, 20, 18, 8, 30,
+24 -- so **90 of 104 cases choose something other than the host's default of 10**. Authors made to
+name the number do not copy one. They had recommended dropping the requirement on the grounds that
+it had no argument of its own; it has one now, and a measured one, so they withdrew the
+recommendation to team-lead and landed the replacement at `0bb3555` with the old note replaced
+rather than deleted. Recording it because reversing your own recommendation on a measurement that
+contradicts you is the rarest move in this log, and because my consistency argument was the thing
+that put the count in front of them.
+
+**And their afternoon has my blind spot, entered from the other end.** `context` is 0 of 104 and
+`execution.model` is 0 of 104, so the `scaffold_script` address they repaired three times today has
+no present users, exactly as the types I dated three times have none. Neither of us ran the count
+that would have said so, and each of us only ran it because the other's measurement forced it. The
+shape is not *one lane failed to check*; it is that **presence and exposure are different questions
+and our whole instrument set answers the first**, so both lanes converge on the same omission from
+opposite directions without either noticing.
+
+**sweep-reviewer refined the two miscounted controls, and the refinement is that they fail in
+opposite safety directions.** Re-derived: byte length is at least character length for UTF-8 always,
+so the byte gate is a strict superset -- **zero false negatives and twenty-four false positives**.
+It is a sound gate with a mislabelled figure; it cannot let an over-width line through, and its only
+cost is sending me to rewrap a line 99 characters long. The em-dash line count fails the other way.
+Four lines carry two em-dashes each, so 67 lines against 71 occurrences, and **adding a second
+em-dash to a line that already has one moves nothing** -- a real blind spot, and one that grows with
+the likeliest edit, which is thickening a sentence you are already writing.
+
+That is the correction to my own entry. **"A control that has never moved has never been tested" is
+right and it does not tell you which of these two you are holding.** Same block, same error of unit,
+opposite consequences: one safe and unreconcilable, one unsafe and quiet. What separates them is
+asking which direction the miscount errs in, which is a single comparison and which neither of us
+would have run if the number had not moved for an unrelated reason. From here both figures are
+reported in the unit they name, with the old ones carried alongside for one commit so the change is
+auditable rather than silent.
+
+**Their 312 is the third frozen field of the day and the decoration is the giveaway again.** They
+reported it as *sum of per-case runs, `case.runs ?? 3`*. No case sets `runs`, so it is 104 times 3,
+a constant times a constant, carrying the single fact that there are 104 cases. The `?? 3` is what
+made it look measured: **a formula naming a per-case value implies per-case variation**, and they
+wrote the formula precisely to be careful about where the 3 came from. Line the three up and each
+carried a decoration that made a dead number look live -- a baseline held across eight commits, a
+read timestamp on a push count frozen by policy, and a defaulting operator on a field nobody
+overrides. **The mark of a frozen field is not that it lacks provenance but that it has just enough
+of it to stop the question.**
+
+**One correction in my own favour, flagged as such because that is the kind that escapes.**
+sweep-reviewer says I am taking more of the exposure-inversion afternoon than is mine: they ran the
+three-arm experiment, itemised the enum findings and called the list of five exhaustive, and never
+asked how many cases used those types either. I cannot settle what they did or did not run, so this
+is their testimony about their own work and I am recording it as that. What I can settle is that it
+lightens my share, and a correction that lightens your share is the one this page has already named
+as escaping scrutiny hardest. Both accounts agree on the only load-bearing part: the count took one
+command, and nobody ran it for forty minutes.
