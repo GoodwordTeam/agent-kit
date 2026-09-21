@@ -1153,10 +1153,46 @@ example of the rule you are about to write, then read it against what you wrote.
 this page needs a probe and a control. This one needs a grep and thirty seconds.
 
 **And the narrowness came from further upstream than the section.** The implementation plan this
-repository is built from says capabilities absent upstream are recorded "`origin: conversation` with
-a `G:L` locator" -- phrasing that assumed the transcript was the only non-donor source. It is not:
-the plan's own precedence table ranks the architecture document *above* the transcript, so a
-capability specified in the arch doc and absent from the transcript has no `G:L` to cite, and
-demanding one would force the fabrication the same section forbids. The implementation generalised
-correctly and every copy of the prose inherited the narrow form. Worth knowing that a contract can
-be wrong because the brief was wrong, and that the code can be the thing that noticed.
+repository is built from -- the brief handed to this session, which is not in the tree -- says
+capabilities absent upstream are recorded "`origin: conversation` with a `G:L` locator", phrasing
+that assumed the transcript was the only non-donor source. It is not. The precedence order puts the
+design document *above* the transcript, so a capability specified there and absent from the
+transcript has no `G:L` to cite, and demanding one would force the fabrication the same section
+forbids. That ordering is stated in the tree, at `provenance.ts:51-53`, as the grammar's own reason
+for admitting document references: "a document reference is a stronger citation than a transcript
+range, not a weaker one." The implementation generalised correctly and every copy of the prose
+inherited the narrow form. Worth knowing that a contract can be wrong because the brief was wrong,
+and that the code can be the thing that noticed.
+
+---
+
+## A short name that denotes three documents yields citations that always resolve
+
+The sentence above said "the plan's own precedence table" until a lane went to check it and reported
+the table does not exist. Both of us were right about our own referent. **In this repository `plan`
+is a term of art meaning the architecture document**, because its path is
+`research/sources/engineering-skills-repo-plan.md` and the `-repo-plan` suffix grew a second
+spelling for it; `policies/resolved-conflicts.yaml` writes `plan: "§6.3, §11"` for that document's
+sections. The implementation plan is a third document, not in the tree. So my citation sent a reader
+to a file whose "Scope and source authority" section is about precedence *within* the transcript --
+a real section, saying a different thing, reached by a name I used correctly in the conversation I
+came from.
+
+This is the wrong-subject register at the level of document names, and it is worse than a broken
+citation in the specific way that matters: **a broken citation fails, and this one resolves.** Every
+reader gets an answer. Nothing reports, nothing is skipped, no control can fire, because from the
+instrument's side a resolved reference is indistinguishable from a right one. What it produces is
+confident disagreement between people who have each read their own document carefully.
+
+The repository had already written the warning down, in `provenance.ts:57-68`, in the file that
+parses the name -- including the consequence in full: "anyone reading `plan` as the implementation
+plan misreads every row that cites one." It had also already been bitten once and recorded that too
+(`:76-79`): `arch` reached the plan's index through a default, so `arch §5` matched the plan's §5
+"and passed without either side establishing which document had been named. It was right by
+accident." I made the documented mistake because the documentation lives where the name is parsed,
+and I was citing prose.
+
+Operable: **before citing a document by a short name, check what that name denotes in the tree that
+will read the citation, not in the conversation that produced it.** One grep of the consumer. The
+conversation you are in is exactly the context in which your own usage is unambiguous, which is why
+this cannot be caught by re-reading what you wrote.
