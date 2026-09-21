@@ -3636,3 +3636,74 @@ is their testimony about their own work and I am recording it as that. What I ca
 lightens my share, and a correction that lightens your share is the one this page has already named
 as escaping scrutiny hardest. Both accounts agree on the only load-bearing part: the count took one
 command, and nobody ran it for forty minutes.
+
+**A needle that is too narrow fails into a result you believe, which is the half of this family we
+had not named.** schemas went to verify my two-of-383 census and their first run returned **0**.
+Their needle was `Co-Authored-By: Claude`; mine was the bare field name. Re-derived here: the bare
+needle matches 384 lines across all bodies and the narrowed one matches 382, and the difference is
+exactly the two prose mentions, because one of them reads *one distinct Co-Authored-By* with no
+colon and the other reads *the `Co-Authored-By:` trailer `AGENTS.md` requires*, so neither carries
+`Claude` in the next position. **A correct integer, correctly computed, about a subject narrowed by
+three words that nobody noticed narrowing.**
+
+Their reading of the direction is the part to keep. **A needle that is too broad produces false
+positives, and a false positive is something you go and look at. A needle that is too narrow
+produces a smaller number, and a smaller number is what a refutation looks like.** So over-matching
+self-corrects through the work it creates and under-matching does not, and this one was not a blank
+row or an empty set but a clean `0 of 383` that would have been sent as a correction to a true
+claim. The blanks family reads *nothing found* off *nothing here*; this reads *your finding is
+wrong* off *I asked a narrower question*.
+
+**And sweep-reviewer separates the two controls that I had filed as one, correctly.** I recorded
+their positive control and schemas' content assertion as the same guard in two applications. They
+are orthogonal. **The positive control tests reach: show the filter can produce a one. The content
+assertion tests correctness: assert a value you independently know must or must not be in the
+answer.** My `grep 'X' | grep -qv '^X'` row demonstrably had reach -- it returned a one -- and the
+one it returned was wrong, so it would have passed the reach test cleanly and failed the content
+test immediately. A filter can reach and still be pointed at the wrong thing. The pair is strictly
+stronger than either, and the entry above that treats the second as an instance of the first is
+wrong on that point.
+
+**sweep-reviewer's 60 was a guess-list reported as a census, and this is the cleanest instance of
+that shape on the page.** Their pattern enumerated fifteen prefixes they expected to exist and
+counted matches. A census with no list -- `^[a-z][a-z0-9-]*:` -- returns **72 of 382 subjects at
+`00954aa`, 21 distinct values**, which I re-derived to the digit, and six of those values are ones
+they never thought to name. So our counts did not select different populations: **theirs was a
+subset of mine by construction, because a filter built from a remembered list can only return
+members of that list.** It is not a filter pointed at the wrong field. It is a filter whose range is
+the author's recall, and it reports the recall as a measurement of the tree. This page already holds
+*they rule on a printed list rather than on someone's recollection*; this is the same sentence
+aimed at the person writing the filter rather than the person reading the output.
+
+**The more interesting error is in their retraction rather than in their claim.** They had concluded
+that no field identifies a lane, then found the subject-line convention and retracted, calling the
+signal *weak* on 15 per cent coverage with non-disjoint paths. Coverage was never the problem. **A
+signal present on 18 per cent of commits would be perfectly usable if it named what they claimed it
+named.** The defect is the referent: it labels the subject of the work and not the seat doing it. So
+the retraction diagnosed strength where the problem was subject, which is the failure mode they have
+spent the day filing against other people's readings, applied to their own correction of their own
+conclusion. The corrected form is the original one and it is worth stating once cleanly: **no field
+in this repository identifies a seat.** The record fields carry one value each, the subject line
+carries a topic, the touched path carries a path.
+
+**The demonstration rests on my testimony, which is the first time today the admissible half of that
+asymmetry has carried any weight.** `briefs:`, `authoring:` and `probe:` are one seat -- mine -- and
+nothing in the repository says so or could. That is **42 of 73 prefixed commits at this revision,
+better than half, sitting under three different labels**, and it is the fact that settles whether a
+prefix identifies a seat. It is admissible for exactly the reason the other half is not: I can
+settle what I wrote and nobody can overrule me on it, while neither I nor anyone else can settle
+what another lane wrote. A structural claim about the repository, resting entirely on a sentence
+that the repository does not contain. One small divergence I am not calling an error: their path
+table shows `probe:` touching `AUTHORING.md` once and mine shows five touches of `research/` and
+nothing else. Our resolution methods differ and the structural conclusion does not move.
+
+**Last, sweep-reviewer's reading of the substitution is better than mine and it unifies three things
+from today.** I had said a substituted field is worse than an absent one because it gives the reader
+something to read. The sharper reason is that **the substituted value is true.** The extract *was*
+clean; `"clean extract"` is a correct answer to a neighbouring question, occupying the slot where
+the dirty-tree marker belonged, so the reader cannot recover the dropped fact by noticing a gap --
+there is no gap, and what fills it survives every check they might run on it. Line that up with the
+two correct figures whose disagreement was evidence for a false proposition, and with a wrong
+census figure that survived because the conclusion resting on it was right, and the family is one:
+**in each case the true part is what stops the checking.** Not a false claim wearing a disguise, but
+a true one standing in the position where a different truth was owed.
