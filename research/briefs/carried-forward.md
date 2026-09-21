@@ -1719,3 +1719,124 @@ The twelve numbers were correct. They were the union of scenario tags over the f
 exactly, with nothing over and nothing under. The sentence they were attached to was about the whole
 tree. A precise measurement of a scope nobody named reads identically to a precise measurement of
 the scope that was named, and the precision is what stops the reader asking which.
+
+## A citation can resolve, name the right revision, and still not say what cites it
+
+`adapters/codex/CONTRACT.md` §5.2 required `name`, `version`, `description` and `license` to agree
+across `package.json` and both host manifests, citing
+`compound-engineering@05c42da:src/release/components.ts`. The pin is real, the path exists at it, and
+the file is the donor's release code. Measured: `components.ts` does version bookkeeping and no
+parity work at all. The parity work is in `metadata.ts`, where the token `compoundPackage.` occurs
+exactly once -- comparing `package.json`'s version and nothing else. Each manifest's description is
+*derived and written* rather than compared, which is why the donor ships one description in
+`package.json` and a different one in `.claude-plugin/plugin.json`; manifest `name` is compared
+manifest-to-manifest; and the donor's own `package.json` has no `license` key.
+
+Four clauses, one supported, two contradicted by the donor's own shipped artifacts.
+
+The plan forbids fabricating a source path. This is the failure that rule does not reach: the path
+was not fabricated. Every property a reader checks quickly -- pin resolves, file exists, donor is the
+one named -- was true, and each true property made the clause harder to doubt. What nobody had done
+was open the file and look for the comparison.
+
+Two things follow. A citation is a claim about *content*, so verifying it means reading the content,
+not resolving the locator. And the tell was available without reading anything: a four-field check
+where one field is trivially satisfied upstream because the two names coincide there is a check that
+never discriminated on that field in the donor either. When a transplanted rule has a clause that
+could not have fired at its source, the clause did not come from the source.
+
+## A second measurement that shares the first one's definition is not independent
+
+I reported 245 distinct expectations in the eval corpus "matching an independent PyYAML census".
+sweep-reviewer re-derived 243. The check emits no distinct-expectation count at all, so no
+independent measurement of 245 existed; what agreed was 102 and 3, the two figures that survived.
+
+The arithmetic: 245 is `248 - 3`, crediting one duplicate per group, which is right only when every
+group has two members. Two of the three had three. `248 - (1+2+2) = 243`. Re-taken at today's tree:
+252 graders, 247 distinct, groups 2/3/3, and `252 - 247 = 5` -- the same rule, confirming theirs.
+
+The corroboration is the part worth keeping. Either my census encoded the same subtraction, in which
+case it agreed for the reason the first one was wrong, or I reported a corroboration I never ran.
+Both are the same defect from the reader's side, and "measured it twice and they agreed" conceals
+both. Two measurements are independent when they could disagree -- different definition, different
+instrument, different population -- and a second pass that re-runs the first one's definition is one
+measurement executed twice.
+
+## zsh does not word-split, so a five-path guard ran against one path that does not exist
+
+The shared-tree guard before a commit is two commands, and I ran the second as:
+
+    P="package.json catalog.yaml schemas/catalog.schema.json adapters/codex/CONTRACT.md AGENTS.md"
+    git diff --stat -- $P
+
+Empty output. In bash that is five pathspecs and empty means clean. zsh does not word-split unquoted
+parameters, so git received **one** pathspec -- the whole string, matching nothing -- and empty means
+the pathspec matched nothing. The two readings are byte-identical and the wrong one is the reassuring
+one.
+
+Caught only because `git status --short` two lines later listed all five files as modified, which is
+a different question I happened to be asking for a different reason. Third zsh entry in this register
+after `:r` and the refspec modifiers, and the same lesson: the shell is a participant in the
+measurement. A guard whose passing output is *empty* cannot distinguish "nothing wrong" from "nothing
+examined", so give it something to say when it runs -- print the path count, or assert it.
+
+## An internal cross-reference by line number is a figure without a revision
+
+authoring's, found while repairing a stale figure: their first draft cited a rule as "73 lines above
+this one". It measured 78 -- the distance had been carried across an edit that moved the sentence
+making the claim. The deeper problem is that a line number is itself a figure about a tree and decays
+on the next edit any lane makes above it, so the repair for a stale-figure defect would have shipped
+a figure with a shorter half-life than the one it replaced.
+
+Cite by section number or verbatim quotation. Both survive other lanes' edits, and a quotation fails
+loudly when the quoted text changes, which a line number never does.
+
+## A control that compares the artifact it protects is silent about whatever it normalises first
+
+authoring's `safe_wrap` flattened a paragraph break and welded two paragraphs into one. Its whitespace
+assertion passed -- a blank line *is* whitespace, and the assertion compares non-whitespace
+characters. The format probe passed too: it counts blank lines that appear, never one that vanishes.
+Two controls, both green on real damage, both blind to the same dimension, and that dimension is the
+one the wrapper normalises away before comparing anything.
+
+Generalised: a control built on a comparison inherits the comparison's blind spots, and a normaliser
+in the pipeline is an enumerated list of them. Read what the comparison discards, and assert on it
+separately or not at all -- but do not let two controls that both discard it count as two.
+
+## An adversarial case and its answer key can have a common cause
+
+sweep-reviewer, re-derived after stating the key: nine of twelve anti-rationalization rows make the
+same rationalization their case prompt makes. The three exceptions are precisely the prompts that
+make **no** rationalization -- two neutral requests and one non-trigger, which has nothing to argue
+for.
+
+That is a mechanism, not a correlation. The row and the prompt are both generated from one sentence,
+the scenario's temptation, so the case and the key that grades it come from a common source. The case
+then measures whether a model can match a sentence to its rebuttal, which a body with the rule
+deleted may well still do. It inverts the reading of a `tags: [adversarial]` corpus: the tag marks the
+cases most likely to have their answer printed in the body they test, and the cases that discriminate
+best are the ones that never name the temptation.
+
+The authoring rule, now in §3: an adversarial prompt states the **conditions** under which the
+rationalization is attractive, and lets the body supply the rationalization. No check -- the key is
+semantic, and the only mechanical proxy is a span-length threshold, which is a knob that gets tuned
+until it reports nothing.
+
+## The population and the key are part of the claim, and both are stated before the number is
+
+Ruled in from sweep-reviewer's table of nine measurement errors across two seats, and it replaces
+"parse, do not grep, whenever the claim is about structure", which authoring killed by testing it
+against their own three: it covers one. Shipped, it would have read as discharged by the two that
+cost the most -- an anti-correlated control, covering the path nobody takes while its presence in the
+tree answers the question.
+
+Each of the three was right about the set it measured and wrong about the set its sentence named. 13
+was about parsed mapping values, 69 about distinct destinations rather than rows, 56 about a join on
+full catalog id rather than last path segment. Same for mine.
+
+The ordering refinement -- "a key is only right relative to a population, so name the population
+first" -- is **not** in. Its single instance turned out not to be an instance of it: the receipt was
+taken at a revision after the repair the error caused, and at the revision the claim was about, the
+key is wrong at both populations. Two independent errors on one output. That the refinement failed by
+selecting a revision for proximity to the repair rather than for the claim, inside the receipt offered
+as its evidence, is the most useful thing about it and the reason the base rule goes in alone.
