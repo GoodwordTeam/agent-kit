@@ -212,9 +212,20 @@ def scan(text: str, report: bool):
 
 
 def sec31(text: str):
-    """The §3.1 subsection's bytes, heading included, or None if it cannot be found."""
-    m = re.search(r"\n### 3\.1[^\n]*\n(.*?)(?=\n### |\n## )", text, re.S)
-    return hashlib.sha256(m.group(0).encode()).hexdigest() if m else None
+    """The §3.1 subsection's bytes, heading included, or None if it cannot be found.
+
+    The capture stops at the next heading OR a `---` rule, and trailing whitespace is
+    stripped before hashing. Both matter, and the second was a defect: the capture used to
+    run to the next heading only, so it swallowed the `\n\n---\n` separator that happens to
+    follow §3.1 today. Adding a sibling `### 3.2` then truncated the capture and moved the
+    hash **without §3.1's own bytes changing**, reporting the frozen table as edited when
+    what changed was its neighbour. Measured: adding a placeholder `### 3.2` moved it from
+    c3de9e1d to 33032e3c. A check that fires on an edit somewhere else is not a freeze on
+    this section -- it names the wrong file to whoever has to act on it, and the obvious
+    repair, moving the pin, retires the freeze to silence a false alarm.
+    """
+    m = re.search(r"\n### 3\.1[^\n]*\n(.*?)(?=\n### |\n## |\n---\s*\n)", text, re.S)
+    return hashlib.sha256(m.group(0).rstrip().encode()).hexdigest() if m else None
 
 
 def main() -> int:

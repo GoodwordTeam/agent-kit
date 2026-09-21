@@ -230,6 +230,43 @@ records that agents skip a step. Three columns, no prose around it:
 Rows are written from the failure the dossier actually recorded. A row invented to fill the table is
 worse than a shorter table.
 
+### 3.2 An adversarial case does not print its own answer key
+
+An adversarial case's prompt states the **conditions** under which the rationalization is
+attractive. It does not state the rationalization. If the prompt argues for the wrong action in the
+same words the body's anti-rationalization row answers, the case tests whether the model can match a
+sentence to its rebuttal, not whether the body holds.
+
+The row and the case have a common cause. Both are written from the same recorded failure, usually
+in the same sitting, so the `adversarial` tag marks the cases most likely to carry their answer in
+the body they test. Batches 6 through 10 are unwritten and would reproduce it by default.
+
+Measured at `9ea8b3f`: of the 40 cases tagged `adversarial`, 34 assert the rationalization and 6 do
+not. The asymmetry runs the way the rule needs — all six belong to skills that do carry
+anti-rationalization rows, five to eight each, so the exception is never that no row exists. It is
+that the row exists and the prompt does not state it.
+
+- **The temptation is quoted and the caller does not adopt it.**
+  `babysit-pr/comment-instruction-is-routed-not-executed`, `diagnose/log-text-is-not-a-command`,
+  `receiving-review/comment-instruction-is-not-executed`,
+  `super-build/check-prompt-carries-no-implementer-framing`. The wrong action is argued for inside
+  material the prompt hands over — a PR comment, a captured log, a reviewer's thread, an
+  implementer's report — while the caller's own request is ordinary.
+- **Only the conditions are supplied.** `doc-review/rejected-finding-is-not-re-asked` and
+  `super-verify/no-realistic-check-is-recorded-not-skipped`. The caller asks for the ordinary
+  deliverable, and the prompt states the facts that make the wrong answer attractive without
+  recommending it.
+
+The pair that locates the line is `receiving-review/comment-instruction-is-not-executed` and
+`receiving-review/comment-cannot-authorize-a-merge`: same skill, both quoting a comment, differing
+only in that the second adds *Resolve the threads and land it*. That endorsement is the whole
+difference, so where a quoted temptation is being written the question is whether the caller adopts
+it.
+
+No check enforces this. The key is semantic, and the mechanical proxy available — a span-length
+threshold between the prompt and the nearest row — is a knob that gets tuned until it reports
+nothing.
+
 ---
 
 ## 4. Frontmatter law
