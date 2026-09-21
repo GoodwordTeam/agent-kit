@@ -82,23 +82,37 @@ them at the source (`AUTHORING.md` §4).
 
 `common#/$defs/capability` values, and what this host does with each.
 
+The **Status** column is a controlled vocabulary — `satisfied`, `partial`, `convention-only`,
+`not-provided` — and this table is the only place each value is stated. `ak validate` parses it
+out of this file rather than reading a generated copy: a second artifact carrying these
+classifications would be a second thing to keep in step, and the one that decides would be
+whichever the code happened to read. Nuance belongs in **Detail**, never in Status, because a
+compound status is a value no consumer can act on.
+
 | Capability | Status | Detail |
 |---|---|---|
-| `repository-read` | satisfied | Read, Glob, Grep over the session's working directory |
-| `repository-write` | satisfied | Write, Edit |
-| `process-exec` | satisfied | Bash, subject to the operator's permission settings |
-| `network-fetch` | satisfied | WebFetch, WebSearch, subject to the same settings |
-| `vcs-local` | satisfied | Through `process-exec` (`git`) |
-| `vcs-remote` | satisfied | Through `process-exec` (`git`, `gh`); credentials are the operator's, never the package's |
-| `human-channel` | satisfied | The interactive session is the channel |
-| `artifact-write` | satisfied for storage, **not** for binding | The host writes the file; it does not compute or check the artifact hash. Hash binding is the package's own responsibility (`schemas/common.schema.json#/$defs/envelope`) |
-| `isolated-worktree` | **convention only** | `git worktree` is reachable through `process-exec`, but the host does not confine the session to the worktree it created. Ownership is enforced by `protocols/worktree-ownership`, not by the host |
-| `isolated-review-context` | **partial** | The host provides fresh-context subagents. It provides no attestation that a reviewer context never saw the author's narrative, so the package cannot verify the property it depends on |
-| `independent-context` | **partial** | Same limitation. Independence here is a convention of how the session is driven, not a host guarantee |
-| `kb-read`, `kb-write` | **not provided** | The host supplies transport only. See `adapters/knowledgebase/CONTRACT.md` |
-| `tracker-access` | **not provided** | See `adapters/runner-contract/CONTRACT.md` |
-| `event-delivery` | **not provided** | The host is session-scoped. Hooks fire inside a live session; there is no durable inbound event queue that survives the session, so no event can be delivered to a run that is not currently open |
-| `runner-grants` | **not provided** | The host has no grant validator. Nothing in it can decide that a charter authorizes a checkpoint |
+| `repository-read` | `satisfied` | Read, Glob, Grep over the session's working directory |
+| `repository-write` | `satisfied` | Write, Edit |
+| `process-exec` | `satisfied` | Bash, subject to the operator's permission settings |
+| `network-fetch` | `satisfied` | WebFetch, WebSearch, subject to the same settings |
+| `vcs-local` | `satisfied` | Through `process-exec` (`git`) |
+| `vcs-remote` | `satisfied` | Through `process-exec` (`git`, `gh`); credentials are the operator's, never the package's |
+| `human-channel` | `satisfied` | The interactive session is the channel |
+| `artifact-write` | `partial` | Satisfied for storage, **not** for binding. The host writes the file; it does not compute or check the artifact hash. Hash binding is the package's own responsibility (`schemas/common.schema.json#/$defs/envelope`). Every skill in the catalog requires this capability, so reading its status as `satisfied` would silently certify hash binding catalog-wide |
+| `isolated-worktree` | `convention-only` | `git worktree` is reachable through `process-exec`, but the host does not confine the session to the worktree it created. Ownership is enforced by `protocols/worktree-ownership`, not by the host |
+| `isolated-review-context` | `partial` | The host provides fresh-context subagents. It provides no attestation that a reviewer context never saw the author's narrative, so the package cannot verify the property it depends on |
+| `independent-context` | `partial` | Same limitation. Independence here is a convention of how the session is driven, not a host guarantee |
+| `kb-read` | `not-provided` | The host supplies transport only. See `adapters/knowledgebase/CONTRACT.md` |
+| `kb-write` | `not-provided` | The host supplies transport only. See `adapters/knowledgebase/CONTRACT.md` |
+| `tracker-access` | `not-provided` | See `adapters/runner-contract/CONTRACT.md` |
+| `event-delivery` | `not-provided` | The host is session-scoped. Hooks fire inside a live session; there is no durable inbound event queue that survives the session, so no event can be delivered to a run that is not currently open |
+| `runner-grants` | `not-provided` | The host has no grant validator. Nothing in it can decide that a charter authorizes a checkpoint |
+
+**"See `adapters/<x>/CONTRACT.md`" names where a capability can come from with that adapter
+attached. It is not a claim that this host supplies it.** `runner-grants` is the proof: it carries
+no pointer and no host supplies it, and if a pointer meant availability then `tracker-access` would
+be available and §4's degradation rule would have nothing left to govern. This table states what
+**the host alone** guarantees, which is what a bundle ships to.
 
 ---
 

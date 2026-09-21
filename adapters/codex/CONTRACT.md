@@ -74,14 +74,18 @@ the whole reason host keys are generated rather than written (`AUTHORING.md` §4
 
 ## 3. Capabilities: what differs from claude-code
 
-Identical on both hosts: `repository-read`, `repository-write`, `process-exec`, `network-fetch`,
-`vcs-local`, `vcs-remote`, `human-channel`, and `artifact-write` (storage only, no hash binding).
-Also identical: `kb-read`, `kb-write`, `tracker-access`, `event-delivery` and `runner-grants` are
-**not provided** by either host, for the same reasons.
+**Every `common#/$defs/capability` value carries the status
+`adapters/claude-code/CONTRACT.md` §3 gives it, with no per-capability difference on this host.**
+That table is the single statement for both hosts and is not restated here — a copy would be a
+second thing to keep in step, and the copy that decided would be whichever one the code read. It
+was restated here once, as prose naming thirteen of the sixteen capabilities, and the three it
+omitted (`isolated-worktree`, `isolated-review-context`, `independent-context`) had no stated
+status on this host at all until a parse of the table went looking for them.
 
-The differences:
+What differs on this host is not which capabilities are supplied but which **restrictions** the
+host can enforce. None of the rows below is a `capability` value:
 
-| Capability / restriction | claude-code | codex | Consequence |
+| Restriction | claude-code | codex | Consequence |
 |---|---|---|---|
 | Per-skill suppression of model invocation | `disable-model-invocation: true`, documented host behavior | **No equivalent key verified** on `codex-cli 0.154.0` | The structural half of the invocation law is unavailable. See §3.1 |
 | Tool restriction | `allowed-tools`, pre-approval only, denies nothing | Not emitted. The host has an OS-level sandbox instead, configured by the operator (`sandbox_permissions`, verified (CLI) in `codex plugin --help`) | Codex's confinement is real but **operator-owned and process-wide**, not per-skill. The package still declares side effects and still relies on neither |
