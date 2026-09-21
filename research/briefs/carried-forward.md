@@ -1076,3 +1076,87 @@ as it stays dead, because the authors filling the field get no feedback from a b
 it. Connecting it turns every one of those declarations live in a single commit. The repair is
 therefore two commits and not one: first make the field readable and report what it would have
 emitted, then change what is emitted.
+
+---
+
+## A control can be anti-correlated with the property it guards
+
+`rulings.binding-not-cited` (`src/validation/rulings.ts:478-490`) reads, per ruling, "this skill
+binds twelve rulings and this body cites nine", and reports the gap as an error naming both. It is a
+real check and it closes the population by itself. Line 481 is the whole of it:
+
+```ts
+if (text.includes(row.id)) continue;
+```
+
+Raw substring presence, anywhere in the file. Measured across four arms on one body: every
+occurrence removed raises exactly one finding; restored, it is silent; the id present **only inside
+an HTML comment** is silent; the id present **only inside a fenced code block** is silent. So it
+verifies that a string is somewhere in a file, and the property it stands in for is that the body
+*obeys the ruling*.
+
+Batch 5 produced the two bodies that separate those:
+
+- `skills/super-review/SKILL.md:41` **cites** `ci-repair-restricts-purpose-not-permission` and then
+  drops the fourth term of the sequence the ruling states, appending a clause that contradicts it.
+  It passes.
+- `skills/babysit-pr/SKILL.md:122` states all four terms correctly and **does not cite**. It is
+  flagged.
+
+So on the only two bodies where the proxy and the property come apart, the check is not merely
+uninformative -- it is **inverted**. It catches the obedient body and passes the contradicting one.
+
+That is a third thing a proxy can do, past the two already on this page. A proxy can be silent where
+the property fails, which is a hole. A proxy can decouple at the boundary, which is why fixtures
+find it. And a proxy can point the other way, which is worse than both, because a writer optimising
+against the check is then being trained toward the defect: the cheapest way to a green
+`binding-not-cited` is to paste ids, and pasting ids is exactly what the contradicting body did.
+**Before trusting a control, find the two cases where the proxy and the property disagree and check
+which way it points on each.** If you cannot construct them, the control has not been tested, only
+run.
+
+### The companion failure, which was mine
+
+I routed a lane this evidence instruction: cite the clean `ak validate` run over
+`policies/invocation.yaml:213` rather than the implementer's comment above the branch. The instinct
+was right -- a comment is a belief about code -- and the substitute was not evidence at all. They
+checked instead of complying: `rulings.uncited-restatement` fires **nowhere in the tree**, so a
+clean run over that file is equally consistent with a check that never reaches `policies/`. Two
+identical readings are not a control.
+
+What they used instead is decisive: delete the citation and the run goes 2 errors to 3 with
+`rulings.binding-not-cited` naming that file and that ruling; restore it and the run goes back. A
+firing control proves the instrument had *a* subject. **A removal control proves it had *this*
+subject** -- it is the only form that establishes the check was looking at your file rather than
+succeeding somewhere else. I had spent the day telling people a clean run is not evidence, and then
+handed one over as evidence inside the remedy for that exact mistake.
+
+---
+
+## When a rule has a canonical example, check the example against the rule
+
+`AUTHORING.md` §5 says twice that a conversation capability is recorded with a `G:L` locator into
+the transcript. The validator's grammar admits three forms (`provenance.ts:1235`): `G:L` ranges,
+`plan §<section>` / `arch §<section>` document references, and `amalgam <dest> + <dest>` seat pairs.
+Five live rows carry no `G:L` and a clean extract validates at zero errors, so they are the contract
+rather than tolerated defects.
+
+The diagnostic is what makes this worth an entry. §5:431-437 exists for one specific case -- a
+conversation capability landing in a `provenance_origin: donor` entry -- and the clearest live
+instance of that case, `guided-checkpoint-mode`, is recorded with `plan §9`. **The paragraph's own
+exemplar contradicts the paragraph's spelling.** When the best instance of a rule in the tree
+violates the wording, the wording is what is wrong, because the instance was written by someone
+solving the real problem and the wording was written by someone describing it.
+
+It is cheap, it is available at authoring time, and it needs no instrument: name the canonical
+example of the rule you are about to write, then read it against what you wrote. Everything else on
+this page needs a probe and a control. This one needs a grep and thirty seconds.
+
+**And the narrowness came from further upstream than the section.** The implementation plan this
+repository is built from says capabilities absent upstream are recorded "`origin: conversation` with
+a `G:L` locator" -- phrasing that assumed the transcript was the only non-donor source. It is not:
+the plan's own precedence table ranks the architecture document *above* the transcript, so a
+capability specified in the arch doc and absent from the transcript has no `G:L` to cite, and
+demanding one would force the fabrication the same section forbids. The implementation generalised
+correctly and every copy of the prose inherited the narrow form. Worth knowing that a contract can
+be wrong because the brief was wrong, and that the code can be the thing that noticed.
