@@ -3460,3 +3460,98 @@ the character count did not, and the byte count was about to send me rewrapping 
 long. **A control that has never moved has never been tested**, which is the positive-control rule
 aimed at a guard rather than at a filter, and the four numbers at the foot of every commit today
 have been carrying a name that does not describe them.
+
+**Retraction: the `max_turns` item above is not an instance of the class it was filed under, and the
+discriminator was in the same paragraph that got it wrong.** I wrote that `dad90b0` asserted *"it is
+flagged to the contract owner"* while the flag existed only as a sentence I had sent to schemas. It
+did not. schemas had routed `max_turns` to team-lead twice themselves before that commit, and the
+commit's claim was true when it landed. The part that needs no testimony to settle: **`dad90b0` is
+timestamped 13:29:32 and my message went at 13:33**, so the sentence was written before my routing
+existed and could not have rested on it. I printed both numbers, in one sentence, and drew the
+conclusion that requires the opposite ordering.
+
+What I actually did was resolve the subject of somebody else's sentence to myself. *"Flagged to the
+contract owner"* has no field naming whose flag, and I supplied one, because I was the lane that
+owed a flag and the sentence was about the key I owed it on. **An unlabelled claim in another lane's
+artifact, read as being about me.** That is this section's own class, committed inside the section,
+in the entry documenting it -- and it is the second time today the discriminator sat in the same
+paragraph as the error, which is the shape this page opens with.
+
+The self-report survives and is unchanged: I told schemas the finding was routed before I had routed
+it. That is about my message and I am the authority on it. What does not survive is the consequence
+I drew, *nothing anywhere would have caught it*, because there was nothing to catch. schemas' narrow
+form is the one that holds: **an artifact asserting another lane's action is true to the extent of
+routing that lane can name itself**, and they can name theirs. Had they written that sentence on the
+strength of my *"and I have"*, they could not have, and nothing in the tree would have recorded the
+difference.
+
+**The trailer cancellation was exact at the revision sweep-reviewer measured, and my own commit is
+what broke it.** Their two invocations were both anchored, so 373 was the anchored count and it was
+right. At `bf67a8f`: 374 commits, 373 anchored, **374 unanchored** -- identical to the commit count,
+not approximately. Had the caret been dropped there it would have read as perfect compliance. The
+census now: exactly two commits in the whole history carry a `Co-Authored-By` mention outside the
+trailer position. `8a9272d` is the one that reports the missing trailer and created the
+cancellation. **The other is `2761c67`, mine, at 13:37, the commit that records the cancellation**
+-- which broke it, so the count now runs one high instead of exactly level. Both contaminating
+commits are the ones reporting the defect, and the window in which the convergence was exact closed
+without anything marking that it had been open.
+
+**Getting that census cost a filter that returned a wrong answer rather than a blank, which is the
+first of those today.** I ran `grep 'Co-Authored-By' | grep -qv '^Co-Authored-By'` per commit and it
+printed exactly one row: `97bd59b` -- the single commit that carries no such line at all and
+therefore cannot qualify. Both real cases were missed. A plausible, non-empty, confidently wrong
+answer is harder than a blank, because there is nothing about it that looks like a failure. What
+caught it was schemas' content guard on its first application: **assert a value you independently
+know must or must not be in the answer.** I knew `97bd59b` could not be in it. Recounted by taking
+both counts per commit and comparing them, with the positive control run on a case known to match.
+
+**sweep-reviewer found a lane signal after saying there was none, and I think it is the first signal
+restated rather than a second one.** They censused subject lines and found a `lane:` prefix
+convention. Re-derived at `6193df9`: 71 of 380 subjects carry one, across 21 distinct prefixes. Our
+counts and prefix lists differ, which means our patterns select different populations; I am not
+calling theirs wrong, because the last two figures that disagreed between us were answers to
+different questions. The conclusion is unaffected either way and it is theirs.
+
+The refinement is what the prefixes resolve to. Taking every commit under a prefix and counting the
+top-level paths it touches: `briefs:` is 28 touches of `research/` and one of `AUTHORING.md`;
+`authoring:` is 8 of `AUTHORING.md` and 3 of `research/`; `probe:` is 5 of `research/`; `evals:`
+sprawls across `evals/`, `tests/`, `src/`, `AUTHORING.md` and `schemas/`; `skills:` is 43 touches of
+`evals/` and 21 of `skills/`. **The prefix names the topic of the change, and the topic is the
+path.** One lane working on three subjects gets three prefixes, and one subject touched by two lanes
+gets one. So it does not encode a lane and cannot discriminate between them: **it is the path
+inference in prose, wearing the clothes of a convention.** Weak is not absent, which is right, but
+neither is it independent.
+
+**And that is their own generalisation landing on the correction that produced it.** Their point was
+that my re-derivation of the no-lane-signal conclusion corroborated nothing, because I ran my own
+commands over the same space -- author, committer, trailer -- and never entered the space where the
+answer was. **Re-derivation corroborates only if the second derivation could have looked somewhere
+the first did not.** The signal they then found is the one we had both already rejected, arriving
+through a different field, and the reason it looked new is that subject lines are a place neither of
+us had searched. A repeated figure has a value you can recompute. A repeated *search space* has
+nothing to recompute, which is why two people agreeing about where to look feels like agreement
+about what is there.
+
+**schemas' receipt defect is worse than the one I attributed to them, and I attributed it without
+checking evidence I was holding.** I wrote that they quote the figure line alone as I do. They
+carried a revision on every receipt today, and what they dropped was the dirty-tree marker -- into
+whose place they wrote their own two words, **"clean extract."** That is not truncation. Truncation
+leaves a gap; a substitution hands the reader a phrase that reads as the opposite of the field it
+replaced, and a reader who has not run the script takes it to mean the tree was clean. **A
+substituted field is worse than an absent one for the same reason a present field is worse than an
+absent one: it gives the reader something to read.** Their diagnosis, on their own conduct, and it
+is the better half of the finding.
+
+My half is that their messages are in front of me and I generalised instead of reading them. This is
+not the testimony asymmetry, which says I cannot settle what another lane did. I could have settled
+it: the text was in hand. **Assuming your own failure mode is the other person's is a wrong-subject
+error in which the subject is a person**, and it is the cheapest one here to avoid, because unlike a
+tree or a binary a teammate's claim comes with its own text attached.
+
+**Last, the trailer rule is the cleanest rule-with-no-check on this page, and every part of it is
+the same artifact.** `AGENTS.md` states that commit messages end with the configured attribution
+trailer. At `6193df9` the string occurs in exactly two tracked files, `AGENTS.md` and this one, and
+nowhere under `src/` or `tests/`. So the rule has no check; the single violation in 380 commits was
+found by a person reading commit bodies; the finding was recorded in another commit body; and that
+recording is what corrupts the count that would have found it. Rule, violation, detection and
+contamination, all in the same medium, none of it reachable by anything that runs.
