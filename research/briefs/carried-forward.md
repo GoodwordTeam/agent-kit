@@ -2731,18 +2731,53 @@ it is a claim with no truth conditions**, because the tree it quantifies over is
 reader has. Pinning is not a workaround for haste. It is the only form in which the claim can be
 true at all.
 
-A related case from the same exchange. sweep-reviewer attributed three commits from a `-S` census to
-me; one, `dae12ad`, is not mine. Every commit in this repository is authored `Pibomeister`, so the
-author field separates nothing, and the discriminator I proposed instead was the file list -- my
-four touch `carried-forward.md` and nothing else.
+**A related case from the same exchange, and this time the correction was the error.**
+sweep-reviewer attributed three commits from a `-S` census to me, and I corrected one of them,
+`dae12ad`, as not mine. **It is mine.** I wrote `research/briefs/checkpoint-host-packaging.md`,
+appended the behavioural half to it, committed it as `dae12ad` and pushed that sha to `main` by
+refspec, all inside one call that is still in this session's transcript. Their attribution was
+right and my correction of it was wrong.
 
-Their caution on that is the better half of the exchange: **the file list separates lanes today
-because lanes happen to own disjoint files, which is a fact about this week and not a property of
-git.** The first time two lanes touch one file it stops working, silently, and nothing announces it.
-The durable form is for a lane to name itself in the commit body, so the discriminator is *stated*
-rather than reconstructed from a coincidence -- this page's retrofitted-provenance rule arriving
-against the person who wrote it down, since evidence has to be created by the act and not inferred
-from its side effects.
+The discriminator I proposed in the same breath settles it instantly.
+`research/briefs/checkpoint-host-packaging.md` has exactly one author across its entire history and
+it is me, so the file list returns the right answer to the very question the paragraph was written
+to answer. **I named the instrument and did not run it on the case in front of me** -- which is the
+oldest finding on this page arriving one level up, because an instrument proposed in a sentence is
+not an instrument applied to that sentence.
+
+**Two more in the other direction, both to a lane that cannot own a commit.** I attributed `6c14391`
+to sweep-reviewer in messages to three lanes, and `552cd5c` to them in the message they were
+answering. sweep-reviewer has made **zero commits and zero edits this session by construction**:
+they are a read-only lane working from `git archive` extracts and scratch copies, so no sha in this
+repository is theirs. `6c14391` touches `CONTRACT-DEFECTS.md`, the file `2cc3a92` created, and
+belongs to the lane that filed it.
+
+**Their correction named one of the two, and the fact it supplied falsifies both.** The sentence *"I
+have made zero commits this session"* rules out every attribution to that lane at once; the
+correction attached it to `6c14391` and left `552cd5c` standing in the message it was replying to.
+This is the shape already recorded here for a published limit -- a true statement scoped to the
+instance the writer arrived with, silent about the sibling it also covers. **When a correction
+supplies a general fact, apply the fact and not the correction**, and re-check every claim the fact
+reaches rather than the one it was attached to.
+
+**And running the discriminator over the session shows what it can and cannot do.** Across
+twenty-one commits nothing in git metadata separates lanes: author, committer and the
+`Co-Authored-By` trailer are byte-identical on every one, so the file list is not one discriminator
+among several, it is the only one. It is decisive for `6c14391`, for the schemas lane's
+`schemas/case.schema.json` + `tests/schemas.test.ts` + `research/probes/host-case-keys.py` set, and
+for all nine of my `carried-forward.md` commits. It is **silent** for `552cd5c`: it returns
+`research/probes/validate-figure.sh` and stops. The discriminator produces a path, and **a path
+names a lane only if somebody keeps a path-to-lane roster** -- nobody does, so the failure is not
+ambiguity, it is a lookup with no table. sweep-reviewer's addition is one row of that table: a
+read-only lane should be recorded as such where the lead holds it, because *"this lane has no
+commits"* converts every attribution question about it into a one-line check.
+
+**The asymmetry underneath all four.** *"Did I write this?"* is answerable from what I already hold
+-- my own transcript records the call that made the commit. *"Did they write it?"* is not answerable
+from anything I hold at all. Three of the four errors are on the second question, where I had no
+evidence and asserted anyway; the fourth, `dae12ad`, is on the first, where I had the evidence and
+did not look. **Publish attributions of your own commits, which you can discharge, and of commits a
+lane has claimed in writing. Everything else is a guess wearing a sha.**
 
 **The same move at the next level up, and it nearly cost me a commit.** `4756a2e` was mine and
 `ak validate` reported `1 error` on it. The error was not mine: `2cc3a92`, another lane's, had
@@ -2867,9 +2902,9 @@ entry is not finished until it has been.
 **A third data point, and it is about routing rather than recall.**
 `research/probes/validate-figure.sh` prints nothing and exits 1 when the tree is red. I found it
 today while closing a limit. sweep-reviewer had already found it and filed it earlier the same day,
-and it is unchanged at HEAD -- `set -euo pipefail` at `:139`, the assignment at `:200`, the
+and it was unchanged as of `0184c96` -- `set -euo pipefail` at `:139`, the assignment at `:200`, the
 unreachable guard at `:212`, last touched at `4312769`, 09-19 21:23. Two lanes, one open finding,
-rediscovered from scratch.
+rediscovered from scratch. It is fixed now, at `552cd5c`.
 
 Their framing, adopted: **a finding that is independently rediscovered while still open is a routing
 failure, not a second discovery.** The second discovery costs what the first cost and adds nothing,
@@ -2878,8 +2913,33 @@ about. That is a third failure mode beside the two above -- the rule that was wr
 the check that fired unattended, and now the finding that was filed and did not arrive -- and it is
 the only one of the three in which nobody forgot anything.
 
-The honest limit on this section: three data points over a single day and two people -- a rule that
-failed at twenty minutes, a check that caught what no reader did, and a filed finding that was
-rediscovered from scratch. That is not enough to rank the mechanisms against each other. It is
-enough to establish that *"we wrote it down"* is not evidence of anything, which is all this section
-asks anyone to stop doing.
+**The ordering those data points imply, which is sweep-reviewer's and is the part to keep.** Rank
+the three mechanisms by how much each needs from a person at the moment of the error. A **rule**
+needs a reader to recall it at the moment they are least able to. A **check** needs no reader at
+all, but it only ever sees classes somebody has already named: `defects.entry-quotation-dangling`
+fired because someone had decided that quotations must resolve. **No check we could have written
+would have caught the address error**, because until the three-arm run nobody knew a key had an
+address distinct from its name. An **experiment with a control** needs neither recall nor a prior
+name, and it is the only one of the three that can discover a class nobody has named yet.
+
+So: **checks are how you hold a known class; experiments are how you find the next one -- and a page
+of rules is a backlog of checks, which is a real function and not the one a rule appears to
+promise.** That is the honest job description for this file. Every entry here is a candidate check
+that has not been written yet, and the entries already converted are the only ones doing any work
+while nobody is reading.
+
+**And the section instantiated its own subject while being written.** The routing paragraph above
+originally read that `validate-figure.sh` *"is unchanged at HEAD"* -- an absence claim, unpinned,
+three screens below the section that had just established that an unpinned absence claim has no
+truth conditions. `552cd5c` fixed the script at **12:56:08**. `0184c96`, the commit carrying that
+sentence, is stamped **12:56:08**, and `552cd5c` is not an ancestor of it. The claim and its
+falsification are the same second in two lanes. The rule was on the same page, written by me, in
+force, and it did not survive to the next section.
+
+The honest limit on this section: four data points over a single day and two people, falling into
+three classes -- a rule that failed at twenty minutes, a rule that failed at zero minutes, a check
+that caught what no reader did, and a filed finding that was rediscovered from scratch. That is not
+enough to rank the mechanisms by failure rate. It is enough for the ordering above, which is an
+argument about what each mechanism *needs* rather than a count of how often each failed, and enough
+to establish that *"we wrote it down"* is not evidence of anything, which is all this section asks
+anyone to stop doing.
