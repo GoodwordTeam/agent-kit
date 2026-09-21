@@ -185,28 +185,40 @@ exact commit being published, so a red build is refused at the wire rather than 
 
 ## Receipts name their instrument
 
-A receipt that reports a check without naming what it ran the check *with* is not reproducible, and
-every published receipt in this repo's history has had that defect. The three lines above behave
-differently depending on how the tree was obtained, so the instrument is part of the result:
+A receipt that reports a check without naming what it ran the check *with* is not reproducible.
+Measured on `origin/main` at `4e45481`: of the 9 commits whose message carries an `ak validate:`
+figure, 7 say nothing about the tree that figure came from, `ae061b2` names the donor half only,
+and `8798873` names its instrument outright — so the practice below is the exception becoming the
+rule, not a new obligation. The three lines above behave differently depending on how the tree was
+obtained, which is why the instrument is part of the result:
 
 | Instrument | What it reports |
 |---|---|
 | The working tree | every check, against contents nobody else can reconstruct |
 | `git archive <sha>` extracted bare | the right contents, but `1 check skipped: donor paths at pin` — provenance rows go unverified |
-| That extract plus `ln -s <repo>/.donors <extract>/.donors` | the right contents *and* every check |
+| That extract with `.donors/` **copied** in | the right contents *and* every check |
 
-Only the third is a receipt. `.donors/` is ignored and therefore absent from any archive; restore it
-by symlink from a full local clone, or from scratch via `provenance/upstream.lock.yaml`, which pins
-every donor to an exact sha. Clone the donors **without** `--depth`: a shallow clone is the common
-default and resolves donor paths for the tip while failing at the pin, which the validator reports as
-missing paths rather than as a broken instrument.
+Only the third is a receipt, and **`research/probes/validate-figure.sh` is that instrument** — run
+it rather than rebuilding it by hand. It extracts the revision, copies `.donors/` in, runs the
+validator there and prints the figure with the provenance that makes it re-derivable.
 
-So a receipt states: the sha it measured, that `.donors/` was present and how it got there, and the
-counts. When comparing two runs, note that the skipped-check line prints as a NOTE *and* is counted
-in the summary total, so a bare run reporting `40 notes, 1 skipped` and a linked run reporting
+Copy `.donors/`, never symlink it. A symlink measures the same thing and reports the same numbers,
+and is still wrong for a quoted figure: the link points out of the extract, so the figure stops
+being reproducible the moment anyone touches that path in the working tree. The script's two other
+choices are load-bearing for the same reason and are easy to lose when rebuilding it by hand — it
+symlinks `node_modules/` so the figure pins the revision's *source* rather than its dependency
+tree, and it resolves its workspace with `cd "$(mktemp -d)" && pwd -P`, because on macOS a bare
+`mktemp -d` returns a `/var` path whose second name silently empties the checked-file population in
+`tests/typecheck.test.ts`. Both failures report as content findings rather than as broken
+instruments.
+
+So a receipt states the sha it measured and that `.donors/` was present. When comparing two runs,
+note that the skipped check prints as a `provenance.donors-unavailable` NOTE *and* is counted in
+the summary total, so a bare run reporting `40 notes, 1 skipped` and a copied run reporting
 `39 notes, 0 skipped` are the same tree measured twice — the difference is the instrument, not a
-change. A receipt that does not name its instrument cannot distinguish those two readings, which is
-the whole reason this section exists.
+change. Clone donors **without** `--depth`: a shallow clone is the common default and resolves
+donor paths for the tip while failing at the pin, which the validator reports as missing paths
+rather than as a broken instrument.
 
 Commit messages end with the session's configured `Co-Authored-By:` attribution trailer. The
 assistant identity in that trailer is supplied by the harness at commit time; it is deliberately
