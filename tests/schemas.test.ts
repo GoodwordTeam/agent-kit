@@ -390,3 +390,45 @@ describe("the resolved-conflicts policy has a declared shape", () => {
     expect(rulingsIssues(loosened)).toEqual([]);
   });
 });
+
+/**
+ * The host's own keys.
+ *
+ * `case.yaml` has two owners. `name` and `tags` are this package's -- the host
+ * reads both, but only as opaque strings to filter on -- so internal agreement
+ * really is the authority for them. `scaffold_script`, `runs` and
+ * `timeout_seconds` are the host's, and no amount of agreement between §9, the
+ * schema and `src/` is evidence about them.
+ *
+ * These assert the three are admitted, because the failure they guard against
+ * has already happened once and was invisible while it did. A schema that
+ * refuses a key the host accepts produces no error anywhere -- it produces a
+ * corpus in which nobody writes that key, and one author who tries, sees their
+ * own file named in a validation error, and concludes they were wrong. The
+ * closure control is what keeps the fix from being "open the object".
+ */
+describe("a case may carry the keys the host reads", () => {
+  const FILE = "evals/demo/fires-on-territory/case.yaml";
+  const withKeys = (extra: string) => evalsTree({ [FILE]: WELL_FORMED_CASE + extra });
+
+  test("scaffold_script is admitted at the case root", () => {
+    expect(caseIssues(withKeys("scaffold_script: |\n  git init -q .\n"), FILE)).toEqual([]);
+  });
+
+  test("runs is admitted at the case root", () => {
+    expect(caseIssues(withKeys("runs: 3\n"), FILE)).toEqual([]);
+  });
+
+  test("timeout_seconds is admitted beside max_turns", () => {
+    const doc = WELL_FORMED_CASE.replace("  max_turns: 8\n", "  max_turns: 8\n  timeout_seconds: 600\n");
+    expect(caseIssues(evalsTree({ [FILE]: doc }), FILE)).toEqual([]);
+  });
+
+  // The control. Without it the three above are satisfied by a schema that
+  // stopped closing the object at all, which is the fix nobody wanted.
+  test("a key neither owner reads is still refused", () => {
+    const issues = caseIssues(withKeys("nonsense_key: 1\n"), FILE);
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("nonsense_key");
+  });
+});

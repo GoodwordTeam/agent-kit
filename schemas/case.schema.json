@@ -26,13 +26,19 @@
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonempty_string"
+      }
     },
     "execution": {
-      "description": "What the runner is asked to do. Closed on the three members AUTHORING.md §9 documents: a key the loader accepts and this does not is a schema edit, which is the direction that gets noticed.",
+      "description": "What the runner is asked to do. Closed, but on the keys the host reads rather than on the three AUTHORING.md §9 happens to document.\n\nIt was closed on those three, with the reason that a key the loader accepts and this does not is \"a schema edit, which is the direction that gets noticed\". That reasoning was wrong and is recorded here rather than deleted, because the way it failed is the point. It was not noticed and could not have been: the symptom of refusing a key the host accepts is that nobody writes that key, and the one author who tries gets a validation error naming their own file and concludes they were mistaken. A closed schema fails by making the missing feature look like nothing anyone wanted. `scaffold_script` was refused from 7db25a7 until it was declared here, and the visible result was a corpus in which no case declared a fixture and a run that scored 0.00 against an empty workspace.\n\nThe keys here have two owners. `prompt` is this package's. `max_turns`, `allowed_tools` and `timeout_seconds` are the host's, settled elsewhere, and no amount of internal agreement between §9, this file and src/ is evidence about them -- which is why each one names the host version it was confirmed against. `allowed_tools` already said as much about its members and this file then closed the object against the host's other keys, which is the same mistake one level up.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["prompt", "max_turns", "allowed_tools"],
+      "required": [
+        "prompt",
+        "max_turns",
+        "allowed_tools"
+      ],
       "properties": {
         "prompt": {
           "description": "The prompt the case runs. Required, and non-empty, because a case whose prompt is absent is the stub this schema exists to refuse.",
@@ -48,7 +54,14 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+          "items": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          }
+        },
+        "timeout_seconds": {
+          "description": "Wall-clock seconds for the run, bounding it alongside `max_turns`. Beside `max_turns` here because the host documents the two as siblings. An under-set value scores 0 rather than reporting a timeout, which is the failure mode worth knowing about: it reads as the skill having done nothing. Host-owned: confirmed against `claude plugin eval --help` at claude 2.1.278. The receipt covers the key's existence and its meaning, not its position in a `case.yaml` -- the host's own `init --bare` writes `prompt.md` frontmatter, and this file's arrangement of the same keys is this package's.",
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -59,36 +72,104 @@
       "items": {
         "description": "Open, not closed, and that is a known divergence from the host rather than a safe default. AUTHORING.md §9 lists five grader types and documents the fields of three: `tool` for `tool_used`, `pattern` for `regex`, `criteria` for `llm`. Those three names are no longer read from §9 -- they are what `claude plugin eval` accepted at `claude 2.1.278`, measured by loading the whole corpus against it. §9 said `expected_outcome` for `llm`, this schema required it, all 256 `llm` graders carried it, and the host rejects that key outright: 87 of 87 shipped cases failed to load, and none of them had ever been run. What `file_exists` and `tool_order` take is still written down nowhere here and no case uses either, so this object stays open rather than refusing them on a guess. But **the host's grader object is closed** -- it refuses any key it does not define, which is how two surplus `expected_outcome` fields on `tool_used` graders were caught. So the openness here buys no safety against the runner: it postpones one guess and admits exactly the surplus the runner will reject.",
         "type": "object",
-        "required": ["name", "type"],
+        "required": [
+          "name",
+          "type"
+        ],
         "properties": {
-          "name": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+          "name": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          },
           "type": {
             "description": "The five types AUTHORING.md §9 lists. §9 also asks for a deterministic grader over `llm` wherever the pass criterion is observable, which is a preference a schema cannot hold.",
-            "enum": ["tool_used", "llm", "regex", "file_exists", "tool_order"]
+            "enum": [
+              "tool_used",
+              "llm",
+              "regex",
+              "file_exists",
+              "tool_order"
+            ]
           },
-          "weight": { "type": "integer", "minimum": 1 },
-          "criteria": { "$ref": "common.schema.json#/$defs/nonempty_string" },
-          "tool": { "$ref": "common.schema.json#/$defs/nonempty_string" },
-          "pattern": { "$ref": "common.schema.json#/$defs/nonempty_string" }
+          "weight": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "criteria": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          },
+          "tool": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          },
+          "pattern": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          }
         },
         "allOf": [
           {
             "description": "An `llm` grader is its `criteria` -- §9 asks for one 'that a reader could score by hand', and without it there is nothing for a judge to read. The host requires this exact key and reports a grader missing it as `graders.N.criteria: Required`.",
-            "if": { "properties": { "type": { "const": "llm" } }, "required": ["type"] },
-            "then": { "required": ["criteria"] }
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "llm"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "required": [
+                "criteria"
+              ]
+            }
           },
           {
             "description": "A `tool_used` grader that names no tool asserts nothing about any tool. It is the eval-case form of a locator that matches no instance: it cannot fail, so it cannot grade, and nothing in this package would ever have said so because nothing here runs it. Inferred from §9's worked example, which carries `tool: Skill`, rather than measured against the loader, for the reason this object is open.",
-            "if": { "properties": { "type": { "const": "tool_used" } }, "required": ["type"] },
-            "then": { "required": ["tool"] }
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "tool_used"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "required": [
+                "tool"
+              ]
+            }
           },
           {
             "description": "Same shape for the pattern a `regex` grader matches.",
-            "if": { "properties": { "type": { "const": "regex" } }, "required": ["type"] },
-            "then": { "required": ["pattern"] }
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "regex"
+                }
+              },
+              "required": [
+                "type"
+              ]
+            },
+            "then": {
+              "required": [
+                "pattern"
+              ]
+            }
           }
         ]
       }
+    },
+    "scaffold_script": {
+      "description": "Author-supplied bash that stages the workspace before the run, executed only under `--scaffold` and skipped under `--no-scaffold`; `--keep-temp` preserves what it built. At the case root rather than in `execution` because it prepares what the run starts from rather than saying what the runner is asked to do. Optional: a case that needs no fixture declares none, and until this key was declared here a case that needed one could not be written at all -- `ak validate` refused it, so the corpus reads as though no case ever wanted a fixture. Host-owned: confirmed against `claude plugin eval --help` at claude 2.1.278. The receipt covers the key's existence and its meaning, not its position in a `case.yaml` -- the host's own `init --bare` writes `prompt.md` frontmatter, and this file's arrangement of the same keys is this package's.",
+      "$ref": "common.schema.json#/$defs/nonempty_string"
+    },
+    "runs": {
+      "description": "How many times the host runs this case, defaulting to 3 when absent and overridden by `--runs`. Spelled `case.runs` in the host's own help, which is why it sits at the root. An integer count with no currency and no tier, like every other limit in this package. Host-owned: confirmed against `claude plugin eval --help` at claude 2.1.278. The receipt covers the key's existence and its meaning, not its position in a `case.yaml` -- the host's own `init --bare` writes `prompt.md` frontmatter, and this file's arrangement of the same keys is this package's.",
+      "type": "integer",
+      "minimum": 1
     }
   }
 }
