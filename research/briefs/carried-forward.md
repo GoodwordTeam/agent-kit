@@ -2528,11 +2528,28 @@ schema fails by making the missing feature look like nobody wanted it.**
 
 **And nobody ever did, which is the finding rather than a gap in it.** This entry said twice that
 the one author who tries gets an error naming their own file and concludes they were wrong. That has
-no instance. Across every branch and revision, `scaffold_script` occurs in three commits, all of
-them briefs written today about this finding; restricted to `evals/**/case.yaml`, AUTHORING.md and
-`schemas/` it occurs in none, and neither does `timeout_seconds` or a case-level `runs:`. Written in
-the present tense it was a prediction standing where a report belongs -- this page's own move, made
-on this page, caught by sweep-reviewer.
+no instance. Measured at `630bad0`: across every branch and revision `scaffold_script` occurred in
+three commits, all of them briefs written that morning about this finding, and restricted to
+`evals/**/case.yaml`, AUTHORING.md and `schemas/` it occurred in none, as did `timeout_seconds` and
+a case-level `runs:`. Written in the present tense it was a prediction standing where a report
+belongs -- this page's own move, made on this page, caught by sweep-reviewer.
+
+**The sha on that sentence is doing work, because the measurement expired before the paragraph
+did.** The schemas lane declared all three keys at `9b12366`, 12:26 -- so by `084e0dc`, the commit
+that first carried the corrected paragraph, `scaffold_script` occurred in `schemas/case.schema.json`
+and the unrestricted count had gone from three commits to five. The paragraph was false as written
+at the moment it was committed, by exactly one commit, and nothing objected: `9b12366` is an
+ancestor of `084e0dc`, and the receipt taken against `084e0dc` reads
+`0 errors, 17 warnings, 43 notes`, because a validator that checks schema conformance has no opinion
+about whether a sentence describes the tree it ships in. What caught it was a routine `git fetch`
+three minutes later, run to read a push count.
+
+So the rule the entry above states about receipts is the rule this paragraph needed: **a
+present-tense census is a receipt, and it transfers exactly as far as the tree it measured is
+unchanged.** Pin it or restate it. The part that does not expire is the part about the corpus, and
+it still holds at HEAD -- `evals/**/case.yaml` declares `scaffold_script` in zero of 104 cases, and
+`timeout_seconds` and a case-level `runs:` in zero. The key exists in this repository now because an
+investigation named it, not because an author ever reached for it.
 
 What replaces it is stronger than the counterfactual was. The corpus held **50** cases at `7db25a7`
 and **104** at `c9fdcda`, so **54 cases were authored after the schema closed**, across seven
