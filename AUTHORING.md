@@ -1136,9 +1136,17 @@ default.
 **Limit on the row above: `case.yaml` is not the only form the host runs.** `claude plugin eval`
 reads *"<eval dir>/**/case.yaml or prompt.md + graders/*.md"* — a case directory qualifies on either
 file, and `claude plugin eval init --bare` writes the second form. This contract specifies only the
-first, `ak validate` discovers only the first, and a valid second-form case therefore sits in the
-tree neither accepted nor refused nor counted. Write the `case.yaml` form until this contract says
-otherwise. The second form is unspecified here, not forbidden by the host.
+first and `ak validate` discovers only the first, so a valid second-form case is handled two
+different ways depending on whether anything declares it, and neither is the handling it deserves.
+**Undeclared, it sits in the tree neither accepted nor refused nor counted**: `readYaml` returns
+null, the loop passes over it with a bare `continue`, and it raises nothing and never reaches the
+coverage count. **Declared, it is refused, and refused with a message that names the wrong
+cause** — the declaration loop tests for `case.yaml` by name, so `evals.declaration-without-case`
+tells the author *there is no executable case at this path* when there is one, written in the other
+form. That arm is the worse of the two: the author is handed a confident error about their own file
+whose stated cause is false, and the real one — discovery reads a single filename — appears nowhere
+in it. Write the `case.yaml` form until this contract says otherwise. The second form is unspecified
+here, not forbidden by the host.
 
 `schemas/skill.schema.json` floors `tests[]` at two entries, one `positive` and one `negative`. **This
 contract requires three**, because a skill with no adversarial case has never been shown to hold a
