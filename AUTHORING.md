@@ -164,8 +164,13 @@ a rationalization and its rebuttal, a gate states a condition and the refusal. M
 `skills/super-review/SKILL.md` at `1b5883b`, `delta-scope-affected-behavior` has exactly two
 carriers — a clause in workflow step 9, and one table row that is inside this section. A check that
 tests this obligation by searching the section will report it satisfied, which is the case the
-distinction exists for. Which rules stop the skill is the author's judgement; the guarantee is only
-that the ones that do are all here.
+distinction exists for. It is named as an illustration and not as a missing gate: bounding a delta
+by affected behavior tells the reviewer where to look and halts nothing, so that ruling correctly
+carries none. **A gate is a condition under which the skill refuses to continue, and says so.** A
+rule that changes what the skill does next is not one — a gate is the absence of a next. Holding the
+population that narrow is what keeps this section from becoming a restatement of `binds.skills`, one
+gate per ruling, a stop-list that has stopped telling a reader anything. Which rules meet that test
+is the author's judgement; the guarantee is only that the ones that do are all here.
 
 **Nothing in the tree records which rulings those are, which bounds what a check of this can do.**
 `policies/resolved-conflicts.yaml` carries `coverage: direct|indirect`, which is about grounding
@@ -277,9 +282,16 @@ clean run will tell you. Which file is amended — the code, §4, or the schema 
 exists to speak at the moment a writer is filling `packaging.hosts[]` in, which is the only moment
 the warning does any good and the reason it is not just a second copy of that entry. Locators are
 what went stale last time: one defect held two records, both carrying line numbers, and only one was
-maintained. A warning carrying none cannot drift. If the entry has left `CONTRACT-DEFECTS.md`, this
-warning was retired with it and belongs deleted — a pointer to an entry that is gone is visible in a
-way a stale line number is not.
+maintained. A warning carrying none cannot drift.
+
+**Read it through `git log -- CONTRACT-DEFECTS.md`, which that file names as its own index.** An
+entry is retired by deletion, so the open file answers whether this is still a defect and only the
+log answers whether it ever was — which is the difference between a warning whose entry was resolved
+and a warning that never had one. Nothing checks this direction: `defects.entry-quotation-dangling`
+runs from an entry to the contract, and no check runs from the contract back. If this paragraph
+outlives its entry, nothing will say so. The retirement is therefore a reader's obligation and not a
+gate's, and saying otherwise — as this paragraph did until now — describes a check that does not
+exist.
 
 `ak validate` cross-checks `catalog.yaml`'s `invocation` against `skill.yaml`'s `invocation` and its
 entrypoint authorities, and fails on disagreement.
