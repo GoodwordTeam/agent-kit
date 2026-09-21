@@ -990,6 +990,16 @@ Remedy, and it is one word: `git fetch` before reading `origin/main`, or `git ls
 to ask instead of recall. Prefer the second when the claim is going in a message, because it has no
 cache to be stale and the command names what it did.
 
+**Correction, same day: the rule the decline rested on is not achievable here.** This is a shared
+working tree with a shared `.git`, so local `main` is not anyone's private branch -- every lane's
+commits interleave on one ref. Git pushes ancestors, so *any* lane's push publishes every lane's
+committed work whether it means to or not. Demonstrated within the hour: a commit of mine sat on top
+of another lane's unpushed commit, I prepared to publish both and disclose it, and before I could, a
+third lane pushed and carried both. "I will not publish another lane's commit" is therefore a rule
+about an outcome nobody in this tree controls. The achievable version is about *timing*: do not push
+while another lane has unpushed work you have not been told is ready. The instinct was right and the
+formulation was not, which is worth separating, because the instinct is the part that transfers.
+
 **The part worth keeping is the decline, not the correction.** The lane's rule -- do not publish
 another lane's commit on my own judgment of when it is ready -- held on a false premise and would
 have held on a true one. A decision that is right for its reason survives its facts being wrong;
