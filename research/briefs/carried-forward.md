@@ -1509,3 +1509,56 @@ paragraph -- which is safe for the reason paragraph scope is safe: the scope is 
 Widening cannot launder a citation. Five reports became one, the one is true, and a control that
 strips a citation from a real file in a scratch extract brings the detection back, so the check still
 fires on the shape it exists for.
+
+---
+
+## I wrote the check, then answered the question with a grep
+
+I reported that release scenario 6 was uncovered across the whole `evals/` tree, gave the figure
+that supported it -- twelve other scenarios found, six absent -- and routed it to two lanes. One of
+them built an eval case on that premise.
+
+It was covered. `super-build` has had two cases for it since batch 4, and `ff82f1a` says so in its
+commit message in plain words: *"Scenario 6 is two of them."* The tree tags scenarios in two
+spellings, `scenario-6` and `scenario-06`, and my pattern matched only the first.
+
+That is register №1, wrong cases, which I wrote. But the sharper fact is what sat beside it the
+whole time. `ak validate` emits `evals.uncovered-scenarios` on every run, reading the *number* and
+not the spelling -- `Number("06")` is 6 -- and it had been printing `release scenarios no case tags:
+2, 16, 17, 22, 24` for days. Scenario 6 was never in that list. **I had built the instrument for
+exactly this question and then answered the question by hand.**
+
+The note even disclaims precisely what I went on to commission: *"the 19 scenarios absent from the
+list above are tagged, not tested."* The half of the audit I asked for was the half the instrument
+says it does not cover, which is the right half to ask for -- and I would have known that from the
+output rather than from reconstructing it afterwards.
+
+### Twelve hits is a firing control
+
+The ad-hoc grep felt safe because it returned a lot. Twelve scenarios is unmistakably an instrument
+with a subject. It is not evidence that it had *this* subject, and a pattern excluding an entire
+spelling produces output indistinguishable from a pattern that found everything there was. **The
+number of hits is never the control. Deliberately removing a case known to be present is.** One
+`grep -c scenario-06` would have closed it, and so would reading the validator.
+
+So the rule, and it is narrower and more useful than "check your regex": **where the tree already
+contains a check for the question you are about to answer, the check is the answer.** An ad-hoc
+measurement standing beside a live check is not corroboration. It is a second instrument, with no
+controls, no population statement and no revision, competing with one that has all three -- and when
+they disagree, the reflex is to believe the one you just ran, because you can see how it works.
+
+### And the writers were following the contract
+
+The four padded files are not sloppiness. `AUTHORING.md` specified `scenario-NN` -- two digits, in
+the notation itself -- and demonstrated `scenario-04`, and both batch briefs instructed the padded
+form. The canonical-example heuristic again: the notation was ambiguous, the example resolved it,
+and every writer followed the example. Meanwhile plan §10, `RELEASE_SCENARIOS`, the validator's own
+messages and twenty-odd case files used the other form. Nothing was broken, and nothing would ever
+have broken, which is why it survived: **a split vocabulary costs nothing until somebody reads the
+corpus with a tool that is not the check.**
+
+Canonical is the unpadded form now, stated in §12 with the reason, and
+`evals.scenario-tag-noncanonical` keeps it that way. `research/probes/scenario-coverage.py` had
+already recorded the same shape in its docstring -- *"three spellings are already in use"* -- about a
+different index, months of attention apart, and neither of us generalised it until it cost
+something.

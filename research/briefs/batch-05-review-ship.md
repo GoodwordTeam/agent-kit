@@ -3,9 +3,10 @@
 Five skill bodies, **all user-invoked**: `super-review`, `super-ship`, `receiving-review`,
 `babysit-pr`, `ultraqa`. Three are `profiles: [core]`, two are `profiles: [autonomy]`.
 
-**This brief is written before batch 4 hands back.** The sections below are the parts that do not
-depend on it. A closing section carries what batch 4 learned and is empty until batch 4 commits —
-if it is still empty when you start, say so in the handback rather than assuming it had nothing.
+**This brief was written before batch 4 handed back.** The sections below are the parts that
+did not depend on it. The closing section, "What batch 4 learned", was empty when this brief
+issued and was filled on 2026-09-21, after batch 5 had started — so read it even if you have
+already read the rest, and say in the handback which of it reached you in time to act on.
 
 **This is the checkpoint batch.** When you hand back, the vertical slice runs against what you
 wrote, and the nine scenarios it gates on are graded on the corpus you leave behind. A gap you ship
@@ -392,5 +393,67 @@ resolve.
 
 ## What batch 4 learned
 
-*Empty. Batch 4 had not handed back when this brief was written. If it is still empty when you
-start, say so in the handback rather than assuming it had nothing.*
+**This section arrived after you started.** It was written on 2026-09-21, against batch 4's four
+commits -- `566a40f` super-scout, `ff82f1a` super-build, `0945b4c` super-verify, `e606f95` diagnose
+-- and batch 4 landed as four commits rather than one, which is worth knowing on its own: the resume
+point is a commit, and a batch that commits per body resumes at a body. Six things it paid for.
+
+**Four of four went over the 150-line target, which makes it eight of eight across two batches.**
+189, 235, 206 and 225 against a 150-line target and a 300-line cap, after batch 3's 168, 175, 168
+and 188. Eight bodies is not eight accidents. Read the target as the point where you owe a reason,
+and note that batch 4 produced two different valid answers. `super-verify` answered by looking:
+nothing in it is a catalogue, a rubric, a long table, a worked example or per-language detail, so it
+kept no `references/` file and said why. `diagnose` answered by moving -- ten ranked feedback-loop
+techniques are a catalogue, which §1 names explicitly, so they went to
+`skills/diagnose/references/feedback-loops.md` and the body kept the gate. Neither cut a gate to
+reach the number.
+
+**Name the rulings you deliberately did not cite.** `super-scout` carries zero inline citations and
+omits `resolved_conflicts` entirely, because it appears in no `binds.skills` group -- it is
+schema-governed rather than ruling-governed, and its gates come from `schemas/dossier.schema.json`
+and `policies/limits.yaml`. `super-verify` and `diagnose` each state which binding rulings they left
+bare and why: `numeric-heuristics-are-guidance` has no number in `super-verify` to govern, and
+`diagnose`'s loop-before-hypothesis, captured-output and secrets gates come from the donors and from
+`schemas/verification.schema.json`, so a citation manufactured to make the gate list look uniform
+would destroy the signal that the cited ones carry (§6). You have twelve rulings to dispose of on
+`super-review` alone. A disposition that says "bare, and here is what governs it instead" is the
+deliverable; a uniform list of citations is the failure it looks most like.
+
+**A restatement may compress; it may not narrow (§6), and narrowing is the one that hides.**
+`super-verify` found its head-conflation entry had dropped a bound -- the ruling says a material
+change opens a new review scope with its own first pass, and an invalidation rule with that clause
+removed is a *wider* rule, not a shorter one. `diagnose` repaired two rather than citing them: one
+substituted a word for the ruling's own and reached a wider population, and one credited the ruling
+with a clause it does not state. In all three the sentence read as a faithful summary. Compare
+against the ruling's text, not against your memory of it.
+
+**The keyless-scalar citation is legal, and the instrument did not accept it until this week.**
+`hard_gates` items are typed `nonempty_string`, so there is no key to carry `ruling:`, and §6
+forbids citing somewhere easier when that happens; the inline markdown shape goes inside the scalar.
+`super-verify` did exactly that, found §6's shape table did not name the case, and the table was
+repaired at `23e9c55`. Then the second half, which is yours: `citationScope` widened a *markdown*
+window to its paragraph but took a *YAML* window's own lines and nothing else, so five claims in
+`skills/*/skill.yaml` were reported `rulings.uncited-restatement` while carrying their citation two
+lines up. Fixed at `70d62a7`. **I told two lanes in writing to leave that warning class standing,
+and a true report was sitting in it.** If following this contract produces a warning you cannot
+clear by doing the right thing, that is a defect in the check and it goes to
+`CONTRACT-DEFECTS.md`. Do not absorb it, and do not let me tell you to.
+
+**A commit message that says "see X" creates an obligation that X exists.** `0945b4c` says "§6's
+shape table does not name that case; see `CONTRACT-DEFECTS.md`". No entry was ever filed there. The
+substance was handled -- the contract was fixed at `23e9c55` the next day -- so no defect was lost,
+and under §10 a retired entry is deleted rather than marked resolved, so an empty list is not
+evidence of nothing. But `CONTRACT-DEFECTS.md` claims `git log -- CONTRACT-DEFECTS.md` is the index
+of every defect this contract has ever had, and this one is not in it, because it never passed
+through the file. A pointer to a record that does not exist closes the question for the next reader
+more firmly than no pointer would.
+
+**Batch 4 was told to pad its scenario tags, and the padding split the corpus.**
+`research/briefs/batch-04-build.md:101` instructs `scenario-06`; twenty-odd other case files write
+`scenario-6`. No check was ever wrong -- `scenarioTags` reads the number, not the spelling -- but an
+ad-hoc `grep scenario-6` over the corpus returns a subset that looks like the whole, and mine
+reported scenario 6 as uncovered when `super-build` had covered it since batch 4 in two cases.
+**I routed that false finding to two lanes, including yours.** Canonical is the unpadded form now,
+stated in §12 and checked by `evals.scenario-tag-noncanonical`. The general form, which is the part
+to keep: a search that finds many things is not thereby a search that found everything, and the
+number of hits is not the control -- deliberately removing a known-present case is.
