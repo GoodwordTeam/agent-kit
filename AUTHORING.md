@@ -1574,8 +1574,12 @@ need it.
   fails.
 - Frontmatter carries spec keys only and `name` equals the directory — `frontmatter.unknown-key`,
   `frontmatter.host-key-in-canonical`, `frontmatter.name-mismatch`.
-- Every adapted file has a provenance row and the cited path exists at the pin —
-  `provenance.missing-adaptation`, `provenance.source-not-at-pin`.
+- A donor-origin entry has at least one provenance row, and every row's cited path exists at the
+  pin — `provenance.missing-adaptation`, `provenance.source-not-at-pin`. The two quantifiers differ
+  and the difference is the point: the second is universal over the rows that exist, the first is
+  existential over the entry's directory. A directory of ten adapted files carrying one row passes
+  it with nine unattributed. Per-file coverage is §5's rule and stays the writer's, so this is the
+  one bullet in this list naming an obligation the commands above do not discharge.
 - Three or more eval cases exist, one of each required kind — `evals.too-few-cases`,
   `evals.missing-case-kind`, both blocking.
 - Nothing in the body links to a file the bundle does not carry — `links.broken-bundle`.
