@@ -14,10 +14,14 @@ package:
   namespace: "/ak:"
   default_profile: core
   # Here for the same reason NOTICE and LICENSE are in every tree this file
-  # builds: a catalog that declares no author and no licence cannot produce a
-  # compliant host manifest, so it is not a valid fixture for a passing build.
+  # builds: a catalog that declares no author, no licence and no description
+  # cannot produce a compliant host manifest, so it is not a valid fixture for a
+  # passing build. The description is the field adapters/codex/CONTRACT.md §5.2
+  # makes the two manifests agree on, and two manifests that both dropped it
+  # agree -- so the build refuses it here rather than certifying the agreement.
   author: agent-kit maintainers
   license: MIT
+  description: What the host is told this package is.
 skills:
   - id: triage
     invocation: U

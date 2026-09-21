@@ -400,11 +400,21 @@ describe("bundle planning", () => {
  * the catalog.
  *
  * `adapters/codex/CONTRACT.md` §5.2 is why absence is an error rather than an
- * omission: `name`, `version`, `description` and `license` must agree across
- * `package.json` and both manifests, and the donor this was adapted from treats
- * that disagreement as release-blocking rather than a lint. A manifest with no
- * `license` key does not disagree with anything -- it removes the field the
- * check compares, which is the quieter way to pass.
+ * omission. The clause has two party sets and this comment used to state only
+ * the wider one: `version` and `license` agree across `package.json` and both
+ * manifests, while `name` and `description` agree between the two manifests and
+ * with the catalog, with `package.json` not a party to either. The donor this
+ * was adapted from treats such a disagreement as release-blocking rather than a
+ * lint. A manifest with no `license` key does not disagree with anything -- it
+ * removes the field the check compares, which is the quieter way to pass.
+ *
+ * `description` is checked here for that exact reason and not by the parity
+ * comparison. Absent from the catalog, both manifests ship without the key,
+ * §5.2's manifest-to-manifest half is satisfied by mutual absence, and nothing
+ * reports it -- agreement between two bundles that both dropped the field. Its
+ * two siblings have been guarded here since `c0ef130`; it arrived as a manifest
+ * field in `19081aa` without the guard, which is the defect this block now
+ * holds shut.
  */
 describe("the identity fields the manifests are obliged to carry", () => {
   test("both manifests carry the author and licence the contract specifies", () => {
@@ -437,6 +447,13 @@ describe("the identity fields the manifests are obliged to carry", () => {
     const plan = planBundle(ctx, "claude-code", {});
     const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes("author"));
     expect(issue?.severity).toBe("error");
+    // The wording, not just the rule. Absent and blank are different facts with
+    // different fixes, and `loadCatalog` is what keeps them apart by setting the
+    // field only when it is present. A loader that defaulted an absent field to
+    // `""` would still fail the build, with a message telling the reader their
+    // catalog declares a blank author when it declares none -- caught here
+    // rather than by the rule id, which is identical either way.
+    expect(issue?.message).toContain("declares no 'author'");
   });
 
   test("a catalog with no license fails the same way, and the two are reported separately", () => {
@@ -447,7 +464,27 @@ describe("the identity fields the manifests are obliged to carry", () => {
       (i) => i.rule === "packaging.manifest-identity-missing",
     );
     expect(missing.length).toBe(1);
-    expect(missing[0]?.message).toContain("license");
+    expect(missing[0]?.message).toContain("declares no 'license'");
+  });
+
+  test("a catalog with no description fails too, which mutual absence would otherwise hide", () => {
+    // The field §5.2 makes the two manifests agree on, with `package.json` not a
+    // party. Nothing else can catch its absence: `checkManifestParity` no longer
+    // compares it, and a manifest-to-manifest comparison passes when neither
+    // side has the key. Both bundles would ship describing nothing and agreeing
+    // about it.
+    const ctx = ctxFor({
+      "catalog.yaml": CATALOG.replace("  description: What the host is told, which is a different sentence again.\n", ""),
+    });
+    const missing = planBundle(ctx, "claude-code", {}).issues.filter(
+      (i) => i.rule === "packaging.manifest-identity-missing",
+    );
+    expect(missing.length).toBe(1);
+    expect(missing[0]?.message).toContain("declares no 'description'");
+    // The authority is the catalog's own block, not §1. A message sending a
+    // reader to adapters/claude-code/CONTRACT.md §1 for this field sends them
+    // to a document that does not state its value.
+    expect(missing[0]?.message).toContain("adapters/codex/CONTRACT.md §5.2");
   });
 
   test("an absent field is left out of the manifest rather than emitted empty", () => {
@@ -457,20 +494,23 @@ describe("the identity fields the manifests are obliged to carry", () => {
     // and satisfy §5.2's comparison not at all -- it would disagree with
     // package.json while looking like a field someone had filled in.
     //
-    // Both fields, because they are emitted by two separately guarded lines and
-    // a test that drops one of them reports clean over the other losing its
-    // guard. Measured, not assumed: the licence-only version of this test
-    // survived a mutant that emitted `"author": { "name": "" }` for an absent
-    // author. The surviving field is asserted too, so "omit the one that is
-    // missing" cannot pass as "omit both".
-    for (const [field, line, other] of [
-      ["license", "  license: MIT\n", "author"],
-      ["author", "  author: agent-kit maintainers\n", "license"],
+    // All three fields, because they are emitted by three separately guarded
+    // lines and a test that drops one of them reports clean over that one
+    // losing its guard. Measured, not assumed: the licence-only version of this
+    // test survived a mutant that emitted `"author": { "name": "" }` for an
+    // absent author. The surviving fields are asserted too, so "omit the one
+    // that is missing" cannot pass as "omit all of them".
+    for (const [field, line] of [
+      ["license", "  license: MIT\n"],
+      ["author", "  author: agent-kit maintainers\n"],
+      ["description", "  description: What the host is told, which is a different sentence again.\n"],
     ] as const) {
       const ctx = ctxFor({ "catalog.yaml": CATALOG.replace(line, "") });
       const manifest = JSON.parse(planBundle(ctx, "claude-code", {}).files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
       expect(`no ${field}: ${field in manifest}`).toBe(`no ${field}: false`);
-      expect(`kept ${other}: ${other in manifest}`).toBe(`kept ${other}: true`);
+      for (const other of ["license", "author", "description"].filter((f) => f !== field)) {
+        expect(`${field} missing, kept ${other}: ${other in manifest}`).toBe(`${field} missing, kept ${other}: true`);
+      }
     }
   });
 
@@ -486,12 +526,26 @@ describe("the identity fields the manifests are obliged to carry", () => {
     // report it, and the manifest has to leave the key out. Reporting an error
     // while writing the blank anyway is what a separate predicate in the check
     // and at the emit site produces.
-    const ctx = ctxFor({ "catalog.yaml": CATALOG.replace("author: agent-kit maintainers", 'author: ""') });
-    const plan = planBundle(ctx, "claude-code", {});
-    const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes("author"));
-    expect(issue?.severity).toBe("error");
-    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
-    expect("author" in manifest).toBe(false);
+    //
+    // `description` is here because blank is the only state in which its guard
+    // is observable at all. Absent, `JSON.stringify` drops the undefined value
+    // and a guarded emit and an unguarded one produce byte-identical manifests;
+    // blank, the unguarded emit ships `"description": ""`. A mutant removing
+    // that guard survived the absent-field test above for exactly this reason,
+    // and this loop is what fails it.
+    for (const [field, from, to] of [
+      ["author", "author: agent-kit maintainers", 'author: ""'],
+      ["license", "license: MIT", 'license: ""'],
+      ["description", "description: What the host is told, which is a different sentence again.", 'description: ""'],
+    ] as const) {
+      const ctx = ctxFor({ "catalog.yaml": CATALOG.replace(from, to) });
+      const plan = planBundle(ctx, "claude-code", {});
+      const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes(field));
+      expect(`${field}: ${issue?.severity}`).toBe(`${field}: error`);
+      expect(`${field}: ${issue?.message.includes("declares a blank")}`).toBe(`${field}: true`);
+      const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      expect(`${field} in manifest: ${field in manifest}`).toBe(`${field} in manifest: false`);
+    }
   });
 });
 

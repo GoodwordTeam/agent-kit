@@ -98,6 +98,18 @@ const PARITY_FIELDS: ReadonlyArray<readonly [string, string]> = [
 ];
 
 /**
+ * The field list as the messages spell it, derived rather than written out.
+ *
+ * Two of the three messages below used to carry `'version' and 'license'` as a
+ * literal while the third derived it from `PARITY_FIELDS`. That is the shape
+ * this file keeps naming as the defect: an edit to the list updates the derived
+ * spelling and leaves the literals stating the old rule, and the one a reader
+ * acts on is whichever message their build happened to emit. The literals are
+ * exactly what went stale when `1167bca` withdrew the four-field clause.
+ */
+const PARITY_FIELD_LIST = PARITY_FIELDS.map(([field]) => `'${field}'`).join(" and ");
+
+/**
  * Where this package records what its own build decided, beside that host's
  * manifest.
  *
@@ -661,7 +673,7 @@ function checkManifestParity(root: string, manifest: Record<string, unknown>): I
         "packaging.manifest-parity-unavailable",
         PACKAGE_FILE,
         PARITY_CHECK,
-        `${PACKAGE_FILE} is ${text === null ? "not in the source tree" : "not a JSON object"}, so neither of the fields adapters/codex/CONTRACT.md §5.2 requires the host manifests to agree with it on could be read. The manifests are in the plan and there is nothing to measure them against, which is a check that did not run rather than a check that passed. Write ${PACKAGE_FILE} declaring ${PARITY_FIELDS.map(([f]) => f).join(" and ")}.`,
+        `${PACKAGE_FILE} is ${text === null ? "not in the source tree" : "not a JSON object"}, so neither of the fields adapters/codex/CONTRACT.md §5.2 requires the host manifests to agree with it on could be read. The manifests are in the plan and there is nothing to measure them against, which is a check that did not run rather than a check that passed. Write ${PACKAGE_FILE} declaring ${PARITY_FIELD_LIST}.`,
       ),
     ];
   }
@@ -675,7 +687,7 @@ function checkManifestParity(root: string, manifest: Record<string, unknown>): I
           "packaging.manifest-parity-unavailable",
           PACKAGE_FILE,
           PARITY_CHECK,
-          `${PACKAGE_FILE} states no '${field}', so the '${field}' this bundle's manifest carries had nothing to be compared against. adapters/codex/CONTRACT.md §5.2 requires 'version' and 'license' to agree across ${PACKAGE_FILE} and both host manifests; declare '${field}' in ${PACKAGE_FILE}.`,
+          `${PACKAGE_FILE} states no '${field}', so the '${field}' this bundle's manifest carries had nothing to be compared against. adapters/codex/CONTRACT.md §5.2 requires ${PARITY_FIELD_LIST} to agree across ${PACKAGE_FILE} and both host manifests; declare '${field}' in ${PACKAGE_FILE}.`,
         ),
       );
       continue;
@@ -686,7 +698,7 @@ function checkManifestParity(root: string, manifest: Record<string, unknown>): I
       error(
         "packaging.manifest-parity",
         PACKAGE_FILE,
-        `'${field}' disagrees: ${PACKAGE_FILE} declares '${theirs}' and the host manifest ${ours === undefined ? "carries no such key" : `carries '${ours}'`}. adapters/codex/CONTRACT.md §5.2 requires 'version' and 'license' to agree across ${PACKAGE_FILE} and both host manifests. The manifest's '${field}' is generated from catalog.yaml's ${source}, so the edit goes there or in ${PACKAGE_FILE} -- not in the bundle, which is rewritten on every build.`,
+        `'${field}' disagrees: ${PACKAGE_FILE} declares '${theirs}' and the host manifest ${ours === undefined ? "carries no such key" : `carries '${ours}'`}. adapters/codex/CONTRACT.md §5.2 requires ${PARITY_FIELD_LIST} to agree across ${PACKAGE_FILE} and both host manifests. The manifest's '${field}' is generated from catalog.yaml's ${source}, so the edit goes there or in ${PACKAGE_FILE} -- not in the bundle, which is rewritten on every build.`,
       ),
     );
   }
@@ -730,24 +742,42 @@ function marketplace(ctx: CheckContext): string {
  * The package identity every host manifest is obliged to carry.
  *
  * Reported per field, because the fix for each is a different line and a reader
- * missing one of the two needs to know which. Emitted from `planBundle` rather
+ * missing one of the three needs to know which. Emitted from `planBundle` rather
  * than from a validation check so that it fails the build: a bundle whose
  * manifest omits `license` does not disagree with `package.json`, it removes
  * the field `adapters/codex/CONTRACT.md` §5 compares, and a check that only
  * compares present fields would pass over it.
+ *
+ * `description` is checked here and nowhere else, which is the gap `19081aa`
+ * left when it made the field a manifest value. It is not in `PARITY_FIELDS`,
+ * because §5.2 makes `package.json` no party to it; and the half of §5.2 that
+ * does bind it is manifest-to-manifest, where two manifests that both dropped
+ * the key agree. Absence is the one state in which that comparison certifies
+ * nothing, so absence has to fail before the comparison is reached.
+ *
+ * The citation differs by field because the authority does. `author` and
+ * `license` are specified by `adapters/claude-code/CONTRACT.md` §1; the
+ * authority for `description` is `catalog.yaml`'s own `package.description`,
+ * per `adapters/codex/CONTRACT.md` §5.2, and sending a reader to §1 for it
+ * would send them to a document that does not state the value.
  */
 function checkManifestIdentity(pkg: CheckContext["catalog"]["package"]): Issue[] {
   const issues: Issue[] = [];
-  for (const [field, value] of [
-    ["author", pkg.author],
-    ["license", pkg.license],
+  for (const [field, value, authority] of [
+    ["author", pkg.author, "adapters/claude-code/CONTRACT.md §1 specifies the value"],
+    ["license", pkg.license, "adapters/claude-code/CONTRACT.md §1 specifies the value"],
+    [
+      "description",
+      pkg.description,
+      "adapters/codex/CONTRACT.md §5.2 makes this block the authority for it, and package.json is not a party",
+    ],
   ] as const) {
     if (declared(value)) continue;
     issues.push(
       error(
         "packaging.manifest-identity-missing",
         "catalog.yaml",
-        `catalog.yaml's package: block ${value === undefined ? "declares no" : "declares a blank"} '${field}', so every host manifest would ship without it. adapters/claude-code/CONTRACT.md §1 specifies the value; declare '${field}' under package: and both manifests get it from there.`,
+        `catalog.yaml's package: block ${value === undefined ? "declares no" : "declares a blank"} '${field}', so every host manifest would ship without it. ${authority}; declare '${field}' under package: and both manifests get it from there.`,
       ),
     );
   }
