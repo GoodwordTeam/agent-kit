@@ -2107,6 +2107,20 @@ commit that closed it. sweep-reviewer's recommendation, adopted: file this separ
 locator figure over the sentence-truth figure, because keeping them in one number is what produced
 the ambiguity above.
 
+**The case that argues for it better than the argument does.** sweep-reviewer checked a sentence
+sitting beside the one they had falsified, in the same paragraph of `schemas/case.schema.json`,
+expecting a second uninstantiated mechanism. *"A run that scored 0.00 against an empty workspace"*
+is **instantiated**, and well: `research/briefs/checkpoint-host-packaging.md` carries the run end to
+end -- one case, 0.00 on all three graders, the trace described, the agent naming the paths it
+inspected and saying the repository had no commits, and all three `llm` graders failing it because
+each asks whether a review was produced. That sentence has a receipt, in another lane's file. *"The
+one author who tries gets a validation error"*, two sentences earlier, has none and never did.
+
+**The two read identically.** Same paragraph, same register, same confident present tense, one fully
+evidenced and one never instantiated, and nothing in the prose distinguishes them -- which is the
+whole argument for the rule above in one artifact. **Evidence is not inherited by adjacency**, and a
+paragraph is exactly the unit that makes it look as though it is.
+
 ## A zero can be correct and still answer a question you did not ask
 
 sweep-reviewer's, against themselves, and it is the complement of every other zero on this page. The
@@ -2532,6 +2546,23 @@ the first class; `scaffold_script`, `runs` and `timeout_seconds` are in the seco
 is the one that was costing a whole capability. Both arms are needed, and this page's own rule says
 why -- a remedy has to have the same extension as the defect it repairs, and this defect has two.
 
+**Necessary and still not sufficient, because the arm has a second parameter.** `schemas` built the
+reconciling half at `719a040` and reported the thing the pair does not say: **which source you
+reconcile against decides what the arm can reach.** They enumerated from the host's eval-authoring
+spec, printed by `claude plugin eval init`, which states its own completeness twice and is a static
+template -- byte-identical across two runs at the same host version, so no inference and no network.
+A stated key list, and a better source than the help text. It lists **five** grader types. The
+loader has six, so `case.schema.json` was refusing `baseline` the whole time and a reconciliation
+against that source reported no divergence on it.
+
+The loader definition read at `4756a2e` has the sixth and misses something else: **it carries
+signatures and not defaults.** `focus` and `target` are in it as optional keys, and their default of
+`last_message` is not, because a default is not a shape. The authoring spec carries the defaults. So
+the two sources are each incomplete in the other's direction, mine missing `focus` and theirs
+missing `baseline`, and that is not a caveat on the remedy -- it is a third parameter on it.
+**Reconcile against one source and the arm inherits that source's blind spot, silently, and reports
+zero divergences from inside it.**
+
 One limit on the reconciling arm, because it is the arm that has to be built. The only host-side
 enumeration to hand is `claude plugin eval --help`, which names these keys inside flag descriptions
 rather than as a key list. Absence from a help text is not evidence of absence from the loader, so
@@ -2631,6 +2662,33 @@ it still holds at HEAD -- `evals/**/case.yaml` declares `scaffold_script` in zer
 `timeout_seconds` and a case-level `runs:` in zero. The key exists in this repository now because an
 investigation named it, not because an author ever reached for it.
 
+**And the four minutes are a property, not bad luck.** sweep-reviewer's reading, which is the
+general form of the paragraph above. A **presence** claim is monotone: *`scaffold_script` occurs in
+`dae12ad`* is true forever, because commits do not un-happen, and pinning it is a courtesy. An
+**absence** claim is the opposite shape -- falsifiable by any commit in any lane and repairable by
+none. *It occurs nowhere in `schemas/`* can only ever get worse, and it can be broken by someone who
+has never read the file it is written in.
+
+So **an absence claim's half-life is set by the commit rate of every other lane, not by your own.**
+With three lanes active it was four minutes, and no amount of care on my side buys a second more.
+The corollary is sharper than the fix: **an absence claim that is not pinned is not a weaker claim,
+it is a claim with no truth conditions**, because the tree it quantifies over is not the tree its
+reader has. Pinning is not a workaround for haste. It is the only form in which the claim can be
+true at all.
+
+A related case from the same exchange. sweep-reviewer attributed three commits from a `-S` census to
+me; one, `dae12ad`, is not mine. Every commit in this repository is authored `Pibomeister`, so the
+author field separates nothing, and the discriminator I proposed instead was the file list -- my
+four touch `carried-forward.md` and nothing else.
+
+Their caution on that is the better half of the exchange: **the file list separates lanes today
+because lanes happen to own disjoint files, which is a fact about this week and not a property of
+git.** The first time two lanes touch one file it stops working, silently, and nothing announces it.
+The durable form is for a lane to name itself in the commit body, so the discriminator is *stated*
+rather than reconstructed from a coincidence -- this page's retrofitted-provenance rule arriving
+against the person who wrote it down, since evidence has to be created by the act and not inferred
+from its side effects.
+
 What replaces it is stronger than the counterfactual was. The corpus held **50** cases at `7db25a7`
 and **104** at `c9fdcda`, so **54 cases were authored after the schema closed**, across seven
 commits, the last at 10:11 this morning -- about two hours before the host was first pointed at the
@@ -2693,3 +2751,37 @@ applied to a finding whose disposition is *unresolved*.
 
 Filed here and not fixed: `schemas/` is not mine. Routed to `schemas` and team-lead with the four
 arms above.
+
+---
+
+## A rule on this page did not prevent its own recurrence, and an instrument did
+
+This is a finding against the form of this page, reported by sweep-reviewer against themselves, and
+it should be read before anything else here is treated as a safeguard.
+
+They filed the `$?`-after-a-pipeline trap as a rule, in writing, having just been caught by it.
+**About twenty minutes later they hit it again** -- `grep -rn 'allow-tools' ... | head`, `head`'s
+zero read as grep's -- and came within one step of reporting a requirement as documented when it
+appears **zero** times in the repository. Writing it down did not prevent the second instance.
+Re-running it in a form that cannot lie did.
+
+Set that beside the one mechanism here that has caught this class automatically. `schemas` filed a
+contract defect at `2cc3a92` quoting §9; `4756a2e` rewrote §9 about fifteen minutes later;
+`defects.entry-quotation-dangling` reported the entry as quoting a sentence that no longer existed,
+on the next validate, with no reader involved. The by-text citation rule was written on this page as
+a rule, and the thing that enforced it was a check that reads the quoted bytes and compares them to
+the contract.
+
+So the two halves of the same day: **a rule, freshly written by the person it was written for,
+failed inside twenty minutes; a check derived from a rule caught a stale quotation across two lanes
+without anyone noticing it had gone stale.** The conclusion is not that the rules are worthless --
+they are what the checks get derived from, and `defects.entry-quotation-dangling` exists because
+someone wrote the rule down first. It is narrower and it bites: **stop counting "it is on the page"
+as mitigation.** A rule on a page asks a tired reader to remember at the exact moment they are least
+able to, and every entry above is a record of that reader failing. Weight an instrument that fails
+loudly over a rule that asks for recall, and when an entry here can be turned into a check, the
+entry is not finished until it has been.
+
+The honest limit on this section: it is two data points, one in each direction, over a single day
+and two people. What it establishes is that *"we wrote it down"* is not evidence of anything, which
+is enough to stop treating it as though it were.
