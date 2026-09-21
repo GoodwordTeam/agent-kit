@@ -70,11 +70,30 @@ Batch 4's failure mode was a writer reaching for a ruling that did not exist. Yo
 opposite: twelve citations will not fit in a body §1 targets at 150 lines, so **some will be
 dropped, and nothing in the repo will tell you which.** §6 governs where a citation goes, not
 whether one is missing; `rulings.uncited-restatement` is lexical and warns about text that looks
-like a restatement, not about a ruling nobody cited. There is no check that reads "this skill binds
-twelve rulings and this body cites nine."
+like a restatement, not about a ruling nobody cited.
 
-So the population is yours to close by hand. **Write the list of twelve first, before the body, and
-account for every one of them in the handback** — cited here, carried by a `references/` file, or
+**Correction, filed by `provmap` against this brief.** An earlier draft said no check reads "this
+skill binds twelve rulings and this body cites nine." One does: `rulings.binding-not-cited`,
+`src/validation/rulings.ts:478-490`, per ruling, as an error naming both the ruling and the file.
+The population closes itself and you will hear about a missing member.
+
+What it cannot do is the reason the advice below stands anyway. Line 481 is
+`if (text.includes(row.id)) continue;` — raw substring presence, anywhere in the file. Measured on
+`skills/diagnose/SKILL.md`: every occurrence removed raises exactly one finding; the id restored
+silences it; the id present **only inside an HTML comment** silences it; the id present **only
+inside a fenced code block** silences it. So the check verifies that a string is somewhere in the
+file. It cannot see §6 shape, cannot see whether the citation sits at the claim it governs, and
+cannot see whether the body agrees with the ruling it names.
+
+The worked example is already in this batch. `skills/super-review/SKILL.md:41` cites
+`ci-repair-restricts-purpose-not-permission` and then drops the fourth term of the sequence the
+ruling states — and passes. `skills/babysit-pr/SKILL.md:122` states all four terms correctly
+without citing, and is flagged. The check catches the obedient body and is blind to the
+contradicting one, so a green `binding-not-cited` is evidence about strings and not about
+agreement.
+
+So the population is closed for you and the *agreement* is yours to close by hand. **Write the list
+of twelve first, before the body, and account for every one of them in the handback** — cited here, carried by a `references/` file, or
 deliberately not cited with the reason. A tally is not a term: "cites all applicable rulings" is not
 an answer to this, because it names no member. Three of the twelve are the ones most likely to be
 folded into prose and lost, because the body will want to *state* them rather than cite them:
