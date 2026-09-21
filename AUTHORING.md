@@ -321,9 +321,19 @@ raise with its owner, not a divergence to introduce here: the catalog is the sin
 Provenance is recorded twice, at two granularities, and both are required.
 
 **Per skill**, in `skill.yaml`'s own `provenance` block (`schemas/skill.schema.json`):
-`origin: donor` with `donor_sources[]` (`donor`, `commit`, `path`, and the `adaptation` that
-describes what changed), or `origin: conversation` with `conversation_locators[]`. Plus
-`resolved_conflicts[]` — see §6.
+`origin: donor` with `donor_sources[]`, or `origin: conversation` with `conversation_locators[]`.
+Plus `resolved_conflicts[]` — see §6.
+
+**A `donor_sources[]` row requires three fields and admits two more.** `donor`, `commit` and `path`
+are the required set; `adaptation`, which says what changed, and `license` are optional, and
+`additionalProperties: false` closes the row against anything else (`schemas/skill.schema.json`,
+and `schemas/pack.schema.json` carries the same shape). This paragraph used to name four fields
+without marking which were required, which reads `adaptation` as mandatory and leaves `license`
+undiscoverable from the contract. Write the `adaptation` regardless — a row that does not say what
+changed is a citation rather than a provenance record — but write it knowing the schema will not
+notice its absence. That is this section claiming more than it enforces, the opposite of the error
+§12.2 made about the never-row gate, and the easier direction to catch: a writer who omits the
+field gets a clean run that contradicts the prose.
 
 **Per adapted file**, as a row of the merged adaptations record. Batches write their rows as
 fragments under `provenance/adaptations.d/`; `ak validate` reads the merged
@@ -418,6 +428,14 @@ The `donor@commit:path` path **must exist at the pin**. Verify it before citing:
 git -C .donors/EveryInc_compound-engineering-plugin cat-file -e 05c42da:skills/ce-code-review/SKILL.md
 ```
 
+**A donor-origin entry with no adaptations row is caught, but only per directory.**
+`provenance.missing-adaptation` (`src/validation/provenance.ts`) fires when an entry declaring
+`provenance_origin: donor` has no row whose `path` is its directory or sits beneath it. It is the
+donor-side counterpart of the conversation-side check below, and it is coarser than its name
+suggests: one row covering one file satisfies it for the entire entry. A directory of ten adapted
+files, nine of them unattributed, passes it. What the gate holds is that the entry is covered; that
+each file is covered is the rule above, and it is yours to keep.
+
 **A capability no donor implements carries no adaptations row.** The adaptations record is for
 adapted files, and there is nothing to attribute. Record it the way the validator checks it instead:
 the `catalog.yaml` entry declares `provenance_origin: conversation`, and
@@ -469,8 +487,12 @@ the same one.** The two granularities are independent: `provenance_origin` class
 while a conversation-map row records a *capability* landing in that entry's directory. A directory
 adapted from a donor can therefore carry a capability no donor implements, recorded at
 `destination: <entry dir>` with its locator in any of the three forms, while the entry stays
-`provenance_origin: donor` and its adapted files keep their rows. Nothing forbids the mix and
-several entries already use it. The clearest instance is `guided-checkpoint-mode`, landing in
+`provenance_origin: donor` and its adapted files keep their rows. Nothing forbids the mix, and it is
+the ordinary case rather than an exception: of the 69 distinct `destination` values in
+`provenance/conversation-map.yaml`, 56 are directories of entries `catalog.yaml` marks
+`provenance_origin: donor`, 2 are `conversation`, and 11 are entries of the declared kinds that
+carry no `provenance_origin` at all. *Several* understated that into sounding like a licensed
+exception. The clearest instance is `guided-checkpoint-mode`, landing in
 `skills/autopilot` — an entry `catalog.yaml` marks `provenance_origin: donor` — on a
 `plan §9` locator. That this paragraph's best example was one its own earlier wording excluded is
 the cheap check worth taking from it: where a rule has a canonical instance in the tree, read the
@@ -491,16 +513,19 @@ present, the citation is not available and the writer says so rather than paraph
 **Material held in `research/sources/` is cited at the pin, or not at all.** Some third-party
 material lives in-repo rather than at a donor pin — a recovered copy, a preserved earlier revision —
 and `provenance/upstream.lock.yaml` registers each one under `local_sources:` with its license and
-copyright. Registering it discharges the license obligation for holding it; it does not make it
-citable, and there is deliberately no `source:` spelling for a local source. Cite the pin wherever
-the claim survives there, and establish that it survives by reading the pin — never by renumbering.
-A recovered copy's line numbers do not correspond to the pin's, and a range carried across resolves
-against real text that says something else. Where a claim survives at no pin, cite the pin for the
-surrounding mechanism and say in the row's `rationale:` that the specific wording came from the
-registered local source; that row keeps its machine-checkable `source:` and states its one
-unverifiable element instead of hiding it. Do not invent a spelling — the reserved one, the evidence
-behind this rule and the trigger that would implement it are recorded beside `local_sources:` in the
-lockfile.
+copyright. That register holds exactly one member today, `pocock-two-axis-backup`, so *each one*
+describes a population of one and this rule has no second case to generalise from. Registering it
+discharges the license obligation for holding it; it does not make it citable, and there is
+deliberately no `source:` spelling for a local source. Cite the pin wherever the claim survives
+there, and establish that it survives by reading the pin — never by renumbering. A recovered copy's
+line numbers do not correspond to the pin's, and a range carried across resolves against real text
+that says something else. Where a claim survives at no pin, cite the pin for the surrounding
+mechanism and say in the row's `rationale:` that the specific wording came from the registered local
+source; that row keeps its machine-checkable `source:` and states its one unverifiable element
+instead of hiding it. No row does this today — the lockfile's one entry records
+`cited_in_adaptations: false` — so the route is specified and unexercised, and whoever needs it
+first is also its first test. Do not invent a spelling — the reserved one, the evidence behind this
+rule and the trigger that would implement it are recorded beside `local_sources:` in the lockfile.
 
 ---
 
