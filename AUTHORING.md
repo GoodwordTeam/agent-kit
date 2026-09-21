@@ -451,7 +451,13 @@ written carefully.
 **The locator has three forms and the transcript is only one of them.** `ak validate` admits
 `G:L<start>[-<end>]` ranges into `research/sources/grok-transcript.md`, `plan §<section>` and
 `arch §<section>` document references, and `amalgam <destination> + <destination>` seat pairs
-(`src/validation/provenance.ts`). Name where the capability was actually specified. Four live
+(`src/validation/provenance.ts`). Name where the capability was actually specified. `plan` and
+`arch` are two spellings of one file — `research/sources/engineering-skills-repo-plan.md`, whose
+`-repo-plan` suffix is why the second spelling grew — and the *implementation* plan is a third
+document that is not in this tree, so `plan §N` never denotes it. Nor is a document reference a
+fallback for a range that could not be found: the grammar admits it because the design's precedence
+puts the document above the transcript, which makes it the stronger citation rather than the weaker
+one (`src/validation/provenance.ts`). Four live
 `conversation` rows record knowledgebase capabilities against `plan §8` and `plan §1.2; plan §8`
 because the transcript does not contain them at all: measured, its 2,264 lines carry zero
 occurrences of `knowledgebase`, `knowledge base`, `knowledge-base`, `central KB` or `KB`. A `G:L`
