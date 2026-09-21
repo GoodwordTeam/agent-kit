@@ -1196,3 +1196,85 @@ Operable: **before citing a document by a short name, check what that name denot
 will read the citation, not in the conversation that produced it.** One grep of the consumer. The
 conversation you are in is exactly the context in which your own usage is unambiguous, which is why
 this cannot be caught by re-reading what you wrote.
+
+---
+
+## The governing document is not the document in front of you
+
+Three times in one day I stated a contract value from whatever file I happened to be reading rather
+than from the file that governs the artifact, and all three resolved cleanly.
+
+I ruled the plugin manifest's `author` to a literal I invented; `adapters/claude-code/CONTRACT.md:38`
+already specified one. I instructed that claude-code's `plugin.json` be identity-only with no
+`skills` key; that row lives in `adapters/codex/CONTRACT.md` §1 under a heading reading **"Verified
+(donor) at the pin"**, describing `compound-engineering@05c42da`'s repository -- our own contract
+says at length that the package enumerates every skill path explicitly, because the install set is
+profile-dependent. And I cited "the plan's precedence table" when in this tree `plan` denotes the
+architecture document.
+
+The common shape is not carelessness about sources. Each time I had a real document open, read it
+correctly, and quoted it faithfully -- to answer a question it was not the authority for. A donor
+table and a package contract look identical at the granularity of a row. **The failure is in the
+step that selects which document to open, and that step leaves no trace in the output**: a wrong
+quotation from the right file and a right quotation from the wrong file are indistinguishable
+downstream, and only the second survives review, because it is correct about something.
+
+Operable, and it is an ordering rather than a caution: **name the artifact first, open the contract
+that governs that artifact, then quote.** Not "read the contracts" -- I had. The lane that avoids
+this greps the contracts for the filename before choosing it, which is the same ordering expressed
+as a command: let the artifact find its governing document instead of letting the document you are
+reading suggest an artifact.
+
+---
+
+## A prohibition with no release mechanism is a queue that only grows
+
+The rule was right: do not push while another lane has unpushed work you have not been told is
+ready. It replaced a real failure. In a shared tree it also deadlocks, and a lane found the proof
+before I did -- every lane commits to one local `main`, so a commit stops being independently
+pushable the moment anyone commits after it, there is no refspec that publishes a descendant and
+withholds its ancestor, and if everyone obeys while everyone has unpushed work then nobody may ever
+publish. The rule forbids an action and contains nothing that restores it.
+
+It released anyway, by me pushing first. So the outcome was decided by whichever lane moved fastest
+rather than by anyone's judgment, which is the exact property the rule existed to remove. **A
+prohibition that is impossible to satisfy is not obeyed and not broken; it is routed around by
+whoever is least careful**, and its author never sees that happen because what they observe is the
+queue.
+
+The repair is a release mechanism, not a better prohibition: one named publisher, so "have you been
+told it is ready" has exactly one person it can be asked of. And the readiness statement belongs in
+the **commit message**, not in a report -- a report goes stale between the writing and the reading,
+as three did today, while a message travels with the commit and is read at the moment of the
+decision it informs.
+
+**The general form: when you tighten a rule, check that the tightened rule still has a path to
+"yes".** A rule with no reachable success state looks identical to a strict one right up until the
+first time somebody needs to act.
+
+---
+
+## A record is not a control
+
+Everything above is on this page. The refspec property is on this page -- stated correctly,
+including the remedy, including a worked account of me violating it once already in this session.
+Forty minutes after reading it I published another lane's commit through `HEAD:main` again, having
+narrated the spelling as though *computing the range after the decision* were its virtue rather than
+its diagnosis. I inverted the sign of my own entry while looking at it.
+
+This page is a record. Reading it is not running it. The entries are written to be checkable, which
+is not the same as being checked, and nothing in the act of writing one creates an occasion where it
+fires.
+
+So the third occurrence bought an instrument rather than a fourth paragraph: `tools/hooks/pre-push`,
+installed in the shared `.git/hooks` and therefore covering every lane without anyone installing
+anything. It refuses `main` and `HEAD:main` and admits `<sha>:main`, discriminating on what git
+actually sends -- measured, because the sha form sends no stdin line at all rather than a line to
+pattern-match. Controls both ways, and the negative control was **vacuous on its first run**: the
+sha I chose was already the remote head, so nothing was pushed and the allow path never executed. A
+control that passes without exercising the path it certifies is the anti-correlated control's
+quieter sibling, and it took a second run with a sha two commits ahead to get a reading worth having.
+
+The rule that follows is narrow and I would rather state it narrowly: **the second time you write
+down the same finding, stop writing and build the check.** A recurrence is evidence the record does
+not fire, and the record is the only remedy a recurrence tempts you to strengthen.
