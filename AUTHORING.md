@@ -1498,6 +1498,15 @@ re-derivable rather than a property of one machine — and a shallow clone would
 that reads differently, since a row unverifiable for want of the commit is not a row citing a bad
 path.
 
+**A receipt about a commit's own contents can only name that commit, so it is provisional until the
+commit is published.** The figures above are pinned to `4e45481` because a measurement *of the tree*
+can choose a published revision. A receipt *for the change in hand* cannot: the sha it has to name
+is the one being created. So it is re-derivable by whoever holds that commit and by nobody else
+until it is pushed, and in a repository that orphaned a published commit this week that is a real
+gap and not a formal one. It closes on publication, and the seat that publishes is the seat that
+closes it — one more reason the readiness statement travels in the commit message rather than in a
+file, where it arrives with the object it describes.
+
 **Two rules in this section still specify a check with no gate, and each says so in its own
 paragraph.** The retirement rule and the entry-quotation rule were gated at `d87f9e9`; the
 recorded-revision rule and the §11 coverage rule were not. **Each disclosure retires on the commit
