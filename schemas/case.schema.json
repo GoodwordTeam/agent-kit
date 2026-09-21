@@ -62,8 +62,36 @@
           "description": "Wall-clock seconds for the run, bounding it alongside `max_turns`. Beside `max_turns` here because the host documents the two as siblings. An under-set value scores 0 rather than reporting a timeout, which is the failure mode worth knowing about: it reads as the skill having done nothing. Host-owned, on two independent receipts: `claude plugin eval --help` at claude 2.1.278, and the authoring spec `claude plugin eval init` prints, which names it in the `prompt.md` frontmatter list. The receipt covers the key's existence and its meaning, not its position in a `case.yaml` -- the host's own `init --bare` writes `prompt.md` frontmatter, and this file's arrangement of the same keys is this package's.",
           "type": "integer",
           "minimum": 1
+        },
+        "artifact_publish": {
+          "description": "Whether the run publishes its artifacts. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "type": "boolean"
+        },
+        "append_system_prompt": {
+          "description": "Text the host appends to the run's system prompt. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "env": {
+          "description": "Environment variables for the run, as a string-to-string map. Defaults to empty at the host. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          }
+        },
+        "growthbook_overrides": {
+          "description": "Host feature-flag overrides for the run, as a map from flag name to a scalar. Values are not constrained here: the flags are the host's and a case that sets one this package has never heard of is the host's business. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "string",
+              "number",
+              "null"
+            ]
+          }
         }
-      }
+      },
+      "$comment": "The host's `execution` object has nine keys. This one names eight. `model` is the ninth, it is real, and it is held out deliberately rather than missed -- it is flagged to the contract owner and not this seat's to add. Stated here because an undeclared key in a closed object is exactly the `scaffold_script` failure: the symptom of refusing a key the host accepts is that nobody writes it, and a refusal nobody recorded is indistinguishable from a feature nobody wanted. This comment is what makes the omission visible instead."
     },
     "graders": {
       "description": "How the run is scored. At least one, because a case that grades nothing cannot fail and is therefore not a case.",
@@ -163,14 +191,51 @@
         ]
       }
     },
-    "scaffold_script": {
-      "description": "Author-supplied bash that stages the workspace before the run, executed only under `--scaffold` and skipped under `--no-scaffold`; `--keep-temp` preserves what it built. At the case root rather than in `execution` because it prepares what the run starts from rather than saying what the runner is asked to do. Optional: a case that needs no fixture declares none, and until this key was declared here a case that needed one could not be written at all -- `ak validate` refused it, so the corpus reads as though no case ever wanted a fixture. Host-owned: confirmed against `claude plugin eval --help` at claude 2.1.278, and confirmed there only. It is absent from the authoring spec `claude plugin eval init` prints, which states its own completeness but is complete about `prompt.md` frontmatter rather than about everything a case can carry. That asymmetry is why `research/probes/host-case-keys.py` reports a floor on divergence and not agreement: the two enumerations each omit something the other has, so neither alone would have found this key. The receipt covers the key's existence and its meaning, not its position in a `case.yaml` -- the host's own `init --bare` writes `prompt.md` frontmatter, and this file's arrangement of the same keys is this package's.",
-      "$ref": "common.schema.json#/$defs/nonempty_string"
-    },
     "runs": {
       "description": "How many times the host runs this case, defaulting to 3 when absent and overridden by `--runs`. Spelled `case.runs` in the host's own help, which is why it sits at the root. An integer count with no currency and no tier, like every other limit in this package. Host-owned, on two independent receipts: `claude plugin eval --help` at claude 2.1.278, and the authoring spec `claude plugin eval init` prints, which names it in the `prompt.md` frontmatter list and states its default of 3. The second is the stronger of the two -- a help text mentions what it happens to mention, so absence from it is not evidence, whereas the spec states its own completeness. The receipt covers the key's existence and its meaning, not its position in a `case.yaml` -- the host's own `init --bare` writes `prompt.md` frontmatter, and this file's arrangement of the same keys is this package's.",
       "type": "integer",
       "minimum": 1
+    },
+    "description": {
+      "description": "Optional prose about the case, read by the host and by nobody here. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+      "$ref": "common.schema.json#/$defs/nonempty_string"
+    },
+    "plugins": {
+      "description": "Plugins the host loads for this case, overriding what it would infer. Not enumerated: the set is the host's. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonempty_string"
+      }
+    },
+    "context": {
+      "description": "What the run starts from, as against `execution`, which is what the runner is asked to do.\n\nThis object exists because `scaffold_script` was declared at the case root at 9b12366 and the host reads it at `context.scaffold_script`. The key was real and correctly attributed to the host; only its address was wrong, and the host's root object is not strict, so a case written to this schema would have validated, shipped, and had its scaffold silently ignored. That is a worse failure than the refusal it replaced: a refused key leaves no artifact, and a key at the wrong address leaves an artifact that looks correct and does nothing. A key has a name and an address, and the annotation at 9b12366 recorded only the name.\n\nRead off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scaffold_script": {
+          "description": "Author-supplied bash that stages the workspace before the run, executed only under `--scaffold` and skipped under `--no-scaffold`; `--keep-temp` preserves what it built. Under `context` because that is where the host reads it. Optional: a case that needs no fixture declares none, and until this key was declared here a case that needed one could not be written at all -- `ak validate` refused it, so the corpus reads as though no case ever wanted a fixture. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "history_file": {
+          "description": "A prior session for the run to resume from. The host refuses a case that sets it without an `execution.prompt`, because a resumed session still needs a next turn. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "$ref": "common.schema.json#/$defs/nonempty_string"
+        },
+        "add_dirs": {
+          "description": "Extra directories the run may reach, beyond its sandbox cwd. Defaults to empty at the host. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "common.schema.json#/$defs/nonempty_string"
+          }
+        }
+      }
+    },
+    "expected_outcome": {
+      "description": "Prose about what the case should produce. Optional, and carried at the case root.\n\nThis is the key AUTHORING.md §9 records as having been refused by the runner across 87 of 87 cases. The refusal was real and the diagnosis was half right: the host's grader objects are strict and this key is not one of theirs, so every `llm` grader carrying it failed to load. But the key itself exists, at the case root, and was never the problem. Name and address again, and in the opposite direction from `context.scaffold_script`: there a real key was moved to a wrong address, here a real key was deleted outright because it had been at one. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
+      "$ref": "common.schema.json#/$defs/nonempty_string"
     }
   }
 }

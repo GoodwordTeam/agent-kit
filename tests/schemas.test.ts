@@ -370,24 +370,39 @@ describe("the resolved-conflicts policy has a declared shape", () => {
   });
 
   /**
-   * The deferrals, asserted as deferrals.
+   * The deferrals that remain, asserted as deferrals.
    *
-   * Both values below are real defects, and `rulings.malformed-id` and
-   * `rulings.malformed-discharged-in` each report one with a message this file
-   * could not write: they name the vocabulary, the file it was read from, and
-   * why a bare string reads as a narrower claim than its author made. Restating
-   * either constraint here was measured at two errors per defect.
+   * `rulings.malformed-id` reports a bad id with a message this file could not
+   * write, and `rulings.missing-discharged-in` does the same for an absent one:
+   * they name the vocabulary, the file it was read from, and why the value must
+   * be derived from the row's own text. Restating either here was measured at
+   * two errors per defect. Neither can be dropped in favour of this file, since
+   * `rulings.ts` needs both for its own `RulingRow`.
    *
    * Asserted rather than left to a comment, because the failure this guards
    * against is someone tightening the schema for symmetry and reintroducing the
    * double report with nothing in the suite to say it had been decided.
+   *
+   * `discharged_in`'s shape is no longer among them -- it is constrained above
+   * by ruling, and that cost is real and measured: an empty list, a bare string
+   * and an out-of-vocabulary member each report twice now, once from ajv and
+   * once from the check that can explain it. Presence is the one class where the
+   * second report was avoidable, which is the whole reason `discharged_in` is
+   * still absent from `required`.
    */
-  test("a non-kebab id and a bare-string discharged_in are left to rulings.ts", () => {
-    const loosened = withRow("  - id: supervisor-never-implements\n", "  - id: Supervisor_Never_Implements\n").replace(
-      "    discharged_in: [authority, hard-gates]\n",
-      "    discharged_in: authority\n",
-    );
+  test("a non-kebab id is left to rulings.ts", () => {
+    const loosened = withRow("  - id: supervisor-never-implements\n", "  - id: Supervisor_Never_Implements\n");
     expect(rulingsIssues(loosened)).toEqual([]);
+  });
+
+  test("an absent discharged_in is left to rulings.ts, though its shape is not", () => {
+    expect(rulingsIssues(withRow("    discharged_in: [authority, hard-gates]\n", ""))).toEqual([]);
+  });
+
+  test("a bare-string discharged_in is refused here as well as there", () => {
+    const issues = rulingsIssues(withRow("    discharged_in: [authority, hard-gates]\n", "    discharged_in: authority\n"));
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("must be array");
   });
 });
 
@@ -411,8 +426,36 @@ describe("a case may carry the keys the host reads", () => {
   const FILE = "evals/demo/fires-on-territory/case.yaml";
   const withKeys = (extra: string) => evalsTree({ [FILE]: WELL_FORMED_CASE + extra });
 
-  test("scaffold_script is admitted at the case root", () => {
-    expect(caseIssues(withKeys("scaffold_script: |\n  git init -q .\n"), FILE)).toEqual([]);
+  test("scaffold_script is admitted under context, which is where the host reads it", () => {
+    expect(caseIssues(withKeys("context:\n  scaffold_script: |\n    git init -q .\n"), FILE)).toEqual([]);
+  });
+
+  // 9b12366 declared `scaffold_script` at the case root. The key was real and
+  // correctly attributed; only the address was wrong, and the host's root object
+  // is not strict, so such a case validates here, ships, and has its scaffold
+  // silently ignored. Refusing the old address is the only thing that makes that
+  // regression visible -- a key at the wrong address leaves an artifact that
+  // looks correct and does nothing, which is worse than the refusal it replaced.
+  test("scaffold_script at the case root is refused, because the host would ignore it there", () => {
+    const issues = caseIssues(withKeys("scaffold_script: |\n  git init -q .\n"), FILE);
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain("scaffold_script");
+  });
+
+  test("the other context keys the host reads are admitted", () => {
+    expect(caseIssues(withKeys("context:\n  history_file: prior.jsonl\n  add_dirs: [fixtures]\n"), FILE)).toEqual([]);
+  });
+
+  test("expected_outcome is admitted at the case root", () => {
+    expect(caseIssues(withKeys("expected_outcome: the skill declines and says why\n"), FILE)).toEqual([]);
+  });
+
+  test("the execution keys the host reads are admitted", () => {
+    const doc = WELL_FORMED_CASE.replace(
+      "  max_turns: 8\n",
+      "  max_turns: 8\n  artifact_publish: false\n  append_system_prompt: be terse\n  env:\n    CI: \"1\"\n",
+    );
+    expect(caseIssues(evalsTree({ [FILE]: doc }), FILE)).toEqual([]);
   });
 
   test("runs is admitted at the case root", () => {

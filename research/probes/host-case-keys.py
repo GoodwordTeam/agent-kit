@@ -1,69 +1,54 @@
 #!/usr/bin/env python3
 #
-# Reconcile schemas/case.schema.json against the host's own enumeration of the
-# keys it reads.
+# Reconcile schemas/case.schema.json against the host's own definition of the
+# case object, read out of the host binary.
 #
 #   ./research/probes/host-case-keys.py
 #
 # WHY THIS RUNS IN THE DIRECTION IT DOES
 #
-# schemas/case.schema.json annotates three keys with the host version they were
-# confirmed against. That annotation is schema-driven: it starts from a key this
-# package already declares and asks who owns it. It cannot reach a key the
-# schema omits, because an omitted key has no row to annotate and no empty cell
-# to notice. `scaffold_script` was refused by this schema from 7db25a7 until it
-# was declared, and the visible result was a corpus in which no case ever
-# declared a fixture -- which reads as nothing anyone wanted, not as a defect.
+# schemas/case.schema.json annotates keys with the host version they were
+# confirmed against. That is schema-driven: it starts from a key this package
+# declares and asks who owns it. It cannot reach a key the schema omits, because
+# an omitted key has no row to annotate and no empty cell to notice.
+# `scaffold_script` was refused from 7db25a7 until it was declared, and the
+# visible result was a corpus in which no case ever declared a fixture -- which
+# reads as nothing anyone wanted. Annotation finds keys we define wrongly; only
+# reconciliation finds keys we exclude silently. Both are needed.
 #
-# This probe runs the other way. It takes the host's key list from the host and
-# asks which of those keys the schema names. Annotation finds keys we define
-# wrongly; only reconciliation finds keys we exclude silently. Both are needed
-# and neither substitutes for the other.
+# WHICH SOURCE, AND WHY IT IS THE THIRD ONE TRIED
 #
-# WHY `claude plugin eval init` AND NOT `--help`
+# The source decides what the arm can reach, and two weaker ones were used first:
 #
-# `--help` is a weak enumeration: it is whatever the help text happens to
-# mention, so a key's absence from it is not evidence. `claude plugin eval init`
-# prints the host's eval-authoring spec, which states its own completeness
-# ("Output format (complete -- do NOT look this up)" and "Do NOT look up the
-# format in source. The complete spec is in this prompt."). It is a static
-# template: two runs from the same directory at 2.1.278 were byte-identical, so
-# it costs no inference, makes no network call, and is diffable across host
-# versions.
+#   `claude plugin eval --help`   what a help text happens to mention, so a key's
+#                                 absence from it is not evidence.
+#   `claude plugin eval init`     the authoring spec, which states its own
+#                                 completeness and is a static template. Better,
+#                                 and still wrong: its grader table lists five
+#                                 types where the loader has six, so reconciling
+#                                 against it reported no divergence while
+#                                 case.schema.json was refusing `baseline`. Its
+#                                 `focus` values omit `mock_calls`.
+#   the loader definition         what this probe reads. It is the object the
+#                                 runner actually parses, it carries the defaults
+#                                 as well as the shapes, and it subsumes both.
 #
-# It is still not a complete enumeration of the host's case surface, and this
-# probe says so rather than implying otherwise. Three sources are in play and
-# each is incomplete in the others' directions:
+# A key has a name and an address. Reading a key list without its addresses is
+# what put `scaffold_script` at the case root at 9b12366, where the host does not
+# read it and where -- the host's root object not being strict -- it would have
+# validated, shipped and been silently ignored. So this probe reports addresses:
+# root, `context`, `execution`, and per grader type.
 #
-#   `--help`                  names `scaffold_script`, which the authoring spec
-#                             does not, because the spec documents `prompt.md`
-#                             frontmatter and `scaffold_script` is a flag's subject.
-#   the authoring spec        the only source for the DEFAULTS (`target`/`focus`
-#                             = `last_message`, `weight` = 1, `match` = contains,
-#                             `tool_used.min` = 1). Its grader table lists five
-#                             types.
-#   the loader definition     readable in the binary; read at 4756a2e, which is
-#   in the binary             how AUTHORING.md §9 came to specify `file_exists`,
-#                             `tool_order` and `baseline`, and to record that
-#                             EVERY type takes an optional `arm`. It has six
-#                             types. It carries signatures, not defaults.
+# THE ANCHORS ARE THE WHOLE RISK
 #
-# So this probe has a known blind spot and prints it rather than leaving a
-# reader to infer completeness from a five-row table: `baseline` is a real
-# grader type that its source does not mention, and `case.schema.json` refused
-# it until 4756a2e was read. This probe did not catch that -- the reconciling
-# direction is necessary and still not sufficient, and which source you
-# reconcile against decides what it can reach. What the probe reports is a
-# floor on divergence, never a proof of agreement.
-#
-# WHY THE FORMS DIFFER
-#
-# The host's canonical case is `prompt.md` (flat frontmatter) plus `graders/*.md`
-# (one file per grader, body carries the rubric or pattern). This package's
-# case.yaml nests the same keys under `execution` and carries grader bodies as
-# named keys. That rearrangement is this package's and is not a divergence; the
-# BODY_KEYS table below names each body-to-key correspondence explicitly so it
-# is visible rather than silently reconciled away.
+# This parses minified JavaScript, where identifiers are one or two letters and
+# are reused across chunks. Anchoring on `gs=new Set([...])` alone matched a
+# DIFFERENT `gs` in this same binary and returned eight plausible strings -- the
+# same count as the real list. Every anchor below is therefore pinned to
+# neighbouring text that is unique to the case loader, and every parse is checked
+# against content this repository independently knows. A miss exits non-zero and
+# says so. It never reports "no divergence", because a probe that cannot find its
+# subject and a probe that finds nothing wrong must not look alike.
 
 import json
 import os
@@ -71,173 +56,177 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 
 PINNED_HOST = "2.1.278"
 
-# Host grader body -> the case.yaml key this package carries it in. Measured
-# against the loader, not inferred: the host reports `graders.N.criteria:
-# Required` for an `llm` grader without one.
-BODY_KEYS = {"llm": "criteria", "regex": "pattern"}
-
 
 def die(msg):
-    print(f"host-case-keys: {msg}", file=sys.stderr)
+    print(f"host-case-keys: {msg} Not a clean run.", file=sys.stderr)
     sys.exit(1)
 
 
-def host_spec():
-    if shutil.which("claude") is None:
-        die("no 'claude' on PATH; this probe needs the host CLI. Not a clean run.")
-    version = subprocess.run(
-        ["claude", "--version"], capture_output=True, text=True
-    ).stdout.strip()
-    work = os.path.realpath(tempfile.mkdtemp())
-    try:
-        os.makedirs(os.path.join(work, ".claude-plugin"))
-        with open(os.path.join(work, ".claude-plugin", "plugin.json"), "w") as f:
-            json.dump(
-                {
-                    "name": "host-case-keys-probe",
-                    "version": "0.0.0",
-                    "description": "throwaway manifest; `eval init` refuses a non-plugin directory",
-                },
-                f,
-            )
-        run = subprocess.run(
-            ["claude", "plugin", "eval", "init"],
-            cwd=work,
-            capture_output=True,
-            text=True,
-        )
-        if run.returncode != 0:
-            die(f"`claude plugin eval init` exited {run.returncode}: {run.stderr.strip()[:300]}")
-        return version, run.stdout
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
+def binary_text():
+    exe = shutil.which("claude")
+    if exe is None:
+        die("no 'claude' on PATH; this probe needs the host binary.")
+    exe = os.path.realpath(exe)
+    version = subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip()
+    if PINNED_HOST not in version:
+        print(f"host-case-keys: host is {version}, not the pinned {PINNED_HOST}. The anchors below", file=sys.stderr)
+        print("  were written against the pinned build and may match something else entirely.", file=sys.stderr)
+    out = subprocess.run(["strings", "-a", exe], capture_output=True, text=True)
+    if out.returncode != 0 or len(out.stdout) < 10_000:
+        die(f"could not read strings out of {exe}.")
+    return version, out.stdout
 
 
-def spans(cell):
-    """Keys named in a backticked list. `target: a|{source: file, path}` is one
-    span and yields one key, which is why this splits on backticks and not on
-    commas."""
-    out = []
-    for s in re.findall(r"`([^`]+)`", cell):
-        out.append(s.split(":", 1)[0].strip())
+def balanced(s, open_at):
+    depth = 0
+    for i in range(open_at, len(s)):
+        if s[i] in "([{":
+            depth += 1
+        elif s[i] in ")]}":
+            depth -= 1
+            if depth == 0:
+                return s[open_at + 1:i]
+    die("unbalanced brackets while reading the loader definition.")
+
+
+def keys(body):
+    """Keys at bracket depth 0. Values nest, so a flat regex would pick up the
+    inner keys of `tt({source:...,path:...})` as if they were siblings."""
+    out, depth, i = [], 0, 0
+    while i < len(body):
+        c = body[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif depth == 0:
+            m = re.match(r"(\w+)\s*:", body[i:])
+            if m:
+                out.append(m.group(1))
+                i += m.end()
+                continue
+        i += 1
     return out
 
 
-def parse(spec):
-    line = [l for l in spec.splitlines() if l.startswith("**prompt.md**")]
-    if not line:
-        die("the spec no longer has a `**prompt.md**` frontmatter line; this probe's parse is stale. Not a clean run.")
-    frontmatter = spans(line[0])
-    if not frontmatter:
-        die("parsed zero keys from the `**prompt.md**` line; the spec's shape changed. Not a clean run.")
+def parse_host(blob):
+    # `ps` and `gs` are the prompt.md frontmatter routing tables: a key in `ps`
+    # lands at the case root, a key in `gs` lands in `execution`, anything else
+    # is refused. Anchored as the adjacent PAIR, because each name alone collides.
+    m = re.search(r'ps=new Set\(\[(.*?)\]\),gs=new Set\(\[(.*?)\]\)', blob)
+    if m is None:
+        die("the frontmatter routing tables (`ps`/`gs`) did not match; this probe's anchors are stale.")
+    root = re.findall(r'"(\w+)"', m.group(1))
+    execution = re.findall(r'"(\w+)"', m.group(2))
+    if "schema_version" not in root or "max_turns" not in execution:
+        die(f"the routing tables matched the wrong pair: root={root}, execution={execution}.")
 
+    m = re.search(r"context:tt\(\{", blob)
+    if m is None:
+        die("the `context` object did not match; this probe's anchors are stale.")
+    context = keys(balanced(blob, m.end() - 1))
+
+    m = re.search(r'var Fc=f\(\(\)=>HXt\("type",\[', blob)
+    if m is None:
+        die("the grader union did not match; this probe's anchors are stale.")
     graders = {}
-    for line in spec.splitlines():
-        if not line.startswith("| `"):
+    for chunk in blob[m.end():].split("tt({")[1:]:
+        cut = chunk.find("}).strict()")
+        if cut < 0:
             continue
-        # Split on unescaped pipes only. The frontmatter cells carry `\|`
-        # alternations inside backticks (`match: contains\|not_contains`), and
-        # splitting on every pipe silently truncates three of the five rows --
-        # which reads as those types taking no frontmatter at all.
-        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)]
-        cells = [c for c in cells if c]
-        if len(cells) < 2:
-            continue
-        kind = cells[0].strip("`")
-        graders[kind] = (spans(cells[1]), cells[2] if len(cells) > 2 else "")
-    if not graders:
-        die("parsed zero grader types from the spec's table; its shape changed. Not a clean run.")
-    return frontmatter, graders
+        body = chunk[:cut]
+        t = re.search(r'type:Od\("(\w+)"\)', body)
+        if t:
+            graders[t.group(1)] = [k for k in keys(body) if k != "type"]
+    if "llm" not in graders:
+        die(f"the grader union parsed without an `llm` type: {sorted(graders)}.")
+
+    # `focus`/`target` accept these, and the default is what makes the 41
+    # filesystem claims in this tree score against the transcript.
+    m = re.search(r'function cs\(\)\{return DP\(\[cl\(\[(.*?)\]\)', blob)
+    focus = re.findall(r'"(\w+)"', m.group(1)) if m else []
+    return root, execution, context, graders, focus
 
 
-def schema_keys(root):
-    with open(os.path.join(root, "schemas", "case.schema.json")) as f:
+def parse_schema(root_dir):
+    with open(os.path.join(root_dir, "schemas", "case.schema.json")) as f:
         s = json.load(f)
-    props = s["properties"]
-    case = {k: k for k in props}
-    for k in props["execution"]["properties"]:
-        case[k] = f"execution.{k}"
-    grader = props["graders"]["items"]
-    closed = grader.get("additionalProperties") is False
-    return case, set(grader["properties"]), closed, set(grader["properties"]["type"]["enum"])
+    p = s["properties"]
+    grader = p["graders"]["items"]
+    return {
+        "root": set(p),
+        "execution": set(p["execution"]["properties"]),
+        "context": set(p.get("context", {}).get("properties", {})),
+        "grader_props": set(grader["properties"]),
+        "grader_types": set(grader["properties"]["type"]["enum"]),
+        "root_closed": s.get("additionalProperties") is False,
+        "exec_closed": p["execution"].get("additionalProperties") is False,
+        "grader_closed": grader.get("additionalProperties") is False,
+    }
 
 
 def main():
-    root = subprocess.run(
+    root_dir = subprocess.run(
         ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
     ).stdout.strip()
-    version, spec = host_spec()
-    frontmatter, graders = parse(spec)
-    case, gprops, gclosed, genum = schema_keys(root)
+    version, blob = binary_text()
+    hroot, hexec, hcontext, hgraders, hfocus = parse_host(blob)
+    s = parse_schema(root_dir)
 
-    print(f"host case keys  (claude: {version})")
-    print("  source: `claude plugin eval init`, the host's own authoring spec, which states")
-    print("  its own completeness. Static template: no inference, no network, diffable.")
-    if PINNED_HOST not in version:
-        print(f"  !! host is not the pinned {PINNED_HOST}. Every row below is against {version};")
-        print("     the annotations in case.schema.json are not, and are now unverified.")
+    print(f"host case object  (claude: {version})")
+    print("  source: the loader definition in the host binary -- the object the runner parses.")
     print()
 
-    print("CASE-LEVEL KEYS THE HOST NAMES")
     missing = []
-    for k in frontmatter:
-        where = case.get(k)
-        print(f"  {k:<18} {'schema: ' + where if where else 'NOT IN SCHEMA'}")
-        if not where:
-            missing.append(k)
+
+    def section(label, host_keys, mine, closed, structural=()):
+        print(f"{label}  ({'closed' if closed else 'open'} here)")
+        for k in host_keys:
+            ok = k in mine or k in structural
+            print(f"    {k:<22} {'' if ok else '<- NOT NAMED HERE'}")
+            if not ok:
+                missing.append(f"{label.split()[0].lower()}.{k}")
+        extra = sorted(mine - set(host_keys) - set(structural))
+        if extra:
+            print(f"    named here, not in the loader: {', '.join(extra)}")
+        print()
+
+    # `execution`, `context` and `graders` are objects the loader declares
+    # structurally rather than routing frontmatter into, so they are not in `ps`.
+    section("ROOT", hroot, s["root"], s["root_closed"], ("execution", "context", "graders"))
+    section("CONTEXT", hcontext, s["context"], True)
+    section("EXECUTION", hexec, s["execution"], s["exec_closed"], ("prompt",))
+
+    print(f"GRADER TYPES  ({'closed' if s['grader_closed'] else 'open'} here; the host's are strict)")
+    for t in sorted(hgraders):
+        mark = "" if t in s["grader_types"] else "  <- NOT IN THIS SCHEMA'S ENUM"
+        absent = [k for k in hgraders[t] if k not in s["grader_props"]]
+        print(f"    {t:<13}{mark}")
+        print(f"      loader     {', '.join(hgraders[t])}")
+        print(f"      unnamed    {', '.join(absent) or '(none)'}")
+        if t not in s["grader_types"]:
+            missing.append(f"grader type {t}")
+        missing += [f"{t}.{k}" for k in absent]
     print()
 
-    print("GRADER KEYS THE HOST NAMES, BY TYPE")
-    gmissing = []
-    for kind, (keys, body) in sorted(graders.items()):
-        named = [k for k in keys if k in gprops]
-        absent = [k for k in keys if k not in gprops]
-        bk = BODY_KEYS.get(kind)
-        print(f"  {kind}")
-        print(f"    frontmatter   {', '.join(keys) or '(none)'}")
-        print(f"    in schema     {', '.join(named) or '(none)'}")
-        print(f"    NOT in schema {', '.join(absent) or '(none)'}")
-        if bk:
-            print(f"    body          {body!r} -> schema `{bk}`" + ("" if bk in gprops else "  MISSING"))
-        elif body and body != "(none)":
-            print(f"    body          {body!r} -> no declared correspondence")
-        gmissing += [(kind, k) for k in absent]
-    print()
-
-    print("GRADER TYPES: THIS PROBE'S SOURCE AGAINST THE SCHEMA")
-    print(f"    authoring spec lists   {', '.join(sorted(graders))}")
-    print(f"    schema enum admits     {', '.join(sorted(genum))}")
-    unlisted = sorted(set(genum) - set(graders))
-    print(f"    in the enum, not in this probe's source: {', '.join(unlisted) or 'none'}")
-    print("    The spec's table is not the host's type list. The loader definition in the")
-    print("    binary has six types and AUTHORING.md \u00a79 records them; a type absent from the")
-    print("    row above is not evidence it does not exist, which is how `baseline` was")
-    print("    refused by this schema while this probe reported no divergence.")
-    print()
-
-    print("SCHEMA KEYS THE HOST SPEC DOES NOT NAME")
-    hostnames = set(frontmatter) | {k for keys, _ in graders.values() for k in keys}
-    for k, where in sorted(case.items()):
-        if k not in hostnames and k not in ("execution", "graders"):
-            print(f"  {where}")
-    print("  (Not defects. This package owns schema_version, name, tags and prompt, and")
-    print("   scaffold_script is real but documented in `--help` rather than in this spec.)")
+    print(f"`focus`/`target` accept {', '.join(hfocus) or '(unparsed)'}, or {{source: file, path}},")
+    print("  and default to last_message. See CONTRACT-DEFECTS.md.")
     print()
 
     print("RECONCILIATION")
-    print(f"  case-level keys the host names and the schema omits:  {', '.join(missing) or 'none'}")
-    print(f"  grader keys the host names and the schema omits:      {', '.join(f'{t}.{k}' for t, k in gmissing) or 'none'}")
-    print(f"  grader object is {'CLOSED' if gclosed else 'open'}: surplus grader keys are "
-          f"{'refused here' if gclosed else 'admitted here and refused by the host'}.")
+    print(f"  the loader names and this schema does not: {', '.join(missing) or 'none'}")
     print()
-    print("  CONTROL: this output is a floor, not a proof of agreement. The parse is")
-    print("  anchored on two lines of the spec and exits non-zero if either is gone, so a")
-    print("  clean 'none' above means the anchors held and the keys matched -- never that")
-    print("  the probe found nothing to look at.")
+    print("  Unnamed grader keys are admitted, because that object is open here -- but")
+    print("  the host's grader objects are strict, so openness buys nothing against the")
+    print("  runner. It admits exactly the surplus the runner will reject.")
+    print()
+    print("  CONTROL: every anchor is pinned to neighbouring text unique to the case")
+    print("  loader and checked against content this repository knows independently. A")
+    print("  missed anchor exits non-zero. A clean 'none' above means the anchors held")
+    print("  and the keys matched, never that the probe could not find its subject.")
 
 
 if __name__ == "__main__":
