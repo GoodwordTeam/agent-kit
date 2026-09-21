@@ -39,7 +39,7 @@ repair sequence dressed as a QA pass is what the cycle cap forbids.
 
 Not for closing its own findings. A finding closes on independent verification evidence bound to the
 revision under review plus a policy rule that says that evidence suffices — never on this run's
-confidence that it probably fixed it.
+confidence that it probably fixed it (ruling `closure-requires-independent-verification`).
 
 ## Authority
 
@@ -110,7 +110,8 @@ invalidated in the same record. Evidence bound to the pre-mutation state is neve
 covering the post-mutation state.
 
 Gate: this run does not close its own findings. Closure needs independent verification evidence bound
-to the revision plus a policy rule saying that evidence is sufficient.
+to the revision plus a policy rule saying that evidence is sufficient (ruling
+`closure-requires-independent-verification`).
 
 Gate: findings bind to the revision actually exercised. A failure observed against one build is never
 reported against another, and a build that could not be produced yields no findings at all.
