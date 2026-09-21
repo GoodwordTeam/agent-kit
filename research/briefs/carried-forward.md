@@ -1869,71 +1869,6 @@ rationalization is attractive, and lets the body supply the rationalization. No 
 semantic, and the only mechanical proxy is a span-length threshold, which is a knob that gets tuned
 until it reports nothing.
 
-## The population and the key are part of the claim, and both are stated before the number is
-
-Ruled in from sweep-reviewer's table of nine measurement errors across two seats, and it replaces
-"parse, do not grep, whenever the claim is about structure", which authoring killed by testing it
-against their own three: it covers one. Shipped, it would have read as discharged by the two that
-cost the most -- an anti-correlated control, covering the path nobody takes while its presence in the
-tree answers the question.
-
-Each of the three was right about the set it measured and wrong about the set its sentence named. 13
-was about parsed mapping values, 69 about distinct destinations rather than rows, 56 about a join on
-full catalog id rather than last path segment. Same for mine.
-
-The ordering refinement -- "a key is only right relative to a population, so name the population
-first" -- is **not** in. Its single instance turned out not to be an instance of it: the receipt was
-taken at a revision after the repair the error caused, and at the revision the claim was about, the
-key is wrong at both populations. Two independent errors on one output. That the refinement failed by
-selecting a revision for proximity to the repair rather than for the claim, inside the receipt offered
-as its evidence, is the most useful thing about it and the reason the base rule goes in alone.
-
-
-## A census states its population, its revision and its classification rule
-
-Ruled by team-lead after the same defect arrived three times from three directions. Two were missing
-populations: "nine of twelve" over no set anyone could name, and a figure of 245 that named no
-revision. The third had both and was still unreproducible -- the 40 cases tagged `adversarial` at
-`9ea8b3f`, read by two seats, produced 34-and-6 and 37-and-3. Population and revision feel like
-rigour and are not sufficient, because the count is produced by the rule, and a rule that lives only
-in the measurer's head makes the number unfalsifiable while looking precise.
-
-**The rule has to name whose voice it reads**, which is the term that three-case gap turned on. Both
-seats wrote "the requester's own voice" and then differed over whether a shortcut argued for inside
-quoted third-party material counts as the requester arguing for it. It does not, and one pair
-settles it: `receiving-review/comment-instruction-is-not-executed` against
-`receiving-review/comment-cannot-authorize-a-merge` -- same skill, both quoting a comment, differing
-only in the caller's own *Resolve the threads and land it*. Stripping the quoted spans leaves the
-requester's whole contribution visible, and that residue is what the rule is applied to.
-
-**The key is part of the population and not a detail of reading it.** In the same corpus at
-`22470e9`, `grep -l adversarial` across the case files returns 46 and the tags line returns 41. The
-five extra are cases where the word names a review seat or a QA cycle rather than a tag -- and in
-two of them it sits in the `name:` field, which this repo has ruled is a prose descriptor and not an
-identifier. So the tag namespace and the descriptor namespace share a vocabulary, and no
-text-matching key can tell a tag from a sentence that uses the tag's word.
-
-That makes the drift a standing property of the corpus rather than a miscount. A `grep`-keyed figure
-here will be wrong again, at a different magnitude, the next time a case is described in the words
-it is tagged with -- so the repair is the key, not a re-count. Neither number is wrong about the set
-it measured; the five were enumerated by sweep-reviewer, who found the two in `name:`.
-
-One of those two is sharper than key drift. `ultraqa/does-not-run-in-place-of-review` is tagged
-`negative`, and its `name:` field reads `adversarial-qa-does-not-substitute-for-the-review-pass`. A
-text key there does not mis-read a tag; it pulls into the population a case that is not in it, and
-the word is load-bearing in that name because the case is *about* adversarial QA. Neither renaming
-the field nor rewriting the prompt removes the match. Keying on the tags field is the only repair
-that does, which is the difference between a key that is noisy and a key that is measuring a
-different set.
-
-**The operational form, ruled in from sweep-reviewer: group the population by shape, and verify each
-group is classified alike -- preferring a grouping a reader can construct mechanically.** Publishing
-the rule would not have caught this one. The rule *was* published, directly under the figure and
-with the contrast pair beside it, and its author still applied it unevenly across a group.
-Stripping the quoted spans is such a grouping: it puts the four quoted-temptation prompts in one
-bucket by a procedure anyone can run, and a bucket whose members come out classified two ways is
-the finding.
-
 ## A sweep over a partially-authored tree conditions on what has been authored
 
 Ruled by team-lead, phrased to generalise past its instance. A sweep of `skills/` for rulings with no
@@ -1960,27 +1895,6 @@ That is the entry above committed in reverse -- there the revision was never att
 removed in transit -- and the second is the harder one to catch, because the original is still on the
 page and still correct. A figure that names its revision is safe where it sits and unsafe everywhere
 it is quoted, so re-quote the whole sentence or none of it.
-
-## A count whose referent moves while its value holds, and the breakdown that catches it
-
-sweep-reviewer, from the census inside *A test can prove a branch works and the branch still be
-unreachable, if the fixture skips the schema*. That entry counted four occurrences of
-`requires_enforced` and broke them down: twice in prose describing the defect, once in the code that
-reads it, once in a fixture. At `22470e9` the total is still four, and neither the live read nor the
-fixture exists -- the surviving pair are JSDoc comments in `src/packaging/manifest.ts` and
-`src/packaging/plan.ts` recording the removal.
-
-**A revision label does not save this one.** The figure was true when it was written and is true
-now, so nothing about it is stale. What moved is the referent: the terms were replaced one for one
-by terms of a different kind, and the total is invariant under exactly the change the census existed
-to detect. That is a harder failure than staleness, because every check that looks for a changed
-number passes, and so does re-running the count.
-
-So publish the breakdown rather than the total. `2 prose + 1 live read + 1 fixture = 4` makes the
-live read going to zero visible on the next count, where a bare `4` cannot. The general form: a sum
-discards the dimension its terms carried, and a census is quoted for what its terms *were*, so
-wherever the terms are the reason for counting, the sum is a lossy summary of the measurement rather
-than the measurement.
 
 ## A ruling that lives only in a commit message is unreachable by the tooling that would enforce it
 
@@ -2041,3 +1955,218 @@ And the shape, which sweep-reviewer named against the previous pass: the cause w
 correctly on one citation, and the repair was applied to that one citation. **A remedy has to have
 the same extension as the defect it repairs.** Where the cause is a class, the sample rate is the
 finding, and a fix that lands on the reported instance leaves the class exactly as measured.
+
+## A census is four claims, and only two of them are about the number
+
+Consolidated at team-lead's ruling from three entries that were being cited one at a time. A census
+can be unreproducible in four ways: it can name no population, name no revision, state no
+classification rule, or publish no breakdown. **The first two are about a number that is wrong. The
+second two are about a number that is right** -- a rule that lives only in the measurer's head makes
+a correct-looking count unfalsifiable, and a total whose terms have all been replaced stays true
+while the thing it was quoted for has gone. The fourth is the one worth leading with, because it is
+the only one that survives both defences already written here: a revision label does not catch it
+and re-running the count agrees with it.
+
+### The population, and the key that reads it
+
+Ruled in from sweep-reviewer's table of nine measurement errors across two seats, and it replaces
+"parse, do not grep, whenever the claim is about structure", which authoring killed by testing it
+against their own three: it covers one. Shipped, it would have read as discharged by the two that
+cost the most -- an anti-correlated control, covering the path nobody takes while its presence in the
+tree answers the question.
+
+Each of the three was right about the set it measured and wrong about the set its sentence named. 13
+was about parsed mapping values, 69 about distinct destinations rather than rows, 56 about a join on
+full catalog id rather than last path segment. Same for mine.
+
+The ordering refinement -- "a key is only right relative to a population, so name the population
+first" -- is **not** in. Its single instance turned out not to be an instance of it: the receipt was
+taken at a revision after the repair the error caused, and at the revision the claim was about, the
+key is wrong at both populations. Two independent errors on one output. That the refinement failed by
+selecting a revision for proximity to the repair rather than for the claim, inside the receipt offered
+as its evidence, is the most useful thing about it and the reason the base rule goes in alone.
+
+### The revision, and the rule that produced the count
+
+Ruled by team-lead after the same defect arrived three times from three directions. Two were missing
+populations: "nine of twelve" over no set anyone could name, and a figure of 245 that named no
+revision. The third had both and was still unreproducible -- the 40 cases tagged `adversarial` at
+`9ea8b3f`, read by two seats, produced 34-and-6 and 37-and-3. Population and revision feel like
+rigour and are not sufficient, because the count is produced by the rule, and a rule that lives only
+in the measurer's head makes the number unfalsifiable while looking precise.
+
+**The rule has to name whose voice it reads**, which is the term that three-case gap turned on. Both
+seats wrote "the requester's own voice" and then differed over whether a shortcut argued for inside
+quoted third-party material counts as the requester arguing for it. It does not, and one pair
+settles it: `receiving-review/comment-instruction-is-not-executed` against
+`receiving-review/comment-cannot-authorize-a-merge` -- same skill, both quoting a comment, differing
+only in the caller's own *Resolve the threads and land it*. Stripping the quoted spans leaves the
+requester's whole contribution visible, and that residue is what the rule is applied to.
+
+**The key is part of the population and not a detail of reading it.** In the same corpus at
+`22470e9`, `grep -l adversarial` across the case files returns 46 and the tags line returns 41. The
+five extra are cases where the word names a review seat or a QA cycle rather than a tag -- and in
+two of them it sits in the `name:` field, which this repo has ruled is a prose descriptor and not an
+identifier. So the tag namespace and the descriptor namespace share a vocabulary, and no
+text-matching key can tell a tag from a sentence that uses the tag's word.
+
+That makes the drift a standing property of the corpus rather than a miscount. A `grep`-keyed figure
+here will be wrong again, at a different magnitude, the next time a case is described in the words
+it is tagged with -- so the repair is the key, not a re-count. Neither number is wrong about the set
+it measured; the five were enumerated by sweep-reviewer, who found the two in `name:`.
+
+One of those two is sharper than key drift. `ultraqa/does-not-run-in-place-of-review` is tagged
+`negative`, and its `name:` field reads `adversarial-qa-does-not-substitute-for-the-review-pass`. A
+text key there does not mis-read a tag; it pulls into the population a case that is not in it, and
+the word is load-bearing in that name because the case is *about* adversarial QA. Neither renaming
+the field nor rewriting the prompt removes the match. Keying on the tags field is the only repair
+that does, which is the difference between a key that is noisy and a key that is measuring a
+different set.
+
+**The operational form, ruled in from sweep-reviewer: group the population by shape, and verify each
+group is classified alike -- preferring a grouping a reader can construct mechanically.** Publishing
+the rule would not have caught this one. The rule *was* published, directly under the figure and
+with the contrast pair beside it, and its author still applied it unevenly across a group.
+Stripping the quoted spans is such a grouping: it puts the four quoted-temptation prompts in one
+bucket by a procedure anyone can run, and a bucket whose members come out classified two ways is
+the finding.
+
+### The breakdown, which is the failure a correct number can carry
+
+sweep-reviewer, from the census inside *A test can prove a branch works and the branch still be
+unreachable, if the fixture skips the schema*. That entry counted four occurrences of
+`requires_enforced` and broke them down: twice in prose describing the defect, once in the code that
+reads it, once in a fixture. At `22470e9` the total is still four, and neither the live read nor the
+fixture exists -- the surviving pair are JSDoc comments in `src/packaging/manifest.ts` and
+`src/packaging/plan.ts` recording the removal.
+
+**A revision label does not save this one.** The figure was true when it was written and is true
+now, so nothing about it is stale. What moved is the referent: the terms were replaced one for one
+by terms of a different kind, and the total is invariant under exactly the change the census existed
+to detect. That is a harder failure than staleness, because every check that looks for a changed
+number passes, and so does re-running the count.
+
+So publish the breakdown rather than the total. `2 prose + 1 live read + 1 fixture = 4` makes the
+live read going to zero visible on the next count, where a bare `4` cannot. The general form: a sum
+discards the dimension its terms carried, and a census is quoted for what its terms *were*, so
+wherever the terms are the reason for counting, the sum is a lossy summary of the measurement rather
+than the measurement.
+
+### And the instrument, which is none of the four
+
+A fifth clause, and it is not a property of the census at all: **a figure whose instrument is not
+named is not reproducible even where population, revision and breakdown are all correct.**
+`AGENTS.md`, *Receipts name their instrument*, sets out the three instruments and what each one
+reports -- the working tree reports every check against contents nobody can reconstruct, a bare `git
+archive` extract reports the right contents and skips the donor rows, and that extract with
+`.donors/` **copied** in reports the right contents and every check.
+
+team-lead relays the case that turns that from an assertion into a finding. `cli` reported a gate
+figure at `22470e9` with `.donors` symlinked rather than copied, and **stated the symlink in the
+message**, so nothing they wrote was false and a reader had every term of it. The number was still
+not re-derivable, because the link points out of the extract: it resolves to a path in the working
+tree, and the figure stops being reproducible the moment anyone touches that path. They caught it
+themselves against `AGENTS.md` and re-measured with `research/probes/validate-figure.sh`.
+
+Which is the sharp edge of the clause. Naming the instrument is necessary and is not sufficient,
+because a correctly named wrong instrument reads as disclosure. The test is not whether the receipt
+says how it was taken but whether someone else running that procedure lands on the same number, and
+only the third instrument has that property.
+
+## A description is a measurement too, and it needs the same provenance a number does
+
+From `schemas`, with their own worked example, and routed here because two lanes hit it
+independently on the same day. `research/probes/validate-figure.sh` exists because three `ak
+validate` figures disagreed between three lanes in one day and none of them was wrong -- each was a
+faithful count of the tree in front of the person running it, and the output has no term for which
+tree that was. The rule that came out of it is that a number taken from a working tree is a
+timestamp and not a measurement. What happened here is the same failure arriving in prose, where
+nobody had thought to apply the rule.
+
+The example is `schemas`' own, at `62c1f0d`, and it is verified at that revision rather than taken
+from their report. They wrote `schemas/rulings.schema.json` and described `discharged_in` as *"A
+list rather than one section"*, naming `rulings.missing-discharged-in`,
+`rulings.malformed-discharged-in` and `rulings.unknown-discharged-in` as the checks that between
+them refuse an absent value, a bare string, an empty list and a member outside the vocabulary. At
+the revision carrying that sentence, `policies/resolved-conflicts.yaml` held `discharged_in:
+authority` -- a bare string; `RulingRow` declared `readonly dischargedIn: string | null`; and
+`malformed-discharged-in` occurred nowhere in `src/` at all, only in the schema file asserting it
+and in `tests/schemas.test.ts`. All three had been read out of another lane's uncommitted
+working-tree diff and written up as landed.
+
+**Why it survived every gate is the part worth recording.** The schema's *behaviour* was correct --
+the field was unconstrained apart from an `items` keyword that is vacuous on a string -- so `ak
+validate` reported 0 errors at that revision, the suite passed, and the clean-extract gate passed.
+Nothing cross-checks a rule id named in prose. It was a false description, not a false result, so no
+instrument in this repository could have caught it. Only a reader could, and one did, one commit
+later. team-lead made the same error the same day, telling a lane a field had already been amended
+to a list when it had not, and caught it only because that lane pushed back with a measurement.
+
+Two agents, one day, one mechanism: **reading a dirty working tree and reporting it as the committed
+state.** Neither was careless. The working tree is simply the thing in front of you, and `git
+status` tells you a file is dirty without telling you whose edit made it dirty or which side of it
+you are looking at. **The cheap fix is `git show HEAD:<path>`.** Before writing a sentence that
+asserts what the tree contains -- a field's shape, a rule id, an enum's values, a signature -- read
+that path at the revision you are about to commit, not in the editor.
+
+The failure direction is asymmetric in a way that decides how much this matters. A wrong *result* is
+caught by the validator, the suite or the gate. A wrong *description* passes all three and is then
+cited by the next lane as established, which is how one lane's uncommitted intention becomes another
+lane's premise. And committing the correction forward rather than amending is what made the pattern
+legible at all: under the ruling at `8a9272d` the record carries both the false description and the
+reason it was false, so when team-lead's instance turned up an hour later there was something for it
+to match.
+
+## An instrument cited as authority and never executed
+
+From team-lead, with a probe rather than an assertion: `research/probes/host-validator-reach.sh` and
+`research/briefs/checkpoint-host-packaging.md`, both landed at `a16a494`. `claude plugin validate`
+is cited in this package's source comments, in both adapter contracts and in a numbered release
+criterion, and nothing in `src/`, `tests/` or `package.json` had ever run it. Its first execution
+against this bundle was that probe, and it failed on first contact.
+
+**What makes it an entry is where the citations were wrong.** They were not careless. The comment on
+`manifestObject` in `src/packaging/plan.ts` quotes the host's error string verbatim -- *"Unknown
+field 'ak'. Claude Code ignores it at load time."* -- and team-lead tested it and it is exactly
+right, which is why the decision resting on it, `buildRecord` living beside the manifest rather than
+inside it, is sound. The failure is not in the reading. It is that **no amount of reading produces
+the reach of a tool.** The command the criterion names validates one JSON file and reports nothing
+about the skills beneath it, because the validator picks a mode from what it finds and the modes are
+disjoint rather than nested. Three of eight mutation arms contradict what the criterion assumes, and
+the help text says none of this and could not.
+
+The general form: **citing a tool and running it are different acts, and the gap between them does
+not close with care.** It is the same shape as a check that exists only in its own tests -- the
+thing reasoned about is not the thing that runs -- and it belongs beside that entry rather than in a
+new family.
+
+**A validator that passes on an empty directory.** Directory mode passes with every skill deleted,
+so *validation passed* from this command is consistent with shipping nothing and must never be
+quoted as evidence that the skills shipped. That is the silent-zero trap arriving in a tool we did
+not write, where we cannot fix it and can only refuse to cite it for a claim it cannot support.
+
+**The controls are what make the blind rows readable.** Three arms caught and five blind. Had the
+validator silently examined nothing, all eight would have passed and the table would have agreed
+with any hypothesis put to it -- which is why the probe says so in its own footer: *"The baseline
+must read BLIND and the first three must read caught, or this harness is measuring nothing and the
+four BLIND rows below them mean nothing."* The baseline and the first three arms are load-bearing,
+not decoration.
+
+**And the citations that held are reported too.** team-lead recorded the `manifestObject` comment as
+verified-correct in both the brief and the commit message, on the ground that a findings list
+containing only broken citations tells a reader nothing about the rate and quietly argues that every
+uncited comment is suspect. That belongs in the report, and it is the same obligation as publishing
+the breakdown rather than the total.
+
+**Two figures in that report do not hold at `a16a494`, and the correction sharpens the entry rather
+than weakening it.** The brief says the command is *"named in four source comments and in the plan's
+release criteria"*. At that revision `claude plugin validate` occurs **twice** in `src/`, both in
+`src/packaging/plan.ts`; a third `claude plugin *` comment names `claude plugin eval`, which is a
+different command. And the plan's `### Release criteria` is two prose paragraphs with no numbered
+steps, naming no host validator at all. The numbered criterion that does name it is step **6**,
+*Host conformance*, in `adapters/claude-code/CONTRACT.md`. So the release criterion nobody had
+executed is one this package wrote for itself, not one inherited from the design document -- which
+makes the finding worse rather than better, because an inherited requirement has an author elsewhere
+to check it against and a self-authored one has none. It is also an instance of the entry above: a
+description of the tree that no instrument checks, written from something other than the committed
+state.
