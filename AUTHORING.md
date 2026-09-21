@@ -1221,6 +1221,20 @@ optional `arm` of `with-only` or `both`, which decides whether the grader scores
 reports — a grader marked `with-only` is an ablation indicator and not part of the score. None of
 these is specified below, and writing one still authors the specification by example.
 
+**Limit on the recommendation above, and the sharper half of the same reading.** A grader is scored
+against a surface, and the surface has a default this section never stated. An `llm` grader takes an
+optional `focus` and a `regex` grader an optional `target`; both default to `last_message`, and both
+accept `trace`, `last_message`, `files`, `mock_calls`, or `{source: file, path}`. So an `llm` grader
+with `criteria` about a file on disk is scored against what the run *said*, not what it *did*, and
+passes a run that created the file and did not mention it. Neither key appears anywhere else in this
+repository.
+
+That is why the preference above is stated the way it is: `file_exists` reads the created-file list
+directly and cannot be satisfied by a sentence. Where the pass criterion is a file, write
+`file_exists`. Where you write `llm` about anything other than the last message, write the `focus`
+as well — §9 said neither until `CONTRACT-DEFECTS.md` filed it, and the 256 `llm` graders in the
+tree carry no `focus` at all.
+
 **This section specifies the fields of two of those six types, and a case using the other four is
 not held to anything it says.** The worked example above is the whole of the specification:
 `tool_used` takes `tool`, `llm` takes `criteria`. `regex` takes `pattern` — required by
