@@ -995,3 +995,53 @@ another lane's commit on my own judgment of when it is ready -- held on a false 
 have held on a true one. A decision that is right for its reason survives its facts being wrong;
 that is the difference between a rule and a lucky guess, and it is worth saying plainly to someone
 who has just been told their measurement was stale.
+
+---
+
+## A test can prove a branch works and the branch still be unreachable, if the fixture skips the schema
+
+The `autonomy` mechanism in `src/packaging/` is dead: `manifest.ts:52` reads a key
+`schemas/skill.schema.json` cannot express, so `plan.ts:199` has one reachable branch and every
+skill ships `mode: manual`. The obvious question is why a suite this thorough never said so. It is
+not that the branch is untested. It is tested, and tested well:
+
+```
+tests/packaging.test.ts:424
+  "id: beta\nversion: 0.1.0\ninvocation: M\nautonomy:\n  modes: [manual, guided, autonomous]\n  requires_enforced: [filesystem-sandbox]\n"
+tests/packaging.test.ts:440
+  expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["filesystem-sandbox"] }])
+```
+
+That is a real assertion about a real degradation, and mutating the branch would kill it. It is also
+the **only** `autonomy` block in the repository: `requires_enforced` occurs four times in the whole
+tree, twice in prose describing the defect, once in the code that reads it, and once here. The
+fixture is a hand-written YAML string. It never passes through the schema whose
+`additionalProperties: false` is the reason no real manifest can carry the key.
+
+So the coverage is genuine and says nothing about reachability. **Branch coverage obtained through a
+fixture that constructs the input by hand cannot see a gate upstream of the fixture.** The test asks
+"given this input, does the branch behave?" and the production question is "can this input exist?"
+-- two claims with different evidence, in the same shape as the figure and its cause. Mutation
+testing does not help, and would not have: mutate the branch, the test dies, the report reads 13 of
+13 caught. All of it true, none of it about production.
+
+The missing check names its own subject: **does any schema-valid input reach this branch?** For
+anything gated by a schema, that is a different question from branch coverage, and only the first
+one is about the shipped artifact.
+
+**Where this bites next, concretely.** Connecting the reader is not a safe repair, because eight
+manifests were filled in while nothing read them. Five declare `mode: autonomous` and one `guided`
+on **codex**, whose `enforces` list is empty (`src/packaging/hosts.ts:46`). A fix that simply honours
+the declared mode would ship four skills claiming autonomy on a host that enforces nothing --
+strictly worse than today's accidental `manual`, and the exact "silently weakening the contract"
+that arch §1.2/§1.3 forbids. Worse, `unsupported` as authored is prose, three sentences per block,
+not capability identifiers, so it cannot be compared against `enforces` at all. The mechanism needs
+a machine-readable statement of what the skill requires the host to enforce; what the manifests
+carry today is the author's conclusion and the author's narrative, and neither is checkable.
+
+Which is the general lesson, and it is the sharp edge of the dead-branch entry above. A dead branch
+does not only fail safe or unsafe by accident. It also **accumulates unreviewed input** for as long
+as it stays dead, because the authors filling the field get no feedback from a build that ignores
+it. Connecting it turns every one of those declarations live in a single commit. The repair is
+therefore two commits and not one: first make the field readable and report what it would have
+emitted, then change what is emitted.
