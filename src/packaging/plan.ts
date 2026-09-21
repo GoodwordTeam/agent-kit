@@ -17,18 +17,39 @@ const SOURCE_ONLY_PREFIXES = ["research/", "provenance/", "src/", "tests/", "dis
 /** Where the packager parks a copied shared dependency, preserving its source layout. */
 export const SHARED_ROOT = "references/shared";
 
-/** The host's own manifest, carrying host keys only. */
-export const HOST_MANIFEST_FILE = ".claude-plugin/plugin.json";
+/**
+ * Each host's own manifest, carrying host keys only, at the path that host reads.
+ *
+ * Keyed by host because it was a single string, and a single string is how one
+ * bundle came to be emitted twice under two names: `dist/codex` carried
+ * `.claude-plugin/plugin.json`, the other host's directory, and every check
+ * passed because both bundles were being measured against the same constant.
+ * `adapters/claude-code/CONTRACT.md` §1 and `adapters/codex/CONTRACT.md` §2
+ * each give their own path.
+ */
+export const HOST_MANIFEST_FILE: Record<HostId, string> = {
+  "claude-code": ".claude-plugin/plugin.json",
+  codex: ".codex-plugin/plugin.json",
+};
 
 /**
- * Where this package records what its own build decided.
+ * Where this package records what its own build decided, beside that host's
+ * manifest.
  *
  * Separate from the host manifest because `claude plugin validate --strict`
  * errors on a key it does not define. Named here rather than spelled out at
  * each use: the previous spelling-it-out is what let a reader-facing message go
  * on naming the host manifest after the record moved out of it.
+ *
+ * It moved with the manifest rather than staying put. Left behind, the codex
+ * bundle would still ship a `.claude-plugin/` directory holding one file --
+ * the same defect as before, one file further down, and invisible to any check
+ * that asks only about `plugin.json`.
  */
-export const BUILD_RECORD_FILE = ".claude-plugin/ak.json";
+export const BUILD_RECORD_FILE: Record<HostId, string> = {
+  "claude-code": ".claude-plugin/ak.json",
+  codex: ".codex-plugin/ak.json",
+};
 
 /**
  * The licence files every bundle carries at its root, copied verbatim.
@@ -208,8 +229,8 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     issues.push(
       note(
         "packaging.excluded-unauthored",
-        BUILD_RECORD_FILE,
-        `${excluded.length} skill(s) are excluded from this bundle because catalog.yaml does not declare them authored: ${excluded.map((e) => e.skill).join(", ")}. The exclusion and its reason are recorded in ${BUILD_RECORD_FILE}.`,
+        BUILD_RECORD_FILE[host],
+        `${excluded.length} skill(s) are excluded from this bundle because catalog.yaml does not declare them authored: ${excluded.map((e) => e.skill).join(", ")}. The exclusion and its reason are recorded in ${BUILD_RECORD_FILE[host]}.`,
       ),
     );
   }
@@ -238,7 +259,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     decisions.push({ skill: entry.id, mode, rejected, unenforceable });
 
     const canonical = parseFrontmatter(body);
-    const generated = generateHostFrontmatter(entry, canonical, manifest, mode, unenforceable);
+    const generated = generateHostFrontmatter(entry, canonical, manifest, mode, unenforceable, host);
     const rewritten = rewriteLinks(bodyPath, bodyPath, canonical.body, included, bodyPath);
     issues.push(...rewritten.issues);
 
@@ -298,12 +319,12 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     files.set(name, { path: name, contents: text, source: name });
   }
 
-  files.set(HOST_MANIFEST_FILE, {
-    path: HOST_MANIFEST_FILE,
-    contents: pluginManifest(ctx, emitted),
+  files.set(HOST_MANIFEST_FILE[host], {
+    path: HOST_MANIFEST_FILE[host],
+    contents: pluginManifest(ctx, host, emitted),
   });
-  files.set(BUILD_RECORD_FILE, {
-    path: BUILD_RECORD_FILE,
+  files.set(BUILD_RECORD_FILE[host], {
+    path: BUILD_RECORD_FILE[host],
     contents: buildRecord(host, membership.profile, excluded, decisions, capabilities.enforces, capabilities.notes),
   });
 
@@ -330,16 +351,37 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
  * ("Unknown field 'ak'. Claude Code ignores it at load time."), so anything this
  * package wants to record about its own build goes in `buildRecord` instead.
  */
-function pluginManifest(ctx: CheckContext, skills: ReadonlyArray<string>): string {
+function pluginManifest(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>): string {
   const pkg = ctx.catalog.package;
   const manifest = {
     name: pkg.id,
     version: pkg.version,
     description: pkg.name,
-    // Explicit enumeration, in catalog order, so load order is controlled rather than glob-dependent.
-    skills: skills.map((id) => `./skills/${id}`),
+    skills: skillRegistration(host, skills),
   };
   return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
+/**
+ * How each host is told which skills the bundle holds.
+ *
+ * The two forms are a contract difference, not a style one. claude-code
+ * enumerates every path in catalog order, so load order is controlled rather
+ * than glob-dependent and the manifest is the one place that states what this
+ * bundle actually contains -- which matters because the install set is
+ * profile-dependent (`adapters/claude-code/CONTRACT.md` §1). codex takes the
+ * directory pointer its contract carries from the donor
+ * (`adapters/codex/CONTRACT.md` §1).
+ *
+ * The forms resolve to the same set only because both bundles are built from
+ * one `skills/` tree. That is a property of this function's caller rather than
+ * of the manifests, and nothing in either manifest would show it breaking --
+ * a pointer states no set to disagree with. The comparison in
+ * `tests/packaging.test.ts` is what holds it, per §1: divergence between the
+ * two bundles is a build failure, not a host difference.
+ */
+function skillRegistration(host: HostId, skills: ReadonlyArray<string>): string | string[] {
+  return host === "codex" ? "./skills/" : skills.map((id) => `./skills/${id}`);
 }
 
 /**

@@ -24,6 +24,29 @@ export const RESTRICTIONS: ReadonlyArray<string> = [
   "process-exec-block",
 ];
 
+/**
+ * The generated frontmatter keys each host actually defines.
+ *
+ * Deliberately not derived from `enforces`, and the two must never be
+ * conflated. `allowed-tools` is a key claude-code defines and enforces nothing
+ * with -- it is pre-approval, per RESTRICTIONS above -- so a host's key set and
+ * a host's guarantees are different questions with different answers.
+ *
+ * codex gets neither of the two claude-code keys. `adapters/codex/CONTRACT.md`
+ * §3: no per-skill model-invocation suppression is verified on this host, and
+ * tool restriction "is not emitted" because the host's confinement is an
+ * OS-level sandbox the operator owns. §5 makes a key from one host's set
+ * appearing in the other's bundle a failure in its own right.
+ *
+ * `argument-hint` is on both lists because neither contract takes it away from
+ * codex: §3's table names exactly two differences, and §5's leaked-key test
+ * names exactly the same two.
+ */
+export const HOST_FRONTMATTER_KEYS: Record<HostId, ReadonlyArray<string>> = {
+  "claude-code": ["disable-model-invocation", "argument-hint", "allowed-tools"],
+  codex: ["argument-hint"],
+};
+
 export interface HostCapabilities {
   id: HostId;
   enforces: Set<string>;

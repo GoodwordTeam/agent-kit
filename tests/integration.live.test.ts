@@ -58,7 +58,19 @@ describe("the other two commands survive the live tree", () => {
     if (catalog === null) return;
     const plans = planAll({ root: ROOT, catalog }, {});
     expect(plans.map((p) => p.host).sort()).toEqual(["claude-code", "codex"]);
-    for (const plan of plans) expect(plan.files.has(".claude-plugin/plugin.json")).toBe(true);
+    // Each plan is asked for its own host's manifest. Asking both for
+    // `.claude-plugin/plugin.json` is what this line used to do, and it passed
+    // -- it was the assertion that one bundle was being emitted twice under two
+    // names, written as if that were the requirement. The comparison that owns
+    // this properly is in tests/packaging.test.ts; here it only has to be the
+    // right question against the real tree.
+    const expected: Record<string, string> = {
+      "claude-code": ".claude-plugin/plugin.json",
+      codex: ".codex-plugin/plugin.json",
+    };
+    for (const plan of plans) {
+      expect(`${plan.host}: ${[...plan.files.keys()].includes(expected[plan.host] ?? "")}`).toBe(`${plan.host}: true`);
+    }
   });
 
   test("ak attach answers for a real path in this repository", () => {

@@ -71,9 +71,14 @@ function ctxFor(overrides: Record<string, string> = {}, drop: string[] = []) {
   return { root, catalog };
 }
 
-/** What this build decided, in the file beside the host's manifest. */
+/** What this build decided, in the file beside that host's own manifest. */
 function recordOf(plan: ReturnType<typeof planBundle>) {
-  return JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
+  // Derived from the plan rather than fixed, because the record moved with the
+  // manifest when the two hosts stopped sharing one. Fixed, it would have gone
+  // on reading `{}` for every codex plan and every assertion on it would have
+  // been an assertion about an empty object.
+  const dir = plan.host === "codex" ? ".codex-plugin" : ".claude-plugin";
+  return JSON.parse(plan.files.get(`${dir}/ak.json`)?.contents ?? "{}");
 }
 
 describe("host capability honesty", () => {
@@ -337,6 +342,177 @@ describe("bundle planning", () => {
     const plan = planBundle(ctx, "claude-code", {});
     expect(plan.issues.some((i) => i.rule === "packaging.skill-body-missing")).toBe(true);
     expect([...plan.files.keys()]).not.toContain("skills/beta/SKILL.md");
+  });
+});
+
+/**
+ * The two bundles are meant to differ, and the contracts say exactly where.
+ *
+ * This is the comparison whose absence let a decorative second adapter report
+ * clean indefinitely. `ak build` was emitting one bundle under two names: the
+ * manifest path was a single constant, so `dist/codex` carried
+ * `.claude-plugin/plugin.json` -- the other host's directory -- and no check
+ * looked at two bundles at once to notice. Every assertion in this file named
+ * `claude-code`, and a test that names one host cannot see two hosts agreeing
+ * where they are supposed to disagree.
+ *
+ * Where they differ, taken from the contracts rather than decided here:
+ *   - the manifest path, `adapters/codex/CONTRACT.md` §2 against
+ *     `adapters/claude-code/CONTRACT.md` §1
+ *   - the skill registration: codex takes a directory pointer
+ *     (`adapters/codex/CONTRACT.md` §1, the donor table row for
+ *     `.codex-plugin/plugin.json`), claude-code enumerates every path because
+ *     its install set is profile-dependent and the manifest is the one place
+ *     that states what the bundle actually contains
+ *     (`adapters/claude-code/CONTRACT.md` §1)
+ *
+ * Where they must agree, same authority: the identity fields
+ * (`adapters/codex/CONTRACT.md` §5.2, adapted from the donor's own release
+ * check, which treats manifest drift as release-blocking rather than a lint)
+ * and the installed skill set itself (§1: "Divergence between the two bundles
+ * is a build failure, not a host difference").
+ *
+ * Both halves are here on purpose. A test that only proves they differ passes
+ * just as well over two bundles that have drifted apart in every other field,
+ * and a test that only proves they agree is what the single shared constant
+ * already satisfied.
+ */
+describe("the two host bundles, compared", () => {
+  /** Both plans from one source tree, so every difference is the packager's doing. */
+  function bundles() {
+    const ctx = ctxFor();
+    return { claude: planBundle(ctx, "claude-code", {}), codex: planBundle(ctx, "codex", {}) };
+  }
+
+  const manifestIn = (plan: ReturnType<typeof planBundle>, path: string) =>
+    JSON.parse(plan.files.get(path)?.contents ?? "{}");
+
+  const skillIdsIn = (plan: ReturnType<typeof planBundle>) =>
+    [...new Set([...plan.files.keys()].flatMap((p) => /^skills\/([^/]+)\//.exec(p)?.[1] ?? []))].sort();
+
+  test("each bundle carries its own host's manifest", () => {
+    const { claude, codex } = bundles();
+    expect(claude.files.has(".claude-plugin/plugin.json")).toBe(true);
+    expect(codex.files.has(".codex-plugin/plugin.json")).toBe(true);
+  });
+
+  test("neither bundle carries anything at all from the other host's directory", () => {
+    // Asserted over every path rather than over the two manifest names, because
+    // the build record sits in the same directory and had to move with it. A
+    // check written against `plugin.json` alone would report clean over a codex
+    // bundle still shipping `.claude-plugin/ak.json`, which is the same defect
+    // one file further down.
+    const { claude, codex } = bundles();
+    expect([...codex.files.keys()].filter((p) => p.startsWith(".claude-plugin/"))).toEqual([]);
+    expect([...claude.files.keys()].filter((p) => p.startsWith(".codex-plugin/"))).toEqual([]);
+  });
+
+  test("codex registers the skills directory; claude-code enumerates the paths", () => {
+    const { claude, codex } = bundles();
+    expect(manifestIn(claude, ".claude-plugin/plugin.json").skills).toEqual(["./skills/alpha", "./skills/beta"]);
+    expect(manifestIn(codex, ".codex-plugin/plugin.json").skills).toBe("./skills/");
+  });
+
+  test("the two manifests agree on every identity field they both carry", () => {
+    // Compared as whole objects with the one key the contracts say differs
+    // removed, rather than against a list of field names written here. A field
+    // added to one manifest and not the other fails this immediately; a list
+    // would have to be remembered, and the thing being guarded against is
+    // exactly the edit nobody remembers to mirror.
+    //
+    // A key that is genuinely host-specific -- `experimental.evals`, which
+    // `adapters/claude-code/CONTRACT.md` §1 gives to that host alone -- must be
+    // added to this exclusion when it lands, and that is the point: it makes
+    // whoever adds it say out loud that it belongs to one host.
+    const { claude, codex } = bundles();
+    const { skills: _enumerated, ...claudeIdentity } = manifestIn(claude, ".claude-plugin/plugin.json");
+    const { skills: _pointer, ...codexIdentity } = manifestIn(codex, ".codex-plugin/plugin.json");
+    expect(Object.keys(claudeIdentity).length).toBeGreaterThan(0);
+    expect(codexIdentity).toEqual(claudeIdentity);
+  });
+
+  test("the two bundles install the same skills, whatever form each manifest states it in", () => {
+    // `adapters/codex/CONTRACT.md` §1: "Divergence between the two bundles is a
+    // build failure, not a host difference." Compared through the bundles' own
+    // skill trees rather than through the manifests, because a directory
+    // pointer states no set at all -- reading the two manifests against each
+    // other here would be comparing a list to a string and calling it agreement.
+    //
+    // The second assertion is a positive control. Two empty bundles have equal
+    // skill sets, and without a figure this test would report agreement most
+    // loudly at the moment both bundles had stopped containing anything.
+    const { claude, codex } = bundles();
+    expect(skillIdsIn(codex)).toEqual(skillIdsIn(claude));
+    expect(skillIdsIn(claude)).toEqual(["alpha", "beta"]);
+  });
+
+  test("the same skill body reaches both bundles; only the generated frontmatter differs", () => {
+    // Contract §5.1, bundle parity. The canonical tree is host-neutral, which is
+    // the whole reason host keys are generated rather than written, so a body
+    // that differs between bundles means something edited content on the way to
+    // one host.
+    const { claude, codex } = bundles();
+    const bodyOf = (plan: ReturnType<typeof planBundle>, id: string) =>
+      (plan.files.get(`skills/${id}/SKILL.md`)?.contents ?? "").replace(/^---\n[\s\S]*?\n---\n/, "");
+    for (const id of ["alpha", "beta"]) {
+      expect(bodyOf(claude, id)).not.toBe("");
+      expect(`${id}:${bodyOf(codex, id)}`).toBe(`${id}:${bodyOf(claude, id)}`);
+    }
+    // And the frontmatter genuinely is generated per host, so the equality above
+    // is a statement about bodies rather than about two identical files.
+    const claudeAlpha = claude.files.get("skills/alpha/SKILL.md")?.contents ?? "";
+    expect(claudeAlpha).toContain("disable-model-invocation");
+    expect(codex.files.get("skills/alpha/SKILL.md")?.contents ?? "").not.toContain("disable-model-invocation");
+  });
+
+  /**
+   * Contract §5, test 3, which this adapter owns and did not have: "the codex
+   * bundle contains no `disable-model-invocation` and no `allowed-tools`; the
+   * claude-code bundle contains both where required. A key from one host's set
+   * appearing in the other's bundle is a failure."
+   *
+   * It was failing in the direction that leaves no trace. Both keys were
+   * reaching the codex bundle, because `generateHostFrontmatter` took no host
+   * argument at all -- the function that generates host frontmatter could not
+   * tell the hosts apart, so it answered the same under both.
+   *
+   * Removing them subtracts no protection. §3 records that codex has no
+   * verified equivalent for either, so neither key was ever honored there; what
+   * the codex bundle loses is a claim, not an enforcement. The restraint that
+   * does the work on that host is §3.1's description clause, which this package
+   * does not generate yet.
+   */
+  test("neither host's own frontmatter keys leak into the other host's bundle", () => {
+    const { claude, codex } = bundles();
+    const alphaIn = (plan: ReturnType<typeof planBundle>) => plan.files.get("skills/alpha/SKILL.md")?.contents ?? "";
+
+    // alpha is a U skill declaring allowed_tools, so claude-code is where both
+    // keys are required. Asserted, not assumed: absent from codex means nothing
+    // if the fixture never produced them anywhere.
+    expect(alphaIn(claude)).toContain("disable-model-invocation: true");
+    expect(alphaIn(claude)).toContain("allowed-tools:");
+
+    for (const leaked of ["disable-model-invocation", "allowed-tools"]) {
+      expect(`codex carries ${leaked}: ${alphaIn(codex).includes(leaked)}`).toBe(`codex carries ${leaked}: false`);
+    }
+
+    // argument-hint is on both lists on purpose. §3's table names exactly two
+    // differences and §5's leaked-key test names the same two, so removing a
+    // third key would be this package inventing a host difference the contract
+    // does not state.
+    expect(alphaIn(codex)).toContain("argument-hint: <ticket>");
+  });
+
+  test("each bundle's build record sits beside its own host's manifest and names that host", () => {
+    const { claude, codex } = bundles();
+    expect(claude.files.has(".claude-plugin/ak.json")).toBe(true);
+    expect(codex.files.has(".codex-plugin/ak.json")).toBe(true);
+    // `host` in the record is the whole capability declaration, not a name, so
+    // the id is reached through it. Asserted on both so a record written into
+    // the right directory for the wrong host still fails: the path and the
+    // contents are two separate claims and only one of them is a filename.
+    expect(recordOf(codex).host.id).toBe("codex");
+    expect(recordOf(claude).host.id).toBe("claude-code");
   });
 });
 
