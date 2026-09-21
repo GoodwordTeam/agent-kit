@@ -101,7 +101,7 @@ FILE = "AUTHORING.md"
 
 # The revision whose over-width count is this check's floor. See the docstring: this is the
 # commit that last lowered the count, not the commit that introduced the rule.
-BASELINE_PIN = "36f0697"
+BASELINE_PIN = "648c2b2"
 
 # §3.1's anti-rationalization table is frozen: it is the one section every skill body copies
 # verbatim, so an edit here silently invalidates every copy. The pin is the revision its
