@@ -36,7 +36,12 @@ already demonstrated it can climb, and every climb so far was invisible to the e
 caused it and to the reader of the rendered prose.
 
 When a run reports fewer than the baseline, the pin is stale rather than the file wrong.
-Move `BASELINE_PIN` to the commit that lowered it, in that commit, so the floor ratchets.
+Move `BASELINE_PIN` to the commit that lowered it, in the commit immediately after. Not in the
+lowering commit itself: it would have to contain its own sha, and a self-naming pin has no
+fixpoint. This instruction said "in that commit" until `36f0697` made it necessary to follow,
+which is when it turned out to be unfollowable -- a remedy stated in a form nobody can execute,
+written by someone who never had to run it. Two adjacent commits is the executable form, and the
+floor is only ever read from the earlier one.
 
 IT HAS NO TEMP ROOT, AND THAT IS LOAD-BEARING
 ---------------------------------------------
@@ -69,7 +74,7 @@ FILE = "AUTHORING.md"
 
 # The revision whose over-width count is this check's floor. See the docstring: this is the
 # commit that last lowered the count, not the commit that introduced the rule.
-BASELINE_PIN = "7f159d8"
+BASELINE_PIN = "36f0697"
 
 # §3.1's anti-rationalization table is frozen: it is the one section every skill body copies
 # verbatim, so an edit here silently invalidates every copy. The pin is the revision its
@@ -174,7 +179,8 @@ def main() -> int:
     # would ratchet it the wrong way.
     if rev is None and over < baseline:
         print(f"NOTE: {baseline - over} fewer over-width lines than the floor. Move "
-              f"BASELINE_PIN to this commit, in this commit, so the floor ratchets.")
+              f"BASELINE_PIN to this commit in the NEXT commit, so the floor ratchets. It "
+              f"cannot go in this one: a commit cannot contain its own sha.")
     fail = over > baseline or ticks or blanks or not frozen
     print("FAIL" if fail else "PASS")
     return 1 if fail else 0
