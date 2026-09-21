@@ -467,7 +467,75 @@ describe("a case may carry the keys the host reads", () => {
     expect(caseIssues(evalsTree({ [FILE]: doc }), FILE)).toEqual([]);
   });
 
-  // The control. Without it the three above are satisfied by a schema that
+  test("the grader fields the host reads are admitted", () => {
+    const doc = WELL_FORMED_CASE.replace(
+      "    weight: 1\n",
+      "    weight: 1\n    arm: both\n    min: 0\n    max: 0\n    input_match: super-ship\n",
+    );
+    expect(caseIssues(evalsTree({ [FILE]: doc }), FILE)).toEqual([]);
+  });
+
+  test("an llm grader may aim its focus at the created-file list", () => {
+    const doc = WELL_FORMED_CASE.replace(
+      "  - name: skill-fired\n    type: tool_used\n    tool: Skill\n    weight: 1\n",
+      "  - name: wrote-the-record\n    type: llm\n    criteria: the review record is written\n    focus: files\n",
+    );
+    expect(caseIssues(evalsTree({ [FILE]: doc }), FILE)).toEqual([]);
+  });
+});
+
+// Three of the host's six grader types sat in the enum with nothing behind
+// them: a case naming one validated here and failed to load at the runner,
+// because the host's grader objects are strict. A stated gap is better than a
+// silent one and is still a gap. Each type needs both arms -- the accepted case
+// alone is satisfied by a schema that checks nothing.
+describe("a grader type in the enum carries the fields the host requires", () => {
+  const FILE = "evals/demo/fires-on-territory/case.yaml";
+  const grader = (body: string) =>
+    evalsTree({
+      [FILE]: WELL_FORMED_CASE.replace(
+        "  - name: skill-fired\n    type: tool_used\n    tool: Skill\n    weight: 1\n",
+        body,
+      ),
+    });
+  const refused = (body: string, missing: string) => {
+    const issues = caseIssues(grader(body), FILE);
+    expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
+    expect(issues[0]?.message).toContain(missing);
+  };
+
+  test("baseline without baseline_file is refused", () => {
+    refused("  - name: b\n    type: baseline\n    criteria: matches the recorded run\n", "baseline_file");
+  });
+
+  test("baseline with both fields is admitted", () => {
+    expect(
+      caseIssues(grader("  - name: b\n    type: baseline\n    baseline_file: prior.json\n    criteria: matches\n"), FILE),
+    ).toEqual([]);
+  });
+
+  test("file_exists without path is refused", () => {
+    refused("  - name: f\n    type: file_exists\n    exists: false\n", "path");
+  });
+
+  test("file_exists with a path is admitted", () => {
+    expect(caseIssues(grader("  - name: f\n    type: file_exists\n    path: out/*.md\n    exists: false\n"), FILE)).toEqual([]);
+  });
+
+  test("tool_order without after is refused", () => {
+    refused("  - name: o\n    type: tool_order\n    before: Read\n", "after");
+  });
+
+  test("tool_order with both is admitted", () => {
+    expect(caseIssues(grader("  - name: o\n    type: tool_order\n    before: Read\n    after: Edit\n"), FILE)).toEqual([]);
+  });
+});
+
+describe("a case may carry the keys the host reads, continued", () => {
+  const FILE = "evals/demo/fires-on-territory/case.yaml";
+  const withKeys = (extra: string) => evalsTree({ [FILE]: WELL_FORMED_CASE + extra });
+
+  // The control. Without it the tests above are satisfied by a schema that
   // stopped closing the object at all, which is the fix nobody wanted.
   test("a key neither owner reads is still refused", () => {
     const issues = caseIssues(withKeys("nonsense_key: 1\n"), FILE);

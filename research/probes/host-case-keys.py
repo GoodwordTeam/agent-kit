@@ -92,10 +92,11 @@ def balanced(s, open_at):
     die("unbalanced brackets while reading the loader definition.")
 
 
-def keys(body):
-    """Keys at bracket depth 0. Values nest, so a flat regex would pick up the
-    inner keys of `tt({source:...,path:...})` as if they were siblings."""
-    out, depth, i = [], 0, 0
+def pairs(body):
+    """(key, value) at bracket depth 0. Values nest, so a flat regex would pick
+    up the inner keys of `tt({source:...,path:...})` as if they were siblings.
+    The value text is what says whether the host requires the key."""
+    out, depth, i, key, start = [], 0, 0, None, 0
     while i < len(body):
         c = body[i]
         if c in "([{":
@@ -103,13 +104,45 @@ def keys(body):
         elif c in ")]}":
             depth -= 1
         elif depth == 0:
+            if c == "," and key is not None:
+                out.append((key, body[start:i]))
+                key = None
+                i += 1
+                continue
             m = re.match(r"(\w+)\s*:", body[i:])
-            if m:
-                out.append(m.group(1))
+            if m and key is None:
+                key, start = m.group(1), i + m.end()
                 i += m.end()
                 continue
         i += 1
+    if key is not None:
+        out.append((key, body[start:]))
     return out
+
+
+def keys(body):
+    return [k for k, _ in pairs(body)]
+
+
+def skeleton(value):
+    """A value's text with every nested group removed. `execution:tt({...max_turns:
+    ...default(10)...})` has a `.default(` inside it and no default of its own, so
+    testing the raw text reports a required object as optional."""
+    out, depth = [], 0
+    for c in value:
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        elif depth == 0:
+            out.append(c)
+    return "".join(out)
+
+
+def host_required(ps):
+    """A key the loader will not fill in: no `.default(...)` and not `.optional()`,
+    counting only modifiers applied to the key itself."""
+    return [k for k, v in ps if ".default" not in skeleton(v) and ".optional" not in skeleton(v)]
 
 
 def parse_host(blob):
@@ -123,6 +156,17 @@ def parse_host(blob):
     execution = re.findall(r'"(\w+)"', m.group(2))
     if "schema_version" not in root or "max_turns" not in execution:
         die(f"the routing tables matched the wrong pair: root={root}, execution={execution}.")
+
+    m = re.search(r"var Uc=f\(\(\)=>tt\(\{", blob)
+    if m is None:
+        die("the case object (`Uc`) did not match; this probe's anchors are stale.")
+    case_pairs = pairs(balanced(blob, m.end() - 1))
+    # Control: the frontmatter routing table and the case object are two
+    # independent statements of the root key set. If they disagree, one of the
+    # two anchors matched something else.
+    if not set(root) <= {k for k, _ in case_pairs}:
+        die(f"the routing table names root keys the case object does not: {sorted(set(root) - {k for k, _ in case_pairs})}.")
+    exec_pairs = pairs(balanced(blob, blob.index("execution:tt({", m.end()) + len("execution:tt(")))
 
     m = re.search(r"context:tt\(\{", blob)
     if m is None:
@@ -148,7 +192,7 @@ def parse_host(blob):
     # filesystem claims in this tree score against the transcript.
     m = re.search(r'function cs\(\)\{return DP\(\[cl\(\[(.*?)\]\)', blob)
     focus = re.findall(r'"(\w+)"', m.group(1)) if m else []
-    return root, execution, context, graders, focus
+    return root, execution, context, graders, focus, case_pairs, exec_pairs
 
 
 def parse_schema(root_dir):
@@ -173,7 +217,7 @@ def main():
         ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
     ).stdout.strip()
     version, blob = binary_text()
-    hroot, hexec, hcontext, hgraders, hfocus = parse_host(blob)
+    hroot, hexec, hcontext, hgraders, hfocus, case_pairs, exec_pairs = parse_host(blob)
     s = parse_schema(root_dir)
 
     print(f"host case object  (claude: {version})")
@@ -214,6 +258,29 @@ def main():
 
     print(f"`focus`/`target` accept {', '.join(hfocus) or '(unparsed)'}, or {{source: file, path}},")
     print("  and default to last_message. See CONTRACT-DEFECTS.md.")
+    print()
+
+    print("CONSTRAINTS THIS SCHEMA ADDS THAT THE LOADER DOES NOT")
+    print("  Reconciliation above asks which host keys we fail to name. It cannot ask the")
+    print("  reverse -- which of our constraints the host does not have -- because a")
+    print("  constraint we invent leaves nothing in the host to compare against. Both")
+    print("  directions diverge from the runner; only the first leaves a trace. These are")
+    print("  reported, not judged: a floor stricter than the host is this package's to set,")
+    print("  and is a defect only when nobody decided it.")
+    hreq_root, hreq_exec = set(host_required(case_pairs)), set(host_required(exec_pairs))
+    with open(os.path.join(root_dir, "schemas", "case.schema.json")) as f:
+        raw = json.load(f)
+    for label, ours, theirs in (("root", set(raw.get("required", [])), hreq_root),
+                                ("execution", set(raw["properties"]["execution"].get("required", [])), hreq_exec)):
+        extra = sorted(ours - theirs)
+        print(f"    {label:<10} required here {sorted(ours)}")
+        print(f"    {'':<10} required there {sorted(theirs)}")
+        print(f"    {'':<10} we add: {', '.join(extra) or 'nothing'}")
+    defaulted = [k for k, v in case_pairs + exec_pairs if ".default([])" in v]
+    for k in defaulted:
+        node = raw["properties"].get(k) or raw["properties"]["execution"]["properties"].get(k) or {}
+        if node.get("minItems"):
+            print(f"    {k}: minItems {node['minItems']} here; the loader defaults it to [].")
     print()
 
     print("RECONCILIATION")
