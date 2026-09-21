@@ -1562,3 +1562,26 @@ Canonical is the unpadded form now, stated in §12 with the reason, and
 already recorded the same shape in its docstring -- *"three spellings are already in use"* -- about a
 different index, months of attention apart, and neither of us generalised it until it cost
 something.
+
+---
+
+## The five scenarios nothing tags, and who owns them
+
+`ak validate` reports these on every run and will keep reporting them, so this is not a second
+record of the fact -- it is the one thing the check cannot know, which is who is in a position to
+close each one.
+
+| # | Scenario | Owner |
+|---|---|---|
+| 2 | A feature missing behavioral coverage triggers the testing lens | `super-review`, **batch 5** -- in reach now |
+| 16 | Autopilot disagreement yields one escalation, not repeated internal debate | `autopilot`, batch 10 |
+| 17 | A missing supervisor is not replaced by the implementer | `autopilot`, batch 10 |
+| 22 | A source merge activates KB coordination without bypassing KB checks | `compound` / KB adapter, batch 8 |
+| 24 | Rolling back a skill leaves its supporting knowledge history intact | `deprecate`, batch 9 |
+
+Only 2 is reachable in the batch now open, and it is the one at risk: 16, 17, 22 and 24 belong to
+batches that have not been written and will meet this table when their briefs are, while 2 belongs
+to a batch that is closing. None of the five is in the checkpoint's gated nine, so nothing stops at
+the checkpoint for them -- which is exactly why 2 is worth naming now rather than at the Phase 5
+release gate, where it would arrive as a catalog-wide coverage failure with no batch left that owns
+it.
