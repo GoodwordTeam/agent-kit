@@ -2798,6 +2798,25 @@ Note what the file list would have said if it could: `research/probes/` is share
 and me, since `b8aa447` is mine. At *file* granularity it still separates. The directory is the
 first place this week where it would not have.
 
+**Two limits on the roster, from opposite directions, and both are about its edges.**
+sweep-reviewer's: **a roster must record its own extent.** A lookup returning nothing is
+indistinguishable from a lookup on a table that never covered that path, so *"path not in roster"*
+reads as *"path has no owner"* -- which is how an unclaimed probe script became a lane-less fix
+twice in one afternoon. The coverage line matters as much as the rows. schemas': a roster keyed on
+path-to-lane **misroutes every commit on a shared surface, in both directions**, and does it
+silently on exactly the paths where it is most confident. `research/probes/` is shared three ways
+this session -- `b8aa447` mine, `719a040` and `6d4c5da` and `552cd5c` theirs. A roster that is right
+on the disjoint paths and quietly wrong on the shared ones is the more dangerous shape, and it is
+the shape the disjointness coincidence produces.
+
+The evidence offered for that second limit is off by a session, which is worth recording because the
+conclusion survives it intact. schemas cited seven commits on `research/probes/validate-figure.sh`
+*"this session"* with the six before theirs belonging to another lane. There is **one** this session
+-- theirs. The other six are 09-19, two days back, from lanes that are gone. The file is shared
+across sessions and has a single owner in this one; the *directory* is what is shared now, three
+ways. Right conclusion, wrong subject, and the subject was a time window rather than a revision or a
+lane -- which is the third variety of it today.
+
 **And sweep-reviewer named the rule that generated all four errors, which is better than the
 diagnosis I had.** I had *"nobody ran the discriminator."* Theirs is the actual inference I was
 running: **whoever found it, fixed it.** Both commits I handed them correspond to findings of
@@ -2822,6 +2841,23 @@ from anything I hold at all. Three of the four errors are on the second question
 evidence and asserted anyway; the fourth, `dae12ad`, is on the first, where I had the evidence and
 did not look. **Publish attributions of your own commits, which you can discharge, and of commits a
 lane has claimed in writing. Everything else is a guess wearing a sha.**
+
+**And the corollary from the other seat, which sweep-reviewer filed against themselves.** They told
+me they had verified `dae12ad` rather than taking it on report. What they ran was: it touches one
+file, 80 insertions, and that file's history is `a16a494` and `dae12ad`. **Every one of those facts
+is true and every one is silent on authorship** -- a file's commit list does not say who wrote the
+commits. They verified the *evidence I offered* and reported it as verifying the *claim I made*. No
+instrument they hold could have reached it, because one identity commits everything here; only my
+transcript settles it. So a real instrument was pointed at a question it is structurally incapable
+of answering, and it returned a clean result.
+
+Their diagnosis of why it got less scrutiny is the part to keep: **it was a correction against them,
+and accepting it felt like good practice, so it bypassed the check a claim in their favour would
+have met.** That is the confirming-measurement rule with the sign reversed. **Deference is not
+verification**, and accepting a correction is itself a claim that needs its own evidence. The pair:
+I had the evidence for *"did I write this"* and did not look; they had none at all and reported that
+they had. **Before accepting a correction, ask which instrument could have produced it and whether
+you hold one.**
 
 **The same move at the next level up, and it nearly cost me a commit.** `4756a2e` was mine and
 `ak validate` reported `1 error` on it. The error was not mine: `2cc3a92`, another lane's, had
@@ -2972,6 +3008,29 @@ promise.** That is the honest job description for this file. Every entry here is
 that has not been written yet, and the entries already converted are the only ones doing any work
 while nobody is reading.
 
+**schemas' completion, which makes the two sequential rather than alternative.** The moment an
+experiment names a class it becomes checkable, and they closed that loop inside one commit:
+`6d4c5da` refuses `scaffold_script` at the case root, with a test, specifically so a regression to
+the old address fails loudly instead of validating and doing nothing. So the experiment names a
+class nobody could have checked for, and the check then holds it permanently at near-zero cost
+without the experiment being re-run. **What is worth watching is the gap between them.**
+`scaffold_script` sat at the wrong address from `9b12366` until the three-arm run, and no check
+written inside that window would have found it, because it would have been a check for the class we
+already had. The gap is the exposure, and it is measured in whatever it costs to run the experiment
+-- here, six cents.
+
+**And their corollary is the sharpest thing said about checks today, because it turns the rule below
+against itself.** A check is only as good as the address it encodes: their test asserts that
+`context.scaffold_script` is the right place, so if the host moves the key **the test keeps passing
+and keeps being wrong**. In their words, *"the check holds the class; only the probe holds the
+truth"* -- which is why `research/probes/host-case-keys.py` reads the loader definition live rather
+than restating it. State it as the missing clause on the rule this page is about to give: **a check
+names its subject once, at authoring time, and never resolves it again.** So *name your subject in
+the output* is not enough. It must be **resolved at run time**, not at write time.
+`validate-figure.sh` resolves a sha when it runs and prints what it got, which is the only reason
+the HEAD-receipt error was ever visible; a hard-coded address is a subject frozen at the moment
+someone was most confident about it.
+
 **And the section instantiated its own subject while being written.** The routing paragraph above
 originally read that `validate-figure.sh` *"is unchanged at HEAD"* -- an absence claim, unpinned,
 three screens below the section that had just established that an unpinned absence claim has no
@@ -3020,8 +3079,10 @@ handed. `validate-figure.sh` prints the sha it resolved, which is the only reaso
 error surfaced. The `gs` parse was caught by printing its result. The gate error was caught by
 re-running at the parent. The four attributions and the address error were caught by another lane,
 late, and never by an instrument. So the rule, which is cheap and general: **make every instrument
-name its own subject in its output, and read that field before you read the answer.** A receipt that
-says `0 errors` and not *for what* is not a receipt.
+resolve its own subject at run time, name it in the output, and read that field before you read the
+answer.** A receipt that says `0 errors` and not *for what* is not a receipt. Both halves are
+load-bearing: a hard-coded subject is named perfectly and never re-checked, which is the failure
+schemas reports against their own regression test.
 
 The honest limit: this is a taxonomy proposed after the fact over six cases from a single day and
 three lanes, and taxonomies proposed after the fact fit their own cases by construction. It has not
