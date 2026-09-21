@@ -183,6 +183,31 @@ These three lines are a gate, not a report. The condition is that `ak build` exi
 about the gate, so no count is kept here. `tools/hooks/pre-push` runs the same build against the
 exact commit being published, so a red build is refused at the wire rather than caught in review.
 
+## Receipts name their instrument
+
+A receipt that reports a check without naming what it ran the check *with* is not reproducible, and
+every published receipt in this repo's history has had that defect. The three lines above behave
+differently depending on how the tree was obtained, so the instrument is part of the result:
+
+| Instrument | What it reports |
+|---|---|
+| The working tree | every check, against contents nobody else can reconstruct |
+| `git archive <sha>` extracted bare | the right contents, but `1 check skipped: donor paths at pin` — provenance rows go unverified |
+| That extract plus `ln -s <repo>/.donors <extract>/.donors` | the right contents *and* every check |
+
+Only the third is a receipt. `.donors/` is ignored and therefore absent from any archive; restore it
+by symlink from a full local clone, or from scratch via `provenance/upstream.lock.yaml`, which pins
+every donor to an exact sha. Clone the donors **without** `--depth`: a shallow clone is the common
+default and resolves donor paths for the tip while failing at the pin, which the validator reports as
+missing paths rather than as a broken instrument.
+
+So a receipt states: the sha it measured, that `.donors/` was present and how it got there, and the
+counts. When comparing two runs, note that the skipped-check line prints as a NOTE *and* is counted
+in the summary total, so a bare run reporting `40 notes, 1 skipped` and a linked run reporting
+`39 notes, 0 skipped` are the same tree measured twice — the difference is the instrument, not a
+change. A receipt that does not name its instrument cannot distinguish those two readings, which is
+the whole reason this section exists.
+
 Commit messages end with the session's configured `Co-Authored-By:` attribution trailer. The
 assistant identity in that trailer is supplied by the harness at commit time; it is deliberately
 not written here, because every tracked file in this repo outside `provenance/` and
