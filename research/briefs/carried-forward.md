@@ -1561,6 +1561,15 @@ and got 0 from `head` -- which would have been reported as *the validator does k
 guard is not a better exit code: redirect to a file and count the lines, which is what the `0` in
 that entry is.
 
+**Seventh instance, and the page had already named the cure.** Verifying the schema state for the
+entry below I wrote `git show "$r:schemas/case.schema.json"` in a loop over three revisions. zsh
+took `:s` as the substitution modifier and git received `9b12366hema.json`. The command failed
+loudly, so this one cost nothing -- but the paragraph three screens up says in as many words that
+**quoting changes nothing and `${r}:<path>` is the only form that does**, and I typed the quoted
+form. The rule was not vague, not buried, and not someone else's: it names the single working
+syntax, and it was written on this page by me. Count it against the recurrence section below rather
+than against zsh.
+
 Three of these now sit together, and they divide by which of the shell's answers got taken for
 yours. `:r` and `:s` answer about a **different path**. `set -e` inside `$( )` answers about a
 **different scope**. `$?` after a pipeline answers about a **different command**. In each the exit
@@ -2412,6 +2421,15 @@ no error from the host, a scored run, and the fixture silently absent. Arm B is 
 `(root) must NOT have additional properties {"additionalProperty":"context"}` -- and read by the
 host.
 
+**That sentence is pinned to `0184c96` and was reversed three minutes later.** At `6d4c5da`,
+12:59:21, the schemas lane declared `context` with `scaffold_script`, `history_file` and `add_dirs`,
+closed it, and removed `scaffold_script` from the root -- so arm A's address is now refused and arm
+C's is accepted, which is exactly the inversion of the table. The finding was true when committed at
+12:56:08 and false by 12:59:21. **A present-tense state claim quantifies over a tree the reader does
+not have, exactly as an absence claim does**, and it needs the same pin; the absence rule above was
+written one section earlier and states the narrower case. Sweep-reviewer's generalisation, adopted
+without its instance -- see below for why the instance was wrong.
+
 **The property behind it.** The host's root, `execution` and `context` are all open; only the six
 grader variants are `.strict()`. In an open object a misplaced key is not rejected, it is
 **ignored**, and ignoring is byte-identical to correct absence. So this failure leaves no artifact
@@ -2772,6 +2790,32 @@ ambiguity, it is a lookup with no table. sweep-reviewer's addition is one row of
 read-only lane should be recorded as such where the lead holds it, because *"this lane has no
 commits"* converts every attribution question about it into a one-line check.
 
+**`552cd5c` is resolved, and by the form this page has been arguing for.** The file list could not
+name it. schemas claimed it in writing -- *"`validate-figure.sh` is in `research/probes/`, which is
+my lane, so I took it"* -- and that settles it in one sentence, because a lane naming its own commit
+is evidence created by the act rather than reconstructed from a coincidence of disjoint ownership.
+Note what the file list would have said if it could: `research/probes/` is shared between schemas
+and me, since `b8aa447` is mine. At *file* granularity it still separates. The directory is the
+first place this week where it would not have.
+
+**And sweep-reviewer named the rule that generated all four errors, which is better than the
+diagnosis I had.** I had *"nobody ran the discriminator."* Theirs is the actual inference I was
+running: **whoever found it, fixed it.** Both commits I handed them correspond to findings of
+theirs. That heuristic is sound nearly everywhere and is precisely wrong here, because finding and
+fixing are separate seats by design and they hold the one that cannot commit. A structural fact
+about the team was available and I substituted a plausible social inference for it.
+
+**Second instance of the correction being the error, this time against me.** The same message
+reported that my three-arm brief described a tree fixed twelve minutes earlier: *"All three were
+fixed at `719a040`, 12:44, before your message."* Re-derived from the blobs: at `719a040` the schema
+still has `scaffold_script` at the root, still has **no `context` member**, and still has four keys
+in `execution` -- byte-identical to `9b12366` on every one of those points. `719a040`'s whole diff
+to that file is **prose inside `description` fields**. The fix is `6d4c5da`, 12:59:21, after the
+brief. Their current-state reading was right and the revision it was attached to was wrong, which
+makes it their own class -- and `719a040` is the most seductive possible false positive for it,
+because it touches the file and its diff discusses these exact keys at length without moving any of
+them.
+
 **The asymmetry underneath all four.** *"Did I write this?"* is answerable from what I already hold
 -- my own transcript records the call that made the commit. *"Did they write it?"* is not answerable
 from anything I hold at all. Three of the four errors are on the second question, where I had no
@@ -2943,3 +2987,45 @@ enough to rank the mechanisms by failure rate. It is enough for the ordering abo
 argument about what each mechanism *needs* rather than a count of how often each failed, and enough
 to establish that *"we wrote it down"* is not evidence of anything, which is all this section asks
 anyone to stop doing.
+
+---
+
+## A well-formed answer about the wrong subject, which is one class and not six findings
+
+sweep-reviewer's unification, and I think it is right that this is the section rather than any of
+its members. Every instrument on this page is built to catch a *malformed* answer: a non-zero exit,
+a missing key, a failed assertion, a count that disagrees. Not one of them tests whether the thing
+that answered is the thing that was asked about. The artifact is well-formed, the command exits
+clean, the number has the right shape, and the only defect is the referent.
+
+The members, all from one afternoon:
+
+    a gate result               right verdict      wrong subject: the tree, not my commit
+    a receipt resolving HEAD    right revision     wrong revision: whoever committed last
+    a key at the wrong address  real key           wrong address: a behaviour it cannot cause
+    four attributions           real commits       wrong lane: found-it inferred as wrote-it
+    a state claim at HEAD       true at commit     wrong tree: the reader's, three minutes on
+    `gs=new Set([...])`         eight identifiers  wrong `gs`: right cardinality, other object
+
+The last is schemas', reported against their own probe, and it is the one that should frighten us.
+Anchoring on `gs=new Set([...])` in the minified binary matched a **different** `gs` and returned
+eight plausible identifiers -- and the real list is also eight. Cardinality agreed. Plausibility
+agreed. It was caught only because they printed the list and noticed `schema_version` was missing.
+**A control that checks the shape of an answer cannot see the subject of it**, and most of our
+controls check shape.
+
+What separates the ones that were caught from the ones that were not is a single property: whether
+the instrument **reported the subject it had resolved** rather than echoing the subject it was
+handed. `validate-figure.sh` prints the sha it resolved, which is the only reason the HEAD-receipt
+error surfaced. The `gs` parse was caught by printing its result. The gate error was caught by
+re-running at the parent. The four attributions and the address error were caught by another lane,
+late, and never by an instrument. So the rule, which is cheap and general: **make every instrument
+name its own subject in its output, and read that field before you read the answer.** A receipt that
+says `0 errors` and not *for what* is not a receipt.
+
+The honest limit: this is a taxonomy proposed after the fact over six cases from a single day and
+three lanes, and taxonomies proposed after the fact fit their own cases by construction. It has not
+yet predicted anything. The prediction it licenses, which is testable cheaply: **any instrument here
+whose output does not name its subject will produce this failure, and naming the subject is the
+whole fix.** The next instance either arrives in something that names its subject, which falsifies
+it, or in something that does not, which does not confirm it but does tell us where to look first.
