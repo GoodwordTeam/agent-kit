@@ -85,6 +85,14 @@ def show(rev: str) -> str:
     so a revision-qualified path built in a shell can degrade into a plain path that also
     resolves, exits 0, and yields a faithful measurement of the wrong file. `subprocess`
     with a list argv has no shell to do that.
+
+    The family is wider than `:e`, and its members do not fail alike. Measured here with
+    `R=33e59fe`: `$R:AUTHORING.md` expands to `<repo>/33e59feUTHORING.md`, because `:A` takes
+    the absolute path of `$R` and the rest of the word is appended. That one is loud -- no such
+    file exists and git refuses. `:e` is the quiet one, because the name it produces can exist.
+    So a shell form that worked once is not evidence about the next path written the same way:
+    whether the trap is caught depends on whether the mangled name happens to resolve, which is
+    a property of the tree rather than of the code. `${R}:...` survives all of them.
     """
     out = subprocess.run(["git", "-C", str(ROOT), "show", f"{rev}:{FILE}"],
                          capture_output=True, text=True)
