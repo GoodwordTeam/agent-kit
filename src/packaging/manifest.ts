@@ -2,18 +2,72 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { readTextIfPresent } from "../util/fs.ts";
+import { isSkillMode, type SkillMode } from "./hosts.ts";
+
+/**
+ * What a skill declares about one adapter, from `packaging.hosts[]`.
+ *
+ * This is the only place a skill.yaml may say it. The packager used to read an
+ * `autonomy:` block instead -- `modes` and `requires_enforced` -- which
+ * `schemas/skill.schema.json` forbids outright: it sets
+ * `additionalProperties: false` and lists no `autonomy` key, so a skill
+ * declaring one fails `ak validate` with `schemas.document-invalid`. No skill
+ * in the tree ever declared it and none could, so `wantsAutonomous` was false
+ * for every skill on every host and every bundle shipped `mode: manual`
+ * whatever its author wrote here.
+ *
+ * `unsupported` is prose, not a vocabulary. `adapters/claude-code/CONTRACT.md`
+ * §3 calls it "the `unsupported` semantics this host cannot enforce" and
+ * `adapters/codex/CONTRACT.md` §3.1 has each U skill name its unsuppressible
+ * model invocation in it. It is deliberately not checked against
+ * `RESTRICTIONS`: that set is what a host *enforces*, `requires[]` speaks a
+ * third vocabulary again (`common#/$defs/capability`), and conflating any two
+ * of them is what produced a comparison between a key that cannot exist and a
+ * set it was never drawn from.
+ */
+export interface HostPackaging {
+  adapter: string;
+  /** Absent when the row states none, or states one outside the schema's enum. */
+  mode?: SkillMode;
+  unsupported: string[];
+}
 
 export interface SkillManifest {
   id?: string;
   invocation?: "U" | "M";
   argumentHint?: string;
   allowedTools?: string[];
-  autonomyModes: string[];
-  requiresEnforced: string[];
+  /** `packaging.hosts[]`, keyed by adapter. */
+  hosts: Record<string, HostPackaging>;
+  /**
+   * Adapters declared by more than one row.
+   *
+   * Carried rather than resolved here. The schema puts no uniqueness constraint
+   * on `hosts[]`, so `ak validate` passes a file naming one adapter twice, and
+   * a loader that silently kept the first or the last would let whichever row
+   * it happened to keep decide the mode with nothing saying so. The packager
+   * reports it; this only records that there was something to report.
+   */
+  duplicateHosts: string[];
   /** Skills and phase operations this skill declares it may start. */
   calls: string[];
   raw: Record<string, unknown>;
   parseError?: string;
+}
+
+/**
+ * Whether only a human may start this skill.
+ *
+ * One predicate for the whole packager, because two of them disagreed. Most
+ * skills state `invocation` in catalog.yaml and not in skill.yaml -- twenty of
+ * them in this tree -- so a reader of skill.yaml alone sees `undefined` for a
+ * skill the catalog calls U, while `generateHostFrontmatter`, which reads both,
+ * writes `disable-model-invocation: true` for exactly those skills. A second
+ * reader of skill.yaml alone would have produced a bundle saying a skill is U
+ * in its frontmatter and packaging it as though it were not.
+ */
+export function isUserInvoked(entry: { invocation?: string }, manifest: SkillManifest): boolean {
+  return entry.invocation === "U" || manifest.invocation === "U";
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -30,11 +84,37 @@ function pick(raw: Record<string, unknown>, ...keys: string[]): unknown {
 }
 
 export const EMPTY_MANIFEST: SkillManifest = {
-  autonomyModes: [],
-  requiresEnforced: [],
+  hosts: {},
+  duplicateHosts: [],
   calls: [],
   raw: {},
 };
+
+/** `packaging.hosts[]` as `adapter -> row`, plus the adapters declared twice. */
+function hostRows(packaging: Record<string, unknown>): { hosts: Record<string, HostPackaging>; duplicateHosts: string[] } {
+  const hosts: Record<string, HostPackaging> = {};
+  const duplicateHosts: string[] = [];
+  const rows = Array.isArray(packaging["hosts"]) ? (packaging["hosts"] as unknown[]) : [];
+  for (const item of rows) {
+    const row = record(item);
+    const adapter = row["adapter"];
+    // A row naming no adapter says nothing about any host. Dropped rather than
+    // keyed under "undefined", which is a host nothing is ever packaged for and
+    // would sit in the map looking like a declaration.
+    if (typeof adapter !== "string" || adapter === "") continue;
+    if (hosts[adapter] !== undefined) {
+      if (!duplicateHosts.includes(adapter)) duplicateHosts.push(adapter);
+      continue;
+    }
+    const entry: HostPackaging = { adapter, unsupported: strings(row["unsupported"]) };
+    // Only a value the schema's enum allows becomes a mode. Anything else is
+    // left absent, and the packager's own default applies -- which is `manual`,
+    // the conservative end, so a typo degrades rather than escalates.
+    if (isSkillMode(row["mode"])) entry.mode = row["mode"];
+    hosts[adapter] = entry;
+  }
+  return { hosts, duplicateHosts };
+}
 
 /** Read skills/<id>/skill.yaml, accepting both snake_case and kebab-case keys. */
 export function loadSkillManifest(root: string, skillId: string): SkillManifest {
@@ -49,10 +129,8 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
   }
 
   const raw = record(parsed);
-  const autonomy = record(pick(raw, "autonomy"));
   const manifest: SkillManifest = {
-    autonomyModes: strings(pick(autonomy, "modes")),
-    requiresEnforced: strings(pick(autonomy, "requires_enforced", "requires-enforced")),
+    ...hostRows(record(pick(raw, "packaging"))),
     calls: [
       ...strings(pick(raw, "calls")),
       ...strings(pick(raw, "child_operations", "child-operations")),

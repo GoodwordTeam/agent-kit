@@ -9,6 +9,27 @@ export type HostId = "claude-code" | "codex";
 export const HOST_IDS: ReadonlyArray<HostId> = ["claude-code", "codex"];
 
 /**
+ * How much of itself a skill is allowed to run on a given host.
+ *
+ * The vocabulary is `schemas/skill.schema.json`'s `packaging.hosts[].mode`
+ * enum, and it lives here rather than beside the frontmatter generator because
+ * it is a host-facing vocabulary like `RESTRICTIONS` below -- and because the
+ * generator now reads it from the same module that defines what each host is.
+ *
+ * Deliberately not the same axis as `RESTRICTIONS`. A mode is what this package
+ * exposes; a restriction is what the host enforces. They were compared to each
+ * other once, through a `skill.yaml` key the schema forbids, and the comparison
+ * never ran.
+ */
+export type SkillMode = "autonomous" | "guided" | "manual";
+
+export const SKILL_MODES: ReadonlyArray<SkillMode> = ["autonomous", "guided", "manual"];
+
+export function isSkillMode(value: unknown): value is SkillMode {
+  return typeof value === "string" && (SKILL_MODES as ReadonlyArray<string>).includes(value);
+}
+
+/**
  * Restrictions a skill may require a host to actually enforce.
  *
  * `tool-allowlist-enforced` is deliberately separate from "the host accepts an

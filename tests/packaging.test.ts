@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { parse as parseYaml } from "yaml";
 
 import { loadCatalog } from "../src/catalog/load.ts";
+import { compileSchemas } from "../src/validation/schemas.ts";
 import { checkCompleteness } from "../src/validation/completeness.ts";
 import { HOST_IDS, RESTRICTIONS, loadHostCapabilities } from "../src/packaging/hosts.ts";
 import { planBundle } from "../src/packaging/plan.ts";
@@ -10,6 +12,9 @@ import { writeBundles, checkBundles } from "../src/packaging/build.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const HEAD = (name: string) => `---\nname: ${name}\ndescription: Use when asked.\n---\n`;
+
+/** This repository, for the tests that measure against its real schemas. */
+const REPO = join(import.meta.dir, "..");
 
 const CATALOG = `schema_version: 1
 package:
@@ -1170,41 +1175,311 @@ protocols:`,
   });
 });
 
-describe("host-capability decisions at build time", () => {
-  const autonomous = {
-    "skills/beta/skill.yaml":
-      "id: beta\nversion: 0.1.0\ninvocation: M\nautonomy:\n  modes: [manual, guided, autonomous]\n  requires_enforced: [filesystem-sandbox]\n",
-  };
+/**
+ * The mode each skill runs in on the host it is being packaged for.
+ *
+ * `packaging.hosts[]` is where a skill.yaml states it, one row per adapter, and
+ * it is the only legal place: `schemas/skill.schema.json` sets
+ * `additionalProperties: false`, so the `autonomy:` block the packager used to
+ * read cannot appear in a skill.yaml that passes `ak validate` -- appending one
+ * to a real skill reports `schemas.document-invalid`, "(root) must NOT have
+ * additional properties {"additionalProperty":"autonomy"}". It never appeared
+ * in one. Every skill in every bundle came out `mode: manual` regardless of
+ * what it declared, and `autonomy_unenforceable` was never emitted at all.
+ *
+ * Four tests stood here and passed over that, because the fixture invented the
+ * input: it wrote `autonomy.modes` into `skills/beta/skill.yaml`, a shape the
+ * validator rejects. The assertions were real and the feature they covered
+ * could not run. The fixtures below declare what a real skill declares, so a
+ * decision the packager cannot make is a decision these tests cannot pass.
+ *
+ * The downgrade rule survives the move, with a legal input. `adapters/
+ * claude-code/CONTRACT.md` §3 calls `unsupported` "the `unsupported` semantics
+ * this host cannot enforce", and §4's rule is that a host which cannot enforce
+ * what an autonomous run requires exposes the skill guided and rejects
+ * autonomous. So a row claiming `autonomous` while naming its own host's
+ * unenforceable semantics is the rule's case, stated by the skill itself.
+ */
+describe("the mode a skill is packaged in, per host", () => {
+  /** A skill.yaml declaring `packaging.hosts[]` rows, which is the real shape. */
+  const declaring = (rows: string) => ({
+    "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\npackaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n${rows}`,
+  });
 
-  test("a host that cannot enforce a required restriction rejects autonomous mode and exposes guided", () => {
-    const plan = planBundle(ctxFor(autonomous), "claude-code", {});
-    const decision = plan.decisions.find((d) => d.skill === "beta");
+  const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) => plan.decisions.find((d) => d.skill === skill);
+
+  test("the mode comes from this host's row, and the two hosts may differ", () => {
+    // The property the old fixture could not express at all: `autonomy.modes`
+    // was one flat list for every adapter, so two hosts could not disagree
+    // about a skill even in principle.
+    const ctx = ctxFor(declaring("    - adapter: claude-code\n      mode: autonomous\n    - adapter: codex\n      mode: manual\n"));
+    expect(decisionFor(planBundle(ctx, "claude-code", {}), "beta")?.mode).toBe("autonomous");
+    expect(decisionFor(planBundle(ctx, "codex", {}), "beta")?.mode).toBe("manual");
+    expect(planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents).toContain("mode: autonomous");
+    expect(planBundle(ctx, "codex", {}).files.get("skills/beta/SKILL.md")?.contents).toContain("mode: manual");
+  });
+
+  test("a skill with no row for this host is manual, not autonomous by omission", () => {
+    const ctx = ctxFor(declaring("    - adapter: codex\n      mode: autonomous\n"));
+    expect(decisionFor(planBundle(ctx, "claude-code", {}), "beta")?.mode).toBe("manual");
+    expect(decisionFor(planBundle(ctx, "codex", {}), "beta")?.mode).toBe("autonomous");
+  });
+
+  test("a skill with no packaging block at all is manual", () => {
+    expect(decisionFor(planBundle(ctxFor(), "claude-code", {}), "alpha")?.mode).toBe("manual");
+  });
+
+  test("a row claiming autonomous while naming semantics this host cannot enforce is exposed guided", () => {
+    const ctx = ctxFor(
+      declaring(
+        "    - adapter: claude-code\n      mode: autonomous\n      unsupported:\n        - the host does not scope writes to a grant.\n        - artifact-write is storage only.\n",
+      ),
+    );
+    const decision = decisionFor(planBundle(ctx, "claude-code", {}), "beta");
     expect(decision?.mode).toBe("guided");
     expect(decision?.rejected).toEqual(["autonomous"]);
-    expect(decision?.unenforceable).toEqual(["filesystem-sandbox"]);
-    expect(plan.files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
+    expect(decision?.unenforceable).toEqual(["the host does not scope writes to a grant.", "artifact-write is storage only."]);
+    expect(planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
   });
 
-  test("the rejection is recorded in the bundle, not only in the log", () => {
-    const plan = planBundle(ctxFor(autonomous), "claude-code", {});
-    const record = recordOf(plan);
-    expect(record.host.enforces).toContain("no-model-invocation");
-    expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["filesystem-sandbox"] }]);
+  test("the rejection is recorded in the bundle, not only in the plan", () => {
+    const ctx = ctxFor(
+      declaring("    - adapter: claude-code\n      mode: autonomous\n      unsupported:\n        - the host does not scope writes to a grant.\n"),
+    );
+    const record = recordOf(planBundle(ctx, "claude-code", {}));
+    expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["the host does not scope writes to a grant."] }]);
   });
 
-  test("a host that does enforce the restriction keeps autonomous mode", () => {
-    const ctx = ctxFor({
-      ...autonomous,
-      "adapters/codex/CONTRACT.md": "```yaml\nenforces: [no-model-invocation, filesystem-sandbox]\n```\n",
-    });
+  test("the semantics the host cannot enforce travel into the skill's own frontmatter", () => {
+    // Where a reader of the installed skill can see them. The field existed and
+    // had never once been emitted, because its input could not exist.
+    const ctx = ctxFor(
+      declaring("    - adapter: claude-code\n      mode: guided\n      unsupported:\n        - idempotency is not provided by the host.\n"),
+    );
+    const body = planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents ?? "";
+    expect(body).toContain("autonomy_unenforceable");
+    expect(body).toContain("idempotency is not provided by the host.");
+  });
+
+  test("a guided row naming unsupported semantics stays guided and is not recorded as a rejection", () => {
+    // Nothing was rejected: the skill asked for guided and got guided. Recording
+    // a rejection here would make `autonomy_rejected` a list of every skill that
+    // named an unenforceable semantic, which is most of them, and the field
+    // would stop meaning that a claim was refused.
+    const ctx = ctxFor(
+      declaring("    - adapter: claude-code\n      mode: guided\n      unsupported:\n        - the host does not scope writes to a grant.\n"),
+    );
+    const decision = decisionFor(planBundle(ctx, "claude-code", {}), "beta");
+    expect(decision?.mode).toBe("guided");
+    expect(decision?.rejected).toEqual([]);
+    expect(recordOf(planBundle(ctx, "claude-code", {})).autonomy_rejected).toEqual([]);
+  });
+
+  test("an autonomous row naming nothing unenforceable keeps autonomous", () => {
+    // The other side of the downgrade, so "always guided" cannot pass as the
+    // rule. The host's own `enforces` set is deliberately not consulted: the
+    // restriction vocabulary it holds and the capability vocabulary `requires[]`
+    // speaks are different enums, and the check that compares a skill's
+    // `requires[]` against a host contract's §3 table belongs to `ak validate`
+    // by both contracts' own words. It does not exist yet.
+    const ctx = ctxFor(declaring("    - adapter: claude-code\n      mode: autonomous\n"));
+    const decision = decisionFor(planBundle(ctx, "claude-code", {}), "beta");
+    expect(decision?.mode).toBe("autonomous");
+    expect(decision?.rejected).toEqual([]);
+  });
+
+  test("two rows for one adapter is an error, and the first of them is the one that decided", () => {
+    // The schema puts no uniqueness constraint on `hosts[]`, so `ak validate`
+    // passes a skill.yaml declaring the same adapter twice and whichever row the
+    // packager happened to keep would decide the mode with nothing saying so.
+    //
+    // Which row won is asserted and not left to whichever the loop reached,
+    // because the error says "whichever the packager reached first" -- a
+    // sentence sending a reader to the first of two rows, and a loader that
+    // kept the last would make the message point at the wrong line.
+    const ctx = ctxFor(
+      declaring("    - adapter: claude-code\n      mode: autonomous\n    - adapter: claude-code\n      mode: manual\n"),
+    );
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.duplicate-host-row");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("skills/beta/skill.yaml");
+    expect(issue?.message).toContain("claude-code");
+    expect(decisionFor(plan, "beta")?.mode).toBe("autonomous");
+  });
+
+  test("a row naming no adapter is dropped, not filed under a host that does not exist", () => {
+    // Two of them, because one is dropped either way -- a row with an empty
+    // adapter that survived would be keyed under "" and nothing ever looks that
+    // up, so the guard is invisible until a second one arrives and the pair is
+    // reported as a duplicate. That error names adapter '' and sends a reader
+    // to fix a host that was never being built.
+    const ctx = ctxFor(declaring('    - adapter: ""\n      mode: autonomous\n    - adapter: ""\n      mode: manual\n'));
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(plan.issues.some((i) => i.rule === "packaging.duplicate-host-row")).toBe(false);
+    expect(decisionFor(plan, "beta")?.mode).toBe("manual");
+  });
+
+  test("the mode vocabulary is the schema's, and a value outside it is not packaged as one", () => {
+    // Two halves, because the packager's fallback is `manual` and a typo that
+    // fell through to it would look exactly like a skill that declared nothing.
+    // The schema is what stops it, and that is asserted against the real
+    // schema rather than described: a mode outside the three fails validation.
+    const schemas = compileSchemas(REPO);
+    const validate = schemas.validatorFor("skill");
+    expect(validate).toBeDefined();
+    const doc = parseYaml(readFileSync(join(REPO, "skills/diagnose/skill.yaml"), "utf8")) as Record<string, unknown>;
+    expect(validate?.(doc)).toBe(true);
+    const rows = (doc["packaging"] as Record<string, unknown>)["hosts"] as Array<Record<string, unknown>>;
+    rows[0]!["mode"] = "sideways";
+    expect(validate?.(doc)).toBe(false);
+
+    // And the packager does not invent one from it either.
+    const ctx = ctxFor(declaring("    - adapter: claude-code\n      mode: sideways\n"));
+    expect(decisionFor(planBundle(ctx, "claude-code", {}), "beta")?.mode).toBe("manual");
+  });
+});
+
+/**
+ * `adapters/codex/CONTRACT.md` §3.1, which the mode decision has to honor now
+ * that it makes one.
+ *
+ * §3.1 is not advice about what a skill should declare. It is a statement about
+ * what the codex bundle contains: "For every U skill in the codex bundle" the
+ * description carries the non-trigger clause, the authority check is the first
+ * step, and "Every U skill's `packaging.hosts[]` entry for `adapter: codex`
+ * records this explicitly: `mode: manual`". The host has no manual-invocation
+ * flag, so a U skill exposed as anything but manual there is a skill the model
+ * may start on a host that cannot be told not to.
+ *
+ * This became reachable and therefore necessary in the same change. While every
+ * skill shipped `manual` by accident the bundle satisfied §3.1 without anyone
+ * having built the rule; honoring the declarations means honoring three that
+ * say `guided` on codex, so the rule has to exist for the bundle to stay
+ * compliant. The skill files are wrong as well -- named in the packager's own
+ * error, because a declaration that says `guided` where §3.1 requires `manual`
+ * is precisely the weakening §3.1 says the declaration exists to notice.
+ */
+describe("a U skill on a host that cannot suppress model invocation", () => {
+  /** A skill.yaml for `alpha`, which the catalog declares U. */
+  const alpha = (rows: string, invocation = "invocation: U\n") =>
+    ({ "skills/alpha/skill.yaml": `id: alpha\nversion: 0.1.0\n${invocation}packaging:\n  hosts:\n${rows}` });
+
+  const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) => plan.decisions.find((d) => d.skill === skill);
+
+  const BOTH_GUIDED = "    - adapter: claude-code\n      mode: guided\n    - adapter: codex\n      mode: guided\n";
+
+  test("is packaged manual on codex however its own row reads, and keeps its declared mode elsewhere", () => {
+    // Both halves in one test on purpose: "codex forces manual" and "this is a
+    // codex rule" are the same claim, and a test that only showed the first
+    // would pass just as well against a packager that forced manual everywhere.
+    const ctx = ctxFor(alpha(BOTH_GUIDED));
+    expect(decisionFor(planBundle(ctx, "codex", {}), "alpha")?.mode).toBe("manual");
+    expect(decisionFor(planBundle(ctx, "claude-code", {}), "alpha")?.mode).toBe("guided");
+    expect(planBundle(ctx, "codex", {}).files.get("skills/alpha/SKILL.md")?.contents).toContain("mode: manual");
+    expect(planBundle(ctx, "claude-code", {}).files.get("skills/alpha/SKILL.md")?.contents).toContain("mode: guided");
+  });
+
+  test("records the refusal rather than quietly packaging something other than what was declared", () => {
+    const plan = planBundle(ctxFor(alpha(BOTH_GUIDED)), "codex", {});
+    expect(decisionFor(plan, "alpha")?.rejected).toEqual(["guided"]);
+    expect(recordOf(plan).autonomy_rejected).toEqual([{ skill: "alpha", unenforceable: [] }]);
+  });
+
+  test("names the skill file and the rule, because the declaration is wrong and not only the bundle", () => {
+    const plan = planBundle(ctxFor(alpha(BOTH_GUIDED)), "codex", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.u-skill-not-manual");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("skills/alpha/skill.yaml");
+    expect(issue?.message).toContain("guided");
+    expect(issue?.message).toContain("codex");
+    // And not on the host where the declaration is legal.
+    expect(planBundle(ctxFor(alpha(BOTH_GUIDED)), "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
+  });
+
+  test("goes to manual, not to the guided that §4's downgrade alone would give it", () => {
+    // A U skill claiming autonomous on codex is both rules' case at once: §4
+    // would expose it guided, §3.1 requires manual. The stricter one is the
+    // answer, and this is the test that tells the two apart -- with only §4
+    // built, the mode here reads `guided` and looks like a rule having worked.
+    const ctx = ctxFor(
+      alpha("    - adapter: codex\n      mode: autonomous\n      unsupported:\n        - model invocation cannot be suppressed on this host.\n"),
+    );
+    const decision = decisionFor(planBundle(ctx, "codex", {}), "alpha");
+    expect(decision?.mode).toBe("manual");
+    expect(decision?.rejected).toEqual(["autonomous"]);
+    expect(decision?.unenforceable).toEqual(["model invocation cannot be suppressed on this host."]);
+  });
+
+  test("leaves an M skill's codex row alone, because the rule is about who may start the skill", () => {
+    // The control. §3.1's subject is the U skill, whose whole protection on this
+    // host is that a human asked for it; an M skill is startable by the model by
+    // design and forcing it to manual would be a different package.
+    const ctx = ctxFor({ "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\npackaging:\n  hosts:\n${BOTH_GUIDED}` });
+    expect(decisionFor(planBundle(ctx, "codex", {}), "beta")?.mode).toBe("guided");
+    expect(planBundle(ctx, "codex", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
+  });
+
+  test("reads U from the catalog as well, so it cannot disagree with the frontmatter about what the skill is", () => {
+    // Twenty skills in this tree state an invocation in catalog.yaml and none in
+    // skill.yaml, so a rule reading only skill.yaml would exempt every one of
+    // them -- while `generateHostFrontmatter`, which reads both, went on writing
+    // `disable-model-invocation: true` for the same skills. One predicate, or
+    // the bundle says a skill is U in its frontmatter and packages it as though
+    // it were not.
+    const ctx = ctxFor(alpha(BOTH_GUIDED, ""));
+    expect(decisionFor(planBundle(ctx, "codex", {}), "alpha")?.mode).toBe("manual");
+    expect(planBundle(ctx, "codex", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(true);
+  });
+
+  test("reads U from skill.yaml as well, for the catalog that is missing the field it is meant to carry", () => {
+    // The other arm of the same predicate, and not a theoretical one.
+    // `catalog.schema.json` requires `invocation` on every skill entry, so a
+    // catalog without it is a catalog that failed `ak validate` -- and `ak
+    // build` plans and writes anyway, so the packager sees that catalog. A
+    // skill whose one surviving record of being U is its own skill.yaml is
+    // exactly when the protection has to hold.
+    const noInvocation = CATALOG.replace("    status: authored\n    invocation: U\n", "    status: authored\n");
+    expect(noInvocation).not.toBe(CATALOG);
+    const ctx = ctxFor({ ...alpha(BOTH_GUIDED), "catalog.yaml": noInvocation });
+    expect(decisionFor(planBundle(ctx, "codex", {}), "alpha")?.mode).toBe("manual");
+    expect(planBundle(ctx, "codex", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(true);
+  });
+
+  test("says nothing about a U skill that declares manual, which is what §3.1 asks for", () => {
+    const ctx = ctxFor(alpha("    - adapter: codex\n      mode: manual\n      unsupported:\n        - model invocation cannot be suppressed on this host.\n"));
     const plan = planBundle(ctx, "codex", {});
-    expect(plan.decisions.find((d) => d.skill === "beta")?.mode).toBe("autonomous");
-    expect(plan.decisions.find((d) => d.skill === "beta")?.rejected).toEqual([]);
+    expect(decisionFor(plan, "alpha")?.mode).toBe("manual");
+    expect(decisionFor(plan, "alpha")?.rejected).toEqual([]);
+    expect(plan.issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
   });
 
-  test("a skill declaring no autonomy needs is unaffected", () => {
-    const plan = planBundle(ctxFor(), "claude-code", {});
-    expect(plan.decisions.find((d) => d.skill === "alpha")?.mode).toBe("manual");
+  test("follows the capability rather than the host's name, in both directions", () => {
+    // The rule's subject is "a host with no manual-invocation flag", not "codex".
+    // Keyed on the host id it would be a rule that happens to be right about the
+    // two hosts that exist today and silently wrong about the third, and it
+    // would keep firing at codex after codex grew the flag. Both directions,
+    // because either alone is satisfied by a constant: claude-code declaring it
+    // enforces nothing forces the U skill to manual there, and codex declaring
+    // it enforces no-model-invocation leaves the declared mode alone.
+    const off = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/claude-code/capabilities.yaml": "enforces: []\n" });
+    expect(decisionFor(planBundle(off, "claude-code", {}), "alpha")?.mode).toBe("manual");
+    expect(planBundle(off, "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(true);
+
+    const on = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/codex/capabilities.yaml": "enforces: [no-model-invocation]\n" });
+    expect(decisionFor(planBundle(on, "codex", {}), "alpha")?.mode).toBe("guided");
+    expect(planBundle(on, "codex", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
+  });
+
+  test("says nothing about a U skill with no codex row, which was already manual", () => {
+    // The fallback and the rule agree here, and they must not both fire: an
+    // error naming a declaration that does not exist would send a reader to a
+    // file to fix a line that is not in it.
+    const ctx = ctxFor(alpha("    - adapter: claude-code\n      mode: guided\n"));
+    const plan = planBundle(ctx, "codex", {});
+    expect(decisionFor(plan, "alpha")?.mode).toBe("manual");
+    expect(decisionFor(plan, "alpha")?.rejected).toEqual([]);
+    expect(plan.issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
   });
 });
 

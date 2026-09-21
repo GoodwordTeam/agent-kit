@@ -2,10 +2,8 @@ import { stringify as stringifyYaml } from "yaml";
 
 import type { CatalogEntry } from "../catalog/load.ts";
 import type { Frontmatter } from "../util/frontmatter.ts";
-import { HOST_FRONTMATTER_KEYS, type HostId } from "./hosts.ts";
-import type { SkillManifest } from "./manifest.ts";
-
-export type SkillMode = "manual" | "guided" | "autonomous";
+import { HOST_FRONTMATTER_KEYS, type HostId, type SkillMode } from "./hosts.ts";
+import { isUserInvoked, type SkillManifest } from "./manifest.ts";
 
 export interface GeneratedFrontmatter {
   keys: Record<string, unknown>;
@@ -49,7 +47,7 @@ export function generateHostFrontmatter(
   if (typeof canonical.data["description"] === "string") keys["description"] = canonical.data["description"];
   if (canonical.data["license"] !== undefined) keys["license"] = canonical.data["license"];
 
-  if (defines("disable-model-invocation") && (entry.invocation === "U" || manifest.invocation === "U")) {
+  if (defines("disable-model-invocation") && isUserInvoked(entry, manifest)) {
     keys["disable-model-invocation"] = true;
   }
   if (defines("argument-hint") && manifest.argumentHint !== undefined) keys["argument-hint"] = manifest.argumentHint;

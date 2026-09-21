@@ -6,9 +6,9 @@ import { parseFrontmatter } from "../util/frontmatter.ts";
 import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../util/links.ts";
 import type { CheckContext } from "../validation/context.ts";
 import { error, note, unavailable, type Issue } from "../validation/types.ts";
-import { generateHostFrontmatter, type SkillMode } from "./frontmatter.ts";
-import { loadHostCapabilities, type HostId } from "./hosts.ts";
-import { loadSkillManifest } from "./manifest.ts";
+import { generateHostFrontmatter } from "./frontmatter.ts";
+import { loadHostCapabilities, type HostId, type SkillMode } from "./hosts.ts";
+import { isUserInvoked, loadSkillManifest } from "./manifest.ts";
 import { resolveProfile } from "./profiles.ts";
 
 /** Trees that exist only in the source repository and are never installed. */
@@ -306,10 +306,88 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
       issues.push(error("packaging.skill-yaml-unparseable", `skills/${entry.id}/skill.yaml`, manifest.parseError));
     }
 
-    const unenforceable = manifest.requiresEnforced.filter((r) => !capabilities.enforces.has(r));
-    const wantsAutonomous = manifest.autonomyModes.includes("autonomous");
-    const mode: SkillMode = wantsAutonomous ? (unenforceable.length === 0 ? "autonomous" : "guided") : "manual";
-    const rejected = wantsAutonomous && unenforceable.length > 0 ? ["autonomous"] : [];
+    for (const adapter of manifest.duplicateHosts) {
+      issues.push(
+        error(
+          "packaging.duplicate-host-row",
+          `skills/${entry.id}/skill.yaml`,
+          `packaging.hosts[] declares adapter '${adapter}' more than once, so which row decides this skill's mode is whichever the packager reached first. schemas/skill.schema.json puts no uniqueness constraint on the list, so ak validate passes it; keep one row per adapter.`,
+        ),
+      );
+    }
+
+    /**
+     * The mode this skill runs in here, from its own row for this host.
+     *
+     * `manual` when it declares no row for this host, which is the
+     * conservative end: neither contract says what an undeclared host gets, and
+     * a skill that has not been thought about on a host is not one to expose
+     * more of. An unrecognised `mode` lands here too -- `loadSkillManifest`
+     * only accepts the schema's three, and `ak validate` reports the rest.
+     *
+     * The downgrade is `adapters/claude-code/CONTRACT.md` §4 with the input it
+     * always should have had. §3 calls `unsupported` "the semantics this host
+     * cannot enforce" and §4 says a host that cannot enforce what an autonomous
+     * run requires exposes the skill guided and rejects autonomous -- so a row
+     * claiming `autonomous` while naming its own unenforceable semantics is
+     * that rule's case, stated by the skill about itself. It replaces a
+     * comparison between `autonomy.requires_enforced`, a key the schema
+     * forbids, and `capabilities.enforces`, a set drawn from a different
+     * vocabulary: two halves that never met, and a decision that came out
+     * `manual` for every skill in every bundle.
+     *
+     * What this does NOT check: the skill's `requires[]` against the host
+     * contract's §3 capability table. That is a third vocabulary again, §3
+     * states it in prose that nothing parses, and both contracts put the check
+     * in `ak validate` rather than here. It is not built.
+     */
+    const row = manifest.hosts[host];
+    const declared: SkillMode = row?.mode ?? "manual";
+    const unenforceable = row?.unsupported ?? [];
+
+    let mode: SkillMode = declared === "autonomous" && unenforceable.length > 0 ? "guided" : declared;
+
+    /**
+     * `adapters/codex/CONTRACT.md` §3.1, keyed on the capability rather than on
+     * the host's name.
+     *
+     * §3.1 states a property of the bundle, not advice about what to declare:
+     * "Every U skill's `packaging.hosts[]` entry for `adapter: codex` records
+     * this explicitly: `mode: manual`". On a host that cannot suppress model
+     * invocation, a U skill exposed as anything else is one the model may start
+     * on a host that cannot be told not to -- and a human having asked is that
+     * skill's whole protection there.
+     *
+     * The premise §3.1 names is "a host with no manual-invocation flag", so
+     * that is what is tested. Keyed on `host === "codex"` this would be a rule
+     * that happens to be right about the two hosts that exist and goes on
+     * firing at codex after codex grows the flag. `enforces` rather than
+     * `HOST_FRONTMATTER_KEYS` because emitting the key and honoring it are
+     * different claims, and the one that protects the skill is the second.
+     *
+     * The bundle is corrected AND the declaration is reported. Correcting alone
+     * would leave three skill.yaml files saying `guided` with nothing pointing
+     * at them, and §3.1's own reason for requiring the declaration is that it
+     * is "the record that the weakening was noticed rather than absorbed" -- a
+     * row that says `guided` here is the weakening absorbed.
+     */
+    const suppressible = capabilities.enforces.has("no-model-invocation");
+    if (!suppressible && isUserInvoked(entry, manifest) && mode !== "manual") {
+      mode = "manual";
+      issues.push(
+        error(
+          "packaging.u-skill-not-manual",
+          `skills/${entry.id}/skill.yaml`,
+          `'${entry.id}' is a U skill and its packaging.hosts[] row for adapter '${host}' declares mode '${declared}'. ${host} does not enforce no-model-invocation, so adapters/codex/CONTRACT.md §3.1 requires 'mode: manual' with the unsuppressible model invocation named in 'unsupported'. The bundle packages it manual regardless; fix the row so the declaration records the weakening instead of contradicting it.`,
+        ),
+      );
+    }
+
+    // Only an actual refusal. A skill that asked for guided and got guided has
+    // had nothing rejected, and recording one would make `autonomy_rejected` a
+    // list of every skill that named an unenforceable semantic -- which is most
+    // of them -- and stop it meaning that a claim was refused.
+    const rejected = mode === declared ? [] : [declared];
     decisions.push({ skill: entry.id, mode, rejected, unenforceable });
 
     const canonical = parseFrontmatter(body);
