@@ -2757,6 +2757,20 @@ proximity; a red gate on a shared branch attributes by whoever ran it. Neither o
 author-shaped field, and in both cases the repair is a second measurement taken at a point the other
 lane could not have touched.
 
+**Third instance, one notch finer, caught by a guard this page already had.** I took the receipt for
+the commit above with `validate-figure.sh` handed `git rev-parse --short HEAD`. Between the commit
+and the substitution another lane committed, so the receipt came back naming a revision that was not
+mine. **A receipt taken against `HEAD` is a receipt about whatever the tree was when the
+substitution ran**, which in a concurrent tree is a different claim from the one you meant to make
+-- and it is the same class as the two above, since `HEAD` is a property of the branch and not of
+your work.
+
+What caught it was that the script resolves its argument and prints the full sha it actually
+measured, rather than echoing back what it was handed. The subject was on the report and the subject
+was wrong, which is the *a figure must carry its subject* rule doing the one thing it was written to
+do. Re-taken against the named sha. The general form only gets narrower: **name the revision, and
+never let a receipt resolve its own subject at the moment it runs.**
+
 What replaces it is stronger than the counterfactual was. The corpus held **50** cases at `7db25a7`
 and **104** at `c9fdcda`, so **54 cases were authored after the schema closed**, across seven
 commits, the last at 10:11 this morning -- about two hours before the host was first pointed at the
