@@ -642,6 +642,20 @@ CONTRACT-DEFECTS 4 / schema_version 2`: it worked because the second and third a
 `0 0 0` becomes a discriminating `0 4 2`. `sanity: 145223 bytes` would have passed on the wrong file.
 **A count proves something was read; only a sentinel proves the right thing was read.**
 
+**And one instance where the rule was applied and held, which belongs here beside the ones where it
+was not.** team-lead's first load-check of the eval corpus printed `0 failures`. Its build step had
+failed, so the grep ran on empty output -- the same shape as the two above, arriving in a third
+register. They caught it by asking the run for the number of cases *loaded* as well as the number
+that failed. That is the positive control this rule asks for, and it discriminates as well: a run
+with no subject drives both terms to zero together, so `0 failed` is a clean result only next to a
+load count that is not also zero. The figure that eventually stood, **87 of 87 shipped cases failed
+to load**, is the one that arrived with its denominator attached.
+
+**A failure count with no load count beside it is the numerator of a fraction nobody wrote down.**
+It generalises past greps: every pass/fail total in this repository has a silent denominator, and
+the totals are quoted without it by default. `ak validate: 0 errors` is the same sentence in a tree
+of 104 cases and a tree of none.
+
 Two mechanical notes that cost more than they look. **Quoting does not help and braces do.**
 `$R:AUTHORING.md` and `"$R:AUTHORING.md"` expand identically under zsh's `:A` absolute-path
 modifier -- both to `…/0c785b8UTHORING.md` -- while `"${R}:AUTHORING.md"` is correct. So a reviewer
@@ -1706,10 +1720,19 @@ about what the artifact under test looks like, and only the fixture was consulte
 
 So: **run a new check against the real tree before believing its tests.** A green suite says the
 check does what its author imagined; only the corpus says whether what they imagined exists. The
-second version keys on an `llm` grader's `expected_outcome`, reports 3 groups over 8 cases against
-245 distinct expectations, and excludes `tool_used` and `regex` deliberately -- `tool_used: Skill`
-is legitimately identical everywhere, and grouping on it would report the corpus as a copy of itself,
+second version keys on an `llm` grader's decisive field, reports 3 groups over 8 cases against 245
+distinct expectations, and excludes `tool_used` and `regex` deliberately -- `tool_used: Skill` is
+legitimately identical everywhere, and grouping on it would report the corpus as a copy of itself,
 which is the unclearable-class shape from three sections up.
+
+That decisive field was `expected_outcome` when this was written and has been `criteria` since
+`c9fdcda`, which renamed it in all 256 `llm` graders: the same field under the name the runner
+accepts. The figures above are unaffected, because a rename moves no value. **The rule above is, and
+it is the sharper reading of this entry.** *Run a new check against the real tree before believing
+its tests* was followed here, exactly as written, and the real tree agreed with the check about a
+key `claude plugin eval` rejects outright. A corpus is a population, not an oracle: it can confirm
+that a check finds what exists in the files and say nothing about whether what exists in the files
+is right. The last entry on this page is that interval.
 
 ### A control that silently does not run agrees with every hypothesis
 
@@ -2117,7 +2140,15 @@ legible at all: under the ruling at `8a9272d` the record carries both the false 
 reason it was false, so when team-lead's instance turned up an hour later there was something for it
 to match.
 
-## An instrument cited as authority and never executed
+## A document, a schema and a check can all be wrong together for as long as nothing runs
+
+Two of these in one day, from opposite ends of the package, and team-lead's reading is that they are
+one entry rather than two. In both, every artifact was read carefully and read correctly,
+repeatedly, by several agents. In both, the thing being read was not the thing that runs.
+**Agreement among readers is bounded by what all of them assume, and no number of readers raises
+that bound.**
+
+### The validator cited as authority and never executed
 
 From team-lead, with a probe rather than an assertion: `research/probes/host-validator-reach.sh` and
 `research/briefs/checkpoint-host-packaging.md`, both landed at `a16a494`. `claude plugin validate`
@@ -2170,3 +2201,109 @@ makes the finding worse rather than better, because an inherited requirement has
 to check it against and a self-authored one has none. It is also an instance of the entry above: a
 description of the tree that no instrument checks, written from something other than the committed
 state.
+
+### The field name three sources agreed on, and the runner refuses it
+
+Also team-lead's, found by running the runner. AUTHORING.md §9 said an `llm` grader takes
+`expected_outcome`. `schemas/case.schema.json` required
+that key. `DECIDED_BY` in `src/validation/evals.ts` was keyed on it. `claude plugin eval` requires
+`criteria` and rejects `expected_outcome` outright as an unrecognized key. Pointed at the corpus for
+the first time, **87 of 87 cases in the shipped bundle failed to load**, and not one of them had
+ever run, while `ak validate` reported 0 errors on all 104 at the same revision. Repaired at
+`c9fdcda`, against the host rather than against §9.
+
+**Three copies of one unverified reading is the number it takes to look settled.** The three did not
+agree by coincidence and their agreement was never evidence: each was written from the one before
+it, and a document, a schema and a check that cite each other are one source wearing three hats.
+What the corpus then received was the whole apparatus -- authored against §9, schema-checked against
+`case.schema.json`, deduplicated and counted by `evals.duplicate-graders` -- three instruments
+confirming a field that does not exist in the system that consumes the file.
+
+It sits against the census entry above rather than beside it. A census is four claims -- population,
+revision, classification rule, breakdown -- and here all four were sound. The population was
+`evals/**/case.yaml`, the revision was named, the classification rule was `type: llm`, the breakdown
+was published. **Not one of the four asks whether the field being counted is read by anything.** A
+census is a claim about a tree; it is silent by construction about the tree's relation to anything
+outside it.
+
+Re-derived here rather than quoted, at `c9fdcda` except where the parent is named:
+
+  - **104 `case.yaml` in the tree, 87 in the bundle.** Both populations are needed and the report is
+    wrong with either one alone: `evals/` ships scoped to the emitted skill set, so
+    `profiles/core.yaml`, which excludes `babysit-pr` (8 cases) and `ultraqa` (9), leaves 87 in
+    `dist/claude-code/evals`. `87` is a bundle figure; the `0 errors` from `ak validate` is a tree
+    figure over 104.
+
+  - **87 of 87 shipped cases carry at least one `llm` grader.** So the one key accounts for every
+    failure with no residue -- which `87 of 87` does not say on its own, because a shipped case with
+    no `llm` grader would have had to fail for some second reason nobody had looked for.
+
+  - **258 occurrences of `expected_outcome` at the parent `25a88c9`, 0 at `c9fdcda`.** 256 are the
+    `llm` graders, one each, matching the 256 `type: llm` lines exactly; 207 of those 256 are inside
+    the shipped 87. The remaining 2 are the second finding below.
+
+  - **`claude 2.1.278`**, which is what `claude --version` reports on this machine, and the only
+    version any of these names has been measured against.
+
+  - `ak validate` at `c9fdcda`:
+    `0 errors, 17 warnings, 43 notes, 0 checks skipped, 0 checks unavailable`, `.donors` copied,
+    every check run.
+
+**The two remaining occurrences are the second finding, and they are this entry in miniature.** The
+host's grader object is closed -- it refuses any key it does not define -- while
+`schemas/case.schema.json` leaves its own open, deliberately, rather than guess at what
+`file_exists` and `tool_order` take. That was reasoned as the safe default and it is not one. It
+bought nothing against the runner and admitted exactly the surplus the runner rejects. **An open
+schema is a bet that the consumer is open too**, and the bet was never priced because the consumer
+was never asked.
+
+What it admitted: two `tool_used` graders carrying an `expected_outcome` beside their `tool`, in
+`super-verify/caller-says-tests-already-passed` and `super-verify/named-criterion-gets-a-receipt`.
+Both graders are named `ran-the-command`. Both surplus fields assert that the verification command
+was *executed during the run, not described* -- an assertion that a check was run rather than
+reported, written into a key nothing reads, inside the skill whose entire subject is that
+distinction. Both were authored at `0945b4c`, batch 4's `super-verify`, so the corpus has carried
+this entry's own thesis as an inert string since 19 September.
+
+### Independence of instruments is not independence of premises
+
+team-lead's, and the part of this that generalises furthest. They rebuilt `evals.duplicate-graders`
+around a decisive-field table keyed on `expected_outcome`, predicted its output with a separate
+PyYAML census written *before* the implementation so the prediction could not be fitted to the
+result, and confirmed the two matched exactly. Different language, different code path, different
+pass, written in the order that makes the agreement mean something. Two genuinely independent
+instruments, perfect agreement -- and the agreement was argued at the time as what made the result
+trustworthy.
+
+This is the second half of *a second measurement that shares the first one's definition is not
+independent*, and it is the harder half. That one failed the independence test outright: the second
+census re-ran the first one's subtraction and could not have disagreed. This one passes the test.
+The two could have disagreed about the count, and had either been written wrong they would have. The
+agreement still carried no information about the only question that decided the outcome.
+
+**Two instruments are independent when they could disagree about the answer. They are informative
+only about the questions they could disagree on, and neither of these could disagree about whether
+the key exists.** A shared premise is invisible from inside both instruments, because it is the one
+thing neither of them is measuring. The corollary for a report: *measured twice by independent
+means* is owed a sentence naming what the two means have in common as well as what they do not. Here
+they shared the corpus, the reading of §9, and the whole notion that `expected_outcome` is a field
+-- which is the entire content of the error.
+
+### And what caught it was neither review nor a fourth reader
+
+Three passes over this corpus by three agents preserved the error perfectly, because all three read
+and none executed. No more careful reading would have produced the correction, and there is no
+reading that could have: `expected_outcome` is spelled identically in a correct document and a wrong
+one, and every property available to a reader -- §9 states it, the schema requires it, the check
+reads it, 256 cases carry it, they all agree -- was true. **Fidelity of transcription is not contact
+with the system**, and the act that distinguishes a right name from a wrong one is not available to
+a reader at all.
+
+So the operational form, which is what this page is for: **a claim about what a tool accepts is owed
+a run of that tool, and nothing else discharges it** -- not a schema, not a contract, not a check,
+and not three of them agreeing. Both halves of this entry are the same unpaid debt.
+`claude plugin validate` was named in step 6 of `adapters/claude-code/CONTRACT.md` and in two
+comments in `src/packaging/plan.ts` and had never been run. `claude plugin eval`'s grader shape was
+written into a contract, a JSON schema and a validator and had never been asked. The cost is not
+symmetric with the effort either way: the eval corpus took three batches to author and one command
+to falsify.
