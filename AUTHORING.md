@@ -1133,6 +1133,13 @@ declared case with no executable counterpart and on an executable case nothing d
 directory is declared once in the built bundle's manifest (`experimental.evals`) and is `evals/` by
 default.
 
+**Limit on the row above: `case.yaml` is not the only form the host runs.** `claude plugin eval`
+reads *"<eval dir>/**/case.yaml or prompt.md + graders/*.md"* — a case directory qualifies on either
+file, and `claude plugin eval init --bare` writes the second form. This contract specifies only the
+first, `ak validate` discovers only the first, and a valid second-form case therefore sits in the
+tree neither accepted nor refused nor counted. Write the `case.yaml` form until this contract says
+otherwise. The second form is unspecified here, not forbidden by the host.
+
 `schemas/skill.schema.json` floors `tests[]` at two entries, one `positive` and one `negative`. **This
 contract requires three**, because a skill with no adversarial case has never been shown to hold a
 gate under pressure — which is the only property most of these gates exist for:
@@ -1177,10 +1184,10 @@ graders:
       It does not approve, and does not substitute the other lanes' agreement for the missing lane.
 ```
 
-Grader types available: `tool_used`, `llm`, `regex`, `file_exists`, `tool_order`. Each grader needs a
-`name` and a `type`. Prefer a deterministic grader (`regex`, `file_exists`, `tool_order`) over `llm`
-wherever the pass criterion is observable; use `llm` for the judgment cases, with `criteria` that a
-reader could score by hand.
+Grader types available: `tool_used`, `llm`, `regex`, `file_exists`, `tool_order`, `baseline`. Each
+grader needs a `name` and a `type`. Prefer a deterministic grader (`regex`, `file_exists`,
+`tool_order`) over `llm` wherever the pass criterion is observable; use `llm` for the judgment
+cases, with `criteria` that a reader could score by hand.
 
 These three field names are **measured against the host**, not derived here: they are what
 `claude plugin eval` accepted at `claude 2.1.278`, loading the built bundle. This section said
@@ -1189,33 +1196,47 @@ case over that one key. `schemas/case.schema.json` and `src/validation/evals.ts`
 with this section rather than with the runner, so three sources said the same wrong thing and none
 of them had ever asked.
 
+**What was wrong was the address, not the name.** `expected_outcome` is a key the host accepts — at
+the case root, as free text. Its grader objects are closed and refuse it there, which is where this
+section put it. So a check of the form *does the host know this key* answers yes and is no help: the
+fields below are correct only at the level they are written at, and nothing in this repository
+checks a level.
+
 The figure that records it is **87 of 87**, and the population is part of it: 87 is the bundle, not
 the tree. `evals/` ships scoped to the installed skill set, so `profiles/core.yaml` — which excludes
 `babysit-pr` and `ultraqa`, holding 17 cases between them — leaves 87 of the tree's 104 in
 `dist/claude-code/evals`. All 87 carry an `llm` grader, which is why the one key accounts for every
 failure and leaves no case needing a second explanation.
 
-A name on this list is measured only against the version named above. What `file_exists` and
-`tool_order` accept is still unmeasured, and nothing in this repository re-takes the measurement or
-notices when the host moves one of the three: the check that reads these names reads them from a
-table, and a table agreeing with this section is the failure that produced the paragraph you are
-reading.
+A name on this list is measured only against the version named above, and nothing in this repository
+re-takes the measurement or notices when the host moves one: the check that reads these names reads
+them from a table, and a table agreeing with this section is the failure that produced the paragraph
+you are reading.
 
-**This section specifies the fields of two of those five types, and a case using the other three is
+What `file_exists`, `tool_order` and `baseline` accept was unmeasured when the paragraph above was
+written and is not now. The host's loader definition is readable in the `claude 2.1.278` binary, and
+against it `file_exists` takes `path` and an optional `exists`, `tool_order` takes `before` and
+`after`, and `baseline` takes `baseline_file` and `criteria`. Every grader type also takes an
+optional `arm` of `with-only` or `both`, which decides whether the grader scores the run or only
+reports — a grader marked `with-only` is an ablation indicator and not part of the score. None of
+these is specified below, and writing one still authors the specification by example.
+
+**This section specifies the fields of two of those six types, and a case using the other four is
 not held to anything it says.** The worked example above is the whole of the specification:
 `tool_used` takes `tool`, `llm` takes `criteria`. `regex` takes `pattern` — required by
 `schemas/case.schema.json` and carried by all four `regex` cases in the tree — and this section has
 never said so, which is §5's distinction arriving in a checklist: the field is published where it is
 derived and not where it is written, so a writer reading §9 alone cannot learn it and a writer
-grepping §9 for it concludes there is none. `file_exists` and `tool_order` are named here and
-specified nowhere in this repository. No case uses either, and `schemas/case.schema.json` leaves its
-grader object open rather than guess at field names no run has produced — which is a stated limit
-rather than a silent one, and is why this paragraph can be written at all. The consequence is uneven
-and worth knowing before you pick a type: a `regex` case is validated against its field by the
-schema even though this section is silent, and a `file_exists` or `tool_order` case parses,
-validates, and is checked against nothing, because there is no record of what to check. Writing one
-authors the specification by example. Say so in the batch report rather than leaving the next reader
-to infer the shape from your case.
+grepping §9 for it concludes there is none. `file_exists`, `tool_order` and `baseline` are named
+here and specified nowhere below. No case uses any of them, and `schemas/case.schema.json` leaves
+its grader object open rather than guess at field names no run had produced — which is a stated
+limit rather than a silent one, and is why this paragraph can be written at all. The host's grader
+objects are closed, so that openness buys nothing against the runner: it admits exactly the surplus
+the runner will reject. The consequence is uneven and worth knowing before you pick a type: a
+`regex` case is validated against its field by the schema even though this section is silent, and a
+`file_exists`, `tool_order` or `baseline` case parses, validates, and is checked against nothing,
+because there is no record of what to check. Writing one authors the specification by example. Say
+so in the batch report rather than leaving the next reader to infer the shape from your case.
 
 Tag every case with the release scenario it exercises, written `scenario-N` with no leading zero:
 `scenario-6`, never `scenario-06`. Both count toward coverage — `ak validate` reads the number, not
