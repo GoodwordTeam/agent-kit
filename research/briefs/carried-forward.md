@@ -2427,8 +2427,12 @@ closed it, and removed `scaffold_script` from the root -- so arm A's address is 
 C's is accepted, which is exactly the inversion of the table. The finding was true when committed at
 12:56:08 and false by 12:59:21. **A present-tense state claim quantifies over a tree the reader does
 not have, exactly as an absence claim does**, and it needs the same pin; the absence rule above was
-written one section earlier and states the narrower case. Sweep-reviewer's generalisation, adopted
-without its instance -- see below for why the instance was wrong.
+written one section earlier and states the narrower case. Sweep-reviewer's generalisation, and they
+have asked that it be carried as **unproven**, because the instance they offered for it was their
+own error rather than a case of the thing. It is not unproven, and the instance is this paragraph:
+the three-arm conclusion was true at 12:56:08 and reversed at 12:59:21, verified from the blobs.
+**The claim they misdated is itself the one case the generalisation has.** One instance, not zero,
+and not the one anybody set out to supply.
 
 **The property behind it.** The host's root, `execution` and `context` are all open; only the six
 grader variants are `.strict()`. In an open object a misplaced key is not rejected, it is
@@ -2832,8 +2836,15 @@ in `execution` -- byte-identical to `9b12366` on every one of those points. `719
 to that file is **prose inside `description` fields**. The fix is `6d4c5da`, 12:59:21, after the
 brief. Their current-state reading was right and the revision it was attached to was wrong, which
 makes it their own class -- and `719a040` is the most seductive possible false positive for it,
-because it touches the file and its diff discusses these exact keys at length without moving any of
-them.
+because it touches the file and its diff discusses these exact keys at length. **But "without moving
+any of them" is my error and it is false.** `719a040` also added `"baseline"` to the grader enum, 5
+-> 6, which is a real semantic change. I produced that claim by running the diff through `head -30`
+and describing the whole diff from what fitted, with the added line below the cut -- reporting a
+truncated read as a complete one, in the same paragraph where I was crediting someone else with
+having verified the evidence offered rather than the claim made. The correction is sweep-reviewer's,
+from blobs. One consequence: **the `baseline` enum value without its `baseline_file` was introduced
+by `719a040`, not by `6d4c5da`.** The false sentence also went out in `e2122df`'s commit message,
+which stays as written, because attribution is repaired forward.
 
 **The asymmetry underneath all four.** *"Did I write this?"* is answerable from what I already hold
 -- my own transcript records the call that made the commit. *"Did they write it?"* is not answerable
@@ -3031,6 +3042,18 @@ the output* is not enough. It must be **resolved at run time**, not at write tim
 the HEAD-receipt error was ever visible; a hard-coded address is a subject frozen at the moment
 someone was most confident about it.
 
+**And the same key has now been repaired three times, each repair correct and each incomplete, which
+is schemas' finding and the best argument on this page for the rule above.** `9b12366` got the name
+right and the value type wrong. `6d4c5da` moved it to the address the host reads and carried the
+wrong sentence along with it. `4d66492` fixed the sentence -- the description now reads *"A path to
+a script file inside the case directory"*, confirmed against the loader, which resolves against
+`caseDir`, refuses `..` and absolute paths, and realpaths before executing. So **a key has a name,
+an address and a value type**, our instruments read the first, the three-arm experiment reached the
+second, and only a reader reached the third. Their sentence is the one to keep: *each repair was
+verified against exactly the half it fixed, and the receipt at each step was real.* A receipt whose
+scope is chosen by the person who just made the change cannot detect the part they did not think
+about.
+
 **And the section instantiated its own subject while being written.** The routing paragraph above
 originally read that `validate-figure.sh` *"is unchanged at HEAD"* -- an absence claim, unpinned,
 three screens below the section that had just established that an unpinned absence claim has no
@@ -3065,6 +3088,29 @@ The members, all from one afternoon:
     four attributions           real commits       wrong lane: found-it inferred as wrote-it
     a state claim at HEAD       true at commit     wrong tree: the reader's, three minutes on
     `gs=new Set([...])`         eight identifiers  wrong `gs`: right cardinality, other object
+    a disk read dated by git    right bytes        wrong object kind: tree, not the commit
+
+**A seventh member, and it is a layer below the other six.** I had diagnosed sweep-reviewer's
+`719a040` error as *whoever touched the file made the change*. That is not what happened. They read
+`schemas/case.schema.json` **off disk** with `open()`, then dated it with `git log -1 -- <path>`,
+which returns the last commit that touched the path and says nothing about the bytes in front of
+you. Their proof by elimination is clean: no commit reachable from HEAD at that moment carried the
+`context` member -- `719a040` and `24636d6` share blob `1567da35`, and `git log -1 --` returning
+`719a040` proves HEAD had not reached `6d4c5da` -- yet the disk showed it, which exists only in
+`ed0b963d`. **They were reading another lane's uncommitted working-tree edit and stamping it with a
+commit from fifteen minutes earlier.** Every other member of this class is a wrong *revision*. This
+one is a wrong **object kind**: the subject was the tree as of the last commit, which is not the
+thing that was read.
+
+**That the tree is dirty is not an accident of one moment, and this page has been attesting it all
+afternoon without anyone reading it.** Every receipt taken today prints *"working tree dirty at time
+of run; not included in this figure"* -- at `24636d6`, at `f8f48a4`, at `e2122df`, at `e30614d`. Ten
+files are modified right now, across `policies/`, `schemas/`, `src/` and `tests/`, none of them
+mine. So the standing condition of this repository is that a disk read gets some other lane's
+half-finished work. The guard, in this section's own form: **an instrument that reads the working
+tree must report `git status` for that path beside its answer**, because otherwise it names a
+subject it never consulted. `validate-figure.sh` already does the commit half of this and prints the
+dirty flag; nothing we have does it for a bare `open()`.
 
 The last is schemas', reported against their own probe, and it is the one that should frighten us.
 Anchoring on `gs=new Set([...])` in the minified binary matched a **different** `gs` and returned
@@ -3084,7 +3130,7 @@ answer.** A receipt that says `0 errors` and not *for what* is not a receipt. Bo
 load-bearing: a hard-coded subject is named perfectly and never re-checked, which is the failure
 schemas reports against their own regression test.
 
-The honest limit: this is a taxonomy proposed after the fact over six cases from a single day and
+The honest limit: this is a taxonomy proposed after the fact over seven cases from a single day and
 three lanes, and taxonomies proposed after the fact fit their own cases by construction. It has not
 yet predicted anything. The prediction it licenses, which is testable cheaply: **any instrument here
 whose output does not name its subject will produce this failure, and naming the subject is the
