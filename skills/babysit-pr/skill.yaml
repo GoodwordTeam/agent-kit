@@ -253,8 +253,14 @@ packaging:
           grant validation is the runner's. Where the host cannot validate a grant, the entrypoint
           stops for explicit invocation rather than running on an unchecked claim.
     - adapter: codex
-      mode: guided
+      mode: manual
       unsupported:
+        - >-
+          model invocation cannot be suppressed on this host: `disable-model-invocation`
+          has no codex equivalent (`adapters/codex/CONTRACT.md` §3.1). The generated
+          description's non-trigger clause and the entrypoint's explicit-authority check are
+          all that stand in for it, and the watch stops rather than acting on a pull request on an
+          unrequested start.
         - >-
           event delivery is not provided by the host. Where no events arrive, the watch stops with
           needs-input rather than substituting a polling loop.

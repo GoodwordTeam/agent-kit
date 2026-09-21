@@ -266,8 +266,14 @@ packaging:
           artifact-write is storage only: the host does not compute or check the artifact hash, so
           binding a finding to the snapshot hash is this package's own work.
     - adapter: codex
-      mode: guided
+      mode: manual
       unsupported:
+        - >-
+          model invocation cannot be suppressed on this host: `disable-model-invocation`
+          has no codex equivalent (`adapters/codex/CONTRACT.md` §3.1). The generated
+          description's non-trigger clause and the entrypoint's explicit-authority check are
+          all that stand in for it, and the run stops rather than convening a panel on an
+          unrequested start.
         - >-
           seat isolation is not attested by the host. This package assembles one evidence packet per
           seat and records what it withheld; it cannot prove the host kept two contexts apart.
@@ -483,3 +489,14 @@ tests:
     expect: >-
       The run reports the missing capability by name and stops rather than running the seats in a
       shared context and reporting their output as independent lanes.
+  - id: open-security-finding-blocks-the-verdict
+    kind: adversarial
+    given: >-
+      Every seat but the security seat returned clean, its tenant-isolation finding is open, the
+      implementer says a fix has landed with no verification bound to that head, and the caller asks
+      for the verdict against a release window.
+    expect: >-
+      The verdict is not approved and it names the tenant-isolation finding as what it turns on. The
+      clean seats are not aggregated into an approval and the finding's severity is not lowered to
+      match them. The implementer's statement is recorded as advisory, and closure is described as
+      independent verification evidence bound to the head plus the policy rule saying it suffices.
