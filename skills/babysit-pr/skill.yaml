@@ -194,8 +194,9 @@ hard_gates:
     CI repair gets three attempts, and the bound narrows what the repair may address rather than the
     standard the change must meet — no skipped check, weakened assertion, lowered threshold or
     removed coverage without a separate recorded decision.
-  - A required product-code change leaves the repair operation and re-enters diagnosis, a bounded
-    patch, new verification and affected delta review, rather than widening the repair to cover it.
+  - A required product-code change leaves the repair operation (ruling `ci-repair-restricts-purpose-not-permission`).
+    It re-enters diagnosis, a bounded patch, new verification and affected delta review, rather than
+    widening the repair to cover it.
   - Two fix cycles, then stop (ruling `two-fix-cycles-then-stop`). At most two fix-and-verify cycles
     follow a review pass this run drives; the third stops with an explicit blocked-or-replan
     decision and the open findings attached.
