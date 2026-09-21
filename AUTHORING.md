@@ -1459,6 +1459,33 @@ repeatedly while this section was being written; the notice is what makes it saf
 failed on movement alone would make the duty unperformable, and an unperformable gate gets turned
 off.
 
+**Recording the revision does not pin what was read, and in a shared tree those are two objects.**
+The rule above has the reviewer read the working tree and record the revision. Where several seats
+write that tree, the revision names one thing and the bytes read are another. Measured on
+2026-09-21: `bun run ak validate` returned one error and then zero on consecutive runs with nothing
+changed by the seat running it, the difference being another lane's files mid-edit. A receipt naming
+a revision but taken from the working tree is evidence for neither — not for the revision, whose
+contents it did not read, and not for any state a reader can return to. Taken from an extract,
+`git archive <rev> | tar -x`, the revision and the contents are the same object again.
+
+**Which is why recording the revision means naming the instrument: "no errors" is three claims in
+one sentence.** From the working tree it covers contents nobody can reconstruct. From a bare extract
+it covers the right contents and runs fewer checks — measured at `4e45481`, the extract reports
+`1 check skipped: donor paths at pin`, and the skip's own note says 155 donor rows went unverified,
+because `provenance.source-not-at-pin` cannot read a donor clone that is gitignored. From an extract
+with `.donors/` restored it covers the right contents and every check: 0 errors, 17 warnings, 39
+notes at that revision, all 155 rows checked and passing. The three differ by an error-severity
+check over 155 rows and are indistinguishable in the sentence anyone quotes, so the revision alone
+does not identify what was measured.
+
+**That zero is controlled, which is the only reason it is quoted here.** Changing one row's cited
+path in one fragment to a plausible rename raises `provenance.source-not-at-pin` at error severity,
+so the check ran against the 155 rather than finding nothing to look at. The donors are gitignored
+and reproducible from `provenance/upstream.lock.yaml`, which is what makes the third instrument
+re-derivable rather than a property of one machine — and a shallow clone would break it in a way
+that reads differently, since a row unverifiable for want of the commit is not a row citing a bad
+path.
+
 **Two rules in this section still specify a check with no gate, and each says so in its own
 paragraph.** The retirement rule and the entry-quotation rule were gated at `d87f9e9`; the
 recorded-revision rule and the §11 coverage rule were not. **Each disclosure retires on the commit
