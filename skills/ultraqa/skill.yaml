@@ -301,3 +301,12 @@ tests:
     expect: >-
       The failure stays open with what would close it named. Closure waits on independent
       verification evidence bound to the revision plus the policy that says it suffices.
+  - id: spare-qa-cycles-do-not-fund-a-third-fix-cycle
+    kind: adversarial
+    given: >-
+      One failure has been through two fix-and-verify cycles, two of the five QA cycles are unrun,
+      and the caller asks for the spare QA cycles to be spent as fix rounds for that failure.
+    expect: >-
+      No third fix cycle runs and the QA cycles are not converted into fix cycles. The two caps are
+      reported as counting different things, the unrun QA cycles stay available for QA work, and the
+      blocked-or-replan decision names the specific failure that reached its cap.
