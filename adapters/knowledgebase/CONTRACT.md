@@ -80,6 +80,26 @@ With no KB configured, `kb-read` operations return an explicit **unavailable** r
 operations refuse. They never fall back to writing the working repository — that failure is release
 scenario 21, and it is the single most common way a donor's behavior survives where it should not.
 
+### Capabilities this adapter supplies
+
+| Capability | Unconfigured | What the refusal is |
+|---|---|---|
+| `kb-write` | `fails-closed` | A refusal; never a write to the working repository (release scenario 21) |
+
+This table is read by `ak build` and `ak validate` (`loadAdapterSupplies` in
+`src/packaging/install.ts`), the way §3 of each host contract is read for what the host provides. A
+row is a claim that this adapter refuses rather than degrades when it is not configured, and that
+claim is what lets an install that attaches the adapter package a skill requiring the capability at
+`autonomous` although neither host provides it: the capability is then not silently absent, because
+an operation needing it refuses instead of proceeding without it (ruling
+`fail-closed-adapter-lifts-ceiling`). Whether this adapter is attached is the install's decision,
+stated in `ak.install.yaml`; with no such file, it is.
+
+`kb-read` is deliberately **not** a row, although this adapter supplies it. Unconfigured, it returns
+an explicit unavailable result and the run continues past it, so its absence is reported rather than
+refused. That is honest, but it is not failing closed, and a skill requiring `kb-read` stays capped
+at `guided` on a host that lacks it, attached knowledgebase or not.
+
 ---
 
 ## 2. The seven operations

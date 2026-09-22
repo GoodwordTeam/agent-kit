@@ -60,6 +60,14 @@
 # not of the commit. A gate that cries wolf is a gate people pass --no-verify to,
 # and that would take the first refusal down with it.
 #
+# It measures the default install. A skill's packaged mode depends on
+# ak.install.yaml, which is gitignored and so never in an archive; the rm below
+# makes that hold even for a commit that carries one by force. What the gate
+# answers is whether the commit builds with every fail-closed adapter attached
+# (ruling `fail-closed-adapter-lifts-ceiling`). On refusal it echoes the
+# summary line, whose install clause says so, because a receipt names its
+# instrument (AGENTS.md).
+#
 # It admits the push when it cannot run -- no node_modules, no bun, archive
 # fails. A gate that blocks on its own breakage teaches the bypass.
 build_gate() {
@@ -69,18 +77,21 @@ build_gate() {
   tmp=$(mktemp -d) || return 0
   git archive "$sha" 2>/dev/null | tar -x -C "$tmp" 2>/dev/null || { rm -rf "$tmp"; return 0; }
   ln -s "$root/node_modules" "$tmp/node_modules" 2>/dev/null || { rm -rf "$tmp"; return 0; }
+  rm -f "$tmp/ak.install.yaml"
   out=$(cd "$tmp" && bun run ak build 2>&1)
   status=$?
   rm -rf "$tmp"
   [ "$status" -eq 0 ] && return 0
   printf '%s\n' "$out" | grep '^ERROR' >&2 || true
+  printf '%s\n' "$out" | grep '^ak build: .*; install: ' >&2 || true
   printf '%s\n' \
     "" \
     "pre-push: refusing to publish $(git rev-parse --short "$sha"): ak build fails in a" \
     "  clean extract of it. The working tree may well build; this is the commit." \
     "" \
     "  Re-run it the way the gate did:" \
-    "      git archive <sha> | tar -x -C \$(mktemp -d)   # then bun run ak build there" >&2
+    "      git archive <sha> | tar -x -C \$(mktemp -d)   # then bun run ak build there," \
+    "      with no ak.install.yaml in the extract: the default install" >&2
   return 1
 }
 

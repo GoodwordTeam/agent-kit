@@ -8,6 +8,7 @@ import { compileSchemas } from "../src/validation/schemas.ts";
 import { checkCompleteness } from "../src/validation/completeness.ts";
 import { HOST_IDS, RESTRICTIONS, loadHostCapabilities } from "../src/packaging/hosts.ts";
 import { MODE_CEILING_CHECK } from "../src/packaging/capability-table.ts";
+import { INSTALL_FILE, checkInstallConfig, describeInstall, loadAdapterSupplies, loadInstallConfig } from "../src/packaging/install.ts";
 import { planBundle } from "../src/packaging/plan.ts";
 import { writeBundles, checkBundles } from "../src/packaging/build.ts";
 import { hasBlockingSkips, hasErrors } from "../src/validation/types.ts";
@@ -297,7 +298,7 @@ describe("bundle planning", () => {
     expect(Object.keys(manifest)).toEqual(["name", "version", "description", "author", "license", "skills", "experimental"]);
 
     const record = JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
-    expect(Object.keys(record).sort()).toEqual(["autonomy_rejected", "excluded", "host", "modes", "profile"]);
+    expect(Object.keys(record).sort()).toEqual(["autonomy_rejected", "excluded", "host", "install", "modes", "profile"]);
   });
 
   test("transitive shared dependencies are copied under references/shared/", () => {
@@ -1841,5 +1842,152 @@ describe("ak build and --check", () => {
     writeFileSync(join(ctx.root, "dist/claude-code/skills/zombie.md"), "x\n");
     writeBundles(ctx, {});
     expect(checkBundles(ctx, {}).filter((i) => i.severity === "error")).toEqual([]);
+  });
+});
+
+/**
+ * Per-install autonomy (ruling `fail-closed-adapter-lifts-ceiling`).
+ *
+ * The base fixture has no adapter beyond the two hosts, so every case above is
+ * the host alone whatever the install says. These add a knowledgebase and a
+ * runner whose contracts carry §1 supply tables, and put `ak.install.yaml` in
+ * the fixture root or leave it out -- never the developer's own file, which
+ * would make the answer depend on whoever ran the suite.
+ */
+describe("the adapters an install attaches, and what they lift", () => {
+  const CATALOG_WITH_ADAPTERS = CATALOG.replace(
+    "  - id: codex\n    status: authored\n",
+    "  - id: codex\n    status: authored\n  - id: knowledgebase\n    status: authored\n  - id: runner-contract\n    status: authored\n",
+  );
+
+  const supplyTable = (rows: string[]) =>
+    ["# adapter", "", "## 1. Capabilities", "", "| Capability | Unconfigured | What the refusal is |", "|---|---|---|", ...rows, "", "## 2. Next", ""].join(
+      "\n",
+    );
+
+  const ADAPTERS: Record<string, string> = {
+    "catalog.yaml": CATALOG_WITH_ADAPTERS,
+    "adapters/knowledgebase/CONTRACT.md": supplyTable(["| `kb-write` | `fails-closed` | Refuses |"]),
+    // A runner whose table lists nothing: attachable is decided by the table,
+    // not by being in the catalog, and this one supplies nothing.
+    "adapters/runner-contract/CONTRACT.md": supplyTable([]),
+  };
+
+  const requiring = (caps: string[]) => ({
+    "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\nrequires:\n${caps
+      .map((c) => `  - ${c}\n`)
+      .join("")}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
+  });
+
+  const ctxWith = (caps: string[], install?: string, extra: Record<string, string> = {}) =>
+    ctxFor({ ...ADAPTERS, ...requiring(caps), ...(install === undefined ? {} : { [INSTALL_FILE]: install }), ...extra });
+
+  const modeOf = (plan: ReturnType<typeof planBundle>) => plan.decisions.find((d) => d.skill === "beta")?.mode;
+  const rules = (plan: ReturnType<typeof planBundle>) => plan.issues.map((i) => i.rule);
+
+  test("with no install file every fail-closed adapter is attached, and the declared autonomy is packaged", () => {
+    const plan = planBundle(ctxWith(["repository-read", "kb-write"]), "claude-code", {});
+    expect(modeOf(plan)).toBe("autonomous");
+    expect(rules(plan)).not.toContain("packaging.mode-capped");
+    expect(rules(plan)).not.toContain("packaging.mode-above-ceiling");
+    expect(hasErrors(plan.issues)).toBe(false);
+    expect(recordOf(plan).install).toEqual({ file: null, attached: ["knowledgebase"] });
+  });
+
+  test("`attached: []` is the host alone: guided, and a note naming the capability and the adapter", () => {
+    const plan = planBundle(ctxWith(["repository-read", "kb-write"], "attached: []\n"), "claude-code", {});
+    expect(modeOf(plan)).toBe("guided");
+    expect(plan.files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
+    const capped = plan.issues.find((i) => i.rule === "packaging.mode-capped");
+    expect(capped?.severity).toBe("note");
+    expect(capped?.file).toBe("skills/beta/skill.yaml");
+    expect(capped?.message).toContain("kb-write");
+    expect(capped?.message).toContain("knowledgebase");
+    // A note and not the error: nothing is wrong with the tree, only with what
+    // this install chose to attach.
+    expect(rules(plan)).not.toContain("packaging.mode-above-ceiling");
+    expect(hasErrors(plan.issues)).toBe(false);
+    expect(recordOf(plan).install).toEqual({ file: INSTALL_FILE, attached: [] });
+  });
+
+  test("listing the adapter is the same as the default", () => {
+    const plan = planBundle(ctxWith(["kb-write"], "attached: [knowledgebase]\n"), "claude-code", {});
+    expect(modeOf(plan)).toBe("autonomous");
+    expect(rules(plan)).not.toContain("packaging.mode-capped");
+  });
+
+  test("an unknown adapter id is an error, and so is a host or an adapter that supplies nothing", () => {
+    const ctx = ctxWith(["kb-write"], "attached: [knowledgebase, nope, codex, runner-contract]\n");
+    const unknown = loadInstallConfig(ctx.root, ctx.catalog).issues.filter((i) => i.rule === "packaging.install-unknown-adapter");
+    expect(unknown.map((i) => i.severity)).toEqual(["error", "error", "error"]);
+    expect(unknown.some((i) => i.message.includes("'nope'"))).toBe(true);
+    expect(unknown.some((i) => i.message.includes("'codex' is a host"))).toBe(true);
+    expect(unknown.some((i) => i.message.includes("'runner-contract'"))).toBe(true);
+    // Reported by `ak validate` as well as by the build, since it is a fact
+    // about the tree's configuration and not about any one bundle.
+    expect(checkInstallConfig(ctx).filter((i) => i.rule === "packaging.install-unknown-adapter")).toHaveLength(3);
+    expect(hasErrors(planBundle(ctx, "claude-code", {}).issues)).toBe(true);
+  });
+
+  test("a capability no adapter supplies is still the error, whatever is attached", () => {
+    const plan = planBundle(ctxWith(["kb-write", "runner-grants"]), "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.mode-above-ceiling");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("runner-grants");
+    expect(modeOf(plan)).toBe("guided");
+  });
+
+  test("a capability §3 does not list is still the error, even when an attached adapter claims it", () => {
+    const plan = planBundle(
+      ctxWith(["telepathy"], undefined, {
+        "adapters/knowledgebase/CONTRACT.md": supplyTable(["| `telepathy` | `fails-closed` | Refuses |"]),
+      }),
+      "claude-code",
+      {},
+    );
+    expect(plan.issues.find((i) => i.rule === "packaging.mode-above-ceiling")?.message).toContain("telepathy");
+  });
+
+  test("a supply row stating anything but fails-closed is an error and lifts nothing", () => {
+    // The degradations the ruling excludes: an adapter that falls back rather
+    // than refusing would let an autonomous run proceed without the capability.
+    const ctx = ctxWith(["kb-write"], undefined, {
+      "adapters/knowledgebase/CONTRACT.md": supplyTable(["| `kb-write` | `falls-back` | Writes a scratch directory |"]),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(plan.issues.find((i) => i.rule === "packaging.unknown-supply-status")?.severity).toBe("error");
+    expect(modeOf(plan)).toBe("guided");
+    expect(loadInstallConfig(ctx.root, ctx.catalog).attachable).toEqual([]);
+  });
+
+  test("an unreadable install file attaches nothing rather than everything", () => {
+    const ctx = ctxWith(["kb-write"], "attached: knowledgebase\n");
+    const config = loadInstallConfig(ctx.root, ctx.catalog);
+    expect(config.attached).toEqual([]);
+    expect(config.issues.map((i) => i.rule)).toContain("packaging.install-unreadable");
+    // The schema reports the shape to `ak validate`; one defect, one row.
+    expect(checkInstallConfig(ctx).map((i) => i.rule)).not.toContain("packaging.install-unreadable");
+  });
+
+  test("the description names the file, or says the default applied", () => {
+    const absent = ctxWith([]);
+    expect(describeInstall(loadInstallConfig(absent.root, absent.catalog))).toBe(
+      "no ak.install.yaml: default, all fail-closed adapters attached (knowledgebase)",
+    );
+    const empty = ctxWith([], "attached: []\n");
+    expect(describeInstall(loadInstallConfig(empty.root, empty.catalog))).toBe("ak.install.yaml: attached none");
+  });
+
+  test("the real contracts supply kb-write from the knowledgebase and runner-grants from the runner, and nothing else", () => {
+    // The only case reading this repository, and it reads the contracts, never
+    // an install file: loadAdapterSupplies does not open one.
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repository has no catalog");
+    const { adapters, issues } = loadAdapterSupplies(REPO, catalog);
+    expect(issues).toEqual([]);
+    const byAdapter = Object.fromEntries(adapters.map((a) => [a.adapter, [...a.capabilities].sort()]));
+    // kb-read is absent on purpose: unconfigured, it answers unavailable and the
+    // run continues, which is reported but not refused.
+    expect(byAdapter).toEqual({ knowledgebase: ["kb-write"], "runner-contract": ["runner-grants"] });
   });
 });

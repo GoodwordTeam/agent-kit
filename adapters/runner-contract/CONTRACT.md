@@ -34,6 +34,25 @@ is a pointer back to this one. This is recorded in `catalog.yaml`'s `adapters:` 
 
 The package computes no prices, selects nothing, and schedules nothing.
 
+### Capabilities this adapter supplies
+
+| Capability | Unconfigured | What the refusal is |
+|---|---|---|
+| `runner-grants` | `fails-closed` | `delegated-grant` operations are unavailable and the entrypoint stops for explicit invocation (§2, "With no runner attached") |
+
+This table is read by `ak build` and `ak validate` (`loadAdapterSupplies` in
+`src/packaging/install.ts`). A row is a claim that an operation needing the capability refuses
+when it is unconfigured rather than degrading, which is what lets an attached adapter lift a
+skill's mode ceiling on a host that does not provide the capability (ruling
+`fail-closed-adapter-lifts-ceiling`).
+
+Two capabilities this contract owns are deliberately **not** rows. `event-delivery` has no stated
+behavior for an unconfigured runner (§6 says what may be done on receipt, not what happens when
+nothing is delivered), so nothing here says its absence refuses. `tracker-access` with no tracker
+configured falls back to the knowledgebase's `ticket` records (§6), which is a degradation and not
+a refusal. A skill requiring either stays capped at `guided` on a host that lacks it, attached
+runner or not, and `profiles/autonomy` still does not install against a host on its own.
+
 ---
 
 ## 2. Grant validation

@@ -103,7 +103,18 @@ const ROW = /^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|/gm;
  * the answer for any capability named twice would be whichever row came last.
  */
 function sectionThree(contract: string): string | null {
-  const start = contract.search(/^##\s+3\.\s/m);
+  return numberedSection(contract, 3);
+}
+
+/**
+ * A contract's `## <n>.` section: from its own heading to the next `## `.
+ *
+ * Exported because the adapter contracts state what they supply in their own
+ * §1 and are read the same way, for the same reason -- each of them carries
+ * other tables in the same shape outside that section.
+ */
+export function numberedSection(contract: string, n: number): string | null {
+  const start = contract.search(new RegExp(`^##\\s+${n}\\.\\s`, "m"));
   if (start === -1) return null;
   const rest = contract.slice(start);
   const end = rest.slice(1).search(/^##\s/m);
@@ -166,6 +177,32 @@ export function loadCapabilityTable(root: string): CapabilityTable {
 }
 
 /**
+ * What the installed adapters add to what the host provides.
+ *
+ * `adapters/claude-code/CONTRACT.md` §3 states what **the host alone**
+ * guarantees, and says that a "See `adapters/<x>/CONTRACT.md`" pointer is not a
+ * claim of availability. So an adapter's supply is a second input rather than an
+ * edit to the first: §3 keeps saying `not-provided`, and this says which adapter
+ * would supply the capability and whether the install attached it.
+ *
+ * `suppliers` lists only capabilities an adapter's own contract states it
+ * supplies *and fails closed on* when nothing is configured behind it. That is
+ * what makes lifting the ceiling honest rather than the weakening §4 forbids:
+ * an autonomous run whose knowledgebase is missing gets a refusal from
+ * `kb-write`, not a write that silently did not happen (ruling
+ * `fail-closed-adapter-lifts-ceiling`).
+ */
+export interface Supply {
+  /** The adapter ids the install configuration attached. */
+  attached: ReadonlySet<string>;
+  /** Capability -> the adapters whose contract supplies it and fails closed, in catalog order. */
+  suppliers: ReadonlyMap<string, readonly string[]>;
+}
+
+/** No adapter attached and none supplying anything: the host alone, which is §3 read by itself. */
+export const HOST_ALONE: Supply = { attached: new Set(), suppliers: new Map() };
+
+/**
  * The most autonomy a skill may be packaged with, given what it requires.
  *
  * `adapters/claude-code/CONTRACT.md` §4: "A host that cannot enforce a
@@ -178,7 +215,7 @@ export function loadCapabilityTable(root: string): CapabilityTable {
 export interface Ceiling {
   /** `null` only when the table was unavailable: no ceiling, not a permissive one. */
   mode: SkillMode | null;
-  /** Required capabilities the table gives a blocking status, in the order declared. */
+  /** Required capabilities the table gives a blocking status and no adapter supplies, in the order declared. */
   blocking: string[];
   /**
    * Required capabilities with no row in the table at all.
@@ -190,19 +227,40 @@ export interface Ceiling {
    * capabilities its prose restatement silently omitted.
    */
   unknown: string[];
+  /**
+   * Required capabilities the host withholds, that an adapter would supply,
+   * and that no attached adapter does -- each with the adapters that would.
+   *
+   * Kept apart from `blocking` because the fix is in a different file. A
+   * blocking capability means the skill's row or its `requires[]` is wrong; a
+   * detached one means this install chose not to attach an adapter, which is
+   * `ak.install.yaml`'s decision to make and not a defect in the tree.
+   */
+  detached: Array<{ capability: string; adapters: string[] }>;
 }
 
-export function ceilingFor(requires: readonly string[], table: CapabilityTable): Ceiling {
-  if (!table.available) return { mode: null, blocking: [], unknown: [] };
+export function ceilingFor(requires: readonly string[], table: CapabilityTable, supply: Supply = HOST_ALONE): Ceiling {
+  if (!table.available) return { mode: null, blocking: [], unknown: [], detached: [] };
 
   const blocking: string[] = [];
   const unknown: string[] = [];
+  const detached: Array<{ capability: string; adapters: string[] }> = [];
   for (const capability of requires) {
     const declared = table.status.get(capability);
-    if (declared === undefined) unknown.push(capability);
-    else if (BLOCKING.has(declared)) blocking.push(capability);
+    if (declared === undefined) {
+      // Never lifted by an adapter. A capability §3 does not mention has no
+      // host status for an adapter to add to, and an adapter row naming it is
+      // as likely to share the typo as to correct it.
+      unknown.push(capability);
+      continue;
+    }
+    if (!BLOCKING.has(declared)) continue;
+    const suppliers = supply.suppliers.get(capability) ?? [];
+    if (suppliers.some((adapter) => supply.attached.has(adapter))) continue;
+    if (suppliers.length > 0) detached.push({ capability, adapters: [...suppliers] });
+    else blocking.push(capability);
   }
 
-  const mode: SkillMode = blocking.length > 0 || unknown.length > 0 ? "guided" : "autonomous";
-  return { mode, blocking, unknown };
+  const capped = blocking.length > 0 || unknown.length > 0 || detached.length > 0;
+  return { mode: capped ? "guided" : "autonomous", blocking, unknown, detached };
 }

@@ -759,7 +759,7 @@ references:
       decisions and from code simplification.
 
 # ---------------------------------------------------------------------------
-# Schemas — 16. `common` holds shared $defs and validates no document itself.
+# Schemas — 17. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -836,6 +836,12 @@ schemas:
     batch: 1
     status: authored
     summary: A captured lesson with supersession, tied to real evidence.
+  - id: install
+    batch: 5
+    status: authored
+    summary: >-
+      The local, uncommitted ak.install.yaml: which adapters one install attaches. Absent, every
+      adapter that supplies a capability and fails closed on it is attached.
 
 # ---------------------------------------------------------------------------
 # Policies — 5. Machine-referenceable rulings.

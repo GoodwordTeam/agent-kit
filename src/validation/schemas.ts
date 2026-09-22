@@ -4,6 +4,7 @@ import type { ValidateFunction } from "ajv";
 import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
 
+import { INSTALL_FILE } from "../packaging/install.ts";
 import { listDirs, listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
 import { documentFiles, documentShape } from "./documents.ts";
@@ -162,6 +163,11 @@ function documentTargets(ctx: CheckContext): Target[] {
   // not exist would report every policy as validating against nothing.
   if (readTextIfPresent(join(root, RULINGS_FILE)) !== null) {
     targets.push({ file: RULINGS_FILE, schemaId: "rulings" });
+  }
+  // The per-install configuration, when this install has one. Its absence is
+  // the default and not a missing document, so nothing is reported for it.
+  if (readTextIfPresent(join(root, INSTALL_FILE)) !== null) {
+    targets.push({ file: INSTALL_FILE, schemaId: "install" });
   }
   return targets;
 }

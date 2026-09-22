@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/common.schema.json",
+  "title": "Fixture common definitions",
+  "description": "The one definition schemas/install.schema.json references, copied from schemas/common.schema.json so this tree measures the real install schema without carrying every shared definition. tests/invalid-fixtures.test.ts holds both copies to the real files.",
+  "$defs": {
+    "kebab_id": {
+      "description": "Lowercase words joined by single hyphens.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64
+    }
+  }
+}

@@ -92,6 +92,9 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
   "finding.synthesis-may-only-worsen-a-grade": ["finding.synthesis-may-only-worsen-a-grade"],
   "finding.low-confidence-security-is-adjudicated-not-filtered": ["finding.low-confidence-security-is-adjudicated-not-filtered"],
 
+  // install.schema.json
+  "install.attached-names-an-attachable-adapter": ["packaging.install-unknown-adapter"],
+
   // lesson.schema.json
   "lesson.duplicate-of-an-existing-lesson-is-refused": ["lesson.duplicate-of-an-existing-lesson-is-refused"],
   "lesson.skill-rollback-preserves-lesson-and-evidence-history": ["lesson.skill-rollback-preserves-lesson-and-evidence-history"],

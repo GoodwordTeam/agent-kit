@@ -9,6 +9,7 @@ import { error, note, unavailable, type Issue } from "../validation/types.ts";
 import { generateHostFrontmatter } from "./frontmatter.ts";
 import { CAPABILITY_TABLE_FILE, ceilingFor, loadCapabilityTable, type Ceiling } from "./capability-table.ts";
 import { loadHostCapabilities, type HostId, type SkillMode } from "./hosts.ts";
+import { INSTALL_FILE, loadInstallConfig, type InstallConfig } from "./install.ts";
 import { isUserInvoked, loadSkillManifest } from "./manifest.ts";
 import { resolveProfile } from "./profiles.ts";
 
@@ -261,7 +262,7 @@ function ceilingReason(ceiling: Ceiling): string {
   if (ceiling.blocking.length > 0) {
     const them = ceiling.blocking.length === 1 ? "it" : "them";
     parts.push(
-      `${CAPABILITY_TABLE_FILE} §3 gives ${list(ceiling.blocking)} a status no host in this package supplies, so an autonomous run would proceed with ${them} silently absent.`,
+      `${CAPABILITY_TABLE_FILE} §3 gives ${list(ceiling.blocking)} a status no host in this package supplies, and no adapter's contract supplies ${them} failing closed, so an autonomous run would proceed with ${them} silently absent.`,
     );
   }
   if (ceiling.unknown.length > 0) {
@@ -269,7 +270,20 @@ function ceilingReason(ceiling: Ceiling): string {
       `${CAPABILITY_TABLE_FILE} §3 states no status for ${list(ceiling.unknown)}, so nothing in this package says any host supplies ${ceiling.unknown.length === 1 ? "it" : "them"}; add the row to §3, or correct the spelling in requires[].`,
     );
   }
+  if (ceiling.detached.length > 0) parts.push(detachedReason(ceiling));
   return parts.join(" ");
+}
+
+/**
+ * The third case, which takes a third fix: attach the adapter.
+ *
+ * Named per capability with the adapters that would supply it, because the
+ * reader acts on the adapter id -- it is what goes in `attached:` -- and a
+ * capability name alone sends them to find it.
+ */
+function detachedReason(ceiling: Ceiling): string {
+  const each = ceiling.detached.map(({ capability, adapters }) => `'${capability}' (supplied by ${adapters.map((a) => `'${a}'`).join(" or ")})`);
+  return `${CAPABILITY_TABLE_FILE} §3 marks ${each.join(", ")} as not provided by the host, and ${INSTALL_FILE} attaches no adapter that supplies ${ceiling.detached.length === 1 ? "it" : "them"}; add the adapter to its attached: list to package this skill at its declared mode (ruling \`fail-closed-adapter-lifts-ceiling\`).`;
 }
 
 export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions): BundlePlan {
@@ -286,6 +300,12 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   // summary's "1 check unavailable" would become a count of skills.
   const capabilityTable = loadCapabilityTable(root);
   issues.push(...capabilityTable.issues);
+
+  // Once per plan for the same reason, and beside the table because the two
+  // are the ceiling's inputs: what the host supplies, and what the attached
+  // adapters add to it.
+  const install = loadInstallConfig(root, catalog);
+  issues.push(...install.issues);
 
   const membership = resolveProfile(root, catalog, options.profile);
   issues.push(...membership.issues);
@@ -438,10 +458,29 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
      * `loadCapabilityTable` has already reported as a blocking skip, and this
      * leaves the declared mode alone rather than correcting it on the strength
      * of a ceiling nobody computed.
+     *
+     * A note instead of the error when the only thing holding the skill down
+     * is an adapter this install did not attach. The row is then not wrong: it
+     * states the mode the skill runs in wherever the adapter is attached, which
+     * is the default, and `ak.install.yaml` chose otherwise for this install --
+     * a choice about one machine, recorded in a file the tree does not carry,
+     * so an error would fail the tree for a decision nobody can fix in it. The capping still happens and is still
+     * said out loud: the note names the capability and the adapter that would
+     * lift it (ruling `fail-closed-adapter-lifts-ceiling`).
      */
-    const ceiling = ceilingFor(manifest.requires, capabilityTable);
+    const ceiling = ceilingFor(manifest.requires, capabilityTable, install.supply);
     let mode: SkillMode = declared;
-    if (ceiling.mode !== null && autonomyRank(declared) > autonomyRank(ceiling.mode)) {
+    const onlyDetached = ceiling.blocking.length === 0 && ceiling.unknown.length === 0;
+    if (ceiling.mode !== null && autonomyRank(declared) > autonomyRank(ceiling.mode) && onlyDetached) {
+      mode = ceiling.mode;
+      issues.push(
+        note(
+          "packaging.mode-capped",
+          `skills/${entry.id}/skill.yaml`,
+          `'${entry.id}' declares mode '${declared}' for adapter '${host}' and is packaged '${mode}' in this install. ${detachedReason(ceiling)}`,
+        ),
+      );
+    } else if (ceiling.mode !== null && autonomyRank(declared) > autonomyRank(ceiling.mode)) {
       mode = ceiling.mode;
       issues.push(
         error(
@@ -620,7 +659,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   }
   files.set(BUILD_RECORD_FILE[host], {
     path: BUILD_RECORD_FILE[host],
-    contents: buildRecord(host, membership.profile, excluded, decisions, capabilities.enforces, capabilities.notes),
+    contents: buildRecord(host, membership.profile, install, excluded, decisions, capabilities.enforces, capabilities.notes),
   });
 
   return { host, profile: membership.profile, files: sortFiles(files), decisions, issues };
@@ -911,6 +950,7 @@ function buildRecord(
   host: HostId,
   /** Passed in, not re-derived: the record states the selection that was made. */
   profile: string,
+  install: InstallConfig,
   excluded: ReadonlyArray<{ skill: string; reason: string }>,
   decisions: ReadonlyArray<HostDecision>,
   enforces: ReadonlySet<string>,
@@ -918,6 +958,13 @@ function buildRecord(
 ): string {
   const record = {
     profile,
+    /**
+     * Which adapters the modes below were computed with. The bundle's modes
+     * depend on a file the tree does not carry, so a record that omitted this
+     * would describe a build nobody else could reproduce from it. `file` is
+     * `null` when the default applied.
+     */
+    install: { file: install.file, attached: [...install.attached] },
     /**
      * Emitted even when empty. An absent key would read as "an older build
      * that did not record this" rather than "nothing was left out", and the

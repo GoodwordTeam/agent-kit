@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/install.schema.json",
+  "title": "Install configuration",
+  "description": "The shape of ak.install.yaml, the local and uncommitted file at the tree root that says which adapters one install attaches. `ak build` and `ak validate` read it; a `git archive` extract never carries it, so a figure measured there is the default's. Absent, every adapter whose contract states a capability it supplies and fails closed on is attached, which is the default ruling `fail-closed-adapter-lifts-ceiling` sets. Present, exactly the listed adapters are attached, and `attached: []` is the host alone. This schema states shape. Which ids an install may attach is read out of each adapter contract's §1 by src/packaging/install.ts (`loadAdapterSupplies`), and restating that list here would be a copy that parts from the contracts the first time one of them gains a row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["attached"],
+  "properties": {
+    "attached": {
+      "description": "The adapters this install attaches, by catalog id. An adapter attached here lifts a skill's mode ceiling for the capabilities its contract supplies and fails closed on; one left out caps every skill requiring them at `guided`, reported as `packaging.mode-capped`. An empty list is legal and meaningful: it is the host alone, as `adapters/claude-code/CONTRACT.md` §3 states it.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/kebab_id" },
+      "x-validator-rule": "install.attached-names-an-attachable-adapter"
+    }
+  }
+}

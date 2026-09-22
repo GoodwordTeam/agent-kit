@@ -4,7 +4,7 @@
 # architecture document deliberately overrides the design conversation: §6.3 (delta boundary)
 # and §6.4 (reviewer continuity). Rows 11-18 carry the same shape for tensions §11 states in
 # prose elsewhere in the plan. Row 19 is the first donor-versus-plan tension rather than an
-# internal one.
+# internal one. Row 20 is the first raised by packaging rather than by the sources.
 #
 # Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
 # every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
@@ -98,9 +98,9 @@
 # written, by construction, and catches nothing afterwards. The field earns its place only as a
 # second, independently derived statement of where the obligation lives, so that a disagreement
 # between this column and the tree is a finding to adjudicate rather than a definition. The
-# nineteen rows below were derived from the prose alone, before any placement was consulted, and
-# they are expected to disagree with the tree in places. `note` records the sections considered
-# and rejected, which is the part an audit can actually check.
+# first nineteen rows below were derived from the prose alone, before any placement was
+# consulted, and they are expected to disagree with the tree in places. `note` records the
+# sections considered and rejected, which is the part an audit can actually check.
 #
 # The discriminations that decide the near misses, each of which cost a row:
 #
@@ -186,7 +186,7 @@
 
 schema_version: 1
 policy: resolved-conflicts
-rows: 19
+rows: 20
 
 conflicts:
 
@@ -842,3 +842,48 @@ conflicts:
       effects` carries the enumerated ten, which is the list a skill declares.
     source:
       plan: "§7.2"
+
+  - id: fail-closed-adapter-lifts-ceiling
+    tension: >-
+      Plan §1.2 says unattended mode requires adapter support for the relevant restrictions, and
+      that a host lacking them must expose the skill in guided or manual mode. The host contracts
+      state what the host alone provides, so read literally every skill requiring a knowledgebase
+      or a grant validator is guided on every install, including the installs that attach the
+      adapter supplying it, and autonomy stops being something an install can configure.
+    ruling: >-
+      A capability the host does not provide counts as supplied when an attached adapter's
+      contract states, in a supply table in its own §1, that it supplies the capability and fails
+      closed when unconfigured. Such a capability is not silently absent: an operation needing it
+      refuses when it is unconfigured, rather than proceeding without it. A capability an adapter
+      supplies but degrades on, or answers with an unavailable result the run continues past, is
+      not listed and still caps the mode. Attachment is per install, stated in the uncommitted
+      ak.install.yaml at the tree root; with no such file every fail-closed adapter is attached,
+      and `attached: []` is the host alone. A skill capped only because its supplying adapter is not attached is packaged at the
+      capped mode with a note naming the capability and the adapter; one requiring a capability
+      no adapter supplies, or one the host's capability table does not list, fails the build.
+      The rule lifts capability ceilings only. It grants no authority, does not reach a
+      restriction that is not a capability, and leaves every user-invoked skill manual on a host
+      that cannot suppress model invocation.
+    discharged_in: [hard-gates]
+    binds:
+      schemas: [install]
+      adapters: [claude-code, codex, knowledgebase, runner-contract]
+    scenario: 21
+    coverage: indirect
+    note: >-
+      `hard-gates` because what makes a lifted ceiling safe is the adapter's refusal: an
+      unconfigured capability is a check the run does not pass, and says so. Rejected
+      `stop-conditions`: the refusal halts at that operation and is resumable once the adapter is
+      configured, rather than ending the run. Rejected `authority`: the row decides which
+      capabilities are present, never who may start or grant anything, and saying otherwise would
+      read an attached runner as a source of grants. Rejected `side-effects`: attaching an adapter
+      permits nothing the skill did not already declare. `skills` is absent from `binds`
+      because the binds check reads SKILL.md alone, and the row changes a skill's packaged mode
+      in skill.yaml and the packager rather than anything its SKILL.md says. The skills it does
+      reach -- diagnose, super-build, super-scout and super-verify -- cite it in skill.yaml,
+      under `provenance.resolved_conflicts` and inline in the `unsupported` entry naming the
+      supplying adapter. Scenario 21 exercises the knowledgebase half on a neighbouring case: a
+      KB write with no KB configured refuses rather than writing the working repository, which
+      is the refusal this row relies on.
+    source:
+      plan: "§1.2"

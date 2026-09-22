@@ -153,26 +153,30 @@ packaging:
     disable-model-invocation: false
   hosts:
     - adapter: claude-code
-      mode: guided
+      mode: autonomous
       unsupported:
         - >-
           artifact-write is storage only: the host does not compute or check the artifact hash, so
           envelope hash binding is this package's own work.
         - >-
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
-          rather than falling back to a repository path when no knowledgebase is configured.
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
         - >-
           environment identity is not attested by the host. This package records what it observed of
           the environment and never reports an identity it could not read.
     - adapter: codex
-      mode: guided
+      mode: autonomous
       unsupported:
         - >-
           artifact-write is storage only: the host does not compute or check the artifact hash, so
           envelope hash binding is this package's own work.
         - >-
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
-          rather than falling back to a repository path when no knowledgebase is configured.
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
         - >-
           environment identity is not attested by the host. This package records what it observed of
           the environment and never reports an identity it could not read.
@@ -214,6 +218,7 @@ provenance:
     - closure-requires-independent-verification
     - delta-baseline-reset-not-third-loop
     - diagnose-patch-or-packet-never-both
+    - fail-closed-adapter-lifts-ceiling
 
 tests:
   - id: named-criterion-gets-a-receipt

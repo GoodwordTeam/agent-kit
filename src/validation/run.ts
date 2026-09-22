@@ -9,6 +9,7 @@
 
 import { loadCatalog, type Catalog } from "../catalog/load.ts";
 import type { BuildOptions } from "../packaging/build.ts";
+import { checkInstallConfig } from "../packaging/install.ts";
 import { checkArtifacts } from "./artifacts.ts";
 import { checkBodyShapes } from "./bodies.ts";
 import { checkBudget } from "./budget.ts";
@@ -71,6 +72,7 @@ export const CHECKS: readonly Check[] = [
   { name: "pack-manifests", run: checkPackManifests },
   { name: "links-source", run: checkSourceLinks },
   { name: "links-loader", run: checkLoaderLinks },
+  { name: "install-config", run: checkInstallConfig },
   { name: "links-bundle", run: (ctx) => checkBundleLinks(ctx, DEFAULT_BUILD) },
   { name: "content", run: checkContent },
   { name: "provenance", run: checkProvenance },

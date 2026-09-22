@@ -68,8 +68,12 @@ M skills receive no `disable-model-invocation` key at all rather than an explici
 
 Each skill's `packaging.hosts[]` entry for `adapter: claude-code` carries the `mode` it runs in here
 (`autonomous` / `guided` / `manual`) and the `unsupported` semantics this host cannot enforce. §4 is
-what those entries must be consistent with; `ak validate` fails a skill claiming `autonomous` on this
-host while requiring a capability §3 marks as not provided.
+what those entries must be consistent with. The packager (`ak build`) caps a skill's mode at what
+its `requires[]` needs and this install supplies: a capability §3 marks `not-provided` counts as
+supplied only when an attached adapter's contract states it supplies that capability and fails
+closed without configuration. A skill capped only because such an adapter is not attached is
+packaged at the capped mode with a note; one requiring a capability no adapter supplies, or one §3
+does not list, fails the build (ruling `fail-closed-adapter-lifts-ceiling`).
 
 **Verified:** `disable-model-invocation`, `argument-hint`, `allowed-tools`, `license` and `metadata`
 all pass `claude plugin validate --strict` in a skill's frontmatter. That acceptance is exactly why
@@ -109,10 +113,14 @@ compound status is a value no consumer can act on.
 | `runner-grants` | `not-provided` | The host has no grant validator. Nothing in it can decide that a charter authorizes a checkpoint |
 
 **"See `adapters/<x>/CONTRACT.md`" names where a capability can come from with that adapter
-attached. It is not a claim that this host supplies it.** `runner-grants` is the proof: it carries
-no pointer and no host supplies it, and if a pointer meant availability then `tracker-access` would
-be available and §4's degradation rule would have nothing left to govern. This table states what
-**the host alone** guarantees, which is what a bundle ships to.
+attached. It is not a claim that this host supplies it, and it is not what decides attachment.**
+`tracker-access` is the proof: it carries a pointer, yet the runner contract states no refusal for
+it (a tracker falls back to the knowledgebase's records), so no attached adapter lifts it. This
+table states what **the host alone** guarantees. What an install adds on top is read from the
+supply table in §1 of each attached adapter's contract, and which adapters are attached is the
+install's decision, stated in `ak.install.yaml` at the tree root; with no such file, every adapter
+whose contract supplies a capability and fails closed on it is attached (ruling
+`fail-closed-adapter-lifts-ceiling`).
 
 ---
 
@@ -150,6 +158,16 @@ Consequences the package accepts:
 **exposes the affected skill in guided/manual mode and rejects autonomous mode.** It never runs the
 skill with the restriction silently absent. Plan §1.2: "A host lacking those restrictions must expose
 the skill in guided/manual mode rather than silently weakening the contract."
+
+A capability this host does not provide, but that an **attached** adapter supplies and fails closed
+on, is not silently absent: when it is unconfigured, an operation needing it refuses instead of
+proceeding without it. Such a capability does not cap the mode. Attachment is decided by
+the install configuration (`ak.install.yaml`, `schemas/install.schema.json`), and the default, when
+that file is absent, is every fail-closed adapter attached. `attached: []` is this host alone, and
+the list below is what it degrades to (ruling `fail-closed-adapter-lifts-ceiling`). The rule reaches
+capabilities only; it grants no authority, so everything below about `delegated-grant` and
+`explicit-or-delegated` entrypoints holds whatever is attached, and a grant is still validated by the
+runner or not at all.
 
 Concretely, on this host alone, with no runner attached:
 

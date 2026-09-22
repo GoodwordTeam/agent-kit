@@ -182,6 +182,12 @@ fi
 WORK="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$WORK"' EXIT
 git archive "$SHA" | tar -x -C "$WORK"
+# The default install, the same one tools/hooks/pre-push measures. A packaged
+# mode depends on ak.install.yaml, which is gitignored and so never archived;
+# the rm makes that hold for a revision that carries one by force, and the
+# summary line's install clause states which configuration the figure is from
+# (ruling `fail-closed-adapter-lifts-ceiling`).
+rm -f "$WORK/ak.install.yaml"
 
 DONORS="absent"
 if [ -d "$ROOT/.donors" ]; then

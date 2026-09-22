@@ -151,7 +151,7 @@
       "x-validator-rule": "catalog.reference-loaded-by-names-a-declared-skill"
     },
     "schemas": {
-      "description": "The 16 JSON Schemas. 'common' holds the shared $defs and validates no document itself; the ten artifact schemas are exactly common#/$defs/schema_id, and catalog, skill, pack, case and rulings validate configuration rather than run artifacts, which is why they carry no envelope. Schema entries have no provenance origin: they are original contracts, not adapted donor files.",
+      "description": "The 17 JSON Schemas. 'common' holds the shared $defs and validates no document itself; the ten artifact schemas are exactly common#/$defs/schema_id, and catalog, skill, pack, case, rulings and install validate configuration rather than run artifacts, which is why they carry no envelope. Schema entries have no provenance origin: they are original contracts, not adapted donor files.",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -167,6 +167,7 @@
               "pack",
               "case",
               "rulings",
+              "install",
               "project",
               "ticket",
               "dossier",

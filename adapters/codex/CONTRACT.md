@@ -110,13 +110,22 @@ For every U skill in the codex bundle:
 
 Every U skill's `packaging.hosts[]` entry for `adapter: codex` records this explicitly:
 `mode: manual`, with the unsuppressible model invocation named in `unsupported`
-(`schemas/skill.schema.json`). A skill claiming `autonomous` on this host is an `ak validate`
-failure — the declaration is the record that the weakening was noticed rather than absorbed.
+(`schemas/skill.schema.json`). A U skill declaring anything but `manual` on this host is an
+`ak build` error, `packaging.u-skill-not-manual`, and is packaged `manual` regardless; `ak validate`
+does not report it, because the packager's plan is where it is decided — the declaration is the
+record that the weakening was noticed rather than absorbed.
 
 And the general rule, unchanged from `adapters/claude-code/CONTRACT.md` §4: a host that cannot
 enforce a restriction an autonomous run requires exposes the skill in guided/manual mode and rejects
-autonomous mode. `profiles/autonomy` does not install against this host on its own, for the same
-missing `runner-grants` and `event-delivery` capabilities.
+autonomous mode. The same section's amendment applies here unchanged: a capability this host does
+not provide, but that an attached adapter supplies and fails closed on, is not silently absent and
+does not cap the mode; `ak.install.yaml` decides attachment, and with no such file every fail-closed
+adapter is attached (ruling `fail-closed-adapter-lifts-ceiling`). That amendment reaches
+capabilities only. It does not reach the manual-invocation restriction above, which is not a
+capability and which no adapter supplies, so every U skill stays `mode: manual` on this host
+whatever is attached; and it grants no delegated authority. `profiles/autonomy` does not install
+against this host on its own, for the same missing `runner-grants` and `event-delivery`
+capabilities.
 
 ---
 

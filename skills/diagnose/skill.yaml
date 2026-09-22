@@ -188,7 +188,7 @@ packaging:
     disable-model-invocation: false
   hosts:
     - adapter: claude-code
-      mode: guided
+      mode: autonomous
       unsupported:
         - >-
           the host does not scope writes to a grant. The grant is read by this package and enforced
@@ -199,9 +199,11 @@ packaging:
           envelope hash binding is this package's own work.
         - >-
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
-          rather than falling back to a repository path when no knowledgebase is configured.
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
     - adapter: codex
-      mode: guided
+      mode: autonomous
       unsupported:
         - >-
           the host does not scope writes to a grant. The grant is read by this package and enforced
@@ -212,7 +214,9 @@ packaging:
           envelope hash binding is this package's own work.
         - >-
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
-          rather than falling back to a repository path when no knowledgebase is configured.
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
 
 provenance:
   origin: donor
@@ -261,6 +265,7 @@ provenance:
     - ci-repair-restricts-purpose-not-permission
     - closure-requires-independent-verification
     - diagnose-patch-or-packet-never-both
+    - fail-closed-adapter-lifts-ceiling
 
 tests:
   - id: bug-with-repro-gets-a-cause

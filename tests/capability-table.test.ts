@@ -3,10 +3,12 @@ import { join } from "node:path";
 
 import {
   CAPABILITY_TABLE_FILE,
+  HOST_ALONE,
   MODE_CEILING_CHECK,
   blockingStatuses,
   ceilingFor,
   loadCapabilityTable,
+  type Supply,
 } from "../src/packaging/capability-table.ts";
 import { hasBlockingSkips } from "../src/validation/types.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -211,5 +213,60 @@ describe("the ceiling a skill's requires[] puts on its mode", () => {
       ),
     );
     expect([...reachable].sort()).toEqual(["autonomous", "guided"]);
+  });
+});
+
+/**
+ * What an attached adapter adds to the host's table (ruling
+ * `fail-closed-adapter-lifts-ceiling`).
+ *
+ * The supply is handed in rather than read here, so these cases pin the rule
+ * itself: `src/packaging/install.ts` owns reading it out of the contracts, and
+ * tests/packaging.test.ts measures the two together.
+ */
+describe("a not-provided capability an attached adapter supplies", () => {
+  const table = loadCapabilityTable(
+    makeTree(contractWith(`${ROWS}\n| \`runner-grants\` | \`not-provided\` | No grant validator |`)),
+  );
+  const supply = (attached: string[]): Supply => ({
+    attached: new Set(attached),
+    suppliers: new Map([["kb-write", ["knowledgebase"]]]),
+  });
+
+  test("does not cap the mode when its supplier is attached", () => {
+    const ceiling = ceilingFor(["repository-read", "kb-write"], table, supply(["knowledgebase"]));
+    expect(ceiling.mode).toBe("autonomous");
+    expect(ceiling.blocking).toEqual([]);
+    expect(ceiling.detached).toEqual([]);
+  });
+
+  test("caps the mode when its supplier is not attached, and names the adapter that would lift it", () => {
+    // Kept apart from `blocking` because the two ask different things of the
+    // reader: one is fixed in ak.install.yaml, the other only by a contract.
+    const ceiling = ceilingFor(["kb-write"], table, supply([]));
+    expect(ceiling.mode).toBe("guided");
+    expect(ceiling.blocking).toEqual([]);
+    expect(ceiling.detached).toEqual([{ capability: "kb-write", adapters: ["knowledgebase"] }]);
+  });
+
+  test("lifts only what the attached adapter supplies, so a capability no adapter supplies still blocks", () => {
+    const ceiling = ceilingFor(["kb-write", "runner-grants"], table, supply(["knowledgebase"]));
+    expect(ceiling.mode).toBe("guided");
+    expect(ceiling.blocking).toEqual(["runner-grants"]);
+    expect(ceiling.detached).toEqual([]);
+  });
+
+  test("never lifts a capability the host's table does not mention", () => {
+    // An adapter claiming to supply something §3 has no row for does not make
+    // the row exist; the unknown stays unknown and still caps.
+    const claims: Supply = { attached: new Set(["knowledgebase"]), suppliers: new Map([["telepathy", ["knowledgebase"]]]) };
+    const ceiling = ceilingFor(["telepathy"], table, claims);
+    expect(ceiling.unknown).toEqual(["telepathy"]);
+    expect(ceiling.mode).toBe("guided");
+  });
+
+  test("the default supply is the host alone, which is today's reading of §3", () => {
+    expect(ceilingFor(["kb-write"], table)).toEqual(ceilingFor(["kb-write"], table, HOST_ALONE));
+    expect(ceilingFor(["kb-write"], table, HOST_ALONE).blocking).toEqual(["kb-write"]);
   });
 });

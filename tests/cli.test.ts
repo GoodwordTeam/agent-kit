@@ -418,6 +418,86 @@ describe("ak build", () => {
   });
 });
 
+/**
+ * The summary line names the install configuration it was measured under.
+ *
+ * A packaged mode now depends on `ak.install.yaml`, which no commit carries, so
+ * a figure that omitted it could not be re-derived -- `AGENTS.md`, "Receipts
+ * name their instrument". On the summary line itself rather than a line of its
+ * own, because that line is the receipt: research/probes/validate-figure.sh
+ * quotes the last line and nothing else. Each tree here is a fixture root, so
+ * the developer's own install file is never read.
+ */
+describe("the install configuration the summary names", () => {
+  const DEFAULT = "; install: no ak.install.yaml: default, all fail-closed adapters attached (none)";
+
+  const summaryLine = (io: ReturnType<typeof capture>, label: string) =>
+    io.out.filter((line) => line.startsWith(`${label}: `) && line.includes(" error")).at(-1) ?? "";
+
+  test("with no install file, ak validate's summary says the default applied", () => {
+    const io = capture();
+    runCli(["validate"], { cwd: cleanTree(), io: io.io });
+    expect(io.out.at(-1)).toEndWith(DEFAULT);
+  });
+
+  test("with an install file, the summary names it and what it attached", () => {
+    const io = capture();
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, ...BUILDABLE, "ak.install.yaml": "attached: []\n" });
+    runCli(["validate"], { cwd: root, io: io.io });
+    expect(io.out.at(-1)).toEndWith("; install: ak.install.yaml: attached none");
+  });
+
+  test("ak build and ak build --check carry the same clause", () => {
+    const root = cleanTree();
+    const built = capture();
+    expect(runCli(["build"], { cwd: root, io: built.io })).toBe(0);
+    expect(summaryLine(built, "ak build")).toEndWith(DEFAULT);
+    const checked = capture();
+    runCli(["build", "--check"], { cwd: root, io: checked.io });
+    expect(summaryLine(checked, "ak build --check")).toEndWith(DEFAULT);
+  });
+
+  test("an unknown adapter id fails the run", () => {
+    const io = capture();
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, ...BUILDABLE, "ak.install.yaml": "attached: [nope]\n" });
+    expect(runCli(["validate"], { cwd: root, io: io.io })).not.toBe(0);
+    expect(io.stdout()).toContain("packaging.install-unknown-adapter");
+    expect(io.stdout()).toContain("'nope'");
+  });
+
+  /** The real schemas beside the fixture, so `ak validate` checks the file's shape against the real contract. */
+  function withRealSchemas(install: string): string {
+    const dir = join(import.meta.dir, "..", "schemas");
+    const schemas: Record<string, string> = {};
+    for (const name of readdirSync(dir)) {
+      if (name.endsWith(".schema.json")) schemas[`schemas/${name}`] = readFileSync(join(dir, name), "utf8");
+    }
+    return makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, ...BUILDABLE, ...schemas, "ak.install.yaml": install });
+  }
+
+  for (const [what, install] of [
+    ["a bare id where the list belongs", "attached: knowledgebase\n"],
+    ["an empty file", ""],
+  ] as const) {
+    test(`a malformed install file fails ak validate on its shape: ${what}`, () => {
+      // The loader attaches nothing and says so only to the build; the shape
+      // is the schema's to report, so this is the row validate must show.
+      const io = capture();
+      expect(runCli(["validate", "--json"], { cwd: withRealSchemas(install), io: io.io })).not.toBe(0);
+      const parsed = JSON.parse(io.stdout()) as { issues: Array<{ rule: string; file: string; severity: string }> };
+      const hit = parsed.issues.find((i) => i.rule === "schemas.document-invalid" && i.file === "ak.install.yaml");
+      expect(hit?.severity).toBe("error");
+    });
+  }
+
+  test("--json carries the install configuration beside ok", () => {
+    const io = capture();
+    runCli(["validate", "--json"], { cwd: cleanTree(), io: io.io });
+    const parsed = JSON.parse(io.stdout()) as { install: { file: string | null; attached: string[] } };
+    expect(parsed.install).toEqual({ file: null, attached: [] });
+  });
+});
+
 describe("ak attach", () => {
   test("requires a subject", () => {
     const io = capture();

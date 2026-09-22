@@ -10,6 +10,7 @@ import { attach, formatAttachResult } from "./attach/index.ts";
 import { loadCatalog } from "./catalog/load.ts";
 import type { BuildOptions } from "./packaging/build.ts";
 import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.ts";
+import { describeInstall, loadInstallConfig } from "./packaging/install.ts";
 import { ADAPTATIONS_FILE, checkAdaptationsSync } from "./validation/provenance.ts";
 import type { CheckContext } from "./validation/context.ts";
 import { runValidation } from "./validation/run.ts";
@@ -70,7 +71,7 @@ function parse(argv: readonly string[]): Parsed {
   return { command: positional[0], positional: positional.slice(1), flags, unknown };
 }
 
-function report(io: CliIo, issues: readonly Issue[], label: string): number {
+function report(io: CliIo, issues: readonly Issue[], label: string, install?: string): number {
   const sorted = sortIssues(issues);
   for (const issue of sorted) io.out(formatIssue(issue));
   const counts = { error: 0, warning: 0, note: 0 };
@@ -91,8 +92,17 @@ function report(io: CliIo, issues: readonly Issue[], label: string): number {
   const blocked = blockingSkips(sorted);
   const clause = (n: number, word: string, names: string[]) =>
     `${n} check${n === 1 ? "" : "s"} ${word}${names.length === 0 ? "" : `: ${names.join(", ")}`}`;
+  // The install configuration rides on the summary line rather than a line of
+  // its own, because the summary line is the receipt: it is what gets quoted,
+  // and `research/probes/validate-figure.sh` takes the last line of output as
+  // the figure. A skill's packaged mode now depends on `ak.install.yaml`, a file
+  // no commit carries, so a figure that did not name the configuration it was
+  // measured under could not be re-derived by anyone else (`AGENTS.md`,
+  // "Receipts name their instrument"). Absent only where no catalog loaded and
+  // nothing was measured under any configuration.
+  const under = install === undefined ? "" : `; install: ${install}`;
   io.out(
-    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${clause(missed.length, "skipped", missed)}, ${clause(blocked.length, "unavailable", blocked)}`,
+    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${clause(missed.length, "skipped", missed)}, ${clause(blocked.length, "unavailable", blocked)}${under}`,
   );
   return hasErrors(sorted) || blocked.length > 0 ? 1 : 0;
 }
@@ -113,6 +123,7 @@ function buildOptions(parsed: Parsed): BuildOptions {
 
 function validate(parsed: Parsed, options: CliOptions): number {
   const result = runValidation(options.cwd, { build: buildOptions(parsed) });
+  const install = result.catalog === null ? undefined : loadInstallConfig(options.cwd, result.catalog);
   if (parsed.flags.get("json") === true) {
     // `skipped` is beside `ok` and not only inside the issues, because `ok: true`
     // on a machine with no donor clones is the same value as `ok: true` on one
@@ -125,6 +136,7 @@ function validate(parsed: Parsed, options: CliOptions): number {
           ok: result.ok,
           skipped: skippedChecks(result.issues),
           unavailable: blockingSkips(result.issues),
+          install: install === undefined ? null : { file: install.file, attached: install.attached },
           issues: result.issues,
         },
         null,
@@ -133,16 +145,17 @@ function validate(parsed: Parsed, options: CliOptions): number {
     );
     return result.ok ? 0 : 1;
   }
-  return report(options.io, result.issues, "ak validate");
+  return report(options.io, result.issues, "ak validate", install === undefined ? undefined : describeInstall(install));
 }
 
 function build(parsed: Parsed, options: CliOptions): number {
   const ctx = contextOf(options.cwd, options.io);
   if (ctx === null) return 1;
   const opts = buildOptions(parsed);
+  const install = describeInstall(loadInstallConfig(ctx.root, ctx.catalog));
 
   if (parsed.flags.get("check") === true) {
-    return report(options.io, [...checkAdaptationsSync(ctx), ...checkBundles(ctx, opts)], "ak build --check");
+    return report(options.io, [...checkAdaptationsSync(ctx), ...checkBundles(ctx, opts)], "ak build --check", install);
   }
 
   // The merged provenance file is a source-tree artifact, not a bundle file:
@@ -160,13 +173,13 @@ function build(parsed: Parsed, options: CliOptions): number {
   // write only when the tree is clean.
   const validation = runValidation(options.cwd, { build: opts });
   if (!validation.ok) {
-    const code = report(options.io, validation.issues, "ak build");
+    const code = report(options.io, validation.issues, "ak build", install);
     options.io.err("ak build: refusing to write dist/ while validation reports errors");
     return code === 0 ? 1 : code;
   }
 
   const built = writeBundles(ctx, opts);
-  const code = report(options.io, built.issues, "ak build");
+  const code = report(options.io, built.issues, "ak build", install);
   if (code === 0) options.io.out(`ak build: wrote dist/ for profile ${built.profile}`);
   return code;
 }

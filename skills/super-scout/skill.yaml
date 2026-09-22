@@ -140,23 +140,27 @@ packaging:
     disable-model-invocation: false
   hosts:
     - adapter: claude-code
-      mode: guided
+      mode: autonomous
       unsupported:
         - >-
           artifact-write is storage only: the host does not compute or check the artifact hash, so
           envelope hash binding is this package's own work.
         - >-
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
-          rather than falling back to a repository path when no knowledgebase is configured.
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
     - adapter: codex
-      mode: guided
+      mode: autonomous
       unsupported:
         - >-
           artifact-write is storage only: the host does not compute or check the artifact hash, so
           envelope hash binding is this package's own work.
         - >-
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
-          rather than falling back to a repository path when no knowledgebase is configured.
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
 
 provenance:
   origin: donor
@@ -178,6 +182,8 @@ provenance:
         dossier-plus-short-gist return split are imported. The donor's fixed line cap on the
         dossier is replaced by the turn cap in policies/limits.yaml, which bounds cost rather than
         output length.
+  resolved_conflicts:
+    - fail-closed-adapter-lifts-ceiling
 
 tests:
   - id: named-question-returns-dossier
