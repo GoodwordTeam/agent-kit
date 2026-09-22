@@ -188,7 +188,7 @@ packaging:
     disable-model-invocation: false
   hosts:
     - adapter: claude-code
-      mode: autonomous
+      mode: guided
       unsupported:
         - >-
           the host does not scope writes to a grant. The grant is read by this package and enforced
@@ -201,7 +201,7 @@ packaging:
           kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
           rather than falling back to a repository path when no knowledgebase is configured.
     - adapter: codex
-      mode: autonomous
+      mode: guided
       unsupported:
         - >-
           the host does not scope writes to a grant. The grant is read by this package and enforced

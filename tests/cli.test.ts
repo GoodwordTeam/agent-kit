@@ -32,6 +32,12 @@ packs:
     status: contract
   - id: pack-perf
     status: contract
+# Declared because BUILDABLE carries adapters/claude-code/CONTRACT.md, and
+# catalog.yaml is this repository's authority for what exists: a directory with
+# no entry is catalog.file-without-entry, which is the check working.
+adapters:
+  - id: claude-code
+    status: authored
 profiles:
   - id: core
     status: contract
@@ -39,6 +45,43 @@ profiles:
 `;
 
 const SKILL = wellFormedSkill("triage", "Sort incoming work into the smallest next action.", "Read the queue and pick one item.");
+
+/**
+ * The catalog and the files it declares must exist, which travel together.
+ *
+ * `catalog.yaml` is this repository's authority for what exists, and it binds
+ * in both directions: a directory with no entry is `catalog.file-without-entry`
+ * and an entry with no directory is `catalog.entry-without-file`. So the
+ * `adapters:` entry above and the contract file below are one fixture and not
+ * two, and every tree in this file spreads both. Spelling them separately let
+ * six trees quietly carry an entry with no file and go on passing, because each
+ * of them was already reporting an error for its own reasons and one more did
+ * not change the assertion.
+ *
+ * §3's table is here rather than in `BUILDABLE` because `ak validate` reaches
+ * it too, through the packager: a tree without it is not a tree where every
+ * declared mode passed, it is the declarations sitting in front of the check
+ * with nothing to judge them by. Two rows are enough -- one status that caps a
+ * skill and one that does not -- because the fixture skill requires nothing and
+ * these tests are about the CLI, not about the ceiling. The ceiling itself is
+ * measured in `tests/capability-table.test.ts` and `tests/packaging.test.ts`.
+ */
+const TREE = {
+  "catalog.yaml": CATALOG,
+  "adapters/claude-code/CONTRACT.md": [
+    "# claude-code",
+    "",
+    "## 3. Capability support",
+    "",
+    "| Capability | Status | Detail |",
+    "|---|---|---|",
+    "| `repository-read` | `satisfied` | Read, Glob, Grep |",
+    "| `kb-write` | `not-provided` | Transport only |",
+    "",
+    "## 4. Host-capability honesty",
+    "",
+  ].join("\n"),
+};
 
 function capture() {
   const out: string[] = [];
@@ -82,7 +125,7 @@ const BUILDABLE = {
 };
 
 function cleanTree(): string {
-  return makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
+  return makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
 }
 
 describe("ak", () => {
@@ -108,7 +151,7 @@ describe("ak validate", () => {
   });
 
   test("every failure line names the file and the rule", () => {
-    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
     const io = capture();
     expect(runCli(["validate"], { cwd: root, io: io.io })).not.toBe(0);
     const lines = io.out.filter((l) => l.includes("catalog.directory-without-entry"));
@@ -120,13 +163,13 @@ describe("ak validate", () => {
   test("a warning alone does not fail the run", () => {
     const long = `${SKILL}\n${"A line of guidance.\n".repeat(200)}`;
     const io = capture();
-    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": long });
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": long });
     expect(runCli(["validate"], { cwd: root, io: io.io })).toBe(0);
     expect(io.stdout()).toContain("budget.skill-over-target");
   });
 
   test("--json emits one machine-readable record per issue", () => {
-    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
     const io = capture();
     runCli(["validate", "--json"], { cwd: root, io: io.io });
     const parsed = JSON.parse(io.stdout()) as { ok: boolean; issues: Array<{ rule: string; file: string }> };
@@ -160,7 +203,7 @@ describe("ak validate", () => {
    * to silence.
    */
   const SKIPPING_TREE = {
-    "catalog.yaml": CATALOG,
+    ...TREE,
     "skills/triage/SKILL.md": SKILL,
     "provenance/upstream.lock.yaml":
       "schema_version: 1\ndonors:\n  - id: donor-one\n    repo: example/one\n    path: .donors/donor_one\n    commit: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n    license: MIT\n",
@@ -197,7 +240,7 @@ describe("ak validate", () => {
       if (name.endsWith(".schema.json")) schemas[`schemas/${name}`] = readFileSync(join(dir, name), "utf8");
     }
     return makeTree({
-      "catalog.yaml": CATALOG,
+      ...TREE,
       "skills/triage/SKILL.md": SKILL,
       "skills/triage/skill.yaml": "id: triage\nversion: 0.1.0\nkind: lifecycle\ninvocation: U\nside_effects: []\n",
       ...schemas,
@@ -282,7 +325,9 @@ describe("ak build", () => {
       "  - id: core\n    status: contract\n    default: true\n",
       "  - id: core\n    status: contract\n    default: true\n  - id: autonomy\n    status: contract\n",
     );
-    const root = makeTree({ "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
+    // `...TREE` first so the edited catalog replaces the stock one while the
+    // adapter contract it declares still travels with it.
+    const root = makeTree({ ...TREE, "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
     expect(runCli(["build", "--profile", "core"], { cwd: root, io: capture().io })).toBe(0);
     const manifest = JSON.parse(
       readFileSync(join(root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8"),
@@ -310,7 +355,7 @@ describe("ak build", () => {
 
     const adaptedTree = (extra: Record<string, string> = {}) =>
       makeTree({
-        "catalog.yaml": CATALOG,
+        ...TREE,
         "skills/triage/SKILL.md": SKILL,
         "provenance/upstream.lock.yaml": LOCK,
         [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: FRAGMENT,
@@ -365,7 +410,7 @@ describe("ak build", () => {
       DENY_MARKER,
       sampleModelTerm(),
     );
-    const root = makeTree({ "catalog.yaml": CATALOG, "skills/triage/SKILL.md": body });
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": body });
     const io = capture();
     expect(runCli(["build"], { cwd: root, io: io.io })).not.toBe(0);
     expect(existsSync(join(root, "dist"))).toBe(false);
@@ -399,7 +444,7 @@ describe("ak attach", () => {
 
   test("a manifest error is reported and exits non-zero", () => {
     const root = makeTree({
-      "catalog.yaml": CATALOG,
+      ...TREE,
       "skills/triage/SKILL.md": SKILL,
       "packs/pack-secure/pack.yaml": "id: pack-secure\nactivation:\n  signals:\n    - kind: vibes\n      pattern: x\n",
     });

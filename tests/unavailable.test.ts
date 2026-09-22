@@ -225,6 +225,13 @@ describe("every skip in the validator is classified, so a new one cannot default
     // in front of the check. A non-blocking skip here would let a tree with no
     // package.json build green over a comparison nobody made.
     "packaging.manifest-parity-unavailable": ["unavailable"],
+    // Every skill's `packaging.hosts[]` mode is in the plan; §3's capability
+    // table is the authority those modes are measured against. Absent, no
+    // ceiling is computed for any of them -- and a non-blocking skip here would
+    // let a tree with no host contract build green over a comparison nobody
+    // made, reporting the same clean result as a tree that genuinely checked
+    // out. That is the same argument as the row above it.
+    "packaging.capability-table-unavailable": ["unavailable"],
     // The bodies are all in the tree; the policy that says which ruling ids
     // exist is what could not be read, so no citation in any of them was
     // checked. The row checks at the same seam stay out of this table: their

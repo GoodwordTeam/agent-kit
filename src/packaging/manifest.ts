@@ -37,6 +37,22 @@ export interface SkillManifest {
   invocation?: "U" | "M";
   argumentHint?: string;
   allowedTools?: string[];
+  /**
+   * `requires[]`: the host capabilities this skill asks for.
+   *
+   * `schemas/common.schema.json#/$defs/capability` is the vocabulary, and
+   * `adapters/claude-code/CONTRACT.md` §3 states what each host does with each
+   * value. Together those two are the only pair in this package that can
+   * compute a ceiling on a skill's mode, which is why this field is read at
+   * all: the packager had `unsupported` prose and a restriction set drawn from
+   * a different enum, and neither of them speaks this vocabulary.
+   *
+   * Read without validating against the enum. `ak validate` fails a skill.yaml
+   * whose `requires[]` leaves it, and a second copy of the enum here would be
+   * one more thing to keep in step; a value outside it has no row in §3's table
+   * and is capped as unstated, which is the same treatment and says so.
+   */
+  requires: string[];
   /** `packaging.hosts[]`, keyed by adapter. */
   hosts: Record<string, HostPackaging>;
   /**
@@ -84,6 +100,7 @@ function pick(raw: Record<string, unknown>, ...keys: string[]): unknown {
 }
 
 export const EMPTY_MANIFEST: SkillManifest = {
+  requires: [],
   hosts: {},
   duplicateHosts: [],
   calls: [],
@@ -131,6 +148,7 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
   const raw = record(parsed);
   const manifest: SkillManifest = {
     ...hostRows(record(pick(raw, "packaging"))),
+    requires: strings(pick(raw, "requires")),
     calls: [
       ...strings(pick(raw, "calls")),
       ...strings(pick(raw, "child_operations", "child-operations")),

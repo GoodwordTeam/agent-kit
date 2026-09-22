@@ -7,8 +7,10 @@ import { loadCatalog } from "../src/catalog/load.ts";
 import { compileSchemas } from "../src/validation/schemas.ts";
 import { checkCompleteness } from "../src/validation/completeness.ts";
 import { HOST_IDS, RESTRICTIONS, loadHostCapabilities } from "../src/packaging/hosts.ts";
+import { MODE_CEILING_CHECK } from "../src/packaging/capability-table.ts";
 import { planBundle } from "../src/packaging/plan.ts";
 import { writeBundles, checkBundles } from "../src/packaging/build.ts";
+import { hasBlockingSkips, hasErrors } from "../src/validation/types.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const HEAD = (name: string) => `---\nname: ${name}\ndescription: Use when asked.\n---\n`;
@@ -86,6 +88,39 @@ const BASE: Record<string, string> = {
   // to check -- it is the manifests sitting in front of the check with no
   // authority to judge them by, which the check reports rather than passes.
   "package.json": packageJson(PACKAGE_JSON),
+  // In every fixture for the same reason package.json is, and it is the same
+  // reason: §3's capability table is the authority every `packaging.hosts[]`
+  // mode is measured against, so a tree without it is not a tree where every
+  // declaration passes -- it is the declarations sitting in front of the check
+  // with nothing to judge them by. One file for both hosts, because
+  // `adapters/codex/CONTRACT.md` §3 states that it carries no per-capability
+  // difference and that a second copy would be "a second thing to keep in step".
+  //
+  // Six rows rather than the real sixteen, covering all four statuses and both
+  // capabilities that actually block anything in this tree. Deliberately not a
+  // copy of §3: a fixture that mirrored it would drift, and the one test that
+  // needs §3 to be complete measures the real file against the real schema
+  // enum, in tests/capability-table.test.ts.
+  "adapters/claude-code/CONTRACT.md": [
+    "# claude-code",
+    "",
+    "## 3. Capability support",
+    "",
+    "| Capability | Status | Detail |",
+    "|---|---|---|",
+    "| `repository-read` | `satisfied` | Read, Glob, Grep |",
+    "| `process-exec` | `satisfied` | Bash |",
+    "| `artifact-write` | `partial` | Storage, not hash binding |",
+    "| `isolated-worktree` | `convention-only` | Not host-confined |",
+    "| `kb-write` | `not-provided` | Transport only |",
+    "| `runner-grants` | `not-provided` | No grant validator |",
+    "",
+    "## 4. Host-capability honesty",
+    "",
+    "A host that cannot enforce a restriction an autonomous run requires exposes the affected",
+    "skill in guided/manual mode and rejects autonomous mode.",
+    "",
+  ].join("\n"),
   "skills/alpha/SKILL.md": `${HEAD("alpha")}\nFollow [tdd](../../protocols/tdd/PROTOCOL.md).\n`,
   "skills/alpha/skill.yaml": "id: alpha\nversion: 0.1.0\ninvocation: U\nargument_hint: <ticket>\nallowed_tools: [Read, Grep]\n",
   "skills/beta/SKILL.md": `${HEAD("beta")}\nPlain body.\n`,
@@ -1312,6 +1347,23 @@ describe("the mode a skill is packaged in, per host", () => {
     "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\npackaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n${rows}`,
   });
 
+  /**
+   * The same, with a `requires[]` -- which is what the ceiling is computed from.
+   *
+   * Separate from `declaring` rather than an optional argument to it, because
+   * the two ask different questions and a reader of a test should be able to
+   * see from the call which one it is asking. Every skill in the real tree
+   * declares `requires[]`; `declaring` alone is the skill that asks the host
+   * for nothing, whose ceiling is `autonomous` by definition.
+   */
+  const requiring = (caps: string[], rows: string) => ({
+    "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\nrequires:\n${caps
+      .map((c) => `  - ${c}\n`)
+      .join("")}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n${rows}`,
+  });
+
+  const CC_AUTONOMOUS = "    - adapter: claude-code\n      mode: autonomous\n";
+
   const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) => plan.decisions.find((d) => d.skill === skill);
 
   test("the mode comes from this host's row, and the two hosts may differ", () => {
@@ -1335,22 +1387,150 @@ describe("the mode a skill is packaged in, per host", () => {
     expect(decisionFor(planBundle(ctxFor(), "claude-code", {}), "alpha")?.mode).toBe("manual");
   });
 
-  test("a row claiming autonomous while naming semantics this host cannot enforce is exposed guided", () => {
+  test("a row claiming autonomous while requiring a capability the host does not provide is exposed guided", () => {
     const ctx = ctxFor(
-      declaring(
-        "    - adapter: claude-code\n      mode: autonomous\n      unsupported:\n        - the host does not scope writes to a grant.\n        - artifact-write is storage only.\n",
+      requiring(
+        ["repository-read", "kb-write"],
+        `${CC_AUTONOMOUS}      unsupported:\n        - the host does not scope writes to a grant.\n        - artifact-write is storage only.\n`,
       ),
     );
-    const decision = decisionFor(planBundle(ctx, "claude-code", {}), "beta");
+    const plan = planBundle(ctx, "claude-code", {});
+    const decision = decisionFor(plan, "beta");
     expect(decision?.mode).toBe("guided");
     expect(decision?.rejected).toEqual(["autonomous"]);
     expect(decision?.unenforceable).toEqual(["the host does not scope writes to a grant.", "artifact-write is storage only."]);
-    expect(planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
+    expect(plan.files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
+  });
+
+  test("the declaration above the ceiling is an error, not only a quiet correction", () => {
+    // The half that distinguishes this from the downgrade it replaces. A
+    // bundle corrected in silence leaves a skill.yaml in the tree stating a
+    // mode the packager will not honor, with nothing pointing at it -- and
+    // `adapters/codex/CONTRACT.md` §3.1 gives the reason that matters: the
+    // declaration is "the record that the weakening was noticed rather than
+    // absorbed", so a row nobody is told about is the weakening absorbed.
+    const ctx = ctxFor(requiring(["repository-read", "kb-write", "runner-grants"], CC_AUTONOMOUS));
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.mode-above-ceiling");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("skills/beta/skill.yaml");
+    // Every blocking capability, not the first: a reader has to fix all of
+    // them, and a message naming one sends them back for a second build to
+    // discover the next.
+    expect(issue?.message).toContain("kb-write");
+    expect(issue?.message).toContain("runner-grants");
+    // Not the satisfied one, which would make the message a list of everything
+    // the skill requires and tell the reader nothing about which is at fault.
+    expect(issue?.message).not.toContain("repository-read");
+    expect(issue?.message).toContain("autonomous");
+    expect(issue?.message).toContain("guided");
+  });
+
+  test("a declaration at the ceiling is not an error, so the check is not just 'autonomous fails'", () => {
+    const ctx = ctxFor(
+      requiring(["repository-read", "kb-write"], "    - adapter: claude-code\n      mode: guided\n"),
+    );
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
+    expect(decisionFor(plan, "beta")?.mode).toBe("guided");
+    expect(decisionFor(plan, "beta")?.rejected).toEqual([]);
+  });
+
+  test("a declaration below the ceiling stays where it was declared, because the rule is a cap", () => {
+    // `min(declared, ceiling)`, not `= ceiling`. A skill that asked for manual
+    // and got raised to guided would have the packager overriding its author in
+    // the permissive direction, which is the one direction no contract permits.
+    const ctx = ctxFor(
+      requiring(["repository-read", "kb-write"], "    - adapter: claude-code\n      mode: manual\n"),
+    );
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(decisionFor(plan, "beta")?.mode).toBe("manual");
+    expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
+  });
+
+  test("a skill requiring only capabilities the host supplies keeps autonomous", () => {
+    // The control that stops "everything is capped" passing as the rule. Three
+    // statuses are present and none of them is `not-provided`, so a ceiling
+    // computed from anything short of `satisfied` would fail here.
+    const ctx = ctxFor(requiring(["repository-read", "process-exec", "artifact-write", "isolated-worktree"], CC_AUTONOMOUS));
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(decisionFor(plan, "beta")?.mode).toBe("autonomous");
+    expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
+  });
+
+  test("a required capability §3 does not mention caps the skill and is named as unstated", () => {
+    // Absence read as `satisfied` would certify a skill against a table that
+    // never mentioned what it needs. The message has to separate the two cases,
+    // because the fix differs: a blocking capability means change the mode, an
+    // unstated one means the contract is missing a row.
+    const ctx = ctxFor(requiring(["repository-read", "telepathy"], CC_AUTONOMOUS));
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.mode-above-ceiling");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("telepathy");
+    expect(issue?.message).toContain("no status");
+    expect(decisionFor(plan, "beta")?.mode).toBe("guided");
+  });
+
+  test("the ceiling comes from requires[], not from the unsupported prose beside it", () => {
+    // The behaviour this replaced, stated as its own test so the move cannot be
+    // undone quietly. `unsupported` is prose -- `adapters/claude-code/
+    // CONTRACT.md` §3 calls it "the `unsupported` semantics this host cannot
+    // enforce" and nothing constrains its wording -- so a downgrade keyed on it
+    // fires on whether an author wrote a sentence, not on what the host
+    // withholds. Here the sentences are present and the capabilities are all
+    // supplied, and the skill keeps what it declared.
+    const ctx = ctxFor(
+      requiring(
+        ["repository-read", "artifact-write"],
+        `${CC_AUTONOMOUS}      unsupported:\n        - the host does not scope writes to a grant.\n        - artifact-write is storage only.\n`,
+      ),
+    );
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(decisionFor(plan, "beta")?.mode).toBe("autonomous");
+    expect(decisionFor(plan, "beta")?.rejected).toEqual([]);
+    // And the prose still reaches the installed skill, which is the job it does
+    // keep: it is a declaration a reader sees, not an input to a decision.
+    expect(plan.files.get("skills/beta/SKILL.md")?.contents).toContain("the host does not scope writes to a grant.");
+  });
+
+  test("a tree with no capability table blocks the build instead of passing every declaration", () => {
+    // The fails-open this check is shaped around. With no §3 table nothing is
+    // `not-provided`, every ceiling computes to `autonomous`, and a build
+    // certifies every declaration it was supposed to measure -- reporting the
+    // same clean result it reports for a tree that genuinely checked out.
+    //
+    // `unavailable` and not `error`, per `src/validation/types.ts`: the subject
+    // is present -- every mode declaration is in the plan -- and what went
+    // missing is the authority. It blocks, which is what makes it more than a
+    // label: `hasErrors` is false here and the run still does not pass.
+    const ctx = ctxFor(requiring(["repository-read", "kb-write"], CC_AUTONOMOUS), ["adapters/claude-code/CONTRACT.md"]);
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((i) => i.rule === "packaging.capability-table-unavailable");
+    expect(issue?.blocking).toBe(true);
+    expect(issue?.skipped).toBe(MODE_CEILING_CHECK);
+    expect(hasErrors(plan.issues)).toBe(false);
+    expect(hasBlockingSkips(plan.issues)).toBe(true);
+    // No ceiling was computed, so nothing was corrected on the strength of one.
+    expect(decisionFor(plan, "beta")?.mode).toBe("autonomous");
+    expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
+  });
+
+  test("the table is read once per plan, not once per skill", () => {
+    // Otherwise a tree with no contract reports the same unavailable check once
+    // for every skill in the bundle, and the summary's "1 check unavailable"
+    // becomes a count of skills.
+    const ctx = ctxFor({}, ["adapters/claude-code/CONTRACT.md"]);
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(plan.issues.filter((i) => i.rule === "packaging.capability-table-unavailable").length).toBe(1);
   });
 
   test("the rejection is recorded in the bundle, not only in the plan", () => {
     const ctx = ctxFor(
-      declaring("    - adapter: claude-code\n      mode: autonomous\n      unsupported:\n        - the host does not scope writes to a grant.\n"),
+      requiring(
+        ["repository-read", "kb-write"],
+        `${CC_AUTONOMOUS}      unsupported:\n        - the host does not scope writes to a grant.\n`,
+      ),
     );
     const record = recordOf(planBundle(ctx, "claude-code", {}));
     expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["the host does not scope writes to a grant."] }]);
@@ -1381,13 +1561,16 @@ describe("the mode a skill is packaged in, per host", () => {
     expect(recordOf(planBundle(ctx, "claude-code", {})).autonomy_rejected).toEqual([]);
   });
 
-  test("an autonomous row naming nothing unenforceable keeps autonomous", () => {
-    // The other side of the downgrade, so "always guided" cannot pass as the
-    // rule. The host's own `enforces` set is deliberately not consulted: the
-    // restriction vocabulary it holds and the capability vocabulary `requires[]`
-    // speaks are different enums, and the check that compares a skill's
-    // `requires[]` against a host contract's §3 table belongs to `ak validate`
-    // by both contracts' own words. It does not exist yet.
+  test("an autonomous row on a skill requiring nothing at all keeps autonomous", () => {
+    // The other side of the cap, so "always guided" cannot pass as the rule. A
+    // skill declaring no `requires[]` asks the host for nothing, so there is
+    // nothing the host can withhold from it and the ceiling is `autonomous`.
+    //
+    // The host's own `enforces` set is still deliberately not consulted here:
+    // the restriction vocabulary it holds and the capability vocabulary
+    // `requires[]` speaks are different enums. The comparison that does run is
+    // against §3's table, which is a third vocabulary again and the one
+    // `requires[]` is actually drawn from.
     const ctx = ctxFor(declaring("    - adapter: claude-code\n      mode: autonomous\n"));
     const decision = decisionFor(planBundle(ctx, "claude-code", {}), "beta");
     expect(decision?.mode).toBe("autonomous");

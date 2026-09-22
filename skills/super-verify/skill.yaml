@@ -153,7 +153,7 @@ packaging:
     disable-model-invocation: false
   hosts:
     - adapter: claude-code
-      mode: autonomous
+      mode: guided
       unsupported:
         - >-
           artifact-write is storage only: the host does not compute or check the artifact hash, so
@@ -165,7 +165,7 @@ packaging:
           environment identity is not attested by the host. This package records what it observed of
           the environment and never reports an identity it could not read.
     - adapter: codex
-      mode: autonomous
+      mode: guided
       unsupported:
         - >-
           artifact-write is storage only: the host does not compute or check the artifact hash, so

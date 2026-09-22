@@ -7,6 +7,7 @@ import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../u
 import type { CheckContext } from "../validation/context.ts";
 import { error, note, unavailable, type Issue } from "../validation/types.ts";
 import { generateHostFrontmatter } from "./frontmatter.ts";
+import { CAPABILITY_TABLE_FILE, ceilingFor, loadCapabilityTable, type Ceiling } from "./capability-table.ts";
 import { loadHostCapabilities, type HostId, type SkillMode } from "./hosts.ts";
 import { isUserInvoked, loadSkillManifest } from "./manifest.ts";
 import { resolveProfile } from "./profiles.ts";
@@ -229,6 +230,48 @@ function rewriteLinks(
   return { text: out, dependencies, issues };
 }
 
+/**
+ * The three modes ordered by how much of a skill the package exposes.
+ *
+ * A `Record<SkillMode, number>` rather than an index into `SKILL_MODES`,
+ * because that constant's declaration order is an enum's order and nothing
+ * documents it as a ranking -- a fourth value appended there would silently
+ * become the most autonomous thing in the package. Written exhaustively here,
+ * a fourth value fails to compile instead.
+ */
+const AUTONOMY_RANK: Record<SkillMode, number> = { autonomous: 2, guided: 1, manual: 0 };
+
+function autonomyRank(mode: SkillMode): number {
+  return AUTONOMY_RANK[mode];
+}
+
+/**
+ * Why the ceiling is where it is, in the terms the reader has to act on.
+ *
+ * The two cases take different fixes and are never merged into one sentence: a
+ * capability the host withholds means the row's mode is wrong, and a
+ * capability §3 does not mention means either the contract is missing a row or
+ * `requires[]` has a typo in it. Only the blocking capabilities are named --
+ * listing everything the skill requires would bury the one at fault in a list
+ * of the ones that are fine.
+ */
+function ceilingReason(ceiling: Ceiling): string {
+  const list = (caps: string[]) => caps.map((c) => `'${c}'`).join(", ");
+  const parts: string[] = [];
+  if (ceiling.blocking.length > 0) {
+    const them = ceiling.blocking.length === 1 ? "it" : "them";
+    parts.push(
+      `${CAPABILITY_TABLE_FILE} §3 gives ${list(ceiling.blocking)} a status no host in this package supplies, so an autonomous run would proceed with ${them} silently absent.`,
+    );
+  }
+  if (ceiling.unknown.length > 0) {
+    parts.push(
+      `${CAPABILITY_TABLE_FILE} §3 states no status for ${list(ceiling.unknown)}, so nothing in this package says any host supplies ${ceiling.unknown.length === 1 ? "it" : "them"}; add the row to §3, or correct the spelling in requires[].`,
+    );
+  }
+  return parts.join(" ");
+}
+
 export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions): BundlePlan {
   const { root, catalog } = ctx;
   const issues: Issue[] = [];
@@ -237,6 +280,12 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
   const capabilities = loadHostCapabilities(root, host);
   issues.push(...capabilities.issues);
+
+  // Once per plan, not once per skill: a tree with no contract would otherwise
+  // report the same unavailable check for every skill in the bundle, and the
+  // summary's "1 check unavailable" would become a count of skills.
+  const capabilityTable = loadCapabilityTable(root);
+  issues.push(...capabilityTable.issues);
 
   const membership = resolveProfile(root, catalog, options.profile);
   issues.push(...membership.issues);
@@ -348,27 +397,60 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
      * more of. An unrecognised `mode` lands here too -- `loadSkillManifest`
      * only accepts the schema's three, and `ak validate` reports the rest.
      *
-     * The downgrade is `adapters/claude-code/CONTRACT.md` §4 with the input it
-     * always should have had. §3 calls `unsupported` "the semantics this host
-     * cannot enforce" and §4 says a host that cannot enforce what an autonomous
-     * run requires exposes the skill guided and rejects autonomous -- so a row
-     * claiming `autonomous` while naming its own unenforceable semantics is
-     * that rule's case, stated by the skill about itself. It replaces a
-     * comparison between `autonomy.requires_enforced`, a key the schema
-     * forbids, and `capabilities.enforces`, a set drawn from a different
-     * vocabulary: two halves that never met, and a decision that came out
-     * `manual` for every skill in every bundle.
+     * The cap is `adapters/claude-code/CONTRACT.md` §4 with the input it always
+     * should have had: "A host that cannot enforce a restriction an autonomous
+     * run requires **exposes the affected skill in guided/manual mode and
+     * rejects autonomous mode.**" What an autonomous run requires is
+     * `requires[]`, and what the host supplies is §3's table, so those two are
+     * the rule's terms and the ceiling is computed from them.
      *
-     * What this does NOT check: the skill's `requires[]` against the host
-     * contract's §3 capability table. That is a third vocabulary again, §3
-     * states it in prose that nothing parses, and both contracts put the check
-     * in `ak validate` rather than here. It is not built.
+     * Two earlier readings of this sentence stood here and neither could come
+     * out false for the right reason. The first compared
+     * `autonomy.requires_enforced`, a key `schemas/skill.schema.json` forbids
+     * outright, against `capabilities.enforces`, a set drawn from a different
+     * enum: two halves that never met, and a decision that came out `manual`
+     * for every skill in every bundle. The second keyed the downgrade on
+     * whether `unsupported` was non-empty -- and `unsupported` is prose, so
+     * that fired on whether an author had written a sentence rather than on
+     * anything the host withholds. A skill naming three unenforceable semantics
+     * and requiring nothing the host lacks was capped; one naming none and
+     * requiring `kb-write` was not.
+     *
+     * `unsupported` keeps the job it can do. It is a declaration a reader of
+     * the installed skill sees, emitted into the body's frontmatter below, and
+     * it is not an input to this decision.
      */
     const row = manifest.hosts[host];
     const declared: SkillMode = row?.mode ?? "manual";
     const unenforceable = row?.unsupported ?? [];
 
-    let mode: SkillMode = declared === "autonomous" && unenforceable.length > 0 ? "guided" : declared;
+    /**
+     * `min(declared, ceiling)`, and an error when the declaration was above it.
+     *
+     * Corrected *and* reported, for the reason `packaging.u-skill-not-manual`
+     * gives a few lines down and `adapters/codex/CONTRACT.md` §3.1 states
+     * outright: the declaration is "the record that the weakening was noticed
+     * rather than absorbed", so a bundle quietly corrected leaves a skill.yaml
+     * in the tree stating a mode the packager will not honor with nothing
+     * pointing at it -- which is the weakening absorbed.
+     *
+     * A null ceiling is not a permissive one. The table was unavailable, which
+     * `loadCapabilityTable` has already reported as a blocking skip, and this
+     * leaves the declared mode alone rather than correcting it on the strength
+     * of a ceiling nobody computed.
+     */
+    const ceiling = ceilingFor(manifest.requires, capabilityTable);
+    let mode: SkillMode = declared;
+    if (ceiling.mode !== null && autonomyRank(declared) > autonomyRank(ceiling.mode)) {
+      mode = ceiling.mode;
+      issues.push(
+        error(
+          "packaging.mode-above-ceiling",
+          `skills/${entry.id}/skill.yaml`,
+          `'${entry.id}' declares mode '${declared}' for adapter '${host}', above the '${ceiling.mode}' its own requires[] allows. ${ceilingReason(ceiling)} adapters/claude-code/CONTRACT.md §4: a host that cannot enforce what an autonomous run requires exposes the skill in guided/manual mode and rejects autonomous mode. The bundle packages it '${mode}' regardless; declare '${ceiling.mode}' or less in the row, or drop the capability from requires[].`,
+        ),
+      );
+    }
 
     /**
      * `adapters/codex/CONTRACT.md` §3.1, keyed on the capability rather than on
