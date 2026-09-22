@@ -81,12 +81,16 @@ export interface RulingRow {
   readonly text: string;
   readonly scenario: number | null;
   /**
-   * The SKILL.md section a bound skill discharges this row in, or `null` when the
-   * row declared none or declared one outside the vocabulary. Independently
-   * derived from the row's prose, so a disagreement with where the bodies
-   * actually cite the row is a finding and not a tautology.
+   * The SKILL.md sections in which a bound skill may legitimately discharge this
+   * row, or empty when the row declared none or declared them unusably.
+   *
+   * A set rather than one section: a row binds several skills, and one obligation
+   * lands in a different section in each -- a refusal condition for one skill is a
+   * scope exclusion for another. It is independently derived from the row's prose,
+   * so a disagreement with where the bodies actually cite the row is a finding and
+   * not a tautology.
    */
-  readonly dischargedIn: string | null;
+  readonly dischargedIn: ReadonlyArray<string>;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -282,38 +286,69 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
 
     const text = typeof row["ruling"] === "string" ? row["ruling"] : "";
 
-    // `discharged_in` names the SKILL.md section a bound skill discharges this row
-    // in. It is required, and a missing value is an error rather than a default,
-    // because the field is only worth having as a statement derived independently
-    // of where the bodies cite the row. A value supplied on a row's behalf -- by a
-    // default here, or by reading the tree -- would agree with the tree by
-    // construction and could never disagree with it, which is the one thing it is
-    // for. The vocabulary is read from the schema, so adding a section there is the
-    // only edit needed to admit one.
+    // `discharged_in` names the SKILL.md sections in which a bound skill may
+    // legitimately discharge this row. Required, and a missing value is an error
+    // rather than a default, because the field is only worth having as a statement
+    // derived independently of where the bodies cite the row. A value supplied on a
+    // row's behalf -- by a default here, or by reading the tree -- would agree with
+    // the tree by construction and could never disagree with it, which is the one
+    // thing it is for.
+    //
+    // The shape is refused rather than coerced, for the reason `universal` gives
+    // just above: `discharged_in: workflow` is a legal-looking scalar that would
+    // silently become a one-member set, and the member it names is then the only
+    // one any check could ever require. A near-miss shape that reads as a narrower
+    // claim than the author made is worth an error of its own.
+    //
+    // The vocabulary is read from the schema, so adding a section there is the only
+    // edit needed to admit one.
     const dischargedValue = row["discharged_in"];
-    let dischargedIn: string | null = null;
+    let dischargedIn: string[] = [];
     if (sections !== null) {
-      if (typeof dischargedValue !== "string" || dischargedValue.trim().length === 0) {
+      if (dischargedValue === undefined || dischargedValue === null) {
         issues.push(
           error(
             "rulings.missing-discharged-in",
             RULINGS_FILE,
-            `${id} declares no discharged_in. Every row names the SKILL.md section a bound skill discharges it in, from ${[...sections].join(", ")} (${COMMON_SCHEMA}#/$defs/skill_section). Derive it from this row's own tension and ruling text, not from where the bodies cite it.`,
+            `${id} declares no discharged_in. Every row names the SKILL.md sections a bound skill may discharge it in, as a list of one or more of ${[...sections].join(", ")} (${COMMON_SCHEMA}#/$defs/skill_section). Derive them from this row's own tension and ruling text, not from where the bodies cite it.`,
           ),
         );
-      } else if (!sections.has(dischargedValue.trim())) {
+      } else if (!Array.isArray(dischargedValue)) {
         issues.push(
           error(
-            "rulings.unknown-discharged-in",
+            "rulings.malformed-discharged-in",
             RULINGS_FILE,
-            `${id} declares discharged_in: ${dischargedValue.trim()}, which is not one of ${[...sections].join(", ")} (${COMMON_SCHEMA}#/$defs/skill_section).`,
+            `${id} declares discharged_in: ${JSON.stringify(dischargedValue)}, which is not a list. Write discharged_in: [workflow, outputs]; a bare string reads as a narrower claim than the author made, since one section then becomes the only one any check could require.`,
           ),
         );
       } else {
-        dischargedIn = dischargedValue.trim();
+        const named = dischargedValue.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter((v) => v.length > 0);
+        if (named.length === 0) {
+          issues.push(
+            error(
+              "rulings.missing-discharged-in",
+              RULINGS_FILE,
+              `${id} declares an empty discharged_in. A row discharges somewhere, and an empty list is a row every bound skill satisfies by citing it anywhere at all.`,
+            ),
+          );
+        }
+        const unknown = named.filter((v) => !sections.has(v));
+        if (unknown.length > 0) {
+          issues.push(
+            error(
+              "rulings.unknown-discharged-in",
+              RULINGS_FILE,
+              `${id} declares discharged_in ${unknown.join(", ")}, which ${unknown.length === 1 ? "is not a" : "are not"} SKILL.md section${unknown.length === 1 ? "" : "s"}. The vocabulary is ${[...sections].join(", ")} (${COMMON_SCHEMA}#/$defs/skill_section).`,
+            ),
+          );
+        }
+        // Duplicates are not an error -- they name the same section twice and the
+        // set is what the check reads -- but they are dropped so a count of the
+        // declaration measures how much it actually admits.
+        dischargedIn = [...new Set(named.filter((v) => sections.has(v)))];
       }
-    } else if (typeof dischargedValue === "string" && dischargedValue.trim().length > 0) {
-      dischargedIn = dischargedValue.trim();
+    } else if (Array.isArray(dischargedValue)) {
+      dischargedIn = [...new Set(dischargedValue.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter((v) => v.length > 0))];
     }
 
     rows.push({ id, binds, universal, text, scenario, dischargedIn });

@@ -65,74 +65,90 @@
 #
 # Where a ruling discharges
 #
-# `discharged_in` names the SKILL.md section in which a bound skill discharges the ruling. It is
-# required on every row and its vocabulary is closed:
+# `discharged_in` names the SKILL.md sections in which a bound skill may legitimately discharge
+# the ruling. It is required on every row, it is a list with at least one member, and its
+# vocabulary is closed. Every authored skill carries the same ten `##` sections, so these ten are
+# the whole space an obligation can land in:
 #
-#   hard-gates  the ruling names a condition under which the skill refuses to continue and says
-#               so. A rule that changes what the skill does *next* is not a gate; a gate is the
-#               absence of a next.
-#   authority   the ruling governs who may invoke, approve, or grant.
-#   limits      the ruling bounds a count, size, round or budget.
-#   not-for     the ruling names a case the skill declines to handle at all.
-#   workflow    the ruling imposes an ordering or a step obligation.
-#   outputs     the ruling constrains what the skill emits or records.
+#   when-to-use      the conditions under which the skill applies.
+#   not-for          a case the skill declines to handle at all.
+#   authority        who may invoke, approve or grant.
+#   inputs           what the skill consumes.
+#   workflow         an ordering or a step obligation.
+#   hard-gates       a condition under which the skill refuses to continue and says so. A rule
+#                    that changes what the skill does *next* is not a gate; a gate is the absence
+#                    of a next.
+#   outputs          what the skill emits or records.
+#   side-effects     what the skill is permitted to do.
+#   stop-conditions  where the run ends or halts: a terminal state, rather than a refusal to
+#                    proceed past a check.
+#   limits           a bound on a count, size, round or budget.
 #
-# Derive the value from the row's own `tension` and `ruling` text and from nothing else. In
-# particular, do not read it off where the bodies currently cite the row. A declaration taken
+# Why a list. A row binds several skills, and one obligation can land in a different section in
+# each: a refusal condition for one skill is a scope exclusion for another. The list is the set of
+# sections in which the obligation may legitimately be discharged, and the check on it is that
+# every bound skill cites the row in at least one of them. It is not a list of every section the
+# row touches. Under that reading each added member makes the check easier to pass, so a member
+# earns its place by being somewhere a bound skill would genuinely put this obligation -- and a
+# row whose list grew to cover the vocabulary would be a row nothing could fail.
+#
+# Derive the values from the row's own `tension` and `ruling` text and from nothing else. In
+# particular, do not read them off where the bodies currently cite the row. A declaration taken
 # from the tree confirms that the tree does what the tree does: it passes on the day it is
 # written, by construction, and catches nothing afterwards. The field earns its place only as a
 # second, independently derived statement of where the obligation lives, so that a disagreement
-# between this column and the tree is a finding rather than a definition. The nineteen values
-# below were written from the prose alone, before any placement was consulted.
+# between this column and the tree is a finding to adjudicate rather than a definition. The
+# nineteen rows below were derived from the prose alone, before any placement was consulted, and
+# they are expected to disagree with the tree in places. `note` records the sections considered
+# and rejected, which is the part an audit can actually check.
 #
-# Most rows have a second section with a real claim on them. `note` carries the runner-up and
-# why it lost, in the form "Runner-up `x`: ...", so a later reader can see that the call was
-# made rather than defaulted, and can reopen it against the same reasoning.
+# The discriminations that decide the near misses, each of which cost a row:
 #
-# Three rejections recur, and each is a way of getting the vocabulary wrong:
-#
+#   hard-gates vs stop-conditions
+#              A gate fails a check and the run does not pass that point; a stop-condition ends
+#              the run. `required-lane-failure-is-unavailable` says the review "stays resumable",
+#              which is what makes it a gate, while `prototype-human-experience-needs-human`
+#              stops and escalates, which ends it. The distinction is worth the care: with no
+#              `stop-conditions` in the vocabulary every halting obligation lands in `hard-gates`
+#              by elimination, and four of these nineteen rows would have been filed wrong.
 #   a number is not a limit
 #              `numeric-heuristics-are-guidance` is entirely about two numbers and is not
-#              `limits`. The row decides they are configurable starting points, neither
-#              validated nor enforced, so filing them as bounds would assert the very thing the
-#              row refuses. `limits` is for a bound the skill enforces, not a quantity it
-#              mentions.
-#   a gate's saying-so is not a second section
-#              `hard-gates` is defined as refusing to continue *and saying so*, so the report a
-#              gate produces is inside the gate. `required-lane-failure-is-unavailable` is not
-#              `hard-gates` plus `outputs` on the strength of "names the lane and why".
-#   a clause a neighbouring row owns does not decide this one
-#              Rows restate each other's consequences in passing.
-#              `missing-supervisor-never-implementer` repeats the block that
-#              `required-lane-failure-is-unavailable` decides, and is classified on its own
-#              content, the eligibility rule. Where two rows would claim the same section for
-#              the same sentence, the row that decides the sentence keeps it.
+#              `limits`. The row decides they are configurable starting points, neither validated
+#              nor enforced, so filing them as bounds would assert the very thing the row
+#              refuses. `limits` is for a bound the skill enforces, not a quantity it mentions.
+#   a gate's saying-so is not a second member
+#              `hard-gates` is defined as refusing to continue *and saying so*, and a
+#              stop-condition likewise carries the shape of its own stop, so the report either
+#              produces is inside it. `two-fix-cycles-then-stop` does not earn `outputs` on the
+#              strength of "the open findings attached".
+#   overlap between rows is expected
+#              Rows restate each other's consequences, and with a list there is no longer any
+#              need to award a clause to one row and withhold it from its neighbour.
+#              `missing-supervisor-never-implementer` declares `hard-gates` beside its own
+#              eligibility rule even though `required-lane-failure-is-unavailable` is where an
+#              unavailable required seat is decided.
 #
-# Two rows are recorded with an open question rather than a settled call.
-# `entrypoint-phase-operation-split` and `ci-repair-restricts-purpose-not-permission` each carry
-# two obligations that do not follow from one another. Each is recorded under the section
-# carrying the bulk of the row, with its `note` stating the other, pending a decision on whether
-# this field admits a list. They are flagged rather than quietly resolved because picking one
-# silently is how a second obligation stops being checkable.
-#
-# Not yet enforced, and the gap is specific. No JSON Schema is applied to this file: the schema
-# targets in src/validation/schemas.ts are catalog.yaml, skills/*/skill.yaml,
-# packs/*/{pack,manifest}.yaml and the eval cases, plus templates/ documents that name a schema
-# in their own envelope. `policies/` is not among them, so a misspelled or missing
-# `discharged_in` is silent today. The check belongs in src/validation/rulings.ts beside
-# `rulings.malformed-universal` and `rulings.unknown-scenario`, which already reject a malformed
-# row in the same loop over `conflicts`, and it must be an error: a row with no value, or a
-# default supplied on the row's behalf, reintroduces exactly the circularity the field exists to
-# break.
+# Not yet enforced by anything but the check named below, and the gap is specific. No JSON Schema
+# is applied to this file: the schema targets in src/validation/schemas.ts are catalog.yaml,
+# skills/*/skill.yaml, packs/*/{pack,manifest}.yaml and the eval cases, plus templates/ documents
+# that name a schema in their own envelope. schemas/rulings.schema.json describes this file's
+# shape but leaves `discharged_in` deliberately unconstrained and says so in its own description.
+# The authority is src/validation/rulings.ts, which reads the vocabulary out of
+# schemas/common.schema.json#/$defs/skill_section rather than restating it, and errors on a
+# missing list, a bare string, an empty list or an unknown member. Each is an error and not a
+# warning: a value supplied on a row's behalf, by a default or by reading the tree, would agree
+# with the tree by construction and could never disagree with it, which is the one thing the
+# field is for.
 #
 # Row shape
 #   id         stable kebab-case identifier, cited verbatim from skill bodies
 #   tension    what the sources actually disagreed about
 #   ruling     what this repository does
 #   discharged_in
-#              the SKILL.md section a bound skill discharges this ruling in, from the closed
-#              vocabulary above. Derived from `tension` and `ruling`, never from where the
-#              bodies cite the row; `note` records the runner-up section and why it lost.
+#              the SKILL.md sections in which a bound skill may legitimately discharge this
+#              ruling, from the closed ten-value vocabulary above. A list, at least one member,
+#              derived from `tension` and `ruling` and never from where the bodies cite the row.
+#              `note` records the sections considered and rejected.
 #   overrides  present only where a source position is deliberately overruled: the design
 #              conversation where the architecture doc wins, or a donor where this repository
 #              takes a different position. `source` names which.
@@ -188,7 +204,7 @@ conflicts:
       explicit invocation rather than reproducing the forbidden command's effect through a side
       door. Ship may draft a lesson candidate; publishing it needs explicit authority or a
       charter grant.
-    discharged_in: authority
+    discharged_in: [authority, stop-conditions]
     overrides:
       source: conversation
       locator: G:L1950
@@ -206,13 +222,11 @@ conflicts:
     scenario: 23
     coverage: direct
     note: >-
-      Two-section candidate, recorded as `authority` pending a decision on whether this field
-      admits a list. Most of the row governs who may invoke what — a human the entrypoint, a
-      delegated controller an exposed phase operation, and only under a grant the runner
-      validated. But "where a host cannot validate a grant, the skill stops for explicit
-      invocation" is a refusal with no next, which is `hard-gates` by definition. Neither clause
-      follows from the other: a skill could state the invocation rule in full and still proceed on
-      a grant it could not check.
+      Rejected `hard-gates` for "where a host cannot validate a grant, the skill stops for
+      explicit invocation": the skill does not fail a check and carry on past it, it ends and
+      waits to be started again by a human, which is a terminal state. `when-to-use` rejected too
+      -- the row decides who may invoke each form, not the conditions under which the skill
+      applies.
     source:
       plan: "§7.1, §11"
       locator: G:L1672-1676
@@ -226,7 +240,7 @@ conflicts:
       specialist may retain its earlier finding context, or a replacement receives a durable
       prior-finding packet. Either way the seat sees the old finding, its fingerprint and
       evidence, and the new revision. Independence from the author is mandatory; amnesia is not.
-    discharged_in: workflow
+    discharged_in: [inputs, authority]
     overrides:
       source: conversation
       locator: G:L1725-1726
@@ -245,12 +259,11 @@ conflicts:
     scenario: 9
     coverage: direct
     note: >-
-      Runner-up `authority`: the row does make independence from the author mandatory. Rejected
-      because that half is already decided by `missing-supervisor-never-implementer`, which says
-      who may fill a seat, and `closure-requires-independent-verification`, which says who may
-      close. What this row adds is the continuity obligation — the seat is handed the old finding,
-      its fingerprint and evidence, and the new revision before it judges — and that is a step
-      obligation.
+      Rejected `workflow`: the hand-off is a step, but what the row decides is what the seat must
+      be given -- the old finding, its fingerprint and evidence, and the new revision -- which is
+      a constraint on what the skill consumes. `authority` carries the other half, that the seat
+      is independent of the author; narrower here than in `missing-supervisor-never-implementer`,
+      which decides seat eligibility in general.
     source:
       plan: "§6.4, §11"
       locator: G:L580
@@ -265,7 +278,7 @@ conflicts:
       regressed that makes this finding new — and unrelated low-priority discovery does not
       restart. A serious newly discovered issue in an untouched affected caller stays
       reportable. Scope discipline is not a reason to suppress relevant evidence.
-    discharged_in: workflow
+    discharged_in: [workflow, outputs]
     overrides:
       source: conversation
       locator: G:L481
@@ -281,11 +294,9 @@ conflicts:
     scenario: 8
     coverage: direct
     note: >-
-      Runner-up `outputs`: requiring novelty evidence on a new finding, and keeping a serious
-      issue in an untouched affected caller reportable, do constrain what the pass emits. Rejected
-      because both follow from the scope rule rather than standing beside it. `limits` was
-      considered and rejected too: the delta is bounded by affected behavior, which is a
-      qualitative boundary and not a count, size, round or budget.
+      Rejected `inputs`: the impact neighbourhood is a scope the step establishes, not a context
+      handed to it. `limits` rejected too -- the delta is bounded by affected behavior, a
+      qualitative boundary, not a count, size, round or budget.
     source:
       plan: "§6.3, §11"
       locator: G:L481
@@ -301,7 +312,7 @@ conflicts:
       receipt: a receipt carries the command or probe, exit status, output digest, revision and
       environment identity. An author may never close their own finding, and a changed patch
       does not inherit stale receipts.
-    discharged_in: hard-gates
+    discharged_in: [hard-gates, authority]
     binds:
       skills: [super-verify, super-review, diagnose, super-build, ultraqa]
       protocols: [apply-findings, review-delta, tdd]
@@ -314,11 +325,12 @@ conflicts:
     coverage: direct
     note: >-
       Scenario 3 requires the tenant-isolation finding to block unsupported closure; scenario 10
-      exercises the same rule from the evidence side.
-      Runner-up `outputs`: the receipt's required contents — command or probe, exit status, output
-      digest, revision, environment identity — read as an emission rule. Rejected because they are
-      what satisfies the gate rather than a separate obligation; absent them the finding does not
-      close at all.
+      exercises the same rule from the evidence side. Rejected `inputs` and `outputs`, both
+      considered for the receipt's contents -- command or probe, exit status, output digest,
+      revision, environment identity. The receipt is what satisfies the gate, and absent it the
+      finding does not close at all; a verifier emitting one and a reviewer consuming one are the
+      same obligation seen from two ends. `stop-conditions` rejected: an unclosed finding does not
+      end the run.
     source:
       plan: "§5.6, §11"
 
@@ -331,7 +343,7 @@ conflicts:
       record and explained in a reference pack. Neither is validated or enforced here, and
       neither is grounds for a finding on its own. Real constraints are set per project and
       exceptions are recorded, rather than forcing artificial file splits or meaningless tests.
-    discharged_in: outputs
+    discharged_in: [inputs, outputs]
     overrides:
       source: conversation
       locator: G:L1706
@@ -352,13 +364,13 @@ conflicts:
     note: >-
       Scenario 2 requires the testing lens to fire on missing behavioral coverage — on evidence
       about behavior, not on a ratio. A pyramid enforced as a gate would fire on the ratio
-      instead, and would fire on a change with adequate coverage in the wrong shape.
-      Runner-up `limits`, and the near miss is the instructive one. The row is entirely about two
-      numbers, and numbers are where `limits` lives — which is exactly why it is wrong here. The
-      row decides both are configurable starting points, neither validated nor enforced, so filing
-      them under limits would assert as a bound the thing the row refuses to make one. What it
-      constrains is emission: neither number is grounds for a finding on its own, and both are
-      carried in the project record and explained in a reference pack.
+      instead, and would fire on a change with adequate coverage in the wrong shape. Rejected
+      `limits`, and the near miss is the instructive one. The row is entirely about two numbers,
+      and numbers are where `limits` lives -- which is exactly why it is wrong. The row decides
+      both are configurable starting points, neither validated nor enforced, so filing them under
+      limits would assert as a bound the thing the row refuses to make one. `inputs` carries where
+      the real constraints come from, set per project and carried in the project record; `outputs`
+      that neither number is grounds for a finding on its own.
     source:
       plan: "§3, §11"
       locator: G:L1706
@@ -373,7 +385,7 @@ conflicts:
       both, and never a patch re-implemented from the packet after the packet already carried
       one. A bug with a reproduction enters through diagnosis; only a fixed result is a work
       source for the build lane.
-    discharged_in: outputs
+    discharged_in: [when-to-use, workflow, outputs]
     binds:
       skills: [diagnose, super-build, super-verify]
       protocols: [tdd, apply-findings]
@@ -382,14 +394,14 @@ conflicts:
     scenario: 6
     coverage: indirect
     note: >-
-      Scenario 6 forbids handing an under-specified finding to an automatic fixer. The work
-      packet is the same hand-off shape: it must be specified enough to be implemented once, or
-      it is sharpened rather than guessed at by a second implementer.
-      Runner-up `workflow`: stating the hypothesis before the edit is an ordering obligation, and
-      routing a reproduction through diagnosis first is a step. Rejected because the decided thing
-      is the exclusive or on what diagnosis emits — exactly one of a verified bounded patch or a
-      diagnostic work packet, never both, and never a patch re-implemented from a packet that
-      already carried one.
+      Scenario 6 forbids handing an under-specified finding to an automatic fixer. The work packet
+      is the same hand-off shape: it must be specified enough to be implemented once, or it is
+      sharpened rather than guessed at by a second implementer. Three clauses, three sections:
+      `when-to-use` for the routing, since a bug with a reproduction enters through diagnosis and
+      only a fixed result is a work source for the build lane; `workflow` for stating the
+      hypothesis before the edit; `outputs` for the decided thing, exactly one of a verified
+      bounded patch or a diagnostic work packet. Rejected `side-effects`: the patch is an output
+      the row counts, not an effect it permits.
     source:
       plan: "§11"
       locator: G:L2133
@@ -404,7 +416,7 @@ conflicts:
       coverage — without a separate decision. A required product-code change leaves CI repair
       and re-enters diagnosis, a bounded patch, new verification and affected delta review.
       Three bounded attempts, then stop.
-    discharged_in: not-for
+    discharged_in: [not-for, limits, stop-conditions]
     overrides:
       source: conversation
       locator: G:L2201
@@ -420,13 +432,12 @@ conflicts:
     scenario: 19
     coverage: direct
     note: >-
-      Two-section candidate, recorded as `not-for` pending a decision on whether this field admits
-      a list. The headline restricts what CI repair is for: it declines to make a pipeline green
-      by skipping checks, weakening assertions, lowering thresholds or removing coverage, and a
-      required product-code change leaves CI repair rather than being handled inside it — cases
-      the skill declines to handle at all. Independently of that, "three bounded attempts, then
-      stop" is a round count, which is `limits` by definition and is not derivable from the
-      purpose rule.
+      Rejected `side-effects`, the closest miss: "no skipped checks, no weakened assertions, no
+      lowered thresholds, no removed coverage" reads as a permitted-effect boundary. But the row's
+      own headline is purpose -- those prohibitions say what the repair is not for, and a required
+      product-code change leaves CI repair rather than being handled inside it. `limits` takes the
+      three-attempt bound and `stop-conditions` the halt it ends in; the two are separable, since
+      a cap with no stated terminal state is a cap nobody acts on.
     source:
       plan: "§7.5, §11"
       locator: G:L2149
@@ -441,7 +452,7 @@ conflicts:
       human experience stays blocked without a human: on an unattended run it stops and
       escalates rather than substituting an automated verdict for the experience it exists to
       produce.
-    discharged_in: hard-gates
+    discharged_in: [when-to-use, inputs, stop-conditions]
     binds:
       skills: [prototype, autopilot, pov, ideate]
       schemas: [decision, ticket]
@@ -450,13 +461,13 @@ conflicts:
     scenario: 4
     coverage: indirect
     note: >-
-      Scenario 4 forbids a reviewer failure from becoming an approval. The absent human
-      evaluator is the same structure: a required independent judgment that could not be
-      obtained is unavailable, never substituted.
-      Runner-up `workflow`: naming the evaluator in advance is an ordering obligation. Rejected
-      because it exists to make the gate decidable; what the row decides is that a prototype whose
-      question is about human experience stops and escalates on an unattended run rather than
-      substituting an automated verdict for the experience it exists to produce.
+      Scenario 4 forbids a reviewer failure from becoming an approval. The absent human evaluator
+      is the same structure: a required independent judgment that could not be obtained is
+      unavailable, never substituted. Rejected `hard-gates` for "stays blocked without a human":
+      on an unattended run the skill stops and escalates, which ends the run rather than refusing
+      to pass a check inside it. `when-to-use` carries the distinction the row turns on -- a
+      technical question may run unattended, a human-experience one may not -- and `inputs` that
+      the evaluator is named in advance.
     source:
       plan: "§11"
       locator: G:L933
@@ -472,7 +483,7 @@ conflicts:
       configurable; the central ownership is not. A skill never creates an application-local
       documentation tree as a substitute, and a completed ship is not permission to rewrite
       project knowledge.
-    discharged_in: outputs
+    discharged_in: [outputs, side-effects]
     overrides:
       source: conversation
       locator: G:L1950
@@ -496,11 +507,11 @@ conflicts:
       Scenario 24 exercises the other half — a rolled-back skill leaves its lesson history intact.
       docs/decisions/0001-kb-document-vocabulary.md is the repo-native record of this ruling: it
       names the central equivalent of each application-local path, fixes the two artifact classes,
-      and holds that decision-record acceptance is not an authority a skill has.
-      Runner-up `not-for`: "a skill never creates an application-local documentation tree" reads
-      as a declined case. Rejected because it constrains where a skill writes what it produces
-      while doing its job, not a class of request it turns away. The row governs the destination
-      and the ownership of every artifact a skill emits.
+      and holds that decision-record acceptance is not an authority a skill has. Rejected `not-
+      for` for "a skill never creates an application-local documentation tree": it constrains
+      where a skill writes while doing its job, not a class of request it turns away. `authority`
+      rejected as well, though "a completed ship is not permission to rewrite project knowledge"
+      invites it -- the row governs ownership of artifacts rather than who may grant.
     source:
       plan: "§1.2, §8, §11"
       locator: G:L1766
@@ -516,7 +527,7 @@ conflicts:
       default profile is the useful first operational release; the other profiles add scope
       without adding a competing lifecycle. Progressive disclosure is the mechanism, not a
       body that depends on another package's hooks.
-    discharged_in: workflow
+    discharged_in: [when-to-use, inputs]
     binds:
       profiles: [core, autonomy, product, maintainer]
       references: [codebase-design, domain-modeling, engineering-principles, prose-quality]
@@ -526,12 +537,11 @@ conflicts:
     note: >-
       Scenario 24 requires a skill to roll back without taking its supporting knowledge with it,
       which is only possible when installation is a profile decision separate from the knowledge
-      the skill produced.
-      Runner-up `limits`: the tension names a small context, which sounds like a size bound.
-      Rejected because the row states a mechanism rather than a bound and contains no count, size,
-      round or budget. The obligation it puts on a skill is procedural — load long material on
-      demand through a reference pack instead of carrying it inline, and do not stand up a second
-      run-everything entrypoint.
+      the skill produced. Rejected `limits`: the tension names a small context, which sounds like
+      a size bound, but the row states a mechanism and contains no count, size, round or budget.
+      `inputs` carries progressive disclosure -- long material loaded on demand through a
+      reference pack rather than carried inline -- and `when-to-use` that installation is a
+      profile decision and no profile adds a competing lifecycle.
     source:
       plan: "§2.6, §11"
       locator: G:L1986-1991
@@ -544,7 +554,7 @@ conflicts:
       At most two fix-and-verify cycles after the first pass. The third stops with an explicit
       blocked-or-replan decision and the open findings attached. Repeated failure is a signal
       about the plan, not an invitation to a third loop. Anything still open is reported.
-    discharged_in: limits
+    discharged_in: [limits, stop-conditions]
     binds:
       skills: [super-review, ultraqa, autopilot, babysit-pr]
       protocols: [review-delta, apply-findings]
@@ -554,10 +564,10 @@ conflicts:
     scenario: 18
     coverage: direct
     note: >-
-      Runner-up `hard-gates`: the third cycle does stop, which is an absence of a next. Rejected
-      because the stop is the consequence of exceeding a bound and the bound is what the row
-      decides. A gate written without the number would not be checkable, and the number is the
-      whole of the content.
+      Rejected `outputs`, considered for "the open findings attached" and "anything still open is
+      reported", on the same ground that a gate's saying-so is not a second section: a stop
+      defined as stopping with a decision and the findings attached carries its own reporting.
+      `hard-gates` rejected -- the third cycle does not fail a check, it is the end of the loop.
     source:
       plan: "§6.3, §7.2"
       locator: G:L1041
@@ -572,7 +582,7 @@ conflicts:
       established. That is a new review scope with its own pass 1, not an unbounded third delta
       loop. A review run records its comparison base, its reviewed head and the last head
       verified in the delta loop, so the three are never conflated.
-    discharged_in: workflow
+    discharged_in: [workflow, outputs]
     binds:
       skills: [super-review, super-verify]
       protocols: [review-delta]
@@ -582,11 +592,11 @@ conflicts:
     scenario: 10
     coverage: direct
     note: >-
-      Runner-up `outputs`: recording the comparison base, the reviewed head and the last head
-      verified in the delta loop is an emission obligation. Rejected because it exists so the
-      reset is decidable rather than standing on its own. `limits` was considered and rejected:
+      Rejected `when-to-use`, considered for the trigger -- architecture, requirements, the
+      comparison base or the affected surface changing materially. The trigger sits inside the
+      review's own sequence rather than deciding whether the skill applies. `limits` rejected:
       `two-fix-cycles-then-stop` owns the cycle cap, and this row decides what happens instead of
-      a third loop rather than restating it.
+      a third loop.
     source:
       plan: "§6.3, §5.2"
 
@@ -602,7 +612,7 @@ conflicts:
       evidence, in practice from the attached packs. A substantive feature lands at the
       six-ish panel the design preserves. A documentation typo does not. Security, API and data
       facts are never dropped because a classifier was uncertain.
-    discharged_in: workflow
+    discharged_in: [inputs, workflow]
     binds:
       skills: [super-review, doc-review]
       protocols: [attach-pack]
@@ -613,11 +623,12 @@ conflicts:
     scenario: 1
     coverage: direct
     note: >-
-      Runner-up `limits`: the panel grows and shrinks, which reads as a size. Rejected because the
+      Rejected `limits`, the near miss: the panel grows and shrinks, which reads as a size. The
       row states a selection procedure keyed to declared standards, earned diff signal and
-      artifact evidence, and deliberately fixes no number. "A substantive feature lands at the
-      six-ish panel" is an outcome of the procedure; writing it as a cap would fix the count the
-      row declines to fix.
+      artifact evidence, and deliberately fixes no number -- "a substantive feature lands at the
+      six-ish panel" is an outcome, and writing it as a cap would fix the count the row declines
+      to fix. `inputs` carries that the conditional seats are selected from artifact evidence, in
+      practice from the attached packs.
     source:
       plan: "§6.1"
       locator: G:L1895
@@ -632,7 +643,7 @@ conflicts:
       blocks approval, is never downgraded to an empty result, and is never backfilled by the
       author, the implementer, another seat or the synthesis step. The review names the lane and
       why, and stays resumable. Fail closed when required evidence is absent.
-    discharged_in: hard-gates
+    discharged_in: [hard-gates, outputs]
     binds:
       skills: [super-review, receiving-review]
       roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
@@ -645,11 +656,11 @@ conflicts:
     scenario: 4
     coverage: direct
     note: >-
-      Runner-up `outputs`: the row does prescribe an emission — `unavailable` rather than an empty
-      result — and requires the review to name the lane and why. Rejected because a gate is
-      defined as refusing to continue *and saying so*, which already carries the naming. What the
-      row adds beyond that is that a required `unavailable` blocks approval and is never
-      backfilled.
+      Rejected `stop-conditions` on the row's own words: the review "stays resumable", so a
+      required lane's `unavailable` blocks approval without ending the run -- a refusal to pass a
+      check, not a terminal state. That clause is the discriminator between this row and the four
+      that do stop. `outputs` carries the vocabulary itself, `unavailable` as a result rather than
+      an absence, and naming the lane and why.
     source:
       plan: "§2.5, §6.1"
 
@@ -663,7 +674,7 @@ conflicts:
       security or adversarial seat is never skipped because a classifier was uncertain about the
       artifact. Confidence is an evidence anchor recorded on the finding, not a gate in front of
       it. Synthesis may not raise a nit's severity because several seats agreed on it either.
-    discharged_in: outputs
+    discharged_in: [workflow, outputs]
     binds:
       roles: [code-review/security, code-review/adversarial, doc-review/security-lens]
       packs: [pack-secure]
@@ -672,12 +683,11 @@ conflicts:
     scenario: 3
     coverage: direct
     note: >-
-      Runner-up `hard-gates`, rejected on the row's own words: confidence is "an evidence anchor
-      recorded on the finding, not a gate in front of it", so filing this under gates would
-      restate the reading the row overturns. What it constrains is what survives to the report — a
-      low-confidence security concern stays visible and is adjudicated, is never silently
-      discarded by a threshold, and synthesis may not raise a nit's severity because several seats
-      agreed on it.
+      Rejected `hard-gates` on the row's own words: confidence is "an evidence anchor recorded on
+      the finding, not a gate in front of it", so filing this under gates would restate the
+      reading the row overturns. `workflow` carries adjudication at the finding adjudication
+      checkpoint; `outputs` that the concern stays visible, is never silently discarded by a
+      threshold, and that synthesis may not raise a nit's severity because several seats agreed.
     source:
       plan: "§6.1, §5.5"
       locator: G:L667
@@ -702,7 +712,7 @@ conflicts:
       structural gate already holds — `spec_quality: patch`, `difficulty: mechanical` and a
       `suggested_fix`. A synthesis or intake step that receives `safe_auto` from a peer lane
       remaps it to `gated_auto`; it never drops the finding. `advisory` is available to every seat.
-    discharged_in: outputs
+    discharged_in: [inputs, outputs]
     overrides:
       source: donor
       locator: "compound-engineering:skills/ce-code-review/references/action-class-rubric.md#L55"
@@ -723,12 +733,13 @@ conflicts:
     note: >-
       Scenario 6 tests the `spec_quality` gate — a vague finding never reaches an automatic fixer,
       which `finding.schema.json` encodes by forcing a `smell` to `manual` or `advisory`. It does
-      not exercise a well-specified `patch` from a code seat that is nonetheless not that seat's to
-      mark unattended, which is what this row decides.
-      Runner-up `authority`: the row says which seat may write which value, which sounds like a
-      permission. Rejected because `authority` governs invoking, approving and granting, and the
-      row names its own subject — "the restriction is on emission by a seat, never on the
-      vocabulary".
+      not exercise a well-specified `patch` from a code seat that is nonetheless not that seat's
+      to mark unattended, which is what this row decides. Rejected `authority`: the row says which
+      seat may write which value, which sounds like a permission, but `authority` governs
+      invoking, approving and granting and the row names its own subject -- "the restriction is on
+      emission by a seat, never on the vocabulary". `inputs` carries the other end, a synthesis or
+      intake step remapping a peer lane's `safe_auto` to `gated_auto` without dropping the
+      finding.
     source:
       plan: "§5.5"
 
@@ -743,7 +754,7 @@ conflicts:
       supervisor failure or an out-of-charter action blocks the checkpoint and produces exactly
       one escalation. There is no tie-breaking third supervisor and no repeated internal debate;
       a tie goes to the human.
-    discharged_in: hard-gates
+    discharged_in: [authority, hard-gates]
     overrides:
       source: conversation
       locator: G:L2073
@@ -762,11 +773,10 @@ conflicts:
     scenario: 16
     coverage: direct
     note: >-
-      Runner-up `authority`, which the row's own id invites. Rejected because the row does not
-      change who may approve: the supervisor pair are already the approvers. It decides that their
-      agreement alone does not carry, and that disagreement, missing evidence, a supervisor
-      failure or an out-of-charter action blocks the checkpoint. That is a refusal condition, not
-      a grant.
+      Rejected `limits`, considered for "exactly one escalation" and "no repeated internal
+      debate": the row bounds a debate to make the escalation unambiguous, not to budget it.
+      `stop-conditions` rejected -- the checkpoint is blocked and escalated, which suspends the
+      run for a human rather than ending it.
     source:
       plan: "§7.3"
       locator: G:L2170
@@ -781,7 +791,7 @@ conflicts:
       seat already sitting on the panel. The supervisor pair never implements and never approves
       a patch it produced. The security seat specifically may not be filled by the implementer
       of the change under review nor by whoever approved its spec.
-    discharged_in: authority
+    discharged_in: [authority, hard-gates]
     binds:
       skills: [autopilot, super-build, super-review]
       roles: [supervisor, implementer, code-review/security, code-review/adversarial]
@@ -793,11 +803,11 @@ conflicts:
     scenario: 17
     coverage: direct
     note: >-
-      Runner-up `hard-gates`: "unavailability blocks the checkpoint" is a refusal with no next.
-      Rejected because `required-lane-failure-is-unavailable` already decides that an unavailable
-      required seat blocks. What this row adds is the eligibility rule — who may not fill the
-      seat: the implementer, the author, the spec approver, or a seat already sitting on the
-      panel.
+      The eligibility rule is this row's own content: who may not fill a seat -- the implementer,
+      the author, the spec approver, or a seat already sitting on the panel. `hard-gates` is
+      declared beside it because the row states the block in as many words, even though `required-
+      lane-failure-is-unavailable` is where an unavailable required seat is decided. Overlap
+      between the two is expected and is not a reason to drop it here.
     source:
       plan: "§7.3"
 
@@ -813,7 +823,7 @@ conflicts:
       human approval bound to that charter's hash, with any expiry or single-use bound. The pair
       may never enlarge its own authority; more autonomy is a more specific capability approved
       in advance, not a decision taken mid-run.
-    discharged_in: authority
+    discharged_in: [authority, side-effects]
     binds:
       skills: [autopilot, super-ship, deprecate, babysit-pr]
       packs: [pack-secure, pack-data, pack-deps, pack-api, pack-delete]
@@ -825,10 +835,10 @@ conflicts:
     scenario: 5
     coverage: direct
     note: >-
-      Runner-up `hard-gates`: an action with no charter entry does not happen. Rejected because
-      that stop is the generic consequence of acting without a grant, while what this row decides
-      is what a valid grant is made of — an explicit charter entry a human approved up front,
-      naming the action and exactly what is permitted, bound to that charter's hash, with any
-      expiry or single-use bound.
+      Rejected `hard-gates`: an action with no charter entry not happening is the generic
+      consequence of acting without a grant, while what this row decides is what a valid grant is
+      made of -- an explicit charter entry approved up front, naming the action and exactly what
+      is permitted, bound to that charter's hash, with any expiry or single-use bound. `side-
+      effects` carries the enumerated ten, which is the list a skill declares.
     source:
       plan: "§7.2"

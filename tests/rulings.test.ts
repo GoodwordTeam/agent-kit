@@ -22,14 +22,26 @@ function rulings(rows: string): string {
   return `schema_version: 1\npolicy: resolved-conflicts\nrows: ${rows.split("- id:").length - 1}\n\nconflicts:\n${rows}`;
 }
 
-const ROW = (id: string, binds = "", scenario = 3, discharged = "workflow") =>
+const ROW = (id: string, binds = "", scenario = 3, discharged = "[workflow]") =>
   `  - id: ${id}\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n    discharged_in: ${discharged}\n${binds}    scenario: ${scenario}\n    coverage: direct\n`;
 
 /** The vocabulary source. Only the one `$defs` entry the discharge check reads. */
 const COMMON = (values: string[]) =>
   JSON.stringify({ $defs: { skill_section: { enum: values } } }, null, 2);
 
-const SECTIONS = ["hard-gates", "authority", "limits", "not-for", "workflow", "outputs"];
+/** The ten SKILL.md sections, as schemas/common.schema.json declares them. */
+const SECTIONS = [
+  "when-to-use",
+  "not-for",
+  "authority",
+  "inputs",
+  "workflow",
+  "hard-gates",
+  "outputs",
+  "side-effects",
+  "stop-conditions",
+  "limits",
+];
 
 function ctxFor(files: Record<string, string>) {
   const root = makeTree({ "catalog.yaml": CATALOG_HEAD, ...files });
@@ -130,26 +142,46 @@ describe("the policy file is the authority for ids", () => {
   });
 });
 
-describe("discharged_in names where a ruling lands, and is required", () => {
+describe("discharged_in names where a ruling lands, and is a required list", () => {
   const load = (rows: string, common: string | null) => {
     const files: Record<string, string> = { "catalog.yaml": CATALOG_HEAD, [RULINGS_FILE]: rulings(rows) };
     if (common !== null) files["schemas/common.schema.json"] = common;
     return loadRulings(makeTree(files));
   };
+  const ruleCount = (issues: ReturnType<typeof loadRulings>["issues"], rule: string) =>
+    issues.filter((i) => i.rule === rule).length;
 
-  test("a legal value passes and reaches the loaded row", () => {
-    const { rows, issues } = load(ROW("a-thing", "", 3, "hard-gates"), COMMON(SECTIONS));
+  test("a list of legal sections passes and reaches the loaded row", () => {
+    const { rows, issues } = load(ROW("a-thing", "", 3, "[hard-gates, authority]"), COMMON(SECTIONS));
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);
-    expect(rows[0]?.dischargedIn).toBe("hard-gates");
+    expect(rows[0]?.dischargedIn).toEqual(["hard-gates", "authority"]);
   });
 
-  test("a value outside the vocabulary is an error naming the value and the legal set", () => {
-    const { issues } = load(ROW("a-thing", "", 3, "hardgates"), COMMON(SECTIONS));
+  // A row binds several skills and one obligation can land in a different section
+  // in each, so a single member is a legal declaration rather than a degenerate one.
+  test("one member is legal; the list is a set of admissible sections, not a pair", () => {
+    const { rows, issues } = load(ROW("a-thing", "", 3, "[not-for]"), COMMON(SECTIONS));
+    expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+    expect(rows[0]?.dischargedIn).toEqual(["not-for"]);
+  });
+
+  // The shape is refused, not coerced. A bare string would silently become a
+  // one-member set, and that member would be the only section any check could
+  // require -- a narrower claim than the author made, from a legal-looking value.
+  test("a bare string is refused rather than read as a one-member list", () => {
+    const { rows, issues } = load(ROW("a-thing", "", 3, "workflow"), COMMON(SECTIONS));
+    expect(ruleCount(issues, "rulings.malformed-discharged-in")).toBe(1);
+    expect(issues.find((i) => i.rule === "rulings.malformed-discharged-in")?.severity).toBe("error");
+    expect(rows[0]?.dischargedIn).toEqual([]);
+  });
+
+  test("a member outside the vocabulary is an error naming it and the ten sections", () => {
+    const { issues } = load(ROW("a-thing", "", 3, "[workflow, hardgates]"), COMMON(SECTIONS));
     const found = issues.filter((i) => i.rule === "rulings.unknown-discharged-in");
     expect(found).toHaveLength(1);
     expect(found[0]?.severity).toBe("error");
     expect(found[0]?.message).toContain("hardgates");
-    expect(found[0]?.message).toContain("not-for");
+    expect(found[0]?.message).toContain("stop-conditions");
   });
 
   // The point of the field is that it is derived from the row's prose rather than
@@ -159,38 +191,48 @@ describe("discharged_in names where a ruling lands, and is required", () => {
   test("no value at all is an error, not a default", () => {
     const bare = `  - id: a-thing\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n    scenario: 3\n    coverage: direct\n`;
     const { rows, issues } = load(bare, COMMON(SECTIONS));
-    const found = issues.filter((i) => i.rule === "rulings.missing-discharged-in");
-    expect(found).toHaveLength(1);
-    expect(found[0]?.severity).toBe("error");
-    expect(rows[0]?.dischargedIn).toBeNull();
+    expect(ruleCount(issues, "rulings.missing-discharged-in")).toBe(1);
+    expect(rows[0]?.dischargedIn).toEqual([]);
+  });
+
+  // An empty list is the shape that would quietly disable the check built on it:
+  // every bound skill satisfies it by citing the ruling anywhere at all.
+  test("an empty list is an error, because every skill would satisfy it", () => {
+    const { issues } = load(ROW("a-thing", "", 3, "[]"), COMMON(SECTIONS));
+    expect(ruleCount(issues, "rulings.missing-discharged-in")).toBe(1);
+  });
+
+  test("a repeated member is not an error but is not counted twice either", () => {
+    const { rows, issues } = load(ROW("a-thing", "", 3, "[workflow, workflow]"), COMMON(SECTIONS));
+    expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+    expect(rows[0]?.dischargedIn).toEqual(["workflow"]);
   });
 
   // The vocabulary is read out of the schema, not spelled again in the validator.
   // A section added to the enum is admitted with no change here; if this test ever
   // needs the validator edited to pass, the two copies have parted.
-  test("the vocabulary comes from the schema, so a value added there is admitted", () => {
-    const withExtra = load(ROW("a-thing", "", 3, "observability"), COMMON([...SECTIONS, "observability"]));
+  test("the vocabulary comes from the schema, so a section added there is admitted", () => {
+    const withExtra = load(ROW("a-thing", "", 3, "[observability]"), COMMON([...SECTIONS, "observability"]));
     expect(withExtra.issues.filter((i) => i.severity === "error")).toEqual([]);
-    expect(withExtra.rows[0]?.dischargedIn).toBe("observability");
+    expect(withExtra.rows[0]?.dischargedIn).toEqual(["observability"]);
 
-    const without = load(ROW("a-thing", "", 3, "observability"), COMMON(SECTIONS));
-    expect(without.issues.filter((i) => i.rule === "rulings.unknown-discharged-in")).toHaveLength(1);
+    const without = load(ROW("a-thing", "", 3, "[observability]"), COMMON(SECTIONS));
+    expect(ruleCount(without.issues, "rulings.unknown-discharged-in")).toBe(1);
   });
 
   // The rows are all present; what is missing is the vocabulary they are measured
   // against. That blocks, and it is said once rather than passing every row.
-  test("an unreadable vocabulary is a blocking unavailable, not nineteen silent passes", () => {
+  test("an unreadable vocabulary is a blocking unavailable, not a row-by-row pass", () => {
     const { issues } = load(ROW("a-thing") + ROW("b-thing"), null);
-    const found = issues.filter((i) => i.rule === "rulings.discharge-vocabulary-unavailable");
-    expect(found).toHaveLength(1);
+    expect(ruleCount(issues, "rulings.discharge-vocabulary-unavailable")).toBe(1);
     expect(hasBlockingSkips(issues)).toBe(true);
-    expect(issues.filter((i) => i.rule === "rulings.missing-discharged-in")).toEqual([]);
+    expect(ruleCount(issues, "rulings.missing-discharged-in")).toBe(0);
   });
 
   test("an empty enum reads as no vocabulary rather than as a vocabulary of nothing", () => {
     const { issues } = load(ROW("a-thing"), COMMON([]));
-    expect(issues.filter((i) => i.rule === "rulings.discharge-vocabulary-unavailable")).toHaveLength(1);
-    expect(issues.filter((i) => i.rule === "rulings.unknown-discharged-in")).toEqual([]);
+    expect(ruleCount(issues, "rulings.discharge-vocabulary-unavailable")).toBe(1);
+    expect(ruleCount(issues, "rulings.unknown-discharged-in")).toBe(0);
   });
 });
 

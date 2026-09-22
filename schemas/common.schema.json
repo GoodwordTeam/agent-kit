@@ -270,8 +270,19 @@
       ]
     },
     "skill_section": {
-      "description": "The SKILL.md section an obligation is discharged in. hard-gates: a condition under which the skill refuses to continue and says so -- a rule that changes what the skill does next is not a gate, a gate is the absence of a next. authority: who may invoke, approve or grant. limits: a bound on a count, size, round or budget. not-for: a case the skill declines to handle at all. workflow: an ordering or a step obligation. outputs: a constraint on what the skill emits or records. The enum is statable here; what is not is the requirement that every row of policies/resolved-conflicts.yaml declare one, because that file is not a schema target. src/validation/rulings.ts reads this enum and enforces it there.",
-      "enum": ["hard-gates", "authority", "limits", "not-for", "workflow", "outputs"],
+      "description": "A SKILL.md section. Every authored skill carries the same ten, so this is the whole space an obligation can land in. when-to-use: the conditions under which the skill applies. not-for: a case it declines to handle at all. authority: who may invoke, approve or grant. inputs: what it consumes. workflow: an ordering or step obligation. hard-gates: a condition under which it refuses to continue and says so -- a rule that changes what it does next is not a gate, a gate is the absence of a next. outputs: what it emits or records. side-effects: what it is permitted to do. stop-conditions: where the run ends or halts, a terminal state rather than a refusal to proceed past a check. limits: a bound on a count, size, round or budget. The enum is statable here; what is not is the requirement that every row of policies/resolved-conflicts.yaml declare a non-empty list of these, because that file is not a schema target. src/validation/rulings.ts reads this enum and enforces it there.",
+      "enum": [
+        "when-to-use",
+        "not-for",
+        "authority",
+        "inputs",
+        "workflow",
+        "hard-gates",
+        "outputs",
+        "side-effects",
+        "stop-conditions",
+        "limits"
+      ],
       "x-validator-rule": "common.ruling-declares-a-discharging-skill-section"
     },
     "side_effect": {

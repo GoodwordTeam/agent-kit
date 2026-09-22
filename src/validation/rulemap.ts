@@ -56,7 +56,7 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
   // constraint the tag names: that every row of policies/resolved-conflicts.yaml
   // declares one of those values. No schema is applied to policies/, so that
   // requirement lives in rulings.ts, which reads the enum rather than restating it.
-  "common.ruling-declares-a-discharging-skill-section": ["rulings.missing-discharged-in", "rulings.unknown-discharged-in"],
+  "common.ruling-declares-a-discharging-skill-section": ["rulings.missing-discharged-in", "rulings.malformed-discharged-in", "rulings.unknown-discharged-in"],
 
   // decision.schema.json
   "decision.seats-declared-independent-and-not-the-implementer": ["decision.seats-declared-independent-and-not-the-implementer"],
