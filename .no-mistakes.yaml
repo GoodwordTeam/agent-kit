@@ -1,0 +1,14 @@
+# no-mistakes gate configuration for agent-kit.
+#
+# Bun project (bun.lock). `bun test` runs the full suite AND typechecks the
+# tree (tests/typecheck.test.ts shells out to node_modules/.bin/tsc over all
+# of src/ and tests/ — see that file's header) whenever the whole suite runs,
+# so no separate typecheck command is needed. There is no lint/format script;
+# `bun run validate` (package.json's "validate", i.e. `ak validate`) is the
+# repo's own real consistency/denylist gate, described in AGENTS.md, and
+# fills the lint role in its place.
+
+commands:
+  prepare: "bun install --frozen-lockfile"
+  test: "bun test"
+  lint: "bun run validate"
