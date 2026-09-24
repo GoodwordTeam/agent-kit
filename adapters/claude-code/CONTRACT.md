@@ -60,11 +60,13 @@ The canonical `SKILL.md` carries spec keys only (`AUTHORING.md` §4). This adapt
 
 | Generated key | Source in `skill.yaml` | Rule |
 |---|---|---|
-| `disable-model-invocation: true` | `invocation: U`, declared in `packaging.generated_frontmatter` | Emitted for **every** U skill in the bundle, with no exception and no per-skill opt-out |
 | `argument-hint` | `packaging.generated_frontmatter.argument-hint` | Copied verbatim when present; omitted otherwise |
 | `allowed-tools` | `packaging.generated_frontmatter.allowed-tools`, cross-checked against `requires[]` through §3 | Pre-approval only — see §4 |
 
-M skills receive no `disable-model-invocation` key at all rather than an explicit `false`.
+No skill receives `disable-model-invocation`, U or M (`docs/decisions/0003-model-invocation.md`). Every skill is loadable by
+the model, so each U skill's `packaging.hosts[]` entry for this host is `mode: manual` and names the
+unrequested suppression in `unsupported`, as `adapters/codex/CONTRACT.md` §3.1 requires of a host
+that does not suppress model invocation.
 
 Each skill's `packaging.hosts[]` entry for `adapter: claude-code` carries the `mode` it runs in here
 (`autonomous` / `guided` / `manual`) and the `unsupported` semantics this host cannot enforce. §4 is
@@ -111,6 +113,7 @@ compound status is a value no consumer can act on.
 | `tracker-access` | `not-provided` | See `adapters/runner-contract/CONTRACT.md` |
 | `event-delivery` | `not-provided` | The host is session-scoped. Hooks fire inside a live session; there is no durable inbound event queue that survives the session, so no event can be delivered to a run that is not currently open |
 | `runner-grants` | `not-provided` | The host has no grant validator. Nothing in it can decide that a charter authorizes a checkpoint |
+| `firstmate-supervision` | `not-provided` | The host is the worker's harness, not a supervisor over it. See `adapters/firstmate/CONTRACT.md` |
 
 **"See `adapters/<x>/CONTRACT.md`" names where a capability can come from with that adapter
 attached. It is not a claim that this host supplies it, and it is not what decides attachment.**
@@ -147,7 +150,7 @@ Consequences the package accepts:
 
 | Restriction | Enforced? | How the package treats it |
 |---|---|---|
-| `disable-model-invocation: true` blocks model-initiated invocation | Yes, as documented host behavior | The structural half of the invocation law. The packager emits it for every U skill; a non-trigger eval case with a `tool_used: Skill` grader observes it |
+| `disable-model-invocation: true` blocks model-initiated invocation | Yes, as documented host behavior | **Not used.** The packager does not emit it (`docs/decisions/0003-model-invocation.md`), so `no-model-invocation` is not claimed. A U skill's description clause and authority step hold the law, and its non-trigger eval case is what observes them |
 | Permission prompts / permission modes | Yes, operator-configured | Outside the package's control and outside its guarantees. A skill never assumes a given mode |
 | `allowed-tools` denies unlisted tools | **No** | Never relied on. Declarative only |
 | Grant validation for delegated phase operations | **No** | See below |
@@ -205,8 +208,8 @@ Tests this adapter owns, in `tests/adapters/`:
 
 1. **Manifest completeness** — every profile-selected skill appears in `skills[]`, every entry
    resolves to a directory containing a `SKILL.md`, and no directory is unnamed.
-2. **Key generation** — for a fixture `skill.yaml` with `authority: explicit`, the emitted
-   frontmatter contains `disable-model-invocation: true`; for an M skill it contains no such key.
+2. **Key generation** — no emitted frontmatter contains `disable-model-invocation`, for a U skill
+   or an M skill (`docs/decisions/0003-model-invocation.md`).
 3. **Canonical purity** — an invalid-case fixture in which a canonical `SKILL.md` hand-writes
    `allowed-tools` must fail `ak validate`.
 4. **Link closure in the bundle** — a skill referencing a `references/` file that the selected

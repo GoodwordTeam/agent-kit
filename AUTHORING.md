@@ -298,8 +298,9 @@ metadata:
 ---
 ```
 
-**Host keys are generated, never hand-written.** `disable-model-invocation`, `argument-hint` and
-`allowed-tools` are emitted by the packager from `skill.yaml`. Writing one into a canonical
+**Host keys are generated, never hand-written.** `argument-hint` and `allowed-tools` are emitted by
+the packager from `skill.yaml`; `disable-model-invocation` is emitted by no host
+(`docs/decisions/0003-model-invocation.md`). Writing one into a canonical
 `SKILL.md` is a validation failure even though the resulting file would install cleanly — and that is
 precisely why the rule is mechanical rather than advisory: `claude plugin validate --strict` accepts
 all three keys, so nothing downstream would catch the leak.
@@ -309,7 +310,7 @@ The keys and the intent to emit them are declared in `skill.yaml` under
 
 | `skill.yaml` | Generated key (claude-code) | Rule |
 |---|---|---|
-| `invocation: U` | `packaging.generated_frontmatter.disable-model-invocation: true` | Declared for **every** U skill, no exception |
+| `invocation: U` | none. `packaging.generated_frontmatter.disable-model-invocation: true` is still declared for **every** U skill, as the record of its class | Not emitted on any host (`docs/decisions/0003-model-invocation.md`) |
 | `packaging.generated_frontmatter.argument-hint` | `argument-hint` | Copied verbatim |
 | `packaging.generated_frontmatter.allowed-tools` | `allowed-tools` | Pre-approval only, never a sandbox |
 

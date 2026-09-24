@@ -53,6 +53,11 @@ export const RESTRICTIONS: ReadonlyArray<string> = [
  * with -- it is pre-approval, per RESTRICTIONS above -- so a host's key set and
  * a host's guarantees are different questions with different answers.
  *
+ * Neither host gets `disable-model-invocation`. claude-code honors the key, and
+ * this package stopped emitting it (docs/decisions/0003-model-invocation.md):
+ * every skill is loadable by the model, and a U skill's gate is its own
+ * authority step, as it always was on codex.
+ *
  * codex gets neither of the two claude-code keys. `adapters/codex/CONTRACT.md`
  * §3: no per-skill model-invocation suppression is verified on this host, and
  * tool restriction "is not emitted" because the host's confinement is an
@@ -64,7 +69,7 @@ export const RESTRICTIONS: ReadonlyArray<string> = [
  * names exactly the same two.
  */
 export const HOST_FRONTMATTER_KEYS: Record<HostId, ReadonlyArray<string>> = {
-  "claude-code": ["disable-model-invocation", "argument-hint", "allowed-tools"],
+  "claude-code": ["argument-hint", "allowed-tools"],
   codex: ["argument-hint"],
 };
 
@@ -79,9 +84,9 @@ export interface HostCapabilities {
 
 const DEFAULTS: Record<HostId, { enforces: string[]; notes: string[] }> = {
   "claude-code": {
-    enforces: ["no-model-invocation"],
+    enforces: [],
     notes: [
-      "disable-model-invocation is honored by the host, so no-model-invocation is enforced.",
+      "disable-model-invocation is honored by the host, but this package does not emit it (docs/decisions/0003-model-invocation.md), so no-model-invocation is NOT claimed.",
       "allowed-tools is a pre-approval mechanism, not a sandbox; tool-allowlist-enforced is NOT claimed.",
       "No filesystem, network or process confinement is claimed.",
     ],

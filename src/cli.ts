@@ -7,6 +7,7 @@
  */
 
 import { attach, formatAttachResult } from "./attach/index.ts";
+import { runFirstmate } from "./firstmate/cli.ts";
 import { loadCatalog } from "./catalog/load.ts";
 import type { BuildOptions } from "./packaging/build.ts";
 import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.ts";
@@ -32,6 +33,7 @@ const USAGE = [
   "  ak validate [--profile <id>] [--json]      check the tree against catalog.yaml",
   "  ak build [--check] [--profile <id>]        emit dist/claude-code and dist/codex",
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
+  "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home",
   "",
   "Exit 0 when nothing failed, non-zero on any error.",
 ];
@@ -205,6 +207,8 @@ function attachCommand(parsed: Parsed, options: CliOptions): number {
 }
 
 export function runCli(argv: readonly string[], options: CliOptions): number {
+  // Its own flags and its own parser: see src/firstmate/cli.ts.
+  if (argv[0] === "firstmate") return runFirstmate(argv.slice(1), options.io);
   const parsed = parse(argv);
   for (const token of parsed.unknown) options.io.err(`ak: ${token} needs a value`);
   if (parsed.unknown.length > 0) return 2;

@@ -97,6 +97,10 @@ The project's own release checks, discovered rather than assumed.
 9. In `publish`, derive an idempotency key for each remote effect from the run id, the operation id,
    the target identity and the input artifact hash — never from a timestamp, a random value, an
    attempt counter or a session id. Read the target back before the effect and again after it.
+   Where the project ships through no-mistakes, the push and the pull request go through it with
+   review, document and rebase skipped, and a parked gate returns to the lifecycle rather than being
+   answered in the pipeline (ruling `no-mistakes-as-ship-transport`). The mechanics are in
+   `./references/transport-no-mistakes.md`.
 10. Draft the lesson candidate through the knowledgebase adapter's draft operation. It stays a draft:
     publishing it is a separate authority this run does not hold.
 11. Hand the open pull request to the watch lane, and report the ship as prepared rather than
@@ -169,6 +173,10 @@ A lesson candidate, drafted through the knowledgebase adapter and left unpublish
 `remote-push` and `pr-open` are remote effects and occur only in `publish`. Each carries an
 idempotency key derived per `adapters/runner-contract/CONTRACT.md` §5 and is read back before and
 after, so a resumed run returns the existing branch or pull request rather than creating a second.
+
+Through the no-mistakes transport these are still this skill's effects, with the same keys: the
+transport performs them, and super-ship remains the single creator of the pull request. No merge is
+among them (ruling `no-mistakes-as-ship-transport`).
 
 `kb-draft` writes a draft and nothing else; `kb-publish` is not in this skill's envelope.
 

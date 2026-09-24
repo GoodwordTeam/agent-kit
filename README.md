@@ -3,7 +3,7 @@
 One engineering lifecycle, amalgamated from six MIT-licensed donors into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
-**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 4 reference packs · 17 schemas**,
+**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 4 reference packs · 18 schemas**,
 with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
 bundles.
 

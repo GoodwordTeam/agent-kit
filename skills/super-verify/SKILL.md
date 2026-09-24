@@ -74,7 +74,8 @@ credentials by default.
 
 Optionally, receipts from an earlier run. They are history: a receipt is evidence for the revision it
 names and for no other, and one taken before the code moved is read as invalidated rather than as a
-head start.
+head start. The code moved when either the revision or the working-tree diff hash differs from the
+receipt's (`common#/$defs/revision_ref`); an uncommitted edit on the same revision is a move.
 
 ## Workflow
 

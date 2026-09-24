@@ -259,6 +259,37 @@ debt rather than a defect. Whoever restores it inherits one specific obligation 
 from the file to the mapping, by running the same scan the generator would have run. That one
 number is to be verified, not trusted.
 
+## Firstmate integration — obligations on work that is not built
+
+Landed with `adapters/firstmate/` and ADR-0002. Each entry is blocked on a dependency, not on this
+batch, and each names what must change when the dependency lands.
+
+**Knowledgebase evidence.** `ak firstmate preflight` and `bind` refuse `--evidence kb` outright,
+because no knowledgebase exists and the adapter supplies no `kb-write`. When the knowledgebase adapter
+is built, `checkEvidence` in `src/firstmate/checks.ts` must call its readiness check instead of
+refusing, and the mock-forces-dry-run rule in `schemas/firstmate-binding.schema.json` stays. Until
+then every Firstmate task under agent-kit is a dry run.
+
+**Runner-validated grants.** The binding names a charter by hash and nothing checks a sensitive action
+against it; super-ship's charter gate is the only control. When the runner exists, the binding's
+`charter` is what it validates against, and `ak firstmate bind` should refuse a charter the runner
+rejects.
+
+**Cross-task child budgets.** `child_budget.charged_to` names the parent run, and nothing totals spend
+across relaunches, because there is no run ledger. A relaunched worker starts a fresh count.
+
+**Autopilot's independent judgments.** CONTRACT.md §2 says Firstmate dispatches them as separate
+agents. Nothing in patch 0001 does that yet; it is a supervisor instruction in `AGENTS.md` text only.
+
+**The child guard on hosts other than Claude Code.** It relies on `agent_id` in PreToolUse input,
+observed on Claude Code 2.1.281. A host upgrade that drops the field makes the guard a no-op; re-run
+the probe recorded in ADR-0002 after each host upgrade. Codex has no equivalent hook, and the rule is
+prose there.
+
+**A live run.** No Firstmate + worker + subagent run has been performed. The first one is its own
+batch: a scratch Firstmate home at `a5d78f8` with patch 0001, the sample fixture project, a mock
+evidence store and dry-run delivery, with the transcript kept as the receipt.
+
 ## Standing traps — not batch-scoped
 
 **`plan` and `arch` are two spellings of one document.** The architecture document is

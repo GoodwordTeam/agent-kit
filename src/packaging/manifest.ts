@@ -78,7 +78,7 @@ export interface SkillManifest {
  * skills state `invocation` in catalog.yaml and not in skill.yaml -- twenty of
  * them in this tree -- so a reader of skill.yaml alone sees `undefined` for a
  * skill the catalog calls U, while `generateHostFrontmatter`, which reads both,
- * writes `disable-model-invocation: true` for exactly those skills. A second
+ * would write `disable-model-invocation: true` for exactly those skills on a host that defined it. A second
  * reader of skill.yaml alone would have produced a bundle saying a skill is U
  * in its frontmatter and packaging it as though it were not.
  */

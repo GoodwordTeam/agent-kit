@@ -210,8 +210,11 @@ packaging:
     disable-model-invocation: true
   hosts:
     - adapter: claude-code
-      mode: guided
+      mode: manual
       unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
         - >-
           idempotency is not provided by the host. The key is derived and the read-back performed by
           this package; the host neither stores the key nor refuses a duplicate effect.

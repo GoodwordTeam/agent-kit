@@ -103,9 +103,11 @@ its input hashes, and the fix diff (`schemas/review.schema.json` `packet`).
    whoever approved its spec (ruling `missing-supervisor-never-implementer`).
 6. Dispatch the selected seats concurrently within the turn, each in its own isolated review context.
    Every finding quotes the line it is about.
-7. Collect each lane's result as `complete`, `empty` or `unavailable`. A lane that could not run,
-   could not be given its required context, or failed, returns `unavailable` with the reason named —
-   a result, not an absence (ruling `required-lane-failure-is-unavailable`).
+7. Record each lane's state as `covered`, `skipped` or `unavailable` (`schemas/review.schema.json`);
+   the mapping from a seat's own result is in `./references/panel.md`. A lane that could not run,
+   could not be given its required context, or failed, is `unavailable` with the reason named — a
+   result, not an absence (ruling `required-lane-failure-is-unavailable`). Store each covered seat's
+   output exactly as it returned, as a run artifact referenced by hash, before synthesis reads it.
 8. Synthesize without merging: deduplicate by fingerprint, keep each seat's evidence attached to its
    finding, and never rewrite a severity to reconcile two seats. Suppression is by the catalogued
    reasons only, and a suppressed finding stays readable with its reason.
@@ -145,7 +147,9 @@ unit of that evidence: it carries the command or probe, its exit status, the out
 revision and the environment identity (`schemas/verification.schema.json`). An agent's description of
 a green run is not a receipt. A classifier's output and a reviewer's confidence are recorded as
 advisory, and a changed patch does not inherit stale receipts (ruling
-`closure-requires-independent-verification`).
+`closure-requires-independent-verification`). A receipt or a verdict is stale once the revision or
+the working-tree diff hash it names differs from the snapshot being judged; either one moving is
+enough.
 
 Gate: at most two fix-and-verify cycles after the first pass. The third request stops with an
 explicit blocked-or-replan decision and the open findings attached; repeated failure is a signal
@@ -172,6 +176,7 @@ standards never become invented preferences, and a seat that cannot cite a rule 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
 | "The security seat could not be seated, but the implementer knows this code best and can look at it." | Backfilling a seat from the author lane produces an approval no independent evidence supports, which is the one thing an unavailable lane must never become (ruling `missing-supervisor-never-implementer`). | Record the lane as `unavailable` with the reason, block approval, and leave the run resumable for when the seat can be filled. |
+| "Autopilot needs two independent judgments; I will start two reviewers myself, or reuse the standards seat I already started." | A helper this run started is not independent of this run, whoever it is told to be (ruling `missing-supervisor-never-implementer`), and the supervisor judgments are not seats of this panel (ruling `firstmate-outer-loop-agent-kit-inner`). | Finish the panel's own lanes, and return the request for the two judgments to the supervisor that owns the task (Firstmate, where one supervises), which dispatches them as separate agents. |
 | "Only one lane is missing and everything else came back clean, so the verdict is approved with a note." | A required lane's absence is a result, not a footnote; an approval with a note reads downstream as an approval (ruling `required-lane-failure-is-unavailable`). | Set the verdict to `unavailable` or `blocked`, name the lane, and say what would make it runnable. |
 | "It is a one-line change, so spawn the standard panel anyway — it is cheaper than deciding." | A fixed roster is the position this package refused; it spends seats on a typo and teaches readers that panel size means nothing (ruling `panel-composition-by-declared-risk`). | Select from declared risk and attached packs, and record which seats were selected and which signals selected them. |
 | "The fix only touched three lines, so the delta reviews those three lines." | The impact of a fix reaches callers the fix never touched, and a line-based boundary suppresses exactly the class of issue the delta exists to catch (ruling `delta-scope-affected-behavior`). | Bound the delta by affected behavior, and report a serious issue in an untouched affected caller with its novelty evidence. |
@@ -216,7 +221,7 @@ skill that holds it.
 
 ## Stop conditions
 
-`complete`: every selected lane has a state, every required lane is `complete` or `empty`, the
+`complete`: every selected lane has a state, every required lane is `covered`, the
 verdict is set, and the review and findings are emitted. A run whose verdict is `blocked` is
 complete; the block is the result. A delta that ends by establishing a new baseline is complete too:
 the reset closes this scope and the new scope opens at pass 1, which is not a third loop (ruling

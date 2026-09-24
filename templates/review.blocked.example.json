@@ -71,7 +71,11 @@
           "ref": "projects/example-project/runs/example-run-1/verification.json",
           "kind": "receipt"
         }
-      ]
+      ],
+      "raw_output": {
+        "id": "raw-code-review-correctness",
+        "hash": "sha256:3dbd5dc391d66078b1c3543394c3566b3bfd467063a79e7864e41a5187cdc7f2"
+      }
     },
     {
       "role": "code-review/security",
