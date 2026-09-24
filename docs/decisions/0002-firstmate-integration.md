@@ -219,6 +219,11 @@ Follow-ups the runs exposed:
 - **Nothing makes the worker run each phase's skill.** A worker can report `done` having skipped
   super-build. `ak firstmate status done` could refuse unless the binding's required gates each have
   an evidence record; that would make lifecycle fidelity checkable instead of hoped for.
+- **A same-user process can still forge a grant.** The worker session's hook denies
+  `ak firstmate bind`, `install`, `remove` and ledger writes (ADR-0004), but a process outside that
+  hook, or a harness without hooks, can run bind itself or edit the ledger. The supervisor can detect
+  it by comparing each grant record's `binding_sha256` with the binding it wrote; closing it needs
+  the runner's validated grants (`research/briefs/carried-forward.md`).
 - `fm-dod-lib`'s agent-kit DoD asks for `no-mistakes init`, green CI and a PR URL even when the
   binding says dry-run.
 - Launch plumbing: `fm-spawn` has no budget option, needs treehouse, and writes trust entries to

@@ -56,10 +56,14 @@ The skills say this in one paragraph each; `adapters/firstmate/CONTRACT.md` §6 
   Firstmate home defeats it, the same limit CONTRACT.md §5 already records for the binding itself.
   The record's `binding_sha256` lets a reviewer see the binding did not change between grants.
   The ledger rejects a copy or a fabricated home, because its path is not the registered one, and
-  an edit in place, because its hash no longer matches. It does not make forgery impossible for a
-  worker running as the same user: one that edits agent-kit's own ledger can still forge a grant.
-  The brief forbids that, the child guard blocks it for children, and the grant record's
-  `binding_sha256` lets the supervisor audit it after the fact.
+  an edit in place, because its hash no longer matches. The hook in the worker's settings
+  (`hooks/child-guard.sh`) denies the whole worker session, main thread and subagents,
+  `ak firstmate bind`, `install` and `remove` and any write naming the ledger. What remains is a
+  same-user process outside that hook, or a harness without hooks, running bind itself or editing
+  the ledger. The brief forbids it, and the `binding_sha256` in each grant record lets the
+  supervisor detect it by comparing against the binding it wrote. Closing it needs a grant issuer
+  outside the worker's reach: the unbuilt runner's validated grants
+  (`research/briefs/carried-forward.md`).
 - The binding carries no signature. Firstmate can change it by binding again, which re-registers
   it; that is intended, since Firstmate is the controller.
 - Outside Firstmate nothing changes. A host with no binding still stops for explicit invocation.

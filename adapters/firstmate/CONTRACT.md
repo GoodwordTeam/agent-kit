@@ -138,6 +138,7 @@ A declaration is not enforcement (plan §1.2). What each claim in this contract 
 | The worker cannot widen its binding | The binding lives in `data/<task-id>/` in the Firstmate home, outside the worktree | A harness running outside Firstmate's worktree isolation |
 | The worker runs the pinned bundle | The bundle is content-addressed under `~/.agent-kit/pins/<sha256>/`, and the binding names the hash | Nothing stops a worker reading another copy; the review of its receipts is what catches it |
 | A child does not push, merge, open a PR, run `fm-*` or no-mistakes, or write outside its destination | `hooks/child-guard.sh`, on Claude Code | Every other harness: the rule is prose in the brief and nothing more |
+| The worker session does not bind, install or remove, or write the binding ledger | `hooks/child-guard.sh`, on Claude Code, for the main thread and subagents (§6) | Every other harness, and any same-user process outside the worker session |
 | The pipeline creates no unreviewed commit | `--skip review,document,rebase` plus `auto_fix.{test,lint,ci}: 0`, which `ak firstmate preflight` requires | A repository whose trusted config is changed after preflight |
 | The ship decision is the lifecycle's | super-ship's preconditions: receipts and a verdict bound to the shipped snapshot | A worker that pushes by hand; Firstmate's done gate then sees a head with no receipts |
 
@@ -167,7 +168,9 @@ Every grant also requires that the binding validates against its schema; that it
 `ak firstmate bind` registered, unmodified, in agent-kit's ledger at
 `~/.agent-kit/firstmate/bindings/<run_id>.json` (same real path, same sha256); that it lies outside
 the worktree the grant is asked from and outside the bound project; and that the pinned bundle still
-hashes to the bound hash. A same-user worker that edits agent-kit's own ledger can still forge a
-grant. The brief forbids that, the child guard blocks it for children, and the grant record's
-`binding_sha256` lets the supervisor audit it after the fact. Any other operation, merge and scope changes included, is refused. The
+hashes to the bound hash. The worker session's hook denies `ak firstmate bind`, `install` and
+`remove` and any write naming the ledger, on the main thread and in subagents. A same-user process
+outside that hook, or a harness without hooks, can still run bind itself or edit the ledger. The
+brief forbids it, and each grant record's `binding_sha256` lets the supervisor detect it against the
+binding it wrote. Closing it needs the runner's validated grants (ADR-0004). Any other operation, merge and scope changes included, is refused. The
 worker then reports `needs-decision` and Firstmate decides or asks the captain.

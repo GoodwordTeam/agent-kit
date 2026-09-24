@@ -72,7 +72,15 @@ export function grant(args: GrantArgs, akRoot: string, ledgerDir: string): Grant
   const sha = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   const entry = join(ledgerDir, `${binding.run_id}.json`);
   if (!existsSync(entry)) return no(`binding ${path} names run ${binding.run_id}, which ak firstmate bind never registered in ${ledgerDir}`);
-  const record = JSON.parse(readFileSync(entry, "utf8")) as LedgerRecord;
+  let record: LedgerRecord;
+  try {
+    record = JSON.parse(readFileSync(entry, "utf8")) as LedgerRecord;
+  } catch {
+    return no(`ledger record ${entry} is unreadable`);
+  }
+  if (typeof record !== "object" || record === null || typeof record.binding_path !== "string" || typeof record.binding_sha256 !== "string") {
+    return no(`ledger record ${entry} is unreadable`);
+  }
   if (record.binding_path !== at) return no(`binding ${path} is not the ${record.binding_path} ak firstmate bind registered for run ${binding.run_id}`);
   if (record.binding_sha256 !== sha) return no(`binding ${path} hashes to ${sha}, not the ${record.binding_sha256} ak firstmate bind registered`);
   const top = git(args.cwd, ["rev-parse", "--show-toplevel"]);

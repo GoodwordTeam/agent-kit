@@ -148,6 +148,17 @@ describe("ak firstmate grant", () => {
     refused(grant(makeDir(), bindingPath, "ship.prepare", worktree), /never registered/);
   });
 
+  test("refuses with the needs-decision hint when the ledger record is corrupt or the wrong shape", () => {
+    const { worktree, ledger, bindingPath, binding } = bound();
+    const entry = join(ledger, `${binding.run_id}.json`);
+    for (const bad of ["{ truncated", "null", JSON.stringify({ run_id: binding.run_id, binding_path: 7 })]) {
+      writeFileSync(entry, bad);
+      const r = grant(ledger, bindingPath, "review.full", worktree);
+      expect(r.code).toBe(1);
+      refused(r, /ledger record .* is unreadable/);
+    }
+  });
+
   test("bind refuses a '..'-prefixed binding path inside the project", () => {
     const { home, upstream } = makeHome({ patched: true });
     const project = makeProject();

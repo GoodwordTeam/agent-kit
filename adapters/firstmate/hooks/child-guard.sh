@@ -4,10 +4,15 @@
 # The Claude Code PreToolUse hook that enforces part of the task-local child
 # envelope (adapters/firstmate/CHILD-ROLES.md, CONTRACT.md §5).
 #
-# It judges only calls made inside a subagent. Claude Code puts `agent_id` and
-# `agent_type` on the hook input for those and on no main-thread call (observed
-# on 2.1.281); a call without `agent_id` is the worker's own and passes
-# untouched. A child may not:
+# Two rules hold for the whole worker session, main thread and subagents alike
+# (ADR-0004): no `ak firstmate bind`, `install` or `remove`, which are
+# supervisor-side, and no write into agent-kit's binding ledger
+# (~/.agent-kit/firstmate/), whether by Write/Edit/NotebookEdit or by a Bash
+# command naming that path.
+#
+# Every other rule judges only calls made inside a subagent. Claude Code puts
+# `agent_id` and `agent_type` on the hook input for those and on no main-thread
+# call (observed on 2.1.281). A child may not:
 #   - start an agent (Task, Agent) or run `claude` or `codex`: depth is 1;
 #   - run Firstmate (`fm-*`) or no-mistakes;
 #   - `git push`, or `gh pr create` / `gh pr merge` (also through gh-axi), or
@@ -22,8 +27,9 @@
 # resolved, so the guard is one part of the envelope and not all of it.
 #
 # A child call it cannot judge -- no jq, input that is not JSON, a binding that
-# is missing, unreadable or still the unsubstituted token -- is denied. The
-# main thread is never judged, so a broken guard cannot stop the worker.
+# is missing, unreadable or still the unsubstituted token -- is denied. A
+# main-thread call it cannot judge passes, so a broken guard cannot stop the
+# worker; a main-thread call that does not mention `firstmate` is not parsed.
 #
 # Output: a PreToolUse deny decision on stdout, exit 0. Silence means allow.
 
@@ -52,12 +58,17 @@ deny() {
 }
 
 # Cheap exit for the main thread before anything that could fail.
+SUBAGENT=0
 case "$INPUT" in
-  *'"agent_id"'*) ;;
+  *'"agent_id"'*) SUBAGENT=1 ;;
+  *firstmate*) ;;
   *) exit 0 ;;
 esac
 
-command -v jq >/dev/null 2>&1 || deny "jq is unavailable, so this subagent call cannot be judged"
+if ! command -v jq >/dev/null 2>&1; then
+  [ "$SUBAGENT" = 1 ] || exit 0
+  deny "jq is unavailable, so this subagent call cannot be judged"
+fi
 
 # One jq call pulls every field the guard could need out of the hook input.
 # Each field is NUL-terminated so arbitrary bytes (newlines, quotes) survive
@@ -81,7 +92,56 @@ AGENT_ID="" CWD="" TOOL="" CMD="" FILE_PATH="" NOTEBOOK_PATH=""
     (.tool_input.command? // ""), "\u0000",
     (.tool_input.file_path? // ""), "\u0000",
     (.tool_input.notebook_path? // ""), "\u0000"
-  ' 2>/dev/null) || deny "the hook input is not JSON"
+  ' 2>/dev/null) || { [ "$SUBAGENT" = 1 ] || exit 0; deny "the hook input is not JSON"; }
+
+TOK=()
+tokenize() {
+  # Separators and quotes become spaces, so every word is a token.
+  local flat noglob=0
+  flat=$(printf '%s' "$1" | tr ';&|()`"'"'"'\n\t<>' '            ')
+  case $- in *f*) noglob=1 ;; esac
+  set -f
+  # shellcheck disable=SC2206
+  TOK=($flat)
+  [ "$noglob" = 1 ] || set +f
+}
+
+in_ledger() {
+  case "$1" in */.agent-kit/firstmate|*/.agent-kit/firstmate/*|.agent-kit/firstmate|.agent-kit/firstmate/*) return 0 ;; esac
+  return 1
+}
+
+check_session_command() {
+  local n=${#TOK[@]} i word
+  for ((i = 0; i < n; i++)); do
+    word=${TOK[$i]}
+    in_ledger "$word" && deny "the worker session may not name agent-kit's binding ledger in a command ($word)"
+    case "$word" in
+      firstmate|*/firstmate/cli.ts)
+        case "${TOK[$((i + 1))]-}" in
+          bind|install|remove) deny "the worker session may not run ak firstmate ${TOK[$((i + 1))]}; binding is supervisor-side" ;;
+        esac
+        ;;
+    esac
+  done
+}
+
+check_session_write() {
+  local path=$1
+  case "$path" in /*) ;; *) path="$CWD/$path" ;; esac
+  in_ledger "$path" && deny "the worker session may not write agent-kit's binding ledger ($1)"
+  return 0
+}
+
+case "$TOOL" in
+  Bash)
+    tokenize "$CMD"
+    check_session_command ;;
+  Write|Edit|MultiEdit)
+    check_session_write "$FILE_PATH" ;;
+  NotebookEdit)
+    check_session_write "$NOTEBOOK_PATH" ;;
+esac
 
 [ -n "$AGENT_ID" ] || exit 0
 
@@ -127,16 +187,7 @@ check_write() {
 }
 
 check_command() {
-  local cmd=$1
-  # Separators and quotes become spaces, so every word is a token.
-  local flat
-  flat=$(printf '%s' "$cmd" | tr ';&|()`"'"'"'\n\t' '          ')
-  local noglob=0
-  case $- in *f*) noglob=1 ;; esac
-  set -f
-  # shellcheck disable=SC2206
-  local -a tok=($flat)
-  [ "$noglob" = 1 ] || set +f
+  local -a tok=("${TOK[@]}")
   local n=${#tok[@]} i j word base sub method pulls merge body graphql prmut
   for ((i = 0; i < n; i++)); do
     word=${tok[$i]}
@@ -199,7 +250,7 @@ case "$TOOL" in
   Task|Agent)
     deny "a task-local child has depth 1 and may not start an agent" ;;
   Bash)
-    check_command "$CMD" ;;
+    check_command ;;
   Write|Edit|MultiEdit)
     check_write "$FILE_PATH" ;;
   NotebookEdit)
