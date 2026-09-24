@@ -4,11 +4,11 @@
  *
  * It runs every preflight check first and writes nothing when one fails. On
  * success it pins the bundle, writes the binding JSON into the Firstmate home's
- * data/<task-id>/ with its sha256 beside it for `ak firstmate grant`, and returns the brief section rendered from
+ * data/<task-id>/, records it in agent-kit's binding ledger for `ak firstmate grant`, and returns the brief section rendered from
  * adapters/firstmate/WORKER.md for fm-brief to insert.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -16,7 +16,6 @@ import { isInside } from "../util/fs.ts";
 import { canonicalJson, sha256Hex } from "../util/hash.ts";
 import type { Check } from "./checks.ts";
 import {
-  BINDING_SHA_FILE,
   CHILD_ROLE_FAMILY,
   CHILD_ROLES,
   DEFAULT_CHILD_BUDGET,
@@ -25,6 +24,7 @@ import {
   type Evidence,
   type FirstmateOptions,
   type Host,
+  type LedgerRecord,
 } from "./constants.ts";
 import { evidenceFromEnv, readHomeEnv } from "./envfile.ts";
 import { pinBundle } from "./pin.ts";
@@ -196,7 +196,14 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
   const staging = `${out}.partial-${process.pid}`;
   writeFileSync(staging, text);
   renameSync(staging, out);
-  writeFileSync(join(dirname(out), BINDING_SHA_FILE), `sha256:${createHash("sha256").update(text).digest("hex")}\n`);
+  const record: LedgerRecord = {
+    run_id: runId,
+    task_id: args.taskId,
+    binding_path: realpathSync(out),
+    binding_sha256: `sha256:${createHash("sha256").update(text).digest("hex")}`,
+  };
+  mkdirSync(opts.ledgerDir, { recursive: true });
+  writeFileSync(join(opts.ledgerDir, `${runId}.json`), `${JSON.stringify(record, null, 2)}\n`);
 
   return { ok: true, errors: [], checks: checked.checks, binding, markdown };
 }

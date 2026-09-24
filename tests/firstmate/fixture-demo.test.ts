@@ -48,7 +48,7 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
     const { home, upstream } = makeHome({ patched: true });
     const project = makeProject();
     const evidenceDir = makeDir();
-    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), upstream, now: FIXED_NOW };
+    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW };
 
     // Firstmate briefs the task; the patched fm-brief binds it.
     const bound = bind(

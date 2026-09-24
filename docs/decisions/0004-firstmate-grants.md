@@ -31,10 +31,10 @@ non-interactive. It exits 0 and prints a grant record (`operation`, `binding`, `
 `task_id`, `run_id`, `granted_by: "firstmate-binding"`) only when all of these hold:
 
 - the binding exists, parses and validates against `schemas/firstmate-binding.schema.json`;
-- the binding's real path is `<home>/data/<task_id>/<file>`, where `<task_id>` is the binding's own
-  and `<home>` holds `config/agent-kit.env`, the file `ak firstmate install` writes;
-- the binding hashes to the `sha256:<hex>` that `ak firstmate bind` wrote beside it in
-  `agent-kit-binding.sha256`;
+- the binding is the one `ak firstmate bind` registered, unmodified: agent-kit's ledger at
+  `~/.agent-kit/firstmate/bindings/<run_id>.json` (the account's home directory, not `$HOME`) holds a
+  record for the binding's `run_id` whose `binding_path` is the binding's real path and whose
+  `binding_sha256` is its current hash;
 - the binding is outside the git worktree of `--cwd` (default the working directory) and outside the
   bound project and workspace, so the worker cannot have written it;
 - the operation is on the slip: `review.full` needs gate `review-full`, `review.readiness` needs
@@ -55,12 +55,13 @@ The skills say this in one paragraph each; `adapters/firstmate/CONTRACT.md` §6 
 - The grant is only as strong as the binding's location. A harness that lets the worker write the
   Firstmate home defeats it, the same limit CONTRACT.md §5 already records for the binding itself.
   The record's `binding_sha256` lets a reviewer see the binding did not change between grants.
-  The location anchor and the hash record do not make forgery impossible for a worker running as the
-  same user. They mean a forged or widened grant needs an edit to Firstmate's own files, which the
-  brief forbids and the child guard blocks for children. A copy placed somewhere the worker can
-  write is no longer accepted.
-- The binding carries no signature. Firstmate can rewrite it, which is intended: Firstmate is the
-  controller.
+  The ledger rejects a copy or a fabricated home, because its path is not the registered one, and
+  an edit in place, because its hash no longer matches. It does not make forgery impossible for a
+  worker running as the same user: one that edits agent-kit's own ledger can still forge a grant.
+  The brief forbids that, the child guard blocks it for children, and the grant record's
+  `binding_sha256` lets the supervisor audit it after the fact.
+- The binding carries no signature. Firstmate can change it by binding again, which re-registers
+  it; that is intended, since Firstmate is the controller.
 - Outside Firstmate nothing changes. A host with no binding still stops for explicit invocation.
 - **A real runner replaces this.** When runner-validated grants exist, `ak firstmate grant` becomes a
   thin caller of the runner's validator, or is retired and the binding feeds the runner instead. The

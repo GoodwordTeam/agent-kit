@@ -10,10 +10,10 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 
 import { isInside } from "../util/fs.ts";
-import { BINDING_SHA_FILE, ENV_FILE } from "./constants.ts";
+import type { LedgerRecord } from "./constants.ts";
 import { treeHash } from "./pin.ts";
 import { git } from "./proc.ts";
 import { validateBinding, type Binding } from "./schema.ts";
@@ -48,7 +48,7 @@ const no = (reason: string): GrantResult => ({ ok: false, reason });
 
 const real = (path: string): string => (existsSync(path) ? realpathSync(path) : resolve(path));
 
-export function grant(args: GrantArgs, akRoot: string): GrantResult {
+export function grant(args: GrantArgs, akRoot: string, ledgerDir: string): GrantResult {
   if (!Object.hasOwn(GRANT_OPERATIONS, args.operation)) {
     return no(`${args.operation} is not an operation a Firstmate binding grants; only ${Object.keys(GRANT_OPERATIONS).join(", ")} are`);
   }
@@ -69,18 +69,12 @@ export function grant(args: GrantArgs, akRoot: string): GrantResult {
 
   // A binding the worker could have written is one it could have widened (CONTRACT.md §5).
   const at = realpathSync(path);
-  const taskDir = dirname(at);
-  const data = dirname(taskDir);
-  const home = dirname(data);
-  if (basename(taskDir) !== binding.task_id || basename(data) !== "data" || !existsSync(join(home, ENV_FILE))) {
-    return no(`binding ${path} is not in data/${binding.task_id}/ of a Firstmate home with ${ENV_FILE}, where ak firstmate bind writes it`);
-  }
-  const recorded = join(taskDir, BINDING_SHA_FILE);
   const sha = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
-  if (!existsSync(recorded)) return no(`binding ${path} has no ${BINDING_SHA_FILE} beside it; ak firstmate bind did not write it`);
-  if (readFileSync(recorded, "utf8").trim() !== sha) {
-    return no(`binding ${path} hashes to ${sha}, not the ${recorded} ak firstmate bind wrote`);
-  }
+  const entry = join(ledgerDir, `${binding.run_id}.json`);
+  if (!existsSync(entry)) return no(`binding ${path} names run ${binding.run_id}, which ak firstmate bind never registered in ${ledgerDir}`);
+  const record = JSON.parse(readFileSync(entry, "utf8")) as LedgerRecord;
+  if (record.binding_path !== at) return no(`binding ${path} is not the ${record.binding_path} ak firstmate bind registered for run ${binding.run_id}`);
+  if (record.binding_sha256 !== sha) return no(`binding ${path} hashes to ${sha}, not the ${record.binding_sha256} ak firstmate bind registered`);
   const top = git(args.cwd, ["rev-parse", "--show-toplevel"]);
   const worktree = top.code === 0 && top.text !== "" ? real(top.text) : real(args.cwd);
   if (isInside(at, worktree)) return no(`binding ${path} is inside the worktree ${worktree}, which the worker can write`);

@@ -28,6 +28,7 @@ function env(over: Partial<Parameters<typeof bind>[1]> = {}) {
       akRoot: REPO,
       bundleDir: makeBundle(),
       pinsDir: makeDir(),
+      ledgerDir: makeDir(),
       upstream,
       now: FIXED_NOW,
       ...over,
@@ -51,7 +52,7 @@ describe("preflight", () => {
     const { home, upstream } = makeHome({ patched: false });
     const result = preflight(
       { fmHome: home, project: makeProject(), host: "claude-code", evidence: { store: "mock", location: makeDir() } },
-      { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), upstream, now: FIXED_NOW },
+      { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW },
     );
     expect(failed(result.checks)).toEqual(["patch-applied"]);
     expect(result.ok).toBe(false);
@@ -343,7 +344,7 @@ describe("install and remove", () => {
 
   test("refuses an unpatched home, and refuses to overwrite a file it did not write", () => {
     const unpatched = makeHome({ patched: false });
-    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), upstream: unpatched.upstream, now: FIXED_NOW };
+    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream: unpatched.upstream, now: FIXED_NOW };
     expect(install({ fmHome: unpatched.home }, opts).ok).toBe(false);
     expect(existsSync(join(unpatched.home, "config/agent-kit.env"))).toBe(false);
 

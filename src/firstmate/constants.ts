@@ -3,7 +3,7 @@
  * patch. adapters/firstmate/CONTRACT.md §3 is the authority; these are the
  * values it names.
  */
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 
 export interface Upstream {
@@ -44,8 +44,6 @@ export const MOCK_LABEL = "mock evidence store: fixture demonstration, not a kno
 export const ENV_FILE = "config/agent-kit.env";
 export const EVIDENCE_FILE = "config/agent-kit/evidence.env";
 export const SETTINGS_FILE = "config/agent-kit/worker-settings.json";
-/** Written by `ak firstmate bind` beside the binding: the binding's sha256, which `ak firstmate grant` checks. */
-export const BINDING_SHA_FILE = "agent-kit-binding.sha256";
 export const ENV_HEADER = "# Written by ak firstmate install. Parsed by Firstmate, never sourced.";
 
 /**
@@ -85,6 +83,23 @@ export function defaultPinsDir(): string {
   return process.env.AK_PINS_DIR ?? join(homedir(), ".agent-kit", "pins");
 }
 
+/**
+ * agent-kit's ledger of the bindings `ak firstmate bind` wrote, one `<run_id>.json` each, which
+ * `ak firstmate grant` checks. Resolved from the account's home directory, not from `HOME` or any
+ * other variable a worker could set for the grant it asks for.
+ */
+export function defaultLedgerDir(): string {
+  return join(userInfo().homedir, ".agent-kit", "firstmate", "bindings");
+}
+
+/** One ledger record: the binding bind wrote, where it wrote it, and its hash. */
+export interface LedgerRecord {
+  run_id: string;
+  task_id: string;
+  binding_path: string;
+  binding_sha256: string;
+}
+
 export interface FirstmateOptions {
   /** The agent-kit checkout: schemas/, adapters/, catalog.yaml. */
   akRoot: string;
@@ -92,6 +107,8 @@ export interface FirstmateOptions {
   bundleDir: string;
   /** Where pinned bundles live, content-addressed. */
   pinsDir: string;
+  /** The binding ledger bind writes and grant reads (defaultLedgerDir). */
+  ledgerDir: string;
   upstream: Upstream;
   now: () => Date;
 }

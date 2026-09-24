@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 
 import { bind } from "./bind.ts";
 import {
+  defaultLedgerDir,
   defaultPinsDir,
   defaultUpstream,
   HOSTS,
@@ -114,12 +115,13 @@ const str = (a: Args, name: string): string | undefined => {
   return typeof v === "string" ? v : undefined;
 };
 
-function options(a: Args, host: Host): FirstmateOptions {
+function options(a: Args, host: Host, ledgerDir: string): FirstmateOptions {
   const akRoot = resolve(import.meta.dir, "..", "..");
   return {
     akRoot,
     bundleDir: resolve(str(a, "bundle-dir") ?? join(akRoot, "dist", host)),
     pinsDir: resolve(str(a, "pins-dir") ?? defaultPinsDir()),
+    ledgerDir,
     upstream: defaultUpstream(akRoot),
     now: () => new Date(),
   };
@@ -145,7 +147,7 @@ function need(a: Args, names: string[], io: Io, sub: string): boolean {
   return missing.length === 0;
 }
 
-export function runFirstmate(argv: readonly string[], io: Io): number {
+export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string = defaultLedgerDir()): number {
   const sub = argv[0];
   if (sub === undefined || !(sub in ALLOWED)) {
     if (sub !== undefined) io.err(`ak firstmate: unknown subcommand ${sub}`);
@@ -170,7 +172,7 @@ export function runFirstmate(argv: readonly string[], io: Io): number {
     return 2;
   }
   const evidence = stored.evidence;
-  const opts = options(a, host);
+  const opts = options(a, host, ledgerDir);
 
   switch (sub) {
     case "preflight": {
@@ -269,7 +271,7 @@ export function runFirstmate(argv: readonly string[], io: Io): number {
       if (!need(a, ["binding", "operation"], io, sub)) return 2;
       const binding = resolve(str(a, "binding")!);
       const operation = str(a, "operation")!;
-      const result = grant({ binding, operation, cwd: resolve(str(a, "cwd") ?? process.cwd()) }, opts.akRoot);
+      const result = grant({ binding, operation, cwd: resolve(str(a, "cwd") ?? process.cwd()) }, opts.akRoot, opts.ledgerDir);
       if (!result.ok) {
         io.err(`ak firstmate grant: refused: ${result.reason}`);
         io.err(

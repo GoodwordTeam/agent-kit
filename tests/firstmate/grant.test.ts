@@ -2,51 +2,58 @@
  * `ak firstmate grant`: the Firstmate binding as the delegated grant (ADR-0004).
  *
  * Label: mock/contract. Every case binds a task in a temp Firstmate home built by
- * ./fixture.ts, then asks the real `ak firstmate` entry for a grant.
+ * ./fixture.ts, with a temp binding ledger, then asks the real `ak firstmate` entry for a grant.
  */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { bind } from "../../src/firstmate/bind.ts";
 import { runFirstmate } from "../../src/firstmate/cli.ts";
-import { BINDING_SHA_FILE, ENV_FILE } from "../../src/firstmate/constants.ts";
+import { ENV_FILE, type LedgerRecord } from "../../src/firstmate/constants.ts";
 import { FIXED_NOW, makeBundle, makeDir, makeHome, makeProject, REPO } from "./fixture.ts";
 
 const sha256 = (bytes: string | Buffer) => `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
 
-function bound(taskId = "T-G") {
+function bound(opts: { taskId?: string; out?: (home: string, worktree: string) => string } = {}) {
+  const taskId = opts.taskId ?? "T-G";
   const { home, upstream } = makeHome({ patched: true });
-  // What `ak firstmate install` leaves, and what marks the directory as a Firstmate home.
-  writeFileSync(join(home, ENV_FILE), "");
   const project = makeProject();
-  const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), upstream, now: FIXED_NOW };
-  const bindingPath = join(home, "data", taskId, "binding.json");
-  const r = bind(
-    { fmHome: home, taskId, project, mode: "agent-kit", bindingOut: bindingPath, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
-    opts,
-  );
-  if (!r.ok) throw new Error(r.errors.join("\n"));
   // The worker's worktree: a checkout of its own, apart from the Firstmate home.
   const worktree = makeProject();
-  return { home, project, worktree, bindingPath, binding: r.binding! };
+  const ledger = makeDir();
+  const bindingPath = opts.out?.(home, worktree) ?? join(home, "data", taskId, "binding.json");
+  const r = bind(
+    { fmHome: home, taskId, project, mode: "agent-kit", bindingOut: bindingPath, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+    { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: ledger, upstream, now: FIXED_NOW },
+  );
+  if (!r.ok) throw new Error(r.errors.join("\n"));
+  return { home, project, worktree, ledger, bindingPath, binding: r.binding! };
 }
 
-/** Rewrite a binding and its hash record together, as Firstmate re-binding would. */
-function rewrite(bindingPath: string, binding: unknown) {
+/** Write a binding and register it in the ledger, as a Firstmate re-bind would. */
+function rewrite(ledger: string, bindingPath: string, binding: { run_id: string; task_id: string }) {
   const text = JSON.stringify(binding);
+  mkdirSync(dirname(bindingPath), { recursive: true });
   writeFileSync(bindingPath, text);
-  writeFileSync(join(dirname(bindingPath), BINDING_SHA_FILE), `${sha256(text)}\n`);
+  const record: LedgerRecord = {
+    run_id: binding.run_id,
+    task_id: binding.task_id,
+    binding_path: realpathSync(bindingPath),
+    binding_sha256: sha256(text),
+  };
+  writeFileSync(join(ledger, `${binding.run_id}.json`), JSON.stringify(record));
 }
 
-function grant(bindingPath: string, operation: string, cwd: string) {
+function grant(ledger: string, bindingPath: string, operation: string, cwd: string) {
   const out: string[] = [];
   const err: string[] = [];
-  const code = runFirstmate(["grant", "--binding", bindingPath, "--operation", operation, "--cwd", cwd], {
-    out: (l) => out.push(l),
-    err: (l) => err.push(l),
-  });
+  const code = runFirstmate(
+    ["grant", "--binding", bindingPath, "--operation", operation, "--cwd", cwd],
+    { out: (l) => out.push(l), err: (l) => err.push(l) },
+    ledger,
+  );
   return { code, out, err };
 }
 
@@ -59,11 +66,16 @@ function refused(r: { code: number; out: string[]; err: string[] }, reason: RegE
 
 describe("ak firstmate grant", () => {
   test("grants each operation the binding covers and prints the grant record", () => {
-    const { worktree, bindingPath, binding } = bound();
+    const { worktree, ledger, bindingPath, binding } = bound();
     const sha = sha256(readFileSync(bindingPath));
-    expect(readFileSync(join(dirname(bindingPath), BINDING_SHA_FILE), "utf8").trim()).toBe(sha);
+    expect(JSON.parse(readFileSync(join(ledger, `${binding.run_id}.json`), "utf8"))).toEqual({
+      run_id: binding.run_id,
+      task_id: binding.task_id,
+      binding_path: realpathSync(bindingPath),
+      binding_sha256: sha,
+    });
     for (const operation of ["review.full", "review.readiness", "ship.prepare"]) {
-      const r = grant(bindingPath, operation, worktree);
+      const r = grant(ledger, bindingPath, operation, worktree);
       expect(r.err).toEqual([]);
       expect(r.code).toBe(0);
       expect(JSON.parse(r.out.join("\n"))).toEqual({
@@ -77,65 +89,69 @@ describe("ak firstmate grant", () => {
     }
   });
 
+  test("grants a binding bind wrote under a data-dir override, outside the home", () => {
+    const { worktree, ledger, bindingPath } = bound({ out: () => join(makeDir(), "override-data", "T-G", "agent-kit-binding.json") });
+    expect(grant(ledger, bindingPath, "ship.prepare", worktree).code).toBe(0);
+  });
+
   test("refuses a binding inside the worktree the grant is asked from, even from a subdirectory", () => {
-    const { home, bindingPath } = bound();
-    refused(grant(bindingPath, "review.full", home), /inside the worktree/);
-    refused(grant(bindingPath, "review.full", join(home, "config")), /inside the worktree/);
+    const { worktree, ledger, bindingPath } = bound({ out: (_, wt) => join(wt, "binding.json") });
+    refused(grant(ledger, bindingPath, "review.full", worktree), /inside the worktree/);
+    mkdirSync(join(worktree, "src"), { recursive: true });
+    refused(grant(ledger, bindingPath, "review.full", join(worktree, "src")), /inside the worktree/);
   });
 
   test("a binding whose name starts with '..' is still inside the worktree", () => {
-    const { home, bindingPath } = bound();
-    copyFileSync(bindingPath, join(dirname(bindingPath), "..binding.json"));
-    refused(grant(join(dirname(bindingPath), "..binding.json"), "review.full", home), /inside the worktree/);
+    const { worktree, ledger, bindingPath } = bound({ out: (_, wt) => join(wt, "..binding.json") });
+    refused(grant(ledger, bindingPath, "review.full", worktree), /inside the worktree/);
   });
 
-  test("refuses a binding inside the bound project checkout", () => {
-    const { project, worktree, bindingPath, binding } = bound();
-    // A project shaped like a Firstmate home, so only the project check stands in the way.
-    mkdirSync(dirname(join(project, ENV_FILE)), { recursive: true });
-    writeFileSync(join(project, ENV_FILE), "");
-    const dir = join(project, "data", binding.task_id);
-    mkdirSync(dir, { recursive: true });
-    copyFileSync(bindingPath, join(dir, "binding.json"));
-    copyFileSync(join(dirname(bindingPath), BINDING_SHA_FILE), join(dir, BINDING_SHA_FILE));
-    refused(grant(join(dir, "binding.json"), "review.full", worktree), /inside the project/);
+  test("refuses a binding inside the bound project checkout, even one the ledger names", () => {
+    const { project, worktree, ledger, bindingPath, binding } = bound();
+    const copy = join(project, "binding.json");
+    copyFileSync(bindingPath, copy);
+    rewrite(ledger, copy, binding);
+    refused(grant(ledger, copy, "review.full", worktree), /inside the project/);
   });
 
-  test("refuses a copied-and-widened binding outside a Firstmate home's data/<task-id>/", () => {
-    const { worktree, bindingPath, binding } = bound();
+  test("refuses a copied-and-widened binding, and one in a fabricated home", () => {
+    const { worktree, ledger, bindingPath } = bound();
     const b = JSON.parse(readFileSync(bindingPath, "utf8"));
     b.required_gates = b.required_gates.filter((g: string) => g !== "ship-preflight");
-    rewrite(bindingPath, b);
-    refused(grant(bindingPath, "ship.prepare", worktree), /ship-preflight/);
-    b.required_gates = [...b.required_gates, "ship-preflight"];
+    rewrite(ledger, bindingPath, b);
+    refused(grant(ledger, bindingPath, "ship.prepare", worktree), /ship-preflight/);
+    const widened = JSON.stringify({ ...b, required_gates: [...b.required_gates, "ship-preflight"] });
+
     const loose = join(makeDir(), "b.json");
-    rewrite(loose, b);
-    refused(grant(loose, "ship.prepare", worktree), /not in data\/T-G\//);
+    writeFileSync(loose, widened);
+    refused(grant(ledger, loose, "ship.prepare", worktree), /not the .* ak firstmate bind registered/);
 
-    // Home-shaped but with no agent-kit.env: not a Firstmate home.
-    const fake = join(makeDir(), "data", binding.task_id, "binding.json");
+    // A home-shaped directory with config/agent-kit.env and a matching hash beside the binding.
+    const fakeHome = makeDir();
+    mkdirSync(join(fakeHome, "config"), { recursive: true });
+    writeFileSync(join(fakeHome, ENV_FILE), "");
+    const fake = join(fakeHome, "data", b.task_id, "binding.json");
     mkdirSync(dirname(fake), { recursive: true });
-    rewrite(fake, b);
-    refused(grant(fake, "ship.prepare", worktree), /not in data\/T-G\//);
+    writeFileSync(fake, widened);
+    writeFileSync(join(dirname(fake), "agent-kit-binding.sha256"), `${sha256(widened)}\n`);
+    refused(grant(ledger, fake, "ship.prepare", worktree), /not the .* ak firstmate bind registered/);
   });
 
-  test("refuses a binding edited in place, and one with no hash record beside it", () => {
-    const { worktree, bindingPath } = bound();
+  test("refuses a binding edited in place, and one bind never registered", () => {
+    const { worktree, ledger, bindingPath } = bound();
     const b = JSON.parse(readFileSync(bindingPath, "utf8"));
     b.required_gates = b.required_gates.filter((g: string) => g !== "ship-preflight");
-    rewrite(bindingPath, b);
-    refused(grant(bindingPath, "ship.prepare", worktree), /ship-preflight/);
+    rewrite(ledger, bindingPath, b);
     b.required_gates = [...b.required_gates, "ship-preflight"];
     writeFileSync(bindingPath, JSON.stringify(b));
-    refused(grant(bindingPath, "ship.prepare", worktree), /hashes to/);
-    rmSync(join(dirname(bindingPath), BINDING_SHA_FILE));
-    refused(grant(bindingPath, "ship.prepare", worktree), /has no .* beside it/);
+    refused(grant(ledger, bindingPath, "ship.prepare", worktree), /hashes to/);
+    refused(grant(makeDir(), bindingPath, "ship.prepare", worktree), /never registered/);
   });
 
   test("bind refuses a '..'-prefixed binding path inside the project", () => {
     const { home, upstream } = makeHome({ patched: true });
     const project = makeProject();
-    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), upstream, now: FIXED_NOW };
+    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW };
     const r = bind(
       { fmHome: home, taskId: "T-D", project, mode: "agent-kit", bindingOut: join(project, "..b.json"), host: "claude-code", evidence: { store: "mock", location: makeDir() } },
       opts,
@@ -145,41 +161,41 @@ describe("ak firstmate grant", () => {
   });
 
   test("refuses an operation whose gate the binding does not require", () => {
-    const { worktree, bindingPath } = bound();
+    const { worktree, ledger, bindingPath } = bound();
     const b = JSON.parse(readFileSync(bindingPath, "utf8"));
     b.required_gates = ["verify", "review-readiness"];
-    rewrite(bindingPath, b);
-    refused(grant(bindingPath, "review.full", worktree), /review-full/);
-    refused(grant(bindingPath, "ship.prepare", worktree), /ship-preflight/);
-    expect(grant(bindingPath, "review.readiness", worktree).code).toBe(0);
+    rewrite(ledger, bindingPath, b);
+    refused(grant(ledger, bindingPath, "review.full", worktree), /review-full/);
+    refused(grant(ledger, bindingPath, "ship.prepare", worktree), /ship-preflight/);
+    expect(grant(ledger, bindingPath, "review.readiness", worktree).code).toBe(0);
   });
 
   test("refuses a tampered binding that no longer validates, and one that is not JSON", () => {
-    const { worktree, bindingPath } = bound();
+    const { worktree, ledger, bindingPath } = bound();
     const b = JSON.parse(readFileSync(bindingPath, "utf8"));
     b.delivery.merge = true;
-    rewrite(bindingPath, b);
-    refused(grant(bindingPath, "ship.prepare", worktree), /does not validate/);
+    rewrite(ledger, bindingPath, b);
+    refused(grant(ledger, bindingPath, "ship.prepare", worktree), /does not validate/);
     writeFileSync(bindingPath, "{ not json");
-    refused(grant(bindingPath, "review.full", worktree), /not JSON/);
-    refused(grant(join(makeDir(), "missing.json"), "review.full", worktree), /does not exist/);
+    refused(grant(ledger, bindingPath, "review.full", worktree), /not JSON/);
+    refused(grant(ledger, join(makeDir(), "missing.json"), "review.full", worktree), /does not exist/);
   });
 
   test("refuses when the pinned bundle no longer matches its hash, or is gone", () => {
-    const { worktree, bindingPath, binding } = bound();
+    const { worktree, ledger, bindingPath, binding } = bound();
     writeFileSync(join(binding.skill_bundle.path, "skills/super-ship/SKILL.md"), "---\nname: super-ship\n---\nedited\n");
-    refused(grant(bindingPath, "ship.prepare", worktree), /pinned bundle/);
+    refused(grant(ledger, bindingPath, "ship.prepare", worktree), /pinned bundle/);
 
     const b = JSON.parse(readFileSync(bindingPath, "utf8"));
     b.skill_bundle.path = join(makeDir(), "gone");
-    rewrite(bindingPath, b);
-    refused(grant(bindingPath, "review.full", worktree), /pinned bundle/);
+    rewrite(ledger, bindingPath, b);
+    refused(grant(ledger, bindingPath, "review.full", worktree), /pinned bundle/);
   });
 
   test("refuses an operation that is not on the slip: merge and unknown names", () => {
-    const { worktree, bindingPath } = bound();
-    refused(grant(bindingPath, "merge", worktree), /not an operation/);
-    refused(grant(bindingPath, "review.delta", worktree), /not an operation/);
+    const { worktree, ledger, bindingPath } = bound();
+    refused(grant(ledger, bindingPath, "merge", worktree), /not an operation/);
+    refused(grant(ledger, bindingPath, "review.delta", worktree), /not an operation/);
   });
 
   test("a missing flag is a usage error", () => {
