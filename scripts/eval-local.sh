@@ -65,7 +65,7 @@ if [[ -s "$json" ]]; then
                  (.aggregates.scoreWithout | n),
                  (.aggregates.delta | n),
                  fired] | @tsv),
-    (["overall", (.aggregates.overallScore | n), "", (.aggregates.meanDelta | n), ""] | @tsv),
+    (["overall", (.aggregates.overallScore | n), "-", (.aggregates.meanDelta | n), "-"] | @tsv),
     "cost $\(.costUsd * 100 | round / 100)  \(.durationSeconds)s  partial=\(.partial)"
   ' "$json" | column -t -s $'\t'
   echo "eval-local: full result in $json"
