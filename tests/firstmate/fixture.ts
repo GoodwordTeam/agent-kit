@@ -89,6 +89,7 @@ export const LIFECYCLE = [
 export function makeBundle(extra: Record<string, string> = {}): string {
   const files: Record<string, string> = {
     "skills/super-ship/references/transport-no-mistakes.md": "# Transport\n",
+    "bin/ak-gate.mjs": "// gate\n",
     ...extra,
   };
   for (const id of LIFECYCLE) files[`skills/${id}/SKILL.md`] = `---\nname: ${id}\n---\n`;

@@ -130,7 +130,7 @@ its input hashes, and the fix diff (`schemas/review.schema.json` `packet`).
     approval no matter what the panel concluded.
 11. Set the verdict from the lane results: `approved`, `changes-requested`, `blocked` or
     `unavailable`. Emit the review and its findings, and report what is still open.
-12. On `approved`, and only then, record the gate for this mode: `node ../../bin/ak-gate.mjs record
+12. On `approved`, and only then, record the gate for this mode: `node <this skill's directory>/../../bin/ak-gate.mjs record
     --gate review-full`, `review-delta` or `review-readiness` (the bundle's `bin/`, two directories
     above this skill). A delta record at the head is what lets a full review of an earlier head count.
     Run it from the project checkout; the run defaults to the branch and the records to the

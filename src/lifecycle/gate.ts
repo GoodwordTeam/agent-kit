@@ -133,9 +133,6 @@ export interface GateRecord {
   gate: Gate;
   snapshot: Snapshot;
   recorded_at: string;
-  /** The phase's own artifact (check result, receipt, verdict), when it has one. */
-  ref?: string;
-  ref_sha256?: string;
 }
 
 const isGate = (g: string): g is Gate => (GATES as readonly string[]).includes(g);
@@ -167,7 +164,6 @@ export interface RecordArgs {
   run: string;
   gate: Gate;
   project: string;
-  ref?: string;
   now?: () => Date;
 }
 
@@ -182,12 +178,6 @@ export function recordGate(a: RecordArgs): { ok: true; path: string; record: Gat
     snapshot,
     recorded_at: (a.now ?? (() => new Date()))().toISOString(),
   };
-  if (a.ref !== undefined) {
-    const ref = resolve(a.ref);
-    if (!existsSync(ref) || !statSync(ref).isFile()) return { ok: false, reason: `--ref ${ref} is not a file` };
-    record.ref = ref;
-    record.ref_sha256 = `sha256:${createHash("sha256").update(readFileSync(ref)).digest("hex")}`;
-  }
   // One file per gate and snapshot: re-recording the same state is idempotent, and a fix cycle adds a
   // record rather than replacing the one before it.
   const name = `${snapshot.revision}-${snapshot.diff_hash.replace(/^sha256:/, "").slice(0, 16)}.json`;
@@ -251,6 +241,35 @@ export interface CheckResult {
 const isAncestor = (project: string, older: string, newer: string): boolean =>
   older === newer || git(project, ["merge-base", "--is-ancestor", older, newer]).code === 0;
 
+const EMPTY_DIFF = `sha256:${createHash("sha256").digest("hex")}`;
+
+/**
+ * Where this branch left the default branch (origin/HEAD, else main, else master): the merge-base of
+ * the head with it. Undefined when none of them resolves.
+ */
+function forkPoint(project: string, head: string): { branch: string; base: string } | undefined {
+  for (const branch of ["refs/remotes/origin/HEAD", "main", "master"]) {
+    const ref = git(project, ["rev-parse", "--verify", "--quiet", `${branch}^{commit}`]);
+    if (ref.code !== 0) continue;
+    const base = git(project, ["merge-base", head, ref.text]);
+    return base.code === 0 ? { branch, base: base.text } : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * An earlier record is on this branch's line when its revision is in the head's history and its
+ * snapshot is not already on the default branch: a branch reused after a merge does not inherit the
+ * old run's records. A record at the head's own revision always is.
+ */
+function onBranchLine(project: string, r: Snapshot, head: string, fork: { base: string } | undefined): boolean {
+  if (r.revision === head) return true;
+  if (!isAncestor(project, r.revision, head)) return false;
+  if (fork === undefined) return true;
+  if (r.revision === fork.base) return r.diff_hash !== EMPTY_DIFF;
+  return !isAncestor(project, r.revision, fork.base);
+}
+
 export function checkGates(a: CheckArgs): CheckResult {
   let head = a.head;
   if (head === undefined) {
@@ -260,6 +279,7 @@ export function checkGates(a: CheckArgs): CheckResult {
   }
   const refusals: string[] = [];
   const stale = (g: Gate, why: string) => refusals.push(`refused: gate ${g} has no current evidence (${why})`);
+  const fork = a.gates.some((g) => EARLIER.has(g)) ? forkPoint(a.project, head.revision) : undefined;
 
   for (const gate of a.gates) {
     const records = readRecords(a.dir, a.run, gate);
@@ -270,9 +290,10 @@ export function checkGates(a: CheckArgs): CheckResult {
     if (records.some((r) => same(r.snapshot, head))) continue;
 
     if (EARLIER.has(gate)) {
-      const onLine = records.filter((r) => isAncestor(a.project, r.snapshot.revision, head.revision));
+      const onLine = records.filter((r) => onBranchLine(a.project, r.snapshot, head.revision, fork));
       if (onLine.length === 0) {
-        stale(gate, `every record is for a revision that is not an ancestor of ${short(head)}`);
+        const since = fork === undefined ? "" : ` since it left ${fork.branch} at ${fork.base.slice(0, 12)}`;
+        stale(gate, `every record is for a revision that is not an ancestor of ${short(head)}${since}`);
         continue;
       }
       if (gate === "build-checks") continue;
@@ -297,7 +318,7 @@ export interface Io {
 export const LIFECYCLE_USAGE = [
   "ak lifecycle — the gate records each lifecycle phase leaves, and the check super-ship runs first",
   "",
-  "  ak lifecycle record --gate <gate> [--ref <file>] [--run <id>] [--dir <dir>] [--project <dir>]",
+  "  ak lifecycle record --gate <gate> [--run <id>] [--dir <dir>] [--project <dir>]",
   "  ak lifecycle check [--gates <g,g>] [--run <id>] [--dir <dir>] [--project <dir>] [--json]",
   "",
   `  gates: ${GATES.join(", ")}`,
@@ -309,7 +330,7 @@ export const LIFECYCLE_USAGE = [
 ];
 
 const FLAGS: Record<string, readonly string[]> = {
-  record: ["gate", "ref", "run", "dir", "project"],
+  record: ["gate", "run", "dir", "project"],
   check: ["gates", "run", "dir", "project", "json"],
 };
 
@@ -366,7 +387,7 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
       io.err(`ak lifecycle record: --gate must be one of ${GATES.join(", ")}`);
       return 2;
     }
-    const r = recordGate({ dir, run, gate, project, ref: str("ref") });
+    const r = recordGate({ dir, run, gate, project });
     if (!r.ok) {
       io.err(`ak lifecycle record: ${r.reason}`);
       return 1;

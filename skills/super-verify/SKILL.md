@@ -103,7 +103,7 @@ receipt's (`common#/$defs/revision_ref`); an uncommitted edit on the same revisi
 10. Claim exactly what the receipts support, and publish the matrix and the receipts through the
     knowledgebase adapter's `publishArtifact` operation with a run-artifact placement. Return the
     verdict per criterion, not a summary sentence over them.
-11. When every criterion is confirmed, record the gate: `node ../../bin/ak-gate.mjs record --gate verify`
+11. When every criterion is confirmed, record the gate: `node <this skill's directory>/../../bin/ak-gate.mjs record --gate verify`
     (the bundle's `bin/`, two directories above this skill). The record names this revision and diff
     hash, so any later edit makes it stale and super-ship sends you back here.
     Run it from the project checkout; the run defaults to the branch and the records to the

@@ -103,6 +103,25 @@ describe("ak lifecycle check, standalone", () => {
     expect(r.err).toContain("refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor");
   });
 
+  test("a branch name reused after its run was merged does not inherit that run's records", () => {
+    const dir = repo();
+    record(dir, "build-checks");
+    git(dir, "commit", "-qam", "build");
+    record(dir, ...PRE_SHIP_GATES);
+    expect(ak(dir, "check").code).toBe(0);
+    git(dir, "checkout", "-q", "main");
+    git(dir, "merge", "-q", "--no-ff", "-m", "merge feature", "feature");
+    git(dir, "checkout", "-q", "feature");
+    git(dir, "merge", "-q", "--ff-only", "main");
+    writeFileSync(join(dir, "src/a.js"), "export const a = 6;\n"); // new work that skips super-build
+    record(dir, "verify", "review-delta", "review-readiness");
+    const r = ak(dir, "check");
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor");
+    expect(r.err).toContain("since it left main at");
+    expect(r.err).toContain("refused: gate review-full has no current evidence");
+  });
+
   test("records live under the git common directory, so a linked worktree's run is found from any worktree", () => {
     const dir = repo();
     git(dir, "commit", "-qam", "work");

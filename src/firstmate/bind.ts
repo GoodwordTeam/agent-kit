@@ -108,6 +108,9 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
 
   const pin = pinBundle(opts.bundleDir, opts.pinsDir);
   if (typeof pin === "string") return refused([pin], checked.checks);
+  if (!existsSync(join(pin.path, GATE_FILE))) {
+    return refused([`the pinned bundle at ${pin.path} has no ${GATE_FILE}, so the worker could not record or check a lifecycle gate; rebuild it with ak build`], checked.checks);
+  }
 
   let charter: Binding["charter"] = null;
   if (args.charter !== undefined) {

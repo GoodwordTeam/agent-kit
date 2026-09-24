@@ -87,11 +87,11 @@ The project's own release checks, discovered rather than assumed.
    `dry-run` stops there.
 2. Confirm the preconditions: receipts bind to the head, the review verdict binds to that head's
    artifact hash. A verdict of `blocked` or `unavailable` stops the run. Start with
-   `node ../../bin/ak-gate.mjs check` (the bundle's `bin/`, two directories above this skill): it
+   `node <this skill's directory>/../../bin/ak-gate.mjs check` (the bundle's `bin/`, two directories above this skill): it
    needs a current record from super-build, super-verify, super-review full (or a delta at this head)
    and super-review readiness. A `refused: gate <g> has no current evidence` line stops the run with
    `needs-input` naming that phase; go back and run it. Once every precondition holds, record
-   `node ../../bin/ak-gate.mjs record --gate ship-preflight`.
+   `node <this skill's directory>/../../bin/ak-gate.mjs record --gate ship-preflight`.
    Run it from the project checkout; the run defaults to the branch and the records to the
    repository's git directory, and a binding's brief supplies `--run` and `--dir` when it has them.
 3. Run the sensitive-data scan over what would be committed. A candidate secret stops the run; where

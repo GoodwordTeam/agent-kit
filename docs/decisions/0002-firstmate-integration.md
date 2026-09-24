@@ -250,7 +250,11 @@ The first follow-up above is closed this way:
 - The check reads "current" per gate. `verify`, `review-delta`, `review-readiness` and `ship-preflight`
   must name the exact head, revision and diff hash. `build-checks` and `review-full` may name an earlier
   revision in the head's history, because a fix loop moves the head after them, but a `review-full` on
-  an earlier head counts only with a `review-delta` at this one. The pre-ship default checks
+  an earlier head counts only with a `review-delta` at this one. "In the head's history" stops at
+  the fork point: an earlier record counts only if its snapshot is not already on the default branch
+  (`origin/HEAD`, else `main`, else `master`; ancestor-only when none resolves). A record at the head's
+  own revision always counts. A standalone run is named after its branch, so without this a branch
+  reused after a merge would inherit the old run's `build-checks`. The pre-ship default checks
   `build-checks, verify, review-full, review-readiness`, since `ship-preflight` does not exist yet
   when super-ship checks.
 - `bind` adds `build-checks` to `required_gates`. `ak firstmate status complete` audits before it
