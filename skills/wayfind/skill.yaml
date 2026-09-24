@@ -100,6 +100,9 @@ outputs:
 
 side_effects: [artifact-write, scratch-write, kb-draft, kb-publish, tracker-write]
 
+references:
+  - tracker-of-record
+
 hard_gates:
   - A decision ticket is never dispatched to an implementer as though approved; an open decision is
     open however obvious the answer looks.
@@ -171,6 +174,7 @@ provenance:
   resolved_conflicts:
     - entrypoint-phase-operation-split
     - central-kb-owns-project-artifacts
+    - tracker-of-record-falls-back-to-kb
 
 tests:
   - id: loose-effort-charts-a-map

@@ -282,8 +282,25 @@ function ceilingReason(ceiling: Ceiling): string {
  * capability name alone sends them to find it.
  */
 function detachedReason(ceiling: Ceiling): string {
-  const each = ceiling.detached.map(({ capability, adapters }) => `'${capability}' (supplied by ${adapters.map((a) => `'${a}'`).join(" or ")})`);
-  return `${CAPABILITY_TABLE_FILE} §3 marks ${each.join(", ")} as not provided by the host, and ${INSTALL_FILE} attaches no adapter that supplies ${ceiling.detached.length === 1 ? "it" : "them"}; add the adapter to its attached: list to package this skill at its declared mode (ruling \`fail-closed-adapter-lifts-ceiling\`).`;
+  const quoted = (ids: string[]) => ids.map((a) => `'${a}'`).join(" or ");
+  const plain = ceiling.detached.filter((d) => d.fallsBackOn === undefined);
+  const parts: string[] = [];
+  if (plain.length > 0) {
+    const each = plain.map(({ capability, adapters }) => `'${capability}' (supplied by ${quoted(adapters)})`);
+    parts.push(
+      `${CAPABILITY_TABLE_FILE} §3 marks ${each.join(", ")} as not provided by the host, and ${INSTALL_FILE} attaches no adapter that supplies ${plain.length === 1 ? "it" : "them"}; add the adapter to its attached: list to package this skill at its declared mode (ruling \`fail-closed-adapter-lifts-ceiling\`).`,
+    );
+  }
+  // The second shape: the supplier is attached, but with no backend configured
+  // its refusal is borrowed from a capability this install does not have.
+  for (const { capability, adapters, fallsBackOn } of ceiling.detached) {
+    if (fallsBackOn === undefined) continue;
+    const attach = fallsBackOn.adapters.length > 0 ? `, or attach ${quoted(fallsBackOn.adapters)}` : "";
+    parts.push(
+      `'${capability}' is supplied by ${quoted(adapters)}, which ${INSTALL_FILE} configures no backend for, and with none it falls back on '${fallsBackOn.capability}', which neither the host nor an attached adapter supplies; configure the backend under its ${adapters[0]}: key${attach}, to package this skill at its declared mode (ruling \`tracker-of-record-falls-back-to-kb\`).`,
+    );
+  }
+  return parts.join(" ");
 }
 
 export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions): BundlePlan {
@@ -962,9 +979,11 @@ function buildRecord(
      * Which adapters the modes below were computed with. The bundle's modes
      * depend on a file the tree does not carry, so a record that omitted this
      * would describe a build nobody else could reproduce from it. `file` is
-     * `null` when the default applied.
+     * `null` when the default applied. `backends` because the same attached
+     * list lifts `tracker-access` with a backend and borrows `kb-write`
+     * without one (`adapters/tracker/CONTRACT.md` §1).
      */
-    install: { file: install.file, attached: [...install.attached] },
+    install: { file: install.file, attached: [...install.attached], backends: Object.fromEntries(install.backends) },
     /**
      * Emitted even when empty. An absent key would read as "an older build
      * that did not record this" rather than "nothing was left out", and the

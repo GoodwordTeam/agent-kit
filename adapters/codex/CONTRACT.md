@@ -120,7 +120,10 @@ enforce a restriction an autonomous run requires exposes the skill in guided/man
 autonomous mode. The same section's amendment applies here unchanged: a capability this host does
 not provide, but that an attached adapter supplies and fails closed on, is not silently absent and
 does not cap the mode; `ak.install.yaml` decides attachment, and with no such file every fail-closed
-adapter is attached (ruling `fail-closed-adapter-lifts-ceiling`). That amendment reaches
+adapter is attached (ruling `fail-closed-adapter-lifts-ceiling`). A supplier whose §1 names a
+fallback lifts only where what it falls back on is available here too: `tracker-access`, with no
+tracker backend configured, is lifted only while `kb-write` is (`adapters/tracker/CONTRACT.md` §1;
+ruling `tracker-of-record-falls-back-to-kb`). That amendment reaches
 capabilities only. It does not reach the manual-invocation restriction above, which is not a
 capability and which no adapter supplies, so every U skill stays `mode: manual` on this host
 whatever is attached; and it grants no delegated authority. `profiles/autonomy` does not install

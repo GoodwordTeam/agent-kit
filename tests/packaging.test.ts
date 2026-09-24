@@ -1891,7 +1891,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(rules(plan)).not.toContain("packaging.mode-capped");
     expect(rules(plan)).not.toContain("packaging.mode-above-ceiling");
     expect(hasErrors(plan.issues)).toBe(false);
-    expect(recordOf(plan).install).toEqual({ file: null, attached: ["knowledgebase"] });
+    expect(recordOf(plan).install).toEqual({ file: null, attached: ["knowledgebase"], backends: {} });
   });
 
   test("`attached: []` is the host alone: guided, and a note naming the capability and the adapter", () => {
@@ -1907,7 +1907,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     // this install chose to attach.
     expect(rules(plan)).not.toContain("packaging.mode-above-ceiling");
     expect(hasErrors(plan.issues)).toBe(false);
-    expect(recordOf(plan).install).toEqual({ file: INSTALL_FILE, attached: [] });
+    expect(recordOf(plan).install).toEqual({ file: INSTALL_FILE, attached: [], backends: {} });
   });
 
   test("listing the adapter is the same as the default", () => {
@@ -1978,7 +1978,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(describeInstall(loadInstallConfig(empty.root, empty.catalog))).toBe("ak.install.yaml: attached none");
   });
 
-  test("the real contracts supply kb-write from the knowledgebase and runner-grants from the runner, and nothing else", () => {
+  test("the real contracts supply kb-write, runner-grants and tracker-access, and only the tracker borrows", () => {
     // The only case reading this repository, and it reads the contracts, never
     // an install file: loadAdapterSupplies does not open one.
     const { catalog } = loadCatalog(REPO);
@@ -1988,6 +1988,133 @@ describe("the adapters an install attaches, and what they lift", () => {
     const byAdapter = Object.fromEntries(adapters.map((a) => [a.adapter, [...a.capabilities].sort()]));
     // kb-read is absent on purpose: unconfigured, it answers unavailable and the
     // run continues, which is reported but not refused.
-    expect(byAdapter).toEqual({ knowledgebase: ["kb-write"], "runner-contract": ["runner-grants"] });
+    expect(byAdapter).toEqual({ knowledgebase: ["kb-write"], "runner-contract": ["runner-grants"], tracker: ["tracker-access"] });
+    // adapters/tracker/CONTRACT.md §1: with no backend its refusal is kb-write's.
+    const borrowed = Object.fromEntries(adapters.map((a) => [a.adapter, Object.fromEntries(a.fallsBackOn)]));
+    expect(borrowed).toEqual({ knowledgebase: {}, "runner-contract": {}, tracker: { "tracker-access": "kb-write" } });
+  });
+});
+
+/**
+ * The tracker's fallback chain, as the packager reads it (ruling
+ * `tracker-of-record-falls-back-to-kb`; `adapters/tracker/CONTRACT.md` §1).
+ *
+ * Fixture roots only, like the block above: every case writes its own
+ * contracts and its own install file, so the developer's `ak.install.yaml` and
+ * the real contracts' wording decide nothing here.
+ */
+describe("tracker-access follows the system-of-record chain", () => {
+  const CATALOG_WITH_TRACKER = CATALOG.replace(
+    "  - id: codex\n    status: authored\n",
+    "  - id: codex\n    status: authored\n  - id: knowledgebase\n    status: authored\n  - id: tracker\n    status: authored\n",
+  );
+
+  const table = (header: string, rows: string[]) =>
+    ["# adapter", "", "## 1. Capabilities", "", header, "|---|---|---|---|", ...rows, "", "## 2. Next", ""].join("\n");
+  const WITH_FALLBACK = "| Capability | Unconfigured | Falls back on | What the refusal is |";
+
+  const TREE_FILES: Record<string, string> = {
+    "catalog.yaml": CATALOG_WITH_TRACKER,
+    // The base fixture's §3 has no tracker-access row, and a capability §3
+    // does not list is never lifted; the row is added here, as the real §3 has it.
+    "adapters/claude-code/CONTRACT.md": (BASE["adapters/claude-code/CONTRACT.md"] ?? "").replace(
+      "| `runner-grants` |",
+      "| `tracker-access` | `not-provided` | See the tracker adapter |\n| `runner-grants` |",
+    ),
+    "adapters/knowledgebase/CONTRACT.md": table("| Capability | Unconfigured | What the refusal is |", ["| `kb-write` | `fails-closed` | Refuses |"]),
+    "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, ["| `tracker-access` | `fails-closed` | `kb-write` | The knowledgebase's records, else a refusal |"]),
+  };
+
+  const requiring = (caps: string[]) => ({
+    "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\nrequires:\n${caps
+      .map((c) => `  - ${c}\n`)
+      .join("")}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
+  });
+  const ctxWith = (install?: string, extra: Record<string, string> = {}) =>
+    ctxFor({ ...TREE_FILES, ...requiring(["repository-read", "tracker-access"]), ...(install === undefined ? {} : { [INSTALL_FILE]: install }), ...extra });
+  const modeOf = (plan: ReturnType<typeof planBundle>) => plan.decisions.find((d) => d.skill === "beta")?.mode;
+  const capped = (plan: ReturnType<typeof planBundle>) => plan.issues.find((i) => i.rule === "packaging.mode-capped");
+
+  test("a configured backend lifts it with the knowledgebase attached", () => {
+    const plan = planBundle(ctxWith("attached: [knowledgebase, tracker]\ntracker:\n  backend: some-tracker\n"), "claude-code", {});
+    expect(modeOf(plan)).toBe("autonomous");
+    expect(capped(plan)).toBeUndefined();
+    expect(recordOf(plan).install).toEqual({ file: INSTALL_FILE, attached: ["knowledgebase", "tracker"], backends: { tracker: "some-tracker" } });
+  });
+
+  test("a configured backend lifts it with the knowledgebase detached, because nothing is borrowed", () => {
+    const plan = planBundle(ctxWith("attached: [tracker]\ntracker:\n  backend: some-tracker\n"), "claude-code", {});
+    expect(modeOf(plan)).toBe("autonomous");
+    expect(capped(plan)).toBeUndefined();
+    expect(hasErrors(plan.issues)).toBe(false);
+  });
+
+  test("no backend with the knowledgebase attached is lifted through the fallback", () => {
+    // Also the default: no install file attaches both and configures no backend.
+    for (const install of [undefined, "attached: [knowledgebase, tracker]\n"]) {
+      const plan = planBundle(ctxWith(install), "claude-code", {});
+      expect(modeOf(plan)).toBe("autonomous");
+      expect(capped(plan)).toBeUndefined();
+    }
+  });
+
+  test("no backend with the knowledgebase detached is capped, with a note naming both fixes", () => {
+    const plan = planBundle(ctxWith("attached: [tracker]\n"), "claude-code", {});
+    expect(modeOf(plan)).toBe("guided");
+    const note = capped(plan);
+    expect(note?.severity).toBe("note");
+    expect(note?.message).toContain("'tracker-access'");
+    expect(note?.message).toContain("'kb-write'");
+    expect(note?.message).toContain("tracker: key");
+    expect(note?.message).toContain("attach 'knowledgebase'");
+    expect(note?.message).toContain("tracker-of-record-falls-back-to-kb");
+    // A note, not the error: the tree is fine, the install chose this.
+    expect(hasErrors(plan.issues)).toBe(false);
+  });
+
+  test("the tracker detached is the ordinary detached case, whatever the knowledgebase does", () => {
+    const plan = planBundle(ctxWith("attached: [knowledgebase]\n"), "claude-code", {});
+    expect(modeOf(plan)).toBe("guided");
+    expect(capped(plan)?.message).toContain("supplied by 'tracker'");
+    expect(capped(plan)?.message).toContain("fail-closed-adapter-lifts-ceiling");
+  });
+
+  test("a backend for an adapter the file does not attach is an error, and lifts nothing", () => {
+    const ctx = ctxWith("attached: [knowledgebase]\ntracker:\n  backend: some-tracker\n");
+    const config = loadInstallConfig(ctx.root, ctx.catalog);
+    expect(config.backends.size).toBe(0);
+    expect(config.issues.find((i) => i.rule === "packaging.install-backend-unattached")?.severity).toBe("error");
+    expect(checkInstallConfig(ctx).map((i) => i.rule)).toContain("packaging.install-backend-unattached");
+  });
+
+  test("an unreadable Falls back on cell is an error, and the row is not counted", () => {
+    const ctx = ctxWith(undefined, {
+      "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, ["| `tracker-access` | `fails-closed` | the knowledgebase | Prose |"]),
+    });
+    const { adapters, issues } = loadAdapterSupplies(ctx.root, ctx.catalog);
+    expect(issues.map((i) => i.rule)).toEqual(["packaging.malformed-fallback"]);
+    expect(adapters.map((a) => a.adapter)).toEqual(["knowledgebase"]);
+  });
+
+  test("a 'none' cell borrows nothing", () => {
+    const ctx = ctxWith("attached: [tracker]\n", {
+      "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, ["| `tracker-access` | `fails-closed` | none | Refuses |"]),
+    });
+    expect(modeOf(planBundle(ctx, "claude-code", {}))).toBe("autonomous");
+  });
+
+  test("the summary names the tracker's state in each configuration", () => {
+    const describe_ = (install?: string) => {
+      const ctx = ctxWith(install);
+      return describeInstall(loadInstallConfig(ctx.root, ctx.catalog));
+    };
+    expect(describe_()).toBe(
+      "no ak.install.yaml: default, all fail-closed adapters attached (knowledgebase, tracker); tracker: no backend, kb-write fallback (knowledgebase)",
+    );
+    expect(describe_("attached: [tracker]\n")).toBe(
+      "ak.install.yaml: attached tracker; tracker: no backend, kb-write fallback, which no attached adapter supplies",
+    );
+    expect(describe_("attached: [tracker]\ntracker:\n  backend: some-tracker\n")).toBe("ak.install.yaml: attached tracker; tracker: backend some-tracker");
+    expect(describe_("attached: [knowledgebase]\n")).toBe("ak.install.yaml: attached knowledgebase");
   });
 });

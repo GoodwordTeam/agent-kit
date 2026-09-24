@@ -108,14 +108,16 @@ compound status is a value no consumer can act on.
 | `independent-context` | `partial` | Same limitation. Independence here is a convention of how the session is driven, not a host guarantee |
 | `kb-read` | `not-provided` | The host supplies transport only. See `adapters/knowledgebase/CONTRACT.md` |
 | `kb-write` | `not-provided` | The host supplies transport only. See `adapters/knowledgebase/CONTRACT.md` |
-| `tracker-access` | `not-provided` | See `adapters/runner-contract/CONTRACT.md` |
+| `tracker-access` | `not-provided` | See `adapters/tracker/CONTRACT.md` |
 | `event-delivery` | `not-provided` | The host is session-scoped. Hooks fire inside a live session; there is no durable inbound event queue that survives the session, so no event can be delivered to a run that is not currently open |
 | `runner-grants` | `not-provided` | The host has no grant validator. Nothing in it can decide that a charter authorizes a checkpoint |
 
 **"See `adapters/<x>/CONTRACT.md`" names where a capability can come from with that adapter
 attached. It is not a claim that this host supplies it, and it is not what decides attachment.**
-`tracker-access` is the proof: it carries a pointer, yet the runner contract states no refusal for
-it (a tracker falls back to the knowledgebase's records), so no attached adapter lifts it. This
+`tracker-access` is the proof: it carries a pointer, yet whether the tracker adapter lifts it
+depends on more than attaching it. With no backend configured, that adapter falls back on the
+knowledgebase and borrows its refusal, so it lifts `tracker-access` only where `kb-write` is
+available too (`adapters/tracker/CONTRACT.md` §1; ruling `tracker-of-record-falls-back-to-kb`). This
 table states what **the host alone** guarantees. What an install adds on top is read from the
 supply table in §1 of each attached adapter's contract, and which adapters are attached is the
 install's decision, stated in `ak.install.yaml` at the tree root; with no such file, every adapter

@@ -106,7 +106,7 @@ as authoritative. Every row below is a claim about the tree, checkable against i
 | `packs/`, `protocols/`, `roles/`, `references/` | Attachable constraints, shared phase logic, role prompts, reference packs | yes |
 | `schemas/` | JSON Schemas; `common` holds the shared `$defs` | yes |
 | `policies/`, `profiles/` | Machine-readable rulings and install profiles. Profiles never name models | yes |
-| `adapters/` | Host contracts: claude-code, codex, runner, knowledgebase | yes |
+| `adapters/` | Host contracts: claude-code, codex, runner, knowledgebase, tracker | yes |
 | `provenance/` | `upstream.lock.yaml`, `adaptations.yaml`, `conversation-map.yaml`, licenses | yes |
 | `research/` | Design sources and the donor dossiers. **Denylist-exempt** | yes |
 | `src/`, `tests/` | The `ak` CLI and its tests | yes |
@@ -222,8 +222,9 @@ donor paths for the tip while failing at the pin, which the validator reports as
 rather than as a broken instrument.
 
 The install configuration is part of the instrument too: a skill's packaged mode depends on which
-adapters `ak.install.yaml` attaches, so the summary line of `ak validate` and `ak build` ends with an
-`install:` clause naming the file or the default, and a quoted figure keeps it. The pre-push gate and
+adapters `ak.install.yaml` attaches and on whether it configures a tracker backend, so the summary
+line of `ak validate` and `ak build` ends with an `install:` clause naming the file or the default and
+the tracker's state, and a quoted figure keeps it. The pre-push gate and
 `validate-figure.sh` measure the default install, with no such file in the extract (ruling
 `fail-closed-adapter-lifts-ceiling`).
 

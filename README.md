@@ -3,7 +3,7 @@
 One engineering lifecycle, amalgamated from six MIT-licensed donors into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
-**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 4 reference packs · 17 schemas**,
+**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 5 reference packs · 18 schemas**,
 with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
 bundles.
 
@@ -86,6 +86,7 @@ bun test                  # units + invalid-case fixtures that must fail
 bun run ak validate       # the gate every batch passes
 bun run ak build --check  # dist/ in sync with source
 bun run ak attach <path>  # show which packs attach, and why
+bun run ak tracker check <project-dir>  # a project's tracker binding, and that its secret stays out of git
 ```
 
 `ak validate` enforces catalog completeness, JSON Schema conformance, frontmatter rules, the

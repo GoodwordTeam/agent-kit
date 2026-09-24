@@ -201,7 +201,10 @@
           "additionalProperties": false,
           "required": ["system"],
           "properties": {
-            "system": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+            "system": {
+              "description": "The system of record's id, compared exactly -- no case folding, no aliases -- with the `Reaches system` a bound backend's document states (adapters/tracker/CONTRACT.md §2). `knowledgebase` is reserved: it names the knowledgebase's own `ticket` records, and no backend may state it as the system it reaches (ruling `tracker-of-record-falls-back-to-kb`).",
+              "$ref": "common.schema.json#/$defs/kebab_id"
+            },
             "url": { "type": "string", "format": "uri" },
             "id_pattern": { "type": "string" }
           }
@@ -213,7 +216,7 @@
             "additionalProperties": false,
             "required": ["system", "role"],
             "properties": {
-              "system": { "$ref": "common.schema.json#/$defs/nonempty_string" },
+              "system": { "description": "Same id shape as the system of record's, so the exact comparison in `project.single-tracker-system-of-record` cannot be dodged by spelling.", "$ref": "common.schema.json#/$defs/kebab_id" },
               "role": { "const": "projection" },
               "url": { "type": "string", "format": "uri" }
             }

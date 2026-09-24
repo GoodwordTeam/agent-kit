@@ -493,8 +493,8 @@ describe("the install configuration the summary names", () => {
   test("--json carries the install configuration beside ok", () => {
     const io = capture();
     runCli(["validate", "--json"], { cwd: cleanTree(), io: io.io });
-    const parsed = JSON.parse(io.stdout()) as { install: { file: string | null; attached: string[] } };
-    expect(parsed.install).toEqual({ file: null, attached: [] });
+    const parsed = JSON.parse(io.stdout()) as { install: { file: string | null; attached: string[]; backends: Record<string, string> } };
+    expect(parsed.install).toEqual({ file: null, attached: [], backends: {} });
   });
 });
 
