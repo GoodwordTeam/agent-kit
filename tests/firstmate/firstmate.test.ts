@@ -85,6 +85,21 @@ describe("preflight", () => {
     expect(failed(r2.checks)).toEqual(["no-mistakes-auto-fix"]);
   });
 
+  test("a project path that does not exist is a named failure in preflight and bind, not a crash", () => {
+    const { home, opts } = env();
+    const project = join(makeDir(), "missing");
+    const evidence = { store: "mock" as const, location: makeDir() };
+    const p = preflight({ fmHome: home, project, host: "claude-code", evidence }, opts);
+    expect(p.ok).toBe(false);
+    expect(failed(p.checks)).toEqual(["no-mistakes-auto-fix"]);
+    const b = bind(
+      { fmHome: home, taskId: "T-9", project, mode: "agent-kit", host: "claude-code", evidence, bindingOut: join(home, "data/T-9/binding.json") },
+      opts,
+    );
+    expect(b.ok).toBe(false);
+    expect(failed(b.checks)).toEqual(["no-mistakes-auto-fix"]);
+  });
+
   test("the no-mistakes config is read from the default branch, not the working tree", () => {
     const { home, opts } = env();
     const good = "commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 0\n  ci: 0\n";
@@ -169,13 +184,16 @@ describe("bind", () => {
   test("a bind that loses the race to create a new pin reuses the winner's pin and leaves no staging directory", () => {
     const bundleDir = makeBundle();
     const pinsDir = makeDir();
+    let lost = false;
     const spy = spyOn(fs, "renameSync").mockImplementationOnce((from, to) => {
+      lost = true;
       fs.cpSync(bundleDir, to as string, { recursive: true });
       spy.mockRestore();
       fs.renameSync(from, to);
     });
     try {
       const pin = pinBundle(bundleDir, pinsDir);
+      expect(lost).toBe(true);
       expect(typeof pin).toBe("object");
       expect((pin as { hash: string }).hash).toBe(`sha256:${treeHash(bundleDir)}`);
       expect(fs.readdirSync(pinsDir)).toEqual([treeHash(bundleDir)]);

@@ -56,6 +56,7 @@ export function checkPatchApplied(fmHome: string, upstream: Upstream): Check {
  */
 export function checkNoMistakesConfig(project: string): Check {
   const id = "no-mistakes-auto-fix";
+  if (!existsSync(project) || !statSync(project).isDirectory()) return fail(id, `${project} is not a directory`);
   const ref = ["origin/HEAD", "main", "master"].find(
     (r) => git(project, ["rev-parse", "--verify", "--quiet", `${r}^{commit}`]).code === 0,
   );
