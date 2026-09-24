@@ -231,3 +231,11 @@ Commit messages end with the session's configured `Co-Authored-By:` attribution 
 assistant identity in that trailer is supplied by the harness at commit time; it is deliberately
 not written here, because every tracked file in this repo outside `provenance/` and
 `research/sources/` must survive the model-name denylist.
+
+## Shipping
+
+All changes ship through the no-mistakes gate:
+
+- Commit on a feature branch, then push with `git push no-mistakes <branch>`. Never push directly to `origin`.
+- no-mistakes runs review, test, lint and document checks, then pushes to origin and opens the PR. Follow progress with `no-mistakes status` or the `/no-mistakes` skill.
+- Per-repo gate commands live in `.no-mistakes.yaml`. It is only read from the default branch.
