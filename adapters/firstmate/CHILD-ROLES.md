@@ -39,6 +39,8 @@ that would exceed it is not started.
 
 - Push, merge, open a pull request, or run no-mistakes.
 - Run Firstmate (`fm-*`), write a status line, or touch another task's files.
+- Run `ak firstmate bind`, `install` or `remove`, or touch agent-kit's binding ledger; binding is
+  supervisor-side (CONTRACT.md §6).
 - Start an agent: `Task`, `Agent`, `claude`, `codex`.
 - Contact a person. A question goes back to the worker as the child's result.
 - Write outside its destination. On Claude Code the guard allows the worktree, the evidence store and
