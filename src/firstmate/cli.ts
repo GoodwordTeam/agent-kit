@@ -19,6 +19,7 @@ import {
   type Host,
 } from "./constants.ts";
 import { evidenceFromEnv, readHomeEnv } from "./envfile.ts";
+import { grant } from "./grant.ts";
 import { install, remove } from "./install.ts";
 import { preflight } from "./preflight.ts";
 import { validateBinding } from "./schema.ts";
@@ -42,6 +43,7 @@ export const FIRSTMATE_USAGE = [
   "  ak firstmate status <binding.json> complete|needs-input|cap-reached|failed|cancelled",
   "                      [--pr <url>] [--evidence <id,id>] [--reason <text>] [--open-findings <id,id>]",
   "                      [--by <who>] [--unknown-child <id>] [--at <epoch>]",
+  "  ak firstmate grant --binding <file> --operation review.full|review.readiness|ship.prepare [--cwd <dir>]",
   "",
   "Nothing here applies the patch or writes Firstmate state. See adapters/firstmate/CONTRACT.md.",
 ];
@@ -67,6 +69,7 @@ const ALLOWED: Record<string, readonly string[]> = {
   install: ["fm-home", "evidence", "evidence-location"],
   remove: ["fm-home"],
   status: ["pr", "evidence", "reason", "open-findings", "by", "unknown-child", "at"],
+  grant: ["binding", "operation", "cwd"],
 };
 
 interface Args {
@@ -260,6 +263,21 @@ export function runFirstmate(argv: readonly string[], io: Io): number {
         return 1;
       }
       io.out(result.line);
+      return 0;
+    }
+    case "grant": {
+      if (!need(a, ["binding", "operation"], io, sub)) return 2;
+      const binding = resolve(str(a, "binding")!);
+      const operation = str(a, "operation")!;
+      const result = grant({ binding, operation, cwd: resolve(str(a, "cwd") ?? process.cwd()) }, opts.akRoot);
+      if (!result.ok) {
+        io.err(`ak firstmate grant: refused: ${result.reason}`);
+        io.err(
+          `needs-decision: stop before ${operation} and report it to Firstmate, e.g. ak firstmate status ${binding} needs-input --reason "${operation} not granted by the binding"`,
+        );
+        return 1;
+      }
+      io.out(JSON.stringify(result.record, null, 2));
       return 0;
     }
   }

@@ -33,6 +33,13 @@ ships again.
 When a checkpoint needs two independent judgments, dispatch them as separate agents. Never ask the
 worker's own helpers.
 
+## What your binding grants
+
+The binding is your grant to the worker for `review.full`, `review.readiness` and `ship.prepare`
+(CONTRACT.md §6). The worker checks it with `ak firstmate grant` before each and cites the record.
+When the check refuses, the worker stops and sends `needs-decision`: decide it yourself or ask the
+captain. Merge is never on the binding and stays yours.
+
 ## What the worker sends back
 
 One status line at a time (CONTRACT.md §4):

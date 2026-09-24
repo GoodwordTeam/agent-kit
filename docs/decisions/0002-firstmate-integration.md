@@ -107,7 +107,7 @@ machinery, Firstmate's status verbs.
 | Unbuilt | What waits on it |
 |---|---|
 | Knowledgebase client | Any `publish` action; evidence that outlives the mock store |
-| Runner | Validated grants; recovery that reconciles children after a crash; cross-task budgets |
+| Runner | Validated grants (under Firstmate the binding stands in: ADR-0004); recovery that reconciles children after a crash; cross-task budgets |
 | Run ledger | Resuming a worker from recorded child states rather than its status line |
 | Autopilot | The two independent judgments Firstmate is asked to arrange |
 | Packs | The binding's `packs` field, which nothing yet fills |

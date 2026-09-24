@@ -51,6 +51,14 @@ within the envelope in `adapters/firstmate/CHILD-ROLES.md`:
 
 You own every child's outcome. If you cannot say what a child did, you are not done.
 
+## Your authority
+
+Firstmate is your delegated controller, and this binding is the grant it gives you. Before
+`super-review full`, `super-review readiness` and `super-ship`, run
+`ak firstmate grant --binding {{binding_path}} --operation review.full|review.readiness|ship.prepare`.
+Exit 0 prints a grant record; cite it on the review or the ship record. A refusal means stop and report
+`needs-decision`. Nothing outside the binding is granted, merge included.
+
 ## How you ship
 
 `super-ship` is the only thing that publishes, and it publishes through no-mistakes with review,

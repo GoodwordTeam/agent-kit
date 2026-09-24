@@ -59,6 +59,11 @@ There is one protocol behind both doors, not a public wrapper and a second pipel
 cannot validate a grant, the entrypoint stops for explicit invocation rather than reproducing the
 delegated effect through a side door (ruling `entrypoint-phase-operation-split`).
 
+Under a Firstmate binding, Firstmate is the delegated controller and the host validates the grant with
+`ak firstmate grant --binding <path> --operation review.full` (or `review.readiness`). Exit 0 is the
+grant: cite the record it prints on the review. A refusal means stop and report `needs-decision` to
+Firstmate (ADR-0004).
+
 `review.delta` does not open a review run. Invoked where none is open, it stops with `needs-input`
 naming `super-review full` as the next permitted action.
 

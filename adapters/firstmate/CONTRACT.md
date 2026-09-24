@@ -87,7 +87,7 @@ worker started is not independent of the worker (ruling `missing-supervisor-neve
 |---|---|
 | **Unmodified upstream** (`a5d78f8` or later, no patch) | Nothing in this adapter. The worker role forbids delegation outright and the supervisor rule gives no-mistakes sole ownership of review, so an agent-kit lifecycle inside a Firstmate worker contradicts its own brief. `ak firstmate preflight` reports this and refuses |
 | **Upstream `a5d78f8` with patch 0001** | Delivery mode `agent-kit` for Claude Code workers with the child guard enforced; other harnesses with the guard declared but not enforced (§5). Everything in §2 and §4 |
-| **Not supported yet** | Evidence published to a knowledgebase (none exists); runner-validated grants (no runner); autopilot (a contract); cross-task child budgets (no run ledger); any Firstmate commit the patch does not apply to cleanly |
+| **Not supported yet** | Evidence published to a knowledgebase (none exists); runner-validated grants (no runner; under Firstmate the binding stands in, §6); autopilot (a contract); cross-task child budgets (no run ledger); any Firstmate commit the patch does not apply to cleanly |
 
 The patch is version-bound. It is carried here, under the upstream commit it was made against, and
 it is never applied to a live Firstmate home by any `ak` command. `ak firstmate preflight` checks
@@ -147,3 +147,23 @@ both for the main thread; that was observed on Claude Code 2.1.281, and the guar
 signal. A host version that stops sending those fields turns the guard into a no-op, so
 `ak firstmate preflight` names the host version it last verified and the guard's tests pin the
 input shape.
+
+---
+
+## 6. Delegated authority
+
+super-review `full` and `readiness` and super-ship are `explicit-or-delegated`: a human starts them,
+or a delegated controller does under a validated grant. Under Firstmate, Firstmate is that controller
+and the binding it wrote is the grant (ADR-0004). `ak firstmate grant --binding <path> --operation
+<op>` validates it and prints a grant record, or refuses with a reason and a `needs-decision` hint.
+
+| Operation | Granted when the binding requires |
+|---|---|
+| `review.full` | `review-full` |
+| `review.readiness` | `review-readiness` |
+| `ship.prepare` | `ship-preflight`; the ship does the binding's `delivery.action` and never merges |
+
+Every grant also requires that the binding validates against its schema, that it lies outside the
+worktree the grant is asked from and outside the bound project, and that the pinned bundle still
+hashes to the bound hash. Any other operation, merge and scope changes included, is refused. The
+worker then reports `needs-decision` and Firstmate decides or asks the captain.

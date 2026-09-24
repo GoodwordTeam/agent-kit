@@ -57,6 +57,11 @@ for explicit invocation rather than reproducing the delegated effect through a s
 `entrypoint-phase-operation-split`). A lesson candidate may be drafted inside the run; publishing it
 needs explicit authority or a charter grant.
 
+Under a Firstmate binding, Firstmate is the delegated controller and the host validates the grant with
+`ak firstmate grant --binding <path> --operation ship.prepare`. Exit 0 is the grant: cite the record it
+prints in the ship record. A refusal means stop and report `needs-decision` to Firstmate. The grant
+covers the binding's delivery action and nothing more; merge is never on it (ADR-0004).
+
 ## Inputs
 
 The head being shipped, named. Verification receipts that bind to that head
