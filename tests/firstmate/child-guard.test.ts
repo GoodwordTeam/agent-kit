@@ -88,6 +88,10 @@ describe("child-guard", () => {
       "gh api repos/o/r/pulls -f title=x -f head=b -f base=main",
       "gh api -X PUT repos/o/r/pulls/3/merge",
       "gh api repos/o/r/pulls/3/merge",
+      `gh api graphql -f query='mutation { mergePullRequest(input:{pullRequestId:"X"}) { clientMutationId } }'`,
+      `gh api graphql -f query='mutation{createPullRequest(input:{}){pullRequest{url}}}'`,
+      `gh api graphql -f query='mutation { enablePullRequestAutoMerge(input:{}) { clientMutationId } }'`,
+      `gh api graphql -f query='mutation { updatePullRequestBranch(input:{}) { clientMutationId } }'`,
     ];
     for (const command of denied) {
       const d = guard(b, child("Bash", { command }));
@@ -99,7 +103,7 @@ describe("child-guard", () => {
   });
 
   test("ordinary child commands pass", () => {
-    for (const command of ["bun test", "git status", "git diff HEAD", "gh pr view 3", "cat CLAUDE.md", "grep -rn push src", "gh api repos/o/r/pulls/3", "gh api -X POST repos/o/r/issues/3/comments -f body=x"]) {
+    for (const command of ["bun test", "git status", "git diff HEAD", "gh pr view 3", "cat CLAUDE.md", "grep -rn push src", "gh api repos/o/r/pulls/3", "gh api -X POST repos/o/r/issues/3/comments -f body=x", `gh api graphql -f query='query { repository(owner:"o", name:"r") { pullRequest(number:3) { title } } }'`]) {
       expect({ command, denied: guard(b, child("Bash", { command })).denied }).toEqual({ command, denied: false });
     }
   });

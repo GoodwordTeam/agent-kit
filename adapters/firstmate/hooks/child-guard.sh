@@ -11,7 +11,8 @@
 #   - start an agent (Task, Agent) or run `claude` or `codex`: depth is 1;
 #   - run Firstmate (`fm-*`) or no-mistakes;
 #   - `git push`, or `gh pr create` / `gh pr merge` (also through gh-axi), or
-#     `gh api` against a pulls endpoint with a mutating method or a merge path;
+#     `gh api` against a pulls endpoint with a mutating method or a merge path,
+#     or a `gh api graphql` call naming a pull-request mutation;
 #   - write outside the worktree, the binding's evidence store or $TMPDIR.
 #
 # The command check is by token and deliberately coarse: a command that names
@@ -104,7 +105,7 @@ check_command() {
   # shellcheck disable=SC2206
   local -a tok=($flat)
   [ "$noglob" = 1 ] || set +f
-  local n=${#tok[@]} i j word base sub method pulls merge body
+  local n=${#tok[@]} i j word base sub method pulls merge body graphql prmut
   for ((i = 0; i < n; i++)); do
     word=${tok[$i]}
     base=${word##*/}
@@ -130,7 +131,7 @@ check_command() {
             create|merge) deny "a task-local child may not ${tok[$((i + 2))]} a pull request" ;;
           esac
         elif [ "${tok[$((i + 1))]-}" = api ]; then
-          method="" pulls=0 merge=0 body=0
+          method="" pulls=0 merge=0 body=0 graphql=0 prmut=0
           for ((j = i + 2; j < n; j++)); do
             case "${tok[$j]}" in
               -X|--method) method=${tok[$((j + 1))]-} ;;
@@ -142,7 +143,12 @@ check_command() {
               */pulls|*/pulls/*|pulls|pulls/*) pulls=1 ;;
             esac
             case "${tok[$j]}" in */pulls/*/merge) merge=1 ;; esac
+            case "${tok[$j]}" in graphql) graphql=1 ;; esac
+            case "${tok[$j]}" in
+              *createPullRequest*|*mergePullRequest*|*enablePullRequestAutoMerge*|*updatePullRequestBranch*) prmut=1 ;;
+            esac
           done
+          if [ "$graphql" = 1 ] && [ "$prmut" = 1 ]; then deny "a task-local child may not change a pull request through gh api graphql"; fi
           [ -z "$method" ] && [ "$body" = 1 ] && method=POST
           method=$(printf '%s' "$method" | tr '[:lower:]' '[:upper:]')
           if [ "$merge" = 1 ]; then deny "a task-local child may not merge a pull request"; fi
