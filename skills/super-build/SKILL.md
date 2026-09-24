@@ -2,12 +2,10 @@
 name: super-build
 description: >-
   Executes one approved implementation ticket in a worktree the ticket owns, test first, then has the
-  result checked on two independent axes (spec and standards) before the ticket is reported done. Use
-  when an approved ticket typed implementation names its acceptance criteria and the verification
-  that shows each one met, including a review finding or diagnostic packet already sharpened into
-  such a ticket. Not for a decision ticket, an unapproved or post-approval-edited ticket, a finding
-  graded smell or with null difficulty, an undiagnosed bug report or an already-verified diagnose
-  patch, or a quick fix with no ticket behind it.
+  result checked on two independent axes before the ticket is reported done. Use when an approved
+  ticket names its acceptance criteria and the verification that shows each one met. Not for a
+  decision ticket, an unapproved draft, a finding too vague to specify, or a quick fix with no ticket
+  behind it.
 license: MIT
 metadata:
   ak_catalog_id: super-build
@@ -15,11 +13,39 @@ metadata:
 
 ## When to use
 
-Selection is in the description.
+Use when a ticket exists, is approved, is typed `implementation`, and names its acceptance criteria
+and the verification that will show each one met. The ticket is the unit of work: one ticket, one
+worktree, one implementer, one pass of checks, one commit.
+
+Use when a run has reached its build phase and the ticket at the head of the ready set has no
+unfinished dependency — including the dependencies a dependency edge does not express.
+
+Use when a finding from a review lane or a diagnostic packet has already been sharpened into such a
+ticket. What decides whether it could be is the finding's own grading, not how actionable its prose
+reads.
 
 ## Not for
 
-Exclusions are in the description; return such work to its owner.
+Not for a ticket typed `decision`. A decision ticket asks which of two things to do; executing one of
+them answers the question by doing it and calls the answer an implementation. The type field settles
+this (`schemas/ticket.schema.json`), and implementation-shaped prose in the body does not reopen it.
+
+Not for an unapproved or draft ticket. Approval binds to the ticket's artifact hash, so a ticket
+edited after approval is unapproved again and re-enters the step that approves it.
+
+Not for a finding that is not yet a ticket. A finding graded `spec_quality: smell`, or carrying
+`difficulty: null`, names a doubt rather than a change; sharpening it is a separate act by a lane
+that holds that authority, and narrowing it here to something a fixer can act on invents the
+specification the grading says is missing.
+
+Not for a bug report with a reproduction and no diagnosis behind it. A bug enters through `diagnose`,
+and what reaches this lane is the diagnosed result. A packet that already carried a verified bounded
+patch is finished work, and re-implementing it here is the same patch written twice (ruling
+`diagnose-patch-or-packet-never-both`).
+
+Not for "just fix this quickly" with no ticket at all. The ticket is what carries the acceptance
+criteria, the allowed changes and the write ownership, and a run that improvises them has nothing to
+check the result against.
 
 ## Authority
 
@@ -27,152 +53,183 @@ Authority: `model`. A controller or a parent skill starts it when an approved ti
 slash command exposes it and no human act is required to start it.
 
 No grant covers delegation, because no phase operation exposes this skill —
-`policies/invocation.yaml` records model-invoked skills as exposing none by construction. The
-authority that governs is the ticket's, not the caller's: the approval the ticket carries, and the
-charter checkpoint the run took before its build phase opened. If you cannot see either, stop; your
-own invocation is not the approval.
+`policies/invocation.yaml` records model-invoked skills as exposing none by construction. What
+authority governs here is the ticket rather than the caller: the approval the ticket carries, and the
+charter checkpoint the run took before its build phase opened. A skill that cannot see either stops
+rather than treating its own invocation as the approval.
 
 ## Inputs
 
-- One approved ticket typed `implementation` (`schemas/ticket.schema.json`) with
-  `acceptance_criteria`, `verification`, `allowed_changes`, `read_dependencies`, `write_ownership`
-  and `integration_owner`. Approval binds to the ticket's artifact hash, so a ticket edited after
-  approval is unapproved again. Absent, unapproved, or typed `decision`: stop with `needs-input`
-  naming the field that decided it.
-- A writable checkout the run owns and a worktree this ticket alone holds (`repository-write`,
-  `isolated-worktree`, `vcs-local`). Unavailable, or the branch is checked out elsewhere: `failed`.
-- Two independent contexts for the check seats (`independent-context`). A seat that cannot be filled
-  independently is `unavailable`, which blocks the ticket. It is never backfilled by the
-  implementer, the author, whoever approved the spec, or the other seat (ruling
-  `missing-supervisor-never-implementer`).
-- The source finding, if the ticket came from one (`schemas/finding.schema.json`). A peer-lane
-  finding graded `autofix_class: safe_auto` is remapped to `gated_auto` on intake and not dropped:
-  the restriction is on which seat may emit the class, not on the class itself (ruling
-  `safe-auto-restricted-per-seat`).
-- Optionally a ticket budget from the runner. Absent: record that, and do not enforce or guess one
-  (`policies/limits.yaml`).
+One approved ticket typed `implementation` (`schemas/ticket.schema.json`), with its
+`acceptance_criteria`, `verification`, `allowed_changes`, `read_dependencies`, `write_ownership` and
+`integration_owner`. Absent, unapproved, or typed `decision`: stop and report `needs-input` naming
+the field that decided it.
+
+A writable checkout the run owns, and a worktree this ticket alone holds (`repository-write`,
+`isolated-worktree`, `vcs-local`). Unavailable, or the branch is already checked out elsewhere: stop
+and report `failed`.
+
+Two independent contexts for the check seats (`independent-context`). A seat that cannot be filled
+independently is `unavailable`, and unavailability blocks the ticket; it is never backfilled by the
+implementer, by the author, by whoever approved the spec, or by the other seat (ruling
+`missing-supervisor-never-implementer`).
+
+The source finding, where the ticket came from one (`schemas/finding.schema.json`). A finding
+arriving from a peer review lane graded `autofix_class: safe_auto` is remapped to `gated_auto` on
+intake and is never dropped for its class: the restriction is on emission by a seat, never on the
+vocabulary (ruling `safe-auto-restricted-per-seat`).
+
+Optionally a ticket budget from the runner. Absent: the cap is not enforced and not guessed, and the
+absence is recorded (`policies/limits.yaml`).
 
 ## Workflow
 
-The goal: one ticket, one worktree, one implementer, one bounded check loop, one commit, with a
-receipt for every acceptance criterion.
-
-1. **Intake.** Start only a ticket with no unfinished dependency, including dependencies no edge
-   expresses. Refuse what this lane does not execute: a `decision` ticket, however
-   implementation-shaped its prose reads (the type field settles it; choosing one option and
-   building it answers the open question by doing it), a missing approval, or a source finding
-   graded `spec_quality: smell` or `difficulty: null` (difficulty without a solution class is not a
-   specification). Name the field that decided it and return the work for sharpening, diagnosis,
-   escalation or decision. Do not re-type, re-grade or rewrite it to make it executable. A bug with
-   a reproduction but no diagnosis enters through `diagnose`; a packet that already carried a
-   verified bounded patch is finished work (ruling `diagnose-patch-or-packet-never-both`).
-2. **Batches and resume.** When several tickets are ready, or a ledger from an earlier run exists,
-   read `references/batches-and-resume.md` first. In short: a missing dependency edge is not
-   evidence of independence, so inspect write surfaces and serialize only pairs that contend; and a
-   resume reads the ledger, redoes no committed work, and keeps spent rounds counted against the cap.
-3. **Worktree.** Record the base commit, then open the worktree this ticket owns
-   (`protocols/worktree-ownership/PROTOCOL.md`). The handle is bound to this ticket and retired when
-   it integrates, never retasked.
-4. **Implement.** Dispatch one implementer (`roles/implementer/ROLE.md`) with the ticket as its only
-   source of requirements. It starts no agents of its own, and no second implementer touches this
-   worktree. Work test first (`protocols/tdd/PROTOCOL.md`): a failing test naming the behaviour, then
-   the change that passes it. Where a behaviour is genuinely untestable, record the alternative
-   verification plan in the ticket.
-5. **Handle the report.** Address correctness or scope concerns before any check runs; supply
-   missing context and re-dispatch the same implementer; assess a blocker rather than sending the
-   implementer back at the same wall. Record anything noticed but out of scope (file, line,
-   observation, why) as a candidate ticket, not an edit.
-6. **Check.** Give both seats the diff as a file plus the ticket's constraints copied verbatim. Leave
-   out the implementer's account and any hint of what to expect: a prompt that says what to expect
-   tells the seat where to stop looking. `reviewer-spec` checks the ticket's obligations;
-   `reviewer-standards` checks the project's designated rules, rule by rule. Keep the axes separate:
-   no merging or re-ranking findings across them, and one passing does not cover the other.
-7. **Fix loop.** At most five rounds. Rounds 1–3 resume the implementer that holds the context;
-   rounds 4–5 dispatch a fresh one, told how many attempts preceded it and that it now owns the task,
-   and nothing of their framing. Each re-check is per finding (addressed or not) plus a read of the
-   fix diff for new breakage.
-8. **Round cap.** With findings still open after round five, adjudicate each one in writing: park it
-   with a ruling naming why the code stands and what it costs if wrong, or rule it load-bearing and
-   stop. Run no sixth round, drop nothing, and return `cap-reached`.
-9. **Finish.** Run the ticket's named verification and collect receipts, commit on the ticket's
-   branch, publish receipts and the ticket result through the knowledgebase adapter's
-   `publishArtifact` with a run-artifact placement, and report every written ruling and
-   out-of-scope observation to whoever invoked you.
-
-Finish the requested ticket without re-asking for permission the approved ticket already gives;
-report extra work you noticed as follow-up tickets rather than doing it.
+1. Read the ticket and refuse what this lane does not execute — `decision` type, missing approval, or
+   a source finding graded `smell` or carrying `difficulty: null`. Record the refusal with the field
+   that decided it. Do not re-grade the finding to make it executable.
+2. Decide parallelism by inspection, not by the absence of a dependency edge. For each pair of
+   tickets with no edge between them, read the declared write ownership, generated artifacts,
+   migration sequence and interfaces, and read the files themselves where a declaration is silent.
+   Contention that survives inspection serializes exactly the contending tickets; the rest of the
+   layer still dispatches together.
+3. Record the base commit, then open the worktree this ticket owns
+   (`protocols/worktree-ownership/PROTOCOL.md`). The worktree handle is bound to this ticket and is
+   retired when the ticket integrates, never retasked.
+4. Dispatch one implementer (`roles/implementer/ROLE.md`) with the ticket as its single source of
+   requirements. It spawns no implementers of its own, and no second implementer runs against this
+   worktree.
+5. Work the ticket test first (`protocols/tdd/PROTOCOL.md`): a failing test that names the behaviour,
+   then the change that passes it. Where the behaviour is genuinely not testable, record the
+   alternative verification plan in the ticket rather than proceeding with neither.
+6. Handle the implementer's report by what it says. Concerns about correctness or scope are addressed
+   before any check runs; missing context is supplied and the same implementer re-dispatched; a
+   blocker is assessed, not returned to the implementer as another attempt at the same wall.
+7. Record what was noticed and not touched — file and line, the observation, why it is out of scope.
+   Each entry is a candidate ticket, never an edit inside this one.
+8. Hand the diff to both check seats at once, as a file, with the ticket's constraints copied
+   verbatim from the ticket. Neither prompt carries the implementer's account of the work or any
+   expectation of what the seat will find.
+9. Keep the axes separate: `reviewer-spec` checks whether the ticket's obligations were met,
+   `reviewer-standards` checks the result against the project's own designated rules, rule by rule.
+   Findings are not merged or re-ranked across the two; one axis passing does not cover the other.
+10. Fix and re-check, at most five rounds per ticket. Rounds one to three resume the implementer that
+    already holds the context; rounds four and five dispatch a fresh implementer told how many
+    attempts preceded it and that it owns the task from here, and told nothing of their framing. Each
+    re-check is scoped per finding — addressed or not addressed — plus the fix diff read for new
+    breakage.
+11. At the round cap, adjudicate every finding still open, one at a time: park it with a written
+    ruling naming why the code stands and what it costs if that is wrong, or rule it load-bearing and
+    stop. A silent discard is forbidden.
+12. Run the ticket's named verification and collect the receipts, commit the work on the ticket's own
+    branch, then publish the receipts and the ticket result through the knowledgebase adapter's
+    `publishArtifact` operation with a run-artifact placement. Report the ticket with every written
+    ruling and every out-of-scope observation collected into the report.
 
 ## Hard gates
 
-- A `decision` ticket, or a finding graded `smell` or with `difficulty: null`, is refused, not
-  re-typed or re-graded (shared rule for applying findings: `protocols/apply-findings/PROTOCOL.md`).
-- Neither check seat emits `autofix_class: safe_auto`; a seat's class is a proposal, so a seat here
-  emits only `gated_auto`, `manual` or `advisory`.
-- The implementer never sits on the panel that checks its work, and no seat approves a patch it
-  produced. Two seats that are the same context in sequence are one seat.
-- Only independent verification evidence, plus a policy rule saying that evidence suffices, closes a
-  finding. A receipt carries the command or probe, exit status, output digest, revision and
-  environment identity; a description of a green run is not one, and a patch that changed after a
-  receipt was taken does not inherit it (ruling `closure-requires-independent-verification`).
-- Writes stay inside `allowed_changes` and the declared ownership. A write outside every worker's
-  exclusive set aborts the wave; a change no worker accounts for may be the user's, so preserve and
-  reconcile it rather than discarding it.
-- A stubbed or skipped test, an unimplemented branch, or a marker left in place of the work is a
-  blocker, not progress: report the ticket blocked with what is missing.
+Gate: a ticket typed `decision` is never executed as implementation work, and never re-typed here to
+make it executable. It returns to the lane that resolves decisions.
+
+Gate: a finding graded `smell`, or carrying `difficulty: null`, is refused as an implementation
+ticket (`schemas/finding.schema.json`); the shared rule for applying a finding at all is
+`protocols/apply-findings/PROTOCOL.md`. Difficulty without a solution class is not a specification,
+and a re-grading performed by the lane that wants to execute it is the refusal being routed around.
+
+Gate: neither check seat emits `autofix_class: safe_auto`. At review time a code edit has no single
+mechanically correct answer, so a seat's classification is a proposal and applying it is the caller's
+decision under its own authorization; `gated_auto`, `manual` and `advisory` are what a seat here may
+emit (ruling `safe-auto-restricted-per-seat`).
+
+Gate: the implementer never sits on the panel that checks its work, and no seat approves a patch it
+produced. Two seats that are the same context in sequence are one seat (ruling
+`missing-supervisor-never-implementer`).
+
+Gate: only independent verification evidence, plus a policy rule saying that evidence suffices for
+that finding, closes a finding. A description of a green run is not a receipt — a receipt carries the
+command or probe, exit status, output digest, revision and environment identity — and a patch that
+changed after a receipt was taken does not inherit it (ruling
+`closure-requires-independent-verification`).
+
+Gate: writes stay inside the ticket's `allowed_changes` and its declared ownership. A write outside
+every worker's declared exclusive set aborts the wave, and a change no worker accounts for may be the
+user's: it is preserved and reconciled, never discarded to get the tree clean.
+
+Gate: a stubbed test, a skipped test, an unimplemented branch or a marker left in place of the work
+is a blocker, not progress. The ticket is reported blocked with what is missing.
+
+Gate: the round cap ends the loop, not the adjudication. Reaching it with findings open is a
+`cap-reached` result carrying each one and its ruling.
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
-| "The implementer is right there; it can confirm its own fix." | The context that produced a change cannot tell you whether it is right. | Mark the seat `unavailable`, stop with `needs-input` naming the seat, and report the ticket not done. |
-| "The report says the tests passed." | The author's account is what a receipt replaces. | Run the named verification and record a receipt per criterion. |
+| "The implementer just fixed it and is sitting right there — having it confirm the fix is faster than dispatching a seat." | A seat that cannot be filled independently is unavailable, and unavailability blocks; it is never backfilled by the implementer (ruling `missing-supervisor-never-implementer`). The context that produced the change is the one context that cannot tell you whether it is right. | Mark the seat `unavailable`, stop with `needs-input` naming which seat and why, and report the ticket as not done. |
+| "The implementer's report says the tests passed, so the criterion is met." | An agent's description of a green run is not a receipt (ruling `closure-requires-independent-verification`). The report is the author's account of its own work, and it is the thing the receipt exists to replace. | Run the ticket's named verification, record command, exit status, output digest, revision and environment, and bind each receipt to the criteria it supports. |
+| "The finding is only a smell, but I can see what it means — I will write the ticket from it." | Difficulty without a solution class is not a specification, and reading a change out of a smell is inventing the one the grading says is missing. The invented specification is then checked against itself. | Refuse it as an implementation ticket, and return it for sharpening, diagnosis or escalation with the field that decided it. |
+| "Round five ended with two small findings open; they are minor and the ticket is otherwise done." | A silent discard is exactly what the round cap exists to prevent, and the findings least likely to be written down are the ones a later reader most needs. | Park each one with a written ruling naming what it costs if wrong, or rule it load-bearing and stop; return `cap-reached` with both attached. |
+| "These two tickets have no dependency edge, so they can run in parallel." | An edge records a declared dependency, not shared write surface. A shared generated artifact, a migration sequence or one exported interface makes two edgeless tickets contending writers, and the DAG cannot see it. | Read the ownership declarations and the files, serialize exactly the contending pair, and dispatch the rest of the layer together. |
+| "The seat should know I already considered the null case, so I will say so in the prompt." | A prompt that says what to expect tells the seat where to stop looking, and the axis returns the author's confidence in the author's own words. | Hand over the diff and the ticket's verbatim constraints, and nothing about what the previous attempt believed. |
 
 ## Outputs
 
-- One commit per ticket on the branch that ticket owns, recorded against the ticket id. This is the
-  patch link the result carries; nothing is merged, pushed or opened as a PR here.
-- Verification receipts (`schemas/verification.schema.json`), one per acceptance criterion, each
-  naming the criteria it supports and bound to the revision it describes.
-- The per-ticket check result: each axis's findings (`schemas/finding.schema.json`), their
-  disposition, and every ruling written at the cap. It emits no `review` artifact, and a later panel
-  does not treat it as a lane already covered.
+One commit per ticket, on the branch that ticket owns, recorded against the ticket by id. The commit
+is the patch link the lane's result carries; nothing is merged here.
 
-All of it is published through the knowledgebase adapter's `publishArtifact` with a run-artifact
-placement (`adapters/knowledgebase/CONTRACT.md`). This skill names no repository path for
-project-derived content.
+Verification receipts (`schemas/verification.schema.json`), one per acceptance criterion the ticket
+names, each naming the criteria it supports and bound to the revision it describes.
+
+The per-ticket check result: the findings each axis raised (`schemas/finding.schema.json`), their
+disposition, and every ruling written at the round cap. A per-ticket check is a lighter instrument
+than a review panel — it emits no `review` artifact, and a later panel never reads it as a lane it no
+longer has to cover.
+
+All of it is published through the knowledgebase adapter's `publishArtifact` operation with a
+run-artifact placement (`adapters/knowledgebase/CONTRACT.md`). This skill names no repository path
+for project-derived content.
 
 ## Side effects
 
 `workspace-write`, `branch-create`, `local-commit`, `process-exec`, `artifact-write`, `kb-publish`.
 
-`kb-publish` is remote: the idempotency key is the content hash of the published set
-(`adapters/runner-contract/CONTRACT.md` §5), and the returned record reference is read back before
-the ticket reports. Republishing an unchanged set after an interruption is a no-op success, not a
-second record.
+`kb-publish` is a remote effect: the idempotency key is derived from the content hash of the
+published set per `adapters/runner-contract/CONTRACT.md` §5, and the returned record reference is
+read back before the ticket reports. Republishing an unchanged set after an interruption is a no-op
+success rather than a second record.
 
-No `remote-push`, no `pr-open`: this lane ends at a commit on an owned branch. Shipping belongs to
-the worker through `super-ship`.
+No `remote-push`, no `pr-open`: a commit on an owned branch is where this lane ends.
 
 ## Stop conditions
 
-- `complete`: committed, every acceptance criterion has a receipt bound to the committed revision,
-  and every finding is closed on that evidence or parked with a written ruling.
-- `cap-reached`: round five ended with findings open. Return the cap, the commit as it stands, and
-  every open finding with its adjudication. Not a pass; the ticket is not done.
-- `needs-input`: no approved ticket, a `decision` ticket, a source finding too vague to specify, or a
-  check seat that cannot be filled independently. Return what is missing and the lane that owns it,
-  never a narrowed version of the work.
-- `failed`: no writable worktree, the branch is checked out elsewhere, or the knowledgebase refuses
-  the write. Leave the worktree and ledger intact for the resume.
-- `cancelled`: the caller withdrew the ticket. Keep the branch, worktree and recorded rulings; the
-  next run reads them instead of re-deriving them.
+`complete`: the ticket is committed, every acceptance criterion has a receipt bound to the committed
+revision, and every finding either closed on that evidence or parked with a written ruling.
+
+`cap-reached`: the fifth fix round ended with findings still open. Returns the cap, the commit as it
+stands, and every open finding with its adjudication. It is not a pass and the ticket is not done.
+
+`needs-input`: no approved ticket, a ticket typed `decision`, a source finding too vague to specify,
+or a check seat that cannot be filled independently. Returns what is missing and the lane that owns
+it, never a narrowed version of the work.
+
+`failed`: no writable worktree, the branch is checked out elsewhere, or the knowledgebase refuses the
+write. The worktree and the ledger are left intact for the resume.
+
+`cancelled`: the caller withdrew the ticket mid-run. The branch, the worktree and the recorded
+rulings are kept rather than cleaned up, because the next run reads them instead of re-deriving them.
 
 ## Limits
 
-- Fix rounds: 5 per ticket (gate). This is the per-ticket loop, not `policies/limits.yaml`
-  `fix_cycles`, which bounds fix-and-verify cycles after a review run's first pass. Neither cap
-  relaxes the other.
-- Implementers per worktree: 1 (gate). Parallelism is across tickets, never inside one.
-- Parallel tickets: a bounded batch (guidance); the runner's ticket budget is the only start cap.
-- Changed-line target and test-pyramid shape: guidance, configured per project
-  (`schemas/project.schema.json`), not validated or enforced here and not a finding on their own. A
-  ticket over the target records the exception instead of an artificial file split or a meaningless
-  test (ruling `numeric-heuristics-are-guidance`).
+Fix rounds: 5 per ticket (gate). Rounds one to three resume the same implementer; four and five
+dispatch a fresh one. This is the per-ticket implementer-and-check loop, and it is not
+`policies/limits.yaml`'s `fix_cycles`, which bounds the fix-and-verify cycles that follow a review
+run's first pass and does not name this skill. Two caps, two scopes, and neither relaxes the other.
+
+Implementers per worktree: 1 (gate). Parallel dispatch is across tickets, never inside one.
+
+Parallel tickets: a bounded batch rather than every independent ticket at once (guidance). A unit too
+small to outweigh its own dispatch runs inline or batched with related units; the runner's ticket
+budget is the only cap this skill enforces on how many start.
+
+Changed-line target and test-pyramid shape: guidance, configurable per project and carried in the
+project record (`schemas/project.schema.json`). Neither is validated or enforced here and neither is
+grounds for a finding on its own; a ticket that exceeds the configured target records the exception
+rather than answering it with an artificial file split or a meaningless test (ruling
+`numeric-heuristics-are-guidance`).

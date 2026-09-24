@@ -4,17 +4,6 @@ Loaded when `super-review full` selects seats, and when a reader needs to know w
 did or did not run. The authority for every rule here is `policies/review.yaml`; this file is the
 operating form of it.
 
-## Contents
-
-- Selection: the seat catalog and what activates each seat
-- What a seat receives
-- Standards output contract
-- Lane results: seat result to lane state
-- Evidence: anchors, absence, line provenance
-- Suppression
-- Suggested fix
-- Synthesis
-
 ## Selection
 
 The panel is layered, not a roster. Composition follows declared risk and the artifact evidence in

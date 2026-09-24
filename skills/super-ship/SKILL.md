@@ -2,13 +2,9 @@
 name: super-ship
 description: >-
   Prepares a verified, reviewed change for publication: release checks, a sensitive-data scan, the
-  commit, the pull-request payload and a linked knowledgebase draft. Runs as `dry-run`, generating
-  the payload locally and pushing nothing, or as `publish` under a grant. Use when implementation is
-  done, verification receipts and a review verdict bind to the head being shipped, and what remains
-  is a commit and a pull request; when a caller wants the PR payload without publishing; or when an
-  interrupted ship must be resumed without duplicating a push or PR. Not for merging or deploying,
-  force-pushing or rewriting history, deciding whether the change is correct, watching the PR once
-  it is open, or writing project knowledge into the repository.
+  commit, the pull-request payload and the linked knowledgebase draft. Runs dry, generating the
+  payload locally and pushing nothing, or publishes under a grant. Not for merging, not for
+  deploying, and not for deciding whether the change is correct.
 license: MIT
 metadata:
   ak_catalog_id: super-ship
@@ -16,13 +12,39 @@ metadata:
 
 ## When to use
 
-Selection is in the description. Pick the mode: `dry-run` to produce and read the payload with no
-remote call, `publish` to push and open the pull request.
+Use when implementation is complete, verification receipts exist for the head being shipped, a review
+verdict binds to that head, and what remains is turning all of it into a commit and a pull request.
+
+Use when a caller wants the pull-request payload without publishing it: the title, the description,
+the linked evidence and the branch plan, generated locally and pushed nowhere.
+
+Use when a change is about to become public and the pre-flight checks — secrets, dependencies, the
+project's own release gates — have not been run and recorded against this head.
+
+Use when an interrupted ship has to be resumed and the question is whether the remote effect already
+landed.
 
 ## Not for
 
-Merge, deploy, force-push and history rewrite are sensitive actions outside this run's authority;
-correctness is super-review's call, and the open PR belongs to the watch lane.
+Not for merging and not for deploying. Both are sensitive actions that are never granted by default:
+each needs an explicit charter entry a human approved up front, naming the action and exactly what is
+permitted, bound to that charter's hash (ruling `sensitive-actions-need-approved-charter-entry`). A
+run approved to open a pull request has not been approved to finish the job.
+
+Not for deciding whether the change is correct. This skill reads the review verdict and the
+verification receipts; it does not form its own opinion about the code and never ships around a
+missing one.
+
+Not for watching the pull request once it is open. CI results, review comments and base-branch
+changes belong to the watch lane, and a ship that opened a PR is not finished until that lane owns
+it.
+
+Not for writing project knowledge into the repository. Decisions, lessons, reviews and sanitized run
+receipts are owned centrally; this package owns reusable instructions and templates only, and a completed ship is
+not permission to rewrite project knowledge (ruling `central-kb-owns-project-artifacts`).
+
+Not for force-pushing or rewriting history to make a branch land. Both are sensitive actions with the
+same charter requirement as merge.
 
 ## Authority
 
@@ -42,135 +64,162 @@ covers the binding's delivery action and nothing more; merge is never on it (ADR
 
 ## Inputs
 
-- The head being shipped, named; verification receipts bound to that head
-  (`schemas/verification.schema.json`); and a review verdict bound to that head's artifact hash
-  (`schemas/review.schema.json`). If any is missing or bound to a different revision, stop with
-  `needs-input` naming which.
-- The mode: `dry-run` or `publish`. `dry-run` is a supported mode, not a flag to remember: nothing
-  leaves the machine.
-- The charter, where one exists (`schemas/charter.schema.json`), with the actions it names and the
-  approval bound to its hash. Without one the run has no sensitive-action authority and does not
-  acquire any by running.
-- The idempotency inputs the runner supplies: run id, operation id, target identity and input
-  artifact hash (`adapters/runner-contract/CONTRACT.md` §5).
-- The project's own release checks, discovered rather than assumed.
+The head being shipped, named. Verification receipts that bind to that head
+(`schemas/verification.schema.json`), and a review verdict that binds to that head's artifact hash
+(`schemas/review.schema.json`). Any of the three missing or bound to a different revision: stop with
+`needs-input` naming which.
+
+The mode: `dry-run` or `publish`. `dry-run` is a supported mode of this skill, not a flag an operator
+has to remember; it is the mode in which nothing leaves the machine.
+
+The charter, where one exists (`schemas/charter.schema.json`), with the actions it names and the
+approval bound to its hash. Absent, the run has no sensitive-action authority and does not acquire
+any by running.
+
+The idempotency inputs the runner supplies: the run id, the operation id, the target identity and the
+input artifact hash (`adapters/runner-contract/CONTRACT.md` §5).
+
+The project's own release checks, discovered rather than assumed.
 
 ## Workflow
 
-Done means: in `dry-run`, the payload and pre-flight record exist as run artifacts; in `publish`,
-the branch and pull request exist with read-backs recorded and the watch lane holds the PR. Finish
-the requested ship without re-asking for permission already given; report anything beyond it, such
-as merge, as a follow-up rather than doing it.
-
-1. Resolve the mode. Both modes follow the same steps up to the first remote call; `dry-run` stops
-   there.
-2. Confirm receipts and the review verdict bind to the head. A `blocked` or `unavailable` verdict
-   stops the run.
-3. Scan what would be committed for sensitive data. A candidate secret stops the run.
-4. Run dependency-audit triage and the project's release checks, and record each outcome against
-   this head. A check that did not run is recorded as not run, with the reason.
-5. Stage only the paths this change owns, named one by one. Report an unexpected modified path
-   rather than committing it.
-6. Compose the commit message and the PR payload: what changed, why, the linked ticket, the receipts
-   and the review verdict, and the branch it would be opened from.
-7. Look up an open pull request for this branch deterministically. Only an exit-0 empty result means
-   none; any other outcome is unknown, and the run stops rather than opening one.
-8. `dry-run`: emit the payload and check results as run artifacts and stop. Say what would have been
-   sent and to where.
-9. `publish`: for each remote effect, derive the idempotency key and read the target back before and
-   after (see Hard gates). Where the project ships through no-mistakes, the push and PR go through
-   it with review, document and rebase skipped, and a parked gate returns to the lifecycle instead of
-   being answered in the pipeline (ruling `no-mistakes-as-ship-transport`). Read
-   `./references/transport-no-mistakes.md` before any no-mistakes push.
-10. Draft the lesson candidate through the knowledgebase adapter's draft operation and leave it
-    unpublished, naming the authority that would publish it.
-11. Hand the open PR to the watch lane. The ship is prepared, not finished, until that lane owns it.
+1. Resolve the mode. `dry-run` and `publish` follow the same steps up to the first remote call;
+   `dry-run` stops there.
+2. Confirm the preconditions: receipts bind to the head, the review verdict binds to that head's
+   artifact hash. A verdict of `blocked` or `unavailable` stops the run.
+3. Run the sensitive-data scan over what would be committed. A candidate secret stops the run; where
+   one was already committed, report it for rotation rather than only removing it from the payload.
+4. Run the dependency-audit triage and the project's own release checks, and record each outcome
+   against this head. A check that did not run is recorded as not run.
+5. Stage only the paths this change owns, named one by one. Never stage the whole tree and never
+   stage by wildcard.
+6. Compose the commit message and the pull-request payload: what changed, why, the linked ticket,
+   the receipts and the review verdict.
+7. Detect whether an open pull request already exists for this branch, deterministically. Only an
+   exit-0 empty result means there is none; any other outcome is unknown, and unknown is not none.
+8. In `dry-run`, emit the payload and the check results as run artifacts and stop. No branch is
+   pushed, no pull request is opened, and the report says what would have been sent and to where.
+9. In `publish`, derive an idempotency key for each remote effect from the run id, the operation id,
+   the target identity and the input artifact hash — never from a timestamp, a random value, an
+   attempt counter or a session id. Read the target back before the effect and again after it.
+   Where the project ships through no-mistakes, the push and the pull request go through it with
+   review, document and rebase skipped, and a parked gate returns to the lifecycle rather than being
+   answered in the pipeline (ruling `no-mistakes-as-ship-transport`). The mechanics are in
+   `./references/transport-no-mistakes.md`.
+10. Draft the lesson candidate through the knowledgebase adapter's draft operation. It stays a draft:
+    publishing it is a separate authority this run does not hold.
+11. Hand the open pull request to the watch lane, and report the ship as prepared rather than
+    finished until that lane owns it.
 12. Report what was done, what was skipped and why, and every action declined for want of a charter
     entry.
 
 ## Hard gates
 
-- Merge, deploy, production credentials, destructive data operations, new dependencies,
-  public-contract redesign, sensitive trust-boundary changes, scope expansion, force-push and
-  history rewrite are not granted by default. Each needs an explicit charter entry a human approved
-  up front, naming the action and exactly what is permitted, with a human approval bound to that
-  charter's hash and any expiry or single-use bound. An approval whose charter was amended
-  afterwards no longer binds, and the run cannot enlarge its own authority. An approved ticket, a
-  green pipeline and reviewer sign-off are evidence about the change, not authority to land it
-  (ruling `sensitive-actions-need-approved-charter-entry`).
-- `dry-run` makes no remote call at all. A run that pushed a branch to show what the push would look
-  like was not a dry run.
-- Every remote effect carries an idempotency key derived from the run id, operation id, target
-  identity and input artifact hash, never from a timestamp, random value, attempt counter or session
-  id, with a read-back before and after (`adapters/runner-contract/CONTRACT.md` §5). A resumed run
-  re-derives the same key and returns the existing branch or PR rather than creating a second.
-- Stage by named path. No whole-tree staging and no wildcards: what a wildcard adds is decided by the
-  working directory, not by this change.
-- A candidate secret in what would be committed stops the run. If it already reached history, report
-  it for rotation; removing it from the payload does not un-leak it, and "nobody pulled the branch"
-  is not evidence it is safe.
-- No project-derived artifact is written to a repository path. Decisions, lessons, reviews and
-  sanitized run receipts go through the knowledgebase adapter, and no application-local
-  documentation tree is created as a substitute (ruling `central-kb-owns-project-artifacts`).
-- The run asks no blocking question mid-flight. Where a decision is required, stop with
-  `needs-input` and name the decision.
+Gate: merge, deploy, production credentials, destructive data operations, new dependencies,
+public-contract redesign, sensitive trust-boundary changes, scope expansion, force-push and history
+rewrite are never granted by default. Each requires an explicit charter entry a human approved up
+front, naming the action and exactly what is permitted, and an explicit human approval bound to that
+charter's hash, with any expiry or single-use bound. An approval whose charter was amended afterwards
+no longer binds, and this run may never enlarge its own authority (ruling
+`sensitive-actions-need-approved-charter-entry`).
+
+Gate: `dry-run` makes no remote call. Not a reduced one, not a single harmless one — none. A run that
+pushed a branch to show what the push would look like was not a dry run.
+
+Gate: every remote effect carries an idempotency key derived from the run id, the operation id, the
+target identity and the input artifact hash, with a read-back before and after
+(`adapters/runner-contract/CONTRACT.md` §5). A restart re-derives the same key and returns the
+existing record rather than creating a second one.
+
+Gate: staging is by named path. The whole tree is never staged and a wildcard is never used, because
+what a wildcard adds is decided by the working directory rather than by this change.
+
+Gate: a candidate secret in what would be committed stops the run. A secret already in history is
+reported for rotation; removing it from the payload does not un-leak it.
+
+Gate: no project-derived artifact is written to a repository path. Decisions, lessons, reviews and
+sanitized run receipts go through the knowledgebase adapter, and no application-local documentation tree is created
+as a substitute (ruling `central-kb-owns-project-artifacts`).
+
+Gate: the run asks no blocking question mid-flight. Where a decision is genuinely required, it stops
+with `needs-input` and the decision named, rather than waiting on a prompt nobody is there to answer.
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
-| "The PR lookup errored, so there is probably no open PR — open one." | An error is not an empty result; treating unknown as none is how a second PR for the same branch gets created. | Treat only an exit-0 empty result as none. Otherwise stop and report the lookup as unknown. |
-| "The run was interrupted after the push, so push again to be sure." | A second push without the key is a second effect. | Re-derive the key from the same inputs, read the target back, and let the unchanged result be the success. |
+| "The PR is open and CI is green — the change is effectively merged, so merging it finishes the job." | Approval to prepare a pull request is not approval to land one, and the run cannot grant itself the difference (ruling `sensitive-actions-need-approved-charter-entry`). | Stop at the open pull request, report it as prepared, and name merge as the action that needs its own charter entry. |
+| "It is only a dry run, so one push to a scratch branch to check the payload is harmless." | A push is a remote effect whether or not the branch matters, and a dry run that pushes has already broken the only promise it makes. | Emit the payload as a run artifact, and say in the report what would have been sent and to where. |
+| "`git add -A` is faster and the working tree only has this change in it." | What a wildcard stages is decided by the working directory, not by the change, and the one time that is false is the time a secret or another lane's file ships. | Stage the paths this change owns, named one by one, and let an unexpected path be a stop rather than a surprise. |
+| "The PR lookup errored, so there is probably no open PR — open one." | An error is not an empty result; treating unknown as none is how a second pull request for the same branch gets created. | Treat only an exit-0 empty result as none. On any other outcome, stop and report the lookup as unknown. |
+| "The run was interrupted after the push, so push again to be sure." | A second push without the key creates a second effect, and "to be sure" is the sentence that turns one action into two. | Re-derive the idempotency key from the same run id, operation id, target identity and input hash, read the target back, and let the unchanged result be the success. |
+| "The secret is in an old commit, so scrubbing it from this one is enough." | The value is already out; removing it from the payload changes what is visible next, not what was exposed. | Stop the run, report the exposure for rotation, and do not treat a clean payload as a closed incident. |
+| "The lesson is written — publish it while the knowledgebase call is already open." | Drafting is inside this run's authority and publishing is not, and doing both because the connection was open is the side door the split exists to close (ruling `entrypoint-phase-operation-split`). | Leave the candidate as a draft and name the authority that would publish it. |
+| "The PR is open, so this skill is done and the watch can be started later." | An open pull request with nobody watching it is where CI failures and review comments go unread, and "later" has no owner. | Hand the pull request to the watch lane as part of this run, and report the ship as prepared until that lane owns it. |
 
 ## Outputs
 
-- The pull-request payload: title, description, linked ticket, the receipts and review verdict it
-  rests on, and the branch it would be opened from. In `dry-run` this is the whole output.
-- The pre-flight record: the sensitive-data scan, dependency-audit triage and each project release
-  check, with its outcome against this head and a reason wherever it did not run.
-- The ship record: which remote effects were performed, the idempotency key each carried, and the
-  read-back before and after.
-- The declined list: every sensitive action not taken, with the charter entry it would have needed.
-  An empty declined list is a claim, so state it rather than omit it.
-- A lesson candidate, drafted through the knowledgebase adapter and left unpublished.
+The pull-request payload: title, description, the linked ticket, the receipts and the review verdict
+it rests on, and the branch it would be opened from. In `dry-run` this is the whole output.
+
+The pre-flight record: the sensitive-data scan, the dependency-audit triage and each project release
+check, with its outcome against this head and a reason wherever it did not run.
+
+The ship record: which remote effects were performed, the idempotency key each carried, and the
+read-back result before and after.
+
+The declined list: every sensitive action this run did not take, with the charter entry that would
+have been needed. An empty declined list is a claim, so it is stated rather than omitted.
+
+A lesson candidate, drafted through the knowledgebase adapter and left unpublished.
 
 ## Side effects
 
 `local-commit`, `branch-create`, `remote-push`, `pr-open`, `kb-draft`, `artifact-write`.
 
-`remote-push` and `pr-open` are remote effects and occur only in `publish`, each with its
-idempotency key and read-backs (`adapters/runner-contract/CONTRACT.md` §5), so a resumed run returns
-the existing branch or pull request rather than creating a second.
+`remote-push` and `pr-open` are remote effects and occur only in `publish`. Each carries an
+idempotency key derived per `adapters/runner-contract/CONTRACT.md` §5 and is read back before and
+after, so a resumed run returns the existing branch or pull request rather than creating a second.
 
 Through the no-mistakes transport these are still this skill's effects, with the same keys: the
 transport performs them, and super-ship remains the single creator of the pull request. No merge is
 among them (ruling `no-mistakes-as-ship-transport`).
 
-`kb-draft` writes a draft and nothing else; `kb-publish` is not in this skill's envelope. No
-`pr-comment` and no `pr-thread-resolve`: replying on a pull request and resolving its threads are
+`kb-draft` writes a draft and nothing else; `kb-publish` is not in this skill's envelope.
+
+No `pr-comment`, no `pr-thread-resolve`: replying on a pull request and resolving its threads are
 separately granted actions belonging to the feedback lane.
 
-In `dry-run` the only effect performed is `artifact-write`.
+In `dry-run` the effects performed are `artifact-write` alone.
 
 ## Stop conditions
 
-- `complete`: in `dry-run`, the payload and the pre-flight record are emitted. In `publish`, the
-  branch and pull request exist with their read-backs recorded, the lesson candidate is drafted, and
-  the watch lane holds the pull request.
-- `needs-input`: receipts or the review verdict are missing or bound to another revision, the mode
-  was not named, or a sensitive action is required and no charter entry covers it. Return what is
-  needed and perform no remote effect.
-- `failed`: a candidate secret was found, a required release check failed, or the pull-request
-  lookup returned something other than success or an empty list. Name the reason; the run stays
-  resumable.
-- `cancelled`: the caller withdrew mid-run. Report effects already performed with their idempotency
-  keys so a resumed run recognises them.
+`complete`: in `dry-run`, the payload and the pre-flight record are emitted. In `publish`, the branch
+and pull request exist with their read-backs recorded, the lesson candidate is drafted, and the watch
+lane holds the pull request.
+
+`needs-input`: receipts or the review verdict are missing or bound to another revision, the mode was
+not named, or a sensitive action is required and no charter entry covers it. Returns what it would
+need and performs no remote effect.
+
+`failed`: a candidate secret was found, a required release check failed, or the pull-request lookup
+returned an outcome that is neither success nor an empty list. The reason is named and the run stays
+resumable.
+
+`cancelled`: the caller withdrew mid-run. Effects already performed are reported with their
+idempotency keys so a resumed run recognises them.
 
 ## Limits
 
-- Remote effects per operation: one (gate). The idempotency key prevents repetition, not an attempt
-  count.
-- Sensitive actions: zero without a charter entry (gate), however well the run is going.
-- Staged paths: named, never wildcarded (gate), at any size.
-- Pull-request size: guidance, not a gate. Size targets are configurable starting points and never a
-  reason to withhold a prepared change.
-- Runner budgets: a cap the runner did not supply is not enforced and not guessed
-  (`policies/limits.yaml`).
+Remote effects per operation: one (gate). Repetition is prevented by the idempotency key, not by
+counting attempts.
+
+Sensitive actions: zero without a charter entry (gate). The count does not rise because the run is
+going well.
+
+Staged paths: named, never wildcarded (gate). There is no threshold at which a wildcard becomes
+acceptable.
+
+Pull-request size: not a gate (guidance). Size targets are configurable starting points and are never
+a reason to withhold a prepared change.
+
+Runner budgets: a cap the runner did not supply is not enforced and not guessed
+(`policies/limits.yaml`).

@@ -1,28 +1,43 @@
 ---
 name: super-align
 description: >-
-  Grills an unsettled request into agreed direction: classifies the work, isolates one coherent
-  outcome, works a design tree in question rounds, settles named terms, offers two or three
-  approaches with a recommendation, and requires an explicit human yes to a restated direction
-  before anything is built. Use when what to build is not yet agreed: no acceptance criteria, an
-  open approach, several bundled outcomes, an unrecorded seam or interface decision, or a term that
-  means different things to different readers. Not for a request that already states acceptance
-  criteria and the pattern to follow, a single-file rename or typo fix, turning an approved
-  direction into a specification and tickets (super-bound), reviewing a written spec, plan or ADR
-  (doc-review), or resolving a decision ticket inside a map a charting session is working.
+  Grills an unsettled request into agreed direction: a design tree worked in rounds, named terms,
+  two or three approaches with a recommendation, and an explicit human yes before anything is built.
+  Use when what to build is not yet agreed. Not for a request that already carries acceptance
+  criteria, and not for a single-file fix with no decision in it.
 license: MIT
 metadata:
   ak_catalog_id: super-align
 ---
 
+Grill the request, establish shared vocabulary, reach approved direction or an explicit unresolved
+decision. Nothing is implemented before a human approves.
+
 ## When to use
 
-Selection is carried by the description. Ceremony scales with the work; the approval gate does not.
+- A human describes a feature, change or problem and the direction is not yet agreed: no acceptance
+  criteria exist, and the approach is still open.
+- The request bundles several outcomes and nobody has said which one this run owns.
+- An approach question turns on where a seam or an interface goes and the project has recorded no
+  decision for it.
+- A term in the request means different things to different readers and the glossary does not
+  settle it.
+- A delegated controller holds a charter naming the `align-answer` checkpoint category and a
+  bounded alignment question inside that charter is open.
 
 ## Not for
 
-Exclusions are in the description. A fully specified request gets a
-two-sentence confirmation, a yes and a hand-off; a typo or rename enters at build with no round.
+- A request that already states its acceptance criteria and names the existing pattern to follow.
+  Confirm the understanding in two sentences, take the yes and hand off; a round-based interview
+  re-decides what the human already decided.
+- A single-file rename or typo fix with no decision in it. That work enters at build.
+- Turning an approved direction into a specification and tickets. That is `super-bound`, which
+  starts from this skill's approved result rather than reopening it.
+- Reviewing a written specification, plan or ADR for coherence and decision readiness. That is
+  `doc-review`.
+- Resolving a decision ticket that belongs to a map. The map's owner brings the ticket to a fresh
+  run of this skill that a human starts; a charting session may not start it (ruling
+  `entrypoint-phase-operation-split`).
 
 ## Authority
 
@@ -31,80 +46,86 @@ Authority: `explicit` at the public entrypoint, `delegated-grant` at the phase o
 starts `align.run` only under a runner-validated grant covering `align-answer`
 (`adapters/runner-contract/CONTRACT.md`), and only for a bounded question inside the charter's work
 source. Where the host cannot validate that grant, the operation stops for explicit invocation
-rather than answering (ruling `entrypoint-phase-operation-split`); a controller's own assertion of
-its charter is not a validated grant. No skill starts this skill directly. A decision ticket that
-belongs to a map reaches it only when the map's owner brings it to a fresh, human-started run; a
-charting session may not start it.
+rather than answering (ruling `entrypoint-phase-operation-split`). No skill starts this skill
+directly.
 
 ## Inputs
 
-- **The request**, as prose from the human. Absent: `needs-input`. A request inferred from
-  repository state is not a request.
-- **Recorded context** via the knowledgebase adapter's `readContext`: the glossary, the `concept`
-  and `system` pages in scope, and any `adr` that already settles part of the question. An empty
-  result is a fact: say the project has recorded none and continue. An unreachable knowledgebase
-  is `failed`; stop rather than proceed from memory. A host that provides no `kb-write` at all is
-  `needs-input` naming `kb-write`; write nothing into the repository as a substitute.
+- The request, as prose from the human. Absent: return `needs-input` and ask for one. A request
+  inferred from repository state is not a request.
+- Recorded project context, read through the knowledgebase adapter's `readContext`: the glossary,
+  the `concept` and `system` pages in scope, and any `adr` that already settles part of the
+  question. An empty result is a fact, not an error — say the project has recorded none and
+  continue. A knowledgebase that cannot be reached returns `failed`; stop and report it rather than
+  proceeding from memory.
 - At `align.run` only: a `charter` (`schemas/charter.schema.json`) listing the `align-answer`
-  checkpoint category. Absent, or listing another category: `needs-input`.
-- Codebase facts are yours to look up. Never ask the human something you could read, and never let
-  looking it up block a round.
+  checkpoint category. Absent, or listing a different category: `needs-input`.
+- Facts about the codebase are this skill's own job to find. A fact the agent could look up is
+  never a question for the human, and looking it up never blocks a round.
 
 ## Workflow
 
-1. Classify the work as **bounded**, **standard** or **architectural** by ambiguity and how far it
-   cuts across the system, with a one-line reason. When unsure, pick the heavier class.
-2. Coherent-work gate: list every outcome in the request that has its own acceptance boundary and
-   could ship without the others. If there is more than one, propose a plain-language breakdown,
-   state only the relationships the material supports, and ask which one this run owns. The rest
-   are context, not scope.
-3. State a hypothesis for what the human wants with a confidence number. Below roughly 70, give the
-   reason on the same line.
+1. Classify the work as **bounded**, **standard** or **architectural** from its ambiguity and how
+   far it cuts across the system. Say which and why in one line. Uncertain lands on the heavier
+   classification.
+2. Run the coherent-work gate: list every outcome in the request that carries its own acceptance
+   boundary and could be delivered without the others. More than one — propose a plain-language
+   breakdown, state only the relationships the material supports, and ask which one this run owns.
+   The rest are context, not scope.
+3. State a hypothesis for what the human wants and a confidence number for it. Below roughly 70,
+   state the reason on the same line.
 4. Load [the domain-modeling reference pack](../../references/domain-modeling/REFERENCE.md) before
    naming any term, and [the codebase-design reference pack](../../references/codebase-design/REFERENCE.md)
-   when the question turns on where a seam or interface goes.
-5. Build the design tree: each decision branches into the decisions that depend on it. The frontier
-   is every decision whose prerequisites are settled.
-6. Ask the whole frontier in one round: numbered questions, each with the answer you would give and
-   why. Then stop and wait.
-7. When an answer names a convention rather than a want, probe once: what would they want if they
-   did not have to justify it to anyone?
-8. Recompute the frontier and run the next round. Stop asking when the frontier is empty and you can
-   predict the human's answers to the next three questions.
-9. Present two or three approaches with trade-offs, leading with your recommendation and why. Name
-   what you rejected and on what grounds. A fork with only one real option is presented as one.
-10. Restate the direction in six fields (Outcome, User, Why now, Success, Constraint, Out of scope)
-    and ask for approval. Out of scope is always present.
+   when the question turns on where a seam or an interface goes.
+5. Build the design tree: each decision branches into the decisions that hang off it. The frontier
+   is every decision whose prerequisites are already settled.
+6. Ask the whole frontier in one round. Number each question and attach the answer you would give
+   and the reason for it. Then stop and wait for the human.
+7. When an answer names a convention rather than a want, probe once: ask what they would actually
+   want if they did not have to justify the choice to anyone.
+8. Recompute the frontier from the answers and run the next round. Stop asking when the frontier is
+   empty and you can predict the human's answer to the next three questions you would ask.
+9. Present two or three approaches with their trade-offs, leading with the one you recommend and
+   why. A single option is not a choice; name what you rejected and on what grounds.
+10. Restate the direction in six fields — Outcome, User, Why now, Success, Constraint, Out of scope
+    — and ask for approval. Out of scope is never omitted.
 11. On an explicit yes, publish the settled vocabulary as a `concept` page and the direction as an
     `adr` with status `proposed`. On a fork the human cannot settle, publish a `type: decision`
     ticket instead and say what it blocks.
 
 ## Hard gates
 
-- Nothing is implemented before approval. At every classification, write no source file, scaffold
-  no project and start no implementation skill until the human approves the restated direction.
-  A short design is still a design: write the two sentences, then take the approval.
-- Approval is an explicit yes to the restatement. "Whatever you think is best", "sounds good",
-  "sure, let's go" and silence hand the decision back; they agree to nothing. Put the six-field
-  restatement in front of the human and ask again; do not pick a direction on their behalf.
-- Complexity found mid-run upgrades the classification; nothing downgrades it. Say when it moves and
-  why, and take the heavier path even when nearly done.
-- A fork the human cannot settle in this session leaves as a `type: decision` ticket. A guess
-  recorded as a settled decision is the failure this skill exists to prevent.
-- At `align.run`, an unbounded or out-of-charter question returns `needs-input`, never a decided
-  answer, and no implementation file is written in that operation.
+Gate: nothing is implemented before approval. On every classification this skill writes no source
+file, scaffolds no project and starts no implementation skill until the human has approved the
+restated direction. The ceremony scales with the work; the gate does not.
+
+Gate: approval is an explicit yes to the restatement. "Whatever you think is best", "sounds good",
+"sure, let's go" and silence are not approval. Restate and ask again.
+
+Gate: complexity found mid-run upgrades the classification, and nothing downgrades it. Say when it
+moves and why.
+
+Gate: a fork the human cannot settle in this session leaves as a `type: decision` ticket. A guess
+recorded as a settled decision is the failure this skill exists to prevent.
+
+Gate: at `align.run`, an unbounded or out-of-charter question returns `needs-input`, never a decided
+answer, and no implementation file is written in that operation.
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
-| The ask is clear enough; more questions waste their time. | An ask that is clear to the agent is the shape of an assumption, not of agreement. | Run the frontier round. If you can already predict the next three answers, say so and go to the restatement. |
+| "It's bounded and the design is obvious — I'll start while they read it." | The gate is the approval, not the design's length. | Present the design, then stop until you hear an explicit yes. |
+| "This is too simple to need a design." | Simple means a short design, not no design. | Write the two sentences, then take the approval. |
+| "They said 'whatever you think is best', so that is a yes." | That answer hands the decision back; it agrees to nothing, and the human has not yet seen a direction to agree to. | Restate the direction in the six fields and ask again for a yes or a change. |
+| "It grew while I worked, but I'm nearly done — re-classifying now wastes a round." | Hidden complexity upgrades the classification and nothing downgrades it; "nearly done" is when the upgrade matters most. | Stop, say the classification moved and why, and run the heavier path. |
+| "The ask is clear enough — more questions would waste their time." | An ask that is clear to the agent is the shape of an assumption, not of agreement. | Run the frontier round. If you can already predict the next three answers, say so and go to the restatement. |
 
 ## Outputs
 
-- `concept` page: the settled vocabulary for this scope, published through the knowledgebase
+- `concept` page — the settled vocabulary for this scope, published through the knowledgebase
   adapter's `publishArtifact` under a `kb-document` placement naming kind `concept` and the scope.
   The knowledgebase resolves the location and this skill supplies no path (ruling
   `central-kb-owns-project-artifacts`).
-- `adr` page: the approved direction, published with status `proposed` through `publishArtifact`.
+- `adr` page — the approved direction, published with status `proposed` through `publishArtifact`.
   This skill never accepts one: acceptance happens in review and never by the author
   (`docs/decisions/0001-kb-document-vocabulary.md`, "Authorship separation carries into the KB").
 - `ticket` (`schemas/ticket.schema.json`), `type: decision`, id shape `align-<scope>-<topic>`,
@@ -118,33 +139,30 @@ charting session may not start it.
 not edit the repository under discussion.
 
 `kb-publish` is a remote side effect. Its idempotency key derives from the run, the operation, the
-knowledgebase record identity and the published artifact's hash. The read-back is the record ref
-and stored hash `publishArtifact` returns, read before the write and confirmed after it
+knowledgebase record identity and the published artifact's hash; the read-back is the record ref and
+stored hash `publishArtifact` returns, read before the write and confirmed after it
 (`adapters/runner-contract/CONTRACT.md`, "Idempotency"). A publication whose read-back cannot be
-performed is `failed`, never complete. On resume after an interrupted publish, read back first and
-publish only if the earlier write is absent.
+performed is `failed`, never complete.
 
 ## Stop conditions
 
-- `complete`: the human approved the restated direction, and every published artifact's read-back
+- `complete` — the human approved the restated direction, and every published artifact's read-back
   matched what was sent.
-- `needs-input`: no request, no explicit approval, no `kb-write` on the host, a question outside the
-  charter at `align.run`, or a fork only the human can settle. Return what is settled so far and
-  the one question that blocks.
-- `cap-reached`: the runner-supplied alignment budget is exhausted. Return the settled part of the
-  tree and the open frontier, and decide none of it.
-- `cancelled`: the human ends the run. Nothing is published.
-- `failed`: the knowledgebase is unreachable, or a publication's read-back cannot be performed.
-
-After an explicit yes, finish publishing without asking again. Report ideas outside the approved
-direction as follow-ups rather than folding them in.
+- `needs-input` — no request, no explicit approval, a question outside the charter at `align.run`,
+  or a fork only the human can settle. Returns what is settled so far and the one question that
+  blocks.
+- `cap-reached` — the runner-supplied alignment budget is exhausted. Returns the settled part of the
+  tree and the open frontier, and decides none of it.
+- `cancelled` — the human ends the run. Nothing is published.
+- `failed` — the knowledgebase is unreachable, or a publication's read-back cannot be performed.
 
 ## Limits
 
 - Alignment exchanges: the runner-supplied `alignment-budget` (gate when supplied). A cap the runner
-  did not supply is not enforced or guessed; the run records that it was absent
+  did not supply is not enforced and not guessed; the run records that it was absent
   (`policies/limits.yaml`).
-- Questions per round: the whole frontier, asked once (gate). This skill sets no round cap of its
-  own.
-- Approaches per fork: two or three (guidance).
+- Questions per round: the whole frontier, asked once (gate). This skill caps the number of rounds
+  at nothing of its own.
+- Approaches offered per fork: two or three (guidance). A fork with one real option is presented as
+  one and said to be one.
 - Confidence below which a hypothesis carries its reason: roughly 70 (guidance).
