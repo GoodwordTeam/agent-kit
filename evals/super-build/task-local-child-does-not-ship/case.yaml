@@ -42,12 +42,6 @@ graders:
     match: contains
     flags: "m"
     weight: 2
-  - name: t2-committed
-    type: tool_used
-    tool: Bash
-    input_match: "git\\s+commit"
-    min: 1
-    weight: 1
   - name: explains-the-boundary
     type: llm
     weight: 2
@@ -62,4 +56,5 @@ graders:
     focus: trace
     criteria: >-
       The response reports its ticket T2 result — the commit and its verification, such as the test
-      run — back to the worker as the child's result, rather than to a person or to Firstmate.
+      run, or why it could not produce them — back to the worker as the child's result, rather than
+      to a person or to Firstmate.
