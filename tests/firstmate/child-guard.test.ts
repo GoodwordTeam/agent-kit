@@ -136,3 +136,231 @@ describe("child-guard", () => {
     expect(guard("__AK_FIRSTMATE_BINDING__", child("Bash", { command: "bun test" })).denied).toBe(true);
   });
 });
+
+/**
+ * Characterization test: pins the hook's exact stdout bytes and exit code
+ * across every deny/allow branch, so a rewrite of the jq plumbing can be
+ * proven byte-for-byte equivalent rather than merely "still denies/allows".
+ * This must pass unmodified against both the pre- and post-rewrite script.
+ */
+function runRaw(
+  bindingPath: string,
+  input: string | Record<string, unknown>,
+  opts?: { cwd?: string },
+): { stdout: string; code: number } {
+  const proc = Bun.spawnSync(["bash", HOOK, "--binding", bindingPath], {
+    cwd: opts?.cwd,
+    stdin: new TextEncoder().encode(typeof input === "string" ? input : JSON.stringify(input)),
+    env: { ...process.env, TMPDIR: "/nonexistent-tmp/" },
+  });
+  return { stdout: proc.stdout.toString(), code: proc.exitCode ?? -1 };
+}
+
+function denyLine(reason: string): string {
+  return (
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: `agent-kit child guard: ${reason}`,
+      },
+    }) + "\n"
+  );
+}
+
+function rawBinding(content: string): string {
+  const dir = makeDir();
+  const path = join(dir, "agent-kit-binding.json");
+  writeFileSync(path, content);
+  return path;
+}
+
+describe("child-guard exact output (characterization)", () => {
+  const b = binding("/evidence/store");
+  const badSchema = rawBinding(JSON.stringify({ schema: "something-else" }));
+  const brokenBinding = rawBinding("{not json");
+  const noCwd = {
+    session_id: "s",
+    hook_event_name: "PreToolUse",
+    agent_id: "a1b2",
+    agent_type: "general-purpose",
+    tool_name: "Bash",
+    tool_input: { command: "bun test" },
+  };
+
+  const allowCases: Array<{ name: string; bindingPath: string; input: string | Record<string, unknown> }> = [
+    { name: "main-thread git push", bindingPath: b, input: parent("Bash", { command: "git push origin main" }) },
+    { name: "main-thread write outside worktree", bindingPath: b, input: parent("Write", { file_path: "/etc/passwd" }) },
+    { name: "child ordinary bash command", bindingPath: b, input: child("Bash", { command: "git status" }) },
+    { name: "child write inside worktree", bindingPath: b, input: child("Write", { file_path: `${WORKTREE}/src/a.ts` }) },
+    { name: "child write inside evidence store", bindingPath: b, input: child("Write", { file_path: "/evidence/store/raw-1.json" }) },
+    { name: "child reads a pull request", bindingPath: b, input: child("Bash", { command: "gh pr view 3" }) },
+  ];
+
+  for (const c of allowCases) {
+    test(`allow: ${c.name}`, () => {
+      const r = runRaw(c.bindingPath, c.input);
+      expect({ name: c.name, stdout: r.stdout, code: r.code }).toEqual({ name: c.name, stdout: "", code: 0 });
+    });
+  }
+
+  const denyCases: Array<{ name: string; bindingPath: string; input: string | Record<string, unknown>; reason: string }> = [
+    {
+      name: "malformed JSON input",
+      bindingPath: b,
+      input: '{"agent_id":"a1"',
+      reason: "the hook input is not JSON",
+    },
+    {
+      name: "no binding substituted (empty)",
+      bindingPath: "",
+      input: child("Bash", { command: "bun test" }),
+      reason: "no task binding was substituted into the worker settings",
+    },
+    {
+      name: "no binding substituted (token)",
+      bindingPath: "__AK_FIRSTMATE_BINDING__",
+      input: child("Bash", { command: "bun test" }),
+      reason: "no task binding was substituted into the worker settings",
+    },
+    {
+      name: "unreadable binding",
+      bindingPath: "/nonexistent/agent-kit-binding.json",
+      input: child("Bash", { command: "bun test" }),
+      reason: "the task binding /nonexistent/agent-kit-binding.json is unreadable",
+    },
+    {
+      name: "binding has the wrong schema",
+      bindingPath: badSchema,
+      input: child("Bash", { command: "bun test" }),
+      reason: `the task binding ${badSchema} is not a firstmate-binding`,
+    },
+    {
+      name: "binding is not valid JSON",
+      bindingPath: brokenBinding,
+      input: child("Bash", { command: "bun test" }),
+      reason: `the task binding ${brokenBinding} is not a firstmate-binding`,
+    },
+    {
+      name: "hook input names no cwd",
+      bindingPath: b,
+      input: noCwd,
+      reason: "the hook input names no working directory",
+    },
+    {
+      name: "Task tool",
+      bindingPath: b,
+      input: child("Task", { prompt: "x" }),
+      reason: "a task-local child has depth 1 and may not start an agent",
+    },
+    {
+      name: "Agent tool",
+      bindingPath: b,
+      input: child("Agent", { prompt: "x" }),
+      reason: "a task-local child has depth 1 and may not start an agent",
+    },
+    {
+      name: "claude token in command",
+      bindingPath: b,
+      input: child("Bash", { command: "claude -p hello" }),
+      reason: "a task-local child has depth 1 and may not start an agent (claude)",
+    },
+    {
+      name: "codex token in command",
+      bindingPath: b,
+      input: child("Bash", { command: "codex exec hi" }),
+      reason: "a task-local child has depth 1 and may not start an agent (codex)",
+    },
+    {
+      name: "fm-* command",
+      bindingPath: b,
+      input: child("Bash", { command: "fm-spawn.sh T-1" }),
+      reason: "a task-local child may not run Firstmate (fm-spawn.sh)",
+    },
+    {
+      name: "fm-* command with a path prefix",
+      bindingPath: b,
+      input: child("Bash", { command: "bin/fm-control.sh pause" }),
+      reason: "a task-local child may not run Firstmate (bin/fm-control.sh)",
+    },
+    {
+      name: "no-mistakes command",
+      bindingPath: b,
+      input: child("Bash", { command: "no-mistakes axi run" }),
+      reason: "a task-local child may not run no-mistakes",
+    },
+    {
+      name: "git push",
+      bindingPath: b,
+      input: child("Bash", { command: "git push origin HEAD" }),
+      reason: "a task-local child may not push",
+    },
+    {
+      name: "gh pr create",
+      bindingPath: b,
+      input: child("Bash", { command: "gh pr create --fill" }),
+      reason: "a task-local child may not create a pull request",
+    },
+    {
+      name: "gh pr merge",
+      bindingPath: b,
+      input: child("Bash", { command: "gh pr merge 3" }),
+      reason: "a task-local child may not merge a pull request",
+    },
+    {
+      name: "gh api graphql pull-request mutation",
+      bindingPath: b,
+      input: child("Bash", {
+        command: `gh api graphql -f query='mutation{createPullRequest(input:{}){pullRequest{url}}}'`,
+      }),
+      reason: "a task-local child may not change a pull request through gh api graphql",
+    },
+    {
+      name: "gh api merge path",
+      bindingPath: b,
+      input: child("Bash", { command: "gh api -X PUT repos/o/r/pulls/3/merge" }),
+      reason: "a task-local child may not merge a pull request",
+    },
+    {
+      name: "gh api mutating pulls request",
+      bindingPath: b,
+      input: child("Bash", { command: "gh api -X POST repos/o/r/pulls -f title=x" }),
+      reason: "a task-local child may not change a pull request through gh api",
+    },
+    {
+      name: "empty write path",
+      bindingPath: b,
+      input: child("Write", { file_path: "" }),
+      reason: "a write with no target path",
+    },
+    {
+      name: "write path climbs with ..",
+      bindingPath: b,
+      input: child("Write", { file_path: `${WORKTREE}/../elsewhere` }),
+      reason: `a write path that climbs with '..' (${WORKTREE}/../elsewhere)`,
+    },
+    {
+      name: "write outside worktree/evidence/tmp",
+      bindingPath: b,
+      input: child("Write", { file_path: "/work/treehouse/x" }),
+      reason: "a task-local child writes only inside the worktree, the evidence store or its scratch directory, not /work/treehouse/x",
+    },
+    {
+      name: "NotebookEdit outside worktree/evidence/tmp",
+      bindingPath: b,
+      input: child("NotebookEdit", { notebook_path: "/tmp/x.ipynb" }),
+      reason: "a task-local child writes only inside the worktree, the evidence store or its scratch directory, not /tmp/x.ipynb",
+    },
+  ];
+
+  for (const c of denyCases) {
+    test(`deny: ${c.name}`, () => {
+      const r = runRaw(c.bindingPath, c.input);
+      expect({ name: c.name, stdout: r.stdout, code: r.code }).toEqual({
+        name: c.name,
+        stdout: denyLine(c.reason),
+        code: 0,
+      });
+    });
+  }
+});

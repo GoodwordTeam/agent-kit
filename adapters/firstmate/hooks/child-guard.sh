@@ -37,7 +37,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-INPUT=$(cat)
+IFS= read -r -d '' INPUT || true  # builtin: no subshell, no cat fork
 
 deny() {
   local reason="agent-kit child guard: $1"
@@ -58,18 +58,50 @@ case "$INPUT" in
 esac
 
 command -v jq >/dev/null 2>&1 || deny "jq is unavailable, so this subagent call cannot be judged"
-AGENT_ID=$(printf '%s' "$INPUT" | jq -r '.agent_id // empty' 2>/dev/null) || deny "the hook input is not JSON"
+
+# One jq call pulls every field the guard could need out of the hook input.
+# Each field is NUL-terminated so arbitrary bytes (newlines, quotes) survive
+# intact, and a `read` that hits EOF before finding its NUL (malformed JSON,
+# or a jq runtime error on an unexpectedly-shaped tool_input) fails -- which
+# is how a bad parse is detected without a second call. The `?` on each nested
+# access keeps one oddly-shaped field (e.g. a non-object tool_input) from
+# aborting the whole read, matching the old per-field jq calls' isolation.
+AGENT_ID="" CWD="" TOOL="" CMD="" FILE_PATH="" NOTEBOOK_PATH=""
+{
+  IFS= read -r -d '' AGENT_ID &&
+  IFS= read -r -d '' CWD &&
+  IFS= read -r -d '' TOOL &&
+  IFS= read -r -d '' CMD &&
+  IFS= read -r -d '' FILE_PATH &&
+  IFS= read -r -d '' NOTEBOOK_PATH
+} < <(printf '%s' "$INPUT" | jq -j '
+    (.agent_id? // ""), "\u0000",
+    (.cwd? // ""), "\u0000",
+    (.tool_name? // ""), "\u0000",
+    (.tool_input.command? // ""), "\u0000",
+    (.tool_input.file_path? // ""), "\u0000",
+    (.tool_input.notebook_path? // ""), "\u0000"
+  ' 2>/dev/null) || deny "the hook input is not JSON"
+
 [ -n "$AGENT_ID" ] || exit 0
 
 case "$BINDING" in
   ""|__AK_FIRSTMATE_BINDING__) deny "no task binding was substituted into the worker settings" ;;
 esac
 [ -f "$BINDING" ] && [ -r "$BINDING" ] || deny "the task binding $BINDING is unreadable"
-jq -e '.schema == "firstmate-binding"' "$BINDING" >/dev/null 2>&1 || deny "the task binding $BINDING is not a firstmate-binding"
 
-EVIDENCE=$(jq -r '.evidence.location // empty' "$BINDING")
-CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
-TOOL=$(printf '%s' "$INPUT" | jq -r '.tool_name // empty')
+# One jq call on the binding file returns whether the schema matches and the
+# evidence location together.
+SCHEMA_OK="" EVIDENCE=""
+{
+  IFS= read -r -d '' SCHEMA_OK &&
+  IFS= read -r -d '' EVIDENCE
+} < <(jq -j '
+    (if .schema == "firstmate-binding" then "1" else "0" end), "\u0000",
+    (.evidence.location? // ""), "\u0000"
+  ' "$BINDING" 2>/dev/null) || deny "the task binding $BINDING is not a firstmate-binding"
+[ "$SCHEMA_OK" = "1" ] || deny "the task binding $BINDING is not a firstmate-binding"
+
 [ -n "$CWD" ] || deny "the hook input names no working directory"
 
 strip_slash() { local p=$1; while [ "${#p}" -gt 1 ] && [ "${p%/}" != "$p" ]; do p=${p%/}; done; printf '%s' "$p"; }
@@ -167,10 +199,10 @@ case "$TOOL" in
   Task|Agent)
     deny "a task-local child has depth 1 and may not start an agent" ;;
   Bash)
-    check_command "$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty')" ;;
+    check_command "$CMD" ;;
   Write|Edit|MultiEdit)
-    check_write "$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty')" ;;
+    check_write "$FILE_PATH" ;;
   NotebookEdit)
-    check_write "$(printf '%s' "$INPUT" | jq -r '.tool_input.notebook_path // empty')" ;;
+    check_write "$NOTEBOOK_PATH" ;;
 esac
 exit 0
