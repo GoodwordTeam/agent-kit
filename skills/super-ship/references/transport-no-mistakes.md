@@ -33,7 +33,8 @@ pushing through a pipeline that reviews or rewrites the change.
 The repository's trusted no-mistakes config must set `auto_fix.test`, `auto_fix.lint` and
 `auto_fix.ci` to `0`, so a failing gate parks instead of committing a fix. Where those values are
 absent or non-zero, the transport is not configured and the ship stops before the push. Under
-Firstmate, `ak firstmate preflight` checks this before a task is bound.
+Firstmate, `ak firstmate preflight` checks this before a task is bound, reading the copy on the
+default branch because that is the only one no-mistakes trusts.
 
 ## The intent
 
