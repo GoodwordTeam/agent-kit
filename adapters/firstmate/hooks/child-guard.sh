@@ -4,17 +4,15 @@
 # The Claude Code PreToolUse hook that enforces part of the task-local child
 # envelope (adapters/firstmate/CHILD-ROLES.md, CONTRACT.md §5).
 #
-# Two rules hold for the whole worker session, main thread and subagents alike
-# (ADR-0004): no `ak firstmate bind`, `install` or `remove`, which are
-# supervisor-side, and no write into agent-kit's binding ledger
-# (~/.agent-kit/firstmate/), whether by Write/Edit/NotebookEdit or by a Bash
-# command naming that path.
-#
-# Every other rule judges only calls made inside a subagent. Claude Code puts
-# `agent_id` and `agent_type` on the hook input for those and on no main-thread
-# call (observed on 2.1.281). A child may not:
+# It judges only calls made inside a subagent. Claude Code puts `agent_id` and
+# `agent_type` on the hook input for those and on no main-thread call (observed
+# on 2.1.281); a call without `agent_id` is the worker's own and passes
+# untouched. A child may not:
 #   - start an agent (Task, Agent) or run `claude` or `codex`: depth is 1;
 #   - run Firstmate (`fm-*`) or no-mistakes;
+#   - run `ak firstmate bind`, `install` or `remove`, which are supervisor-side,
+#     or name agent-kit's binding ledger (~/.agent-kit/firstmate/) in a command
+#     or a write (ADR-0004);
 #   - `git push`, or `gh pr create` / `gh pr merge` (also through gh-axi), or
 #     `gh api` against a pulls endpoint with a mutating method or a merge path,
 #     or a `gh api graphql` call naming a pull-request mutation;
@@ -27,9 +25,8 @@
 # resolved, so the guard is one part of the envelope and not all of it.
 #
 # A child call it cannot judge -- no jq, input that is not JSON, a binding that
-# is missing, unreadable or still the unsubstituted token -- is denied. A
-# main-thread call it cannot judge passes, so a broken guard cannot stop the
-# worker; a main-thread call that does not mention `firstmate` is not parsed.
+# is missing, unreadable or still the unsubstituted token -- is denied. The
+# main thread is never judged, so a broken guard cannot stop the worker.
 #
 # Output: a PreToolUse deny decision on stdout, exit 0. Silence means allow.
 
@@ -58,17 +55,12 @@ deny() {
 }
 
 # Cheap exit for the main thread before anything that could fail.
-SUBAGENT=0
 case "$INPUT" in
-  *'"agent_id"'*) SUBAGENT=1 ;;
-  *firstmate*) ;;
+  *'"agent_id"'*) ;;
   *) exit 0 ;;
 esac
 
-if ! command -v jq >/dev/null 2>&1; then
-  [ "$SUBAGENT" = 1 ] || exit 0
-  deny "jq is unavailable, so this subagent call cannot be judged"
-fi
+command -v jq >/dev/null 2>&1 || deny "jq is unavailable, so this subagent call cannot be judged"
 
 # One jq call pulls every field the guard could need out of the hook input.
 # Each field is NUL-terminated so arbitrary bytes (newlines, quotes) survive
@@ -92,7 +84,9 @@ AGENT_ID="" CWD="" TOOL="" CMD="" FILE_PATH="" NOTEBOOK_PATH=""
     (.tool_input.command? // ""), "\u0000",
     (.tool_input.file_path? // ""), "\u0000",
     (.tool_input.notebook_path? // ""), "\u0000"
-  ' 2>/dev/null) || { [ "$SUBAGENT" = 1 ] || exit 0; deny "the hook input is not JSON"; }
+  ' 2>/dev/null) || deny "the hook input is not JSON"
+
+[ -n "$AGENT_ID" ] || exit 0
 
 TOK=()
 tokenize() {
@@ -111,39 +105,27 @@ in_ledger() {
   return 1
 }
 
-check_session_command() {
+check_ledger_command() {
   local n=${#TOK[@]} i word
   for ((i = 0; i < n; i++)); do
     word=${TOK[$i]}
-    in_ledger "$word" && deny "the worker session may not name agent-kit's binding ledger in a command ($word)"
+    in_ledger "$word" && deny "a task-local child may not name agent-kit's binding ledger in a command ($word)"
     case "$word" in
       firstmate|*/firstmate/cli.ts)
         case "${TOK[$((i + 1))]-}" in
-          bind|install|remove) deny "the worker session may not run ak firstmate ${TOK[$((i + 1))]}; binding is supervisor-side" ;;
+          bind|install|remove) deny "a task-local child may not run ak firstmate ${TOK[$((i + 1))]}; binding is supervisor-side" ;;
         esac
         ;;
     esac
   done
 }
 
-check_session_write() {
+check_ledger_write() {
   local path=$1
   case "$path" in /*) ;; *) path="$CWD/$path" ;; esac
-  in_ledger "$path" && deny "the worker session may not write agent-kit's binding ledger ($1)"
+  in_ledger "$path" && deny "a task-local child may not write agent-kit's binding ledger ($1)"
   return 0
 }
-
-case "$TOOL" in
-  Bash)
-    tokenize "$CMD"
-    check_session_command ;;
-  Write|Edit|MultiEdit)
-    check_session_write "$FILE_PATH" ;;
-  NotebookEdit)
-    check_session_write "$NOTEBOOK_PATH" ;;
-esac
-
-[ -n "$AGENT_ID" ] || exit 0
 
 case "$BINDING" in
   ""|__AK_FIRSTMATE_BINDING__) deny "no task binding was substituted into the worker settings" ;;
@@ -250,10 +232,14 @@ case "$TOOL" in
   Task|Agent)
     deny "a task-local child has depth 1 and may not start an agent" ;;
   Bash)
+    tokenize "$CMD"
+    check_ledger_command
     check_command ;;
   Write|Edit|MultiEdit)
+    check_ledger_write "$FILE_PATH"
     check_write "$FILE_PATH" ;;
   NotebookEdit)
+    check_ledger_write "$NOTEBOOK_PATH"
     check_write "$NOTEBOOK_PATH" ;;
 esac
 exit 0

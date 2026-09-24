@@ -62,43 +62,41 @@ const parent = (tool_name: string, tool_input: Record<string, unknown>) => {
 describe("child-guard", () => {
   const b = binding("/evidence/store");
 
-  test("the whole session may not run ak firstmate bind, install or remove", () => {
+  test("a child may not run ak firstmate bind, install or remove", () => {
     for (const cmd of [
       "ak firstmate bind --fm-home /h --task-id T --project /p --mode agent-kit --binding-out /tmp/b.json",
       "bun run ak firstmate install --fm-home /h",
       "bun src/cli.ts firstmate remove --fm-home /h",
       "cd /x && ak firstmate bind",
     ]) {
-      for (const call of [parent("Bash", { command: cmd }), child("Bash", { command: cmd })]) {
-        const d = guard(b, call);
-        expect(d.denied).toBe(true);
-        expect(d.reason).toContain("supervisor-side");
-      }
+      const d = guard(b, child("Bash", { command: cmd }));
+      expect(d.denied).toBe(true);
+      expect(d.reason).toContain("supervisor-side");
     }
   });
 
-  test("the whole session may not write agent-kit's binding ledger", () => {
+  test("a child may not write agent-kit's binding ledger", () => {
     const ledger = "/Users/w/.agent-kit/firstmate/bindings/ak-T-1.json";
-    for (const make of [parent, child]) {
-      expect(guard(b, make("Write", { file_path: ledger })).denied).toBe(true);
-      expect(guard(b, make("Edit", { file_path: ledger })).denied).toBe(true);
-      expect(guard(b, make("NotebookEdit", { notebook_path: "/Users/w/.agent-kit/firstmate/x.ipynb" })).denied).toBe(true);
-      expect(guard(b, make("Bash", { command: `echo '{}' >${ledger}` })).denied).toBe(true);
-      expect(guard(b, make("Bash", { command: "cp /tmp/r.json ~/.agent-kit/firstmate/bindings/" })).denied).toBe(true);
-    }
+    expect(guard(b, child("Write", { file_path: ledger })).reason).toContain("binding ledger");
+    expect(guard(b, child("Edit", { file_path: ledger })).reason).toContain("binding ledger");
+    expect(guard(b, child("NotebookEdit", { notebook_path: "/Users/w/.agent-kit/firstmate/x.ipynb" })).reason).toContain("binding ledger");
+    expect(guard(b, child("Bash", { command: `echo '{}' >${ledger}` })).reason).toContain("binding ledger");
+    expect(guard(b, child("Bash", { command: "cp /tmp/r.json ~/.agent-kit/firstmate/bindings/" })).reason).toContain("binding ledger");
   });
 
-  test("the main thread may still ask for a grant, report status, and write elsewhere under ~/.agent-kit", () => {
+  test("a main-thread call is never judged, even one naming ak firstmate bind or the ledger", () => {
     for (const cmd of [
+      "git commit -m 'fix(firstmate): ak firstmate bind refuses X'",
+      "rg 'firstmate install' src",
       "ak firstmate grant --binding /h/data/T/agent-kit-binding.json --operation review.full",
-      "ak firstmate status /h/data/T/agent-kit-binding.json complete",
+      "cat ~/.agent-kit/firstmate/bindings/ak-T-1.json",
     ]) {
       expect(guard(b, parent("Bash", { command: cmd })).denied).toBe(false);
     }
-    expect(guard(b, parent("Write", { file_path: "/Users/w/.agent-kit/pins/x" })).denied).toBe(false);
+    expect(guard(b, parent("Write", { file_path: "/Users/w/.agent-kit/firstmate/bindings/x.json" })).denied).toBe(false);
   });
 
-  test("otherwise a main-thread call is not judged, even one a child would be denied", () => {
+  test("a main-thread call is never judged, even one a child would be denied", () => {
     for (const cmd of ["git push origin main", "fm-spawn.sh x", "gh pr create"]) {
       expect(guard(b, parent("Bash", { command: cmd })).denied).toBe(false);
     }

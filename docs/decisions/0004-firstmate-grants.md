@@ -56,14 +56,14 @@ The skills say this in one paragraph each; `adapters/firstmate/CONTRACT.md` §6 
   Firstmate home defeats it, the same limit CONTRACT.md §5 already records for the binding itself.
   The record's `binding_sha256` lets a reviewer see the binding did not change between grants.
   The ledger rejects a copy or a fabricated home, because its path is not the registered one, and
-  an edit in place, because its hash no longer matches. The hook in the worker's settings
-  (`hooks/child-guard.sh`) denies the whole worker session, main thread and subagents,
-  `ak firstmate bind`, `install` and `remove` and any write naming the ledger. What remains is a
-  same-user process outside that hook, or a harness without hooks, running bind itself or editing
-  the ledger. The brief forbids it, and the `binding_sha256` in each grant record lets the
-  supervisor detect it by comparing against the binding it wrote. Closing it needs a grant issuer
-  outside the worker's reach: the unbuilt runner's validated grants
-  (`research/briefs/carried-forward.md`).
+  an edit in place, because its hash no longer matches. It does not stop a same-user worker from
+  running bind itself or editing the ledger, which the brief forbids. `hooks/child-guard.sh` denies
+  a subagent's `ak firstmate bind`, `install` or `remove` and any command or write naming the
+  ledger, but it is a token-matching tripwire for a helper's accidental or naive call, not a
+  security boundary: shell indirection gets past it, and the main-thread worker is not hooked for
+  these at all. The supervisor detects a forgery by comparing each grant record's `binding_sha256`
+  and `binding` path with the binding Firstmate wrote. Preventing it needs a grant issuer outside
+  the worker's reach: the unbuilt runner's validated grants (`research/briefs/carried-forward.md`).
 - The binding carries no signature. Firstmate can change it by binding again, which re-registers
   it; that is intended, since Firstmate is the controller.
 - Outside Firstmate nothing changes. A host with no binding still stops for explicit invocation.
