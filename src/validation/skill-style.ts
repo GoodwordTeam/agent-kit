@@ -161,7 +161,7 @@ function checkEnforcementDensity(file: string, body: string): Issue[] {
 /** A markdown table row whose first cell opens with a quoted thought, e.g. `| "The ticket is obviously..." |`. */
 const RATIONALIZATION_ROW = /^\|\s*"/;
 
-function checkRationalizationTable(file: string, body: string): Issue[] {
+function checkRationalizationTable(file: string, body: string, offset: number): Issue[] {
   const lines = body.split("\n");
   const rows = lines.filter((line) => RATIONALIZATION_ROW.test(line.trim()));
   if (rows.length === 0) return [];
@@ -171,7 +171,7 @@ function checkRationalizationTable(file: string, body: string): Issue[] {
       "skill-style.rationalization-table",
       file,
       `${rows.length} rationalization-table row${rows.length === 1 ? "" : "s"} (a table row whose first cell opens with a quoted thought). These tables are a known verbosity pattern worth a second look, even where a row count of one is unavoidable.`,
-      firstLine === -1 ? undefined : firstLine + 1,
+      firstLine === -1 ? undefined : firstLine + 1 + offset,
     ),
   ];
 }
@@ -184,7 +184,7 @@ function checkRationalizationTable(file: string, body: string): Issue[] {
 export const SELECTION_SECTION_LINE_REPORT_MIN = 3;
 const SELECTION_HEADINGS = ["## When to use", "## Not for"];
 
-function checkSelectionTextInBody(file: string, body: string): Issue[] {
+function checkSelectionTextInBody(file: string, body: string, offset: number): Issue[] {
   const issues: Issue[] = [];
   for (const section of splitSections(body)) {
     if (!SELECTION_HEADINGS.includes(section.heading)) continue;
@@ -195,7 +195,7 @@ function checkSelectionTextInBody(file: string, body: string): Issue[] {
         "skill-style.selection-text-in-body",
         file,
         `${section.heading} runs ${lines} lines in the body. The body is read only after the description has already triggered the skill, so text that decides *whether* to use it belongs in the description, not here.`,
-        section.line,
+        section.line + offset,
       ),
     );
   }
@@ -281,7 +281,7 @@ export const LEGACY_PHRASES: ReadonlyArray<string> = [
   "if in doubt, use",
 ];
 
-function checkLegacyPhrases(file: string, body: string): Issue[] {
+function checkLegacyPhrases(file: string, body: string, offset: number): Issue[] {
   const issues: Issue[] = [];
   const lower = body.toLowerCase();
   for (const phrase of LEGACY_PHRASES) {
@@ -291,7 +291,7 @@ function checkLegacyPhrases(file: string, body: string): Issue[] {
         "skill-style.legacy-phrase",
         file,
         `carries the phrase "${phrase}", which current skill-authoring guidance treats as a legacy prompting pattern.`,
-        lineContaining(lower, phrase),
+        lineContaining(lower, phrase)! + offset,
       ),
     );
   }
@@ -307,15 +307,17 @@ function checkOneSkill(ctx: CheckContext, id: string): Issue[] {
 
   const front = parseFrontmatter(text);
   const body = front.present ? front.body : text;
+  // Body line numbers are relative to the body; report them against the file.
+  const offset = front.bodyStartLine - 1;
 
   return [
     ...checkBodyLength(file, body),
     ...checkDescription(file, front),
     ...checkEnforcementDensity(file, body),
-    ...checkRationalizationTable(file, body),
-    ...checkSelectionTextInBody(file, body),
+    ...checkRationalizationTable(file, body, offset),
+    ...checkSelectionTextInBody(file, body, offset),
     ...checkOutsideLinks(id, file, body),
-    ...checkLegacyPhrases(file, body),
+    ...checkLegacyPhrases(file, body, offset),
     ...checkReferenceFiles(ctx, id),
   ];
 }

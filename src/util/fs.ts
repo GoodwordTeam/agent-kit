@@ -1,11 +1,17 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 
 /** Directories never walked: generated, vendored or scratch. */
 const DEFAULT_SKIP = new Set([".git", "node_modules", ".donors", ".work", ".omc", ".DS_Store"]);
 
 export function toPosix(p: string): string {
   return sep === "/" ? p : p.split(sep).join("/");
+}
+
+/** True when `child` is `parent` or lies under it. Both paths must already be absolute. */
+export function isInside(child: string, parent: string): boolean {
+  const rel = relative(parent, child);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
 }
 
 export function exists(path: string): boolean {

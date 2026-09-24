@@ -44,6 +44,8 @@ export const MOCK_LABEL = "mock evidence store: fixture demonstration, not a kno
 export const ENV_FILE = "config/agent-kit.env";
 export const EVIDENCE_FILE = "config/agent-kit/evidence.env";
 export const SETTINGS_FILE = "config/agent-kit/worker-settings.json";
+/** Written by `ak firstmate bind` beside the binding: the binding's sha256, which `ak firstmate grant` checks. */
+export const BINDING_SHA_FILE = "agent-kit-binding.sha256";
 export const ENV_HEADER = "# Written by ak firstmate install. Parsed by Firstmate, never sourced.";
 
 /**

@@ -286,3 +286,30 @@ describe("skill-style: 8. legacy phrases", () => {
     expect(checkSkillStyle(ctx).some((i) => i.rule === "skill-style.legacy-phrase")).toBe(false);
   });
 });
+
+describe("skill-style: body findings report file lines, not body lines", () => {
+  test("legacy-phrase, rationalization-table and selection-text lines count the frontmatter", () => {
+    const body = [
+      "# Alpha",
+      "",
+      "| The thought | Why | Instead |",
+      "|---|---|---|",
+      '| "Obviously fine." | A guess. | Ask. |',
+      "",
+      "## When to use",
+      "",
+      "Line one.",
+      "Line two.",
+      "Line three.",
+      "",
+      "Then think step by step.",
+    ].join("\n");
+    const text = skill(body);
+    const fileLine = (needle: string) => text.split("\n").findIndex((l) => l.includes(needle)) + 1;
+    const issues = checkSkillStyle(ctxFor({ "skills/alpha/SKILL.md": text }));
+    const lineOf = (rule: string) => issues.find((i) => i.rule === rule)?.line;
+    expect(lineOf("skill-style.legacy-phrase")).toBe(fileLine("think step by step"));
+    expect(lineOf("skill-style.rationalization-table")).toBe(fileLine('"Obviously fine."'));
+    expect(lineOf("skill-style.selection-text-in-body")).toBe(fileLine("## When to use"));
+  });
+});

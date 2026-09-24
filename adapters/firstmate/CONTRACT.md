@@ -163,7 +163,11 @@ and the binding it wrote is the grant (ADR-0004). `ak firstmate grant --binding 
 | `review.readiness` | `review-readiness` |
 | `ship.prepare` | `ship-preflight`; the ship does the binding's `delivery.action` and never merges |
 
-Every grant also requires that the binding validates against its schema, that it lies outside the
-worktree the grant is asked from and outside the bound project, and that the pinned bundle still
-hashes to the bound hash. Any other operation, merge and scope changes included, is refused. The
+Every grant also requires that the binding validates against its schema; that its real path is
+`<home>/data/<task_id>/<file>` for its own `task_id` in a home holding `config/agent-kit.env`; that it
+still hashes to the `agent-kit-binding.sha256` record `ak firstmate bind` wrote beside it; that it lies
+outside the worktree the grant is asked from and outside the bound project; and that the pinned bundle
+still hashes to the bound hash. This does not stop a same-user worker from forging a grant. It means a
+forgery needs an edit to Firstmate's own files, which the brief forbids and the child guard blocks for
+children. Any other operation, merge and scope changes included, is refused. The
 worker then reports `needs-decision` and Firstmate decides or asks the captain.

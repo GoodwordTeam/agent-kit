@@ -322,6 +322,8 @@ describe("ak validate --skill-style", () => {
     // The flag narrows what is printed, not what the exit code answers for: a
     // real error sitting outside the skill-style findings still fails the run.
     expect(code).not.toBe(0);
+    // And the summary line, the run's receipt, does not read "0 errors" beside that exit 1.
+    expect(io.out.at(-1) ?? "").not.toMatch(/\b0 errors\b/);
   });
 
   test("--skill-style --json carries only the skill-style issues in the issues array", () => {

@@ -4,17 +4,19 @@
  *
  * It runs every preflight check first and writes nothing when one fails. On
  * success it pins the bundle, writes the binding JSON into the Firstmate home's
- * data/<task-id>/, and returns the brief section rendered from
+ * data/<task-id>/ with its sha256 beside it for `ak firstmate grant`, and returns the brief section rendered from
  * adapters/firstmate/WORKER.md for fm-brief to insert.
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
+import { isInside } from "../util/fs.ts";
 import { canonicalJson, sha256Hex } from "../util/hash.ts";
 import type { Check } from "./checks.ts";
 import {
+  BINDING_SHA_FILE,
   CHILD_ROLE_FAMILY,
   CHILD_ROLES,
   DEFAULT_CHILD_BUDGET,
@@ -54,11 +56,6 @@ export interface BindResult {
 
 const refused = (errors: string[], checks: Check[] = []): BindResult => ({ ok: false, errors, checks, markdown: "" });
 
-function inside(child: string, parent: string): boolean {
-  const rel = relative(resolve(parent), resolve(child));
-  return rel === "" || (!rel.startsWith("..") && !rel.startsWith("/"));
-}
-
 function kebab(text: string): string {
   const k = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64).replace(/-+$/, "");
   return k === "" ? "project" : k;
@@ -88,7 +85,7 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
   if (args.mode !== "agent-kit") {
     return refused([`mode ${args.mode} is not agent-kit; ak firstmate bind binds only delivery mode agent-kit`]);
   }
-  if (inside(args.bindingOut, args.project)) {
+  if (isInside(resolve(args.bindingOut), resolve(args.project))) {
     return refused([
       `binding path ${args.bindingOut} is inside the project; a binding the worker can write is one it can widen (CONTRACT.md §5). Write it under the Firstmate home's data/<task-id>/`,
     ]);
@@ -193,10 +190,13 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
     return refused(["the rendered worker section carries a 'Delivery contract: mode=' line, which only Firstmate may write"], checked.checks);
   }
 
-  mkdirSync(dirname(resolve(args.bindingOut)), { recursive: true });
-  const staging = `${resolve(args.bindingOut)}.partial-${process.pid}`;
-  writeFileSync(staging, `${JSON.stringify(binding, null, 2)}\n`);
-  renameSync(staging, resolve(args.bindingOut));
+  const out = resolve(args.bindingOut);
+  const text = `${JSON.stringify(binding, null, 2)}\n`;
+  mkdirSync(dirname(out), { recursive: true });
+  const staging = `${out}.partial-${process.pid}`;
+  writeFileSync(staging, text);
+  renameSync(staging, out);
+  writeFileSync(join(dirname(out), BINDING_SHA_FILE), `sha256:${createHash("sha256").update(text).digest("hex")}\n`);
 
   return { ok: true, errors: [], checks: checked.checks, binding, markdown };
 }

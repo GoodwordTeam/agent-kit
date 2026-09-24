@@ -80,12 +80,14 @@ function report(
   issues: readonly Issue[],
   label: string,
   install?: string,
-  skipSource: readonly Issue[] = issues,
+  whole: readonly Issue[] = issues,
 ): number {
   const sorted = sortIssues(issues);
   for (const issue of sorted) io.out(formatIssue(issue));
+  // Counted from `whole`, like the skip clauses below: the summary line is the
+  // receipt for the run and its exit code, not for the lines a filter printed.
   const counts = { error: 0, warning: 0, note: 0 };
-  for (const issue of sorted) counts[issue.severity] += 1;
+  for (const issue of whole) counts[issue.severity] += 1;
 
   // Both skip terms are printed at zero like the other three, and that is the
   // point: "0 checks skipped" is the only thing that distinguishes a verified run
@@ -98,14 +100,14 @@ function report(
   // sitting in front of it and no authority to judge it by, and only the second
   // fails the run. Collapsed into a single count, the summary said "1 check
   // skipped" for both and a reader gating on the exit code saw no difference.
-  // Computed from `skipSource`, not `sorted`: a display filter (`--skill-style`)
+  // Computed from `whole`, not `sorted`: a display filter (`--skill-style`)
   // narrows what gets printed above, but whether a check ran at all is a fact
   // about the whole run, not about which lines a reader asked to see. Deriving
   // these from the filtered set would let "0 checks skipped" stand in for a run
   // that really did skip one, which is the exact lie this pair of clauses exists
   // to rule out.
-  const missed = skippedChecks(skipSource);
-  const blocked = blockingSkips(skipSource);
+  const missed = skippedChecks(whole);
+  const blocked = blockingSkips(whole);
   const clause = (n: number, word: string, names: string[]) =>
     `${n} check${n === 1 ? "" : "s"} ${word}${names.length === 0 ? "" : `: ${names.join(", ")}`}`;
 
@@ -114,7 +116,7 @@ function report(
   // reader scanning only the warning count would undercount them. Printed at
   // zero for the same reason the skip clauses are (see below): its absence
   // would otherwise read as "not measured" rather than "measured, found none".
-  const skillStyleCount = sorted.filter(isSkillStyleIssue).length;
+  const skillStyleCount = whole.filter(isSkillStyleIssue).length;
   // The install configuration rides on the summary line rather than a line of
   // its own, because the summary line is the receipt: it is what gets quoted,
   // and `research/probes/validate-figure.sh` takes the last line of output as
@@ -127,7 +129,7 @@ function report(
   io.out(
     `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${skillStyleCount} skill-style warning${skillStyleCount === 1 ? "" : "s"}, ${clause(missed.length, "skipped", missed)}, ${clause(blocked.length, "unavailable", blocked)}${under}`,
   );
-  return hasErrors(sorted) || blocked.length > 0 ? 1 : 0;
+  return hasErrors(whole) || blocked.length > 0 ? 1 : 0;
 }
 
 function contextOf(cwd: string, io: CliIo): CheckContext | null {

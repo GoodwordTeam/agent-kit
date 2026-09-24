@@ -10,8 +10,10 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
+import { isInside } from "../util/fs.ts";
+import { BINDING_SHA_FILE, ENV_FILE } from "./constants.ts";
 import { treeHash } from "./pin.ts";
 import { git } from "./proc.ts";
 import { validateBinding, type Binding } from "./schema.ts";
@@ -44,11 +46,6 @@ export type GrantResult = { ok: true; record: GrantRecord } | { ok: false; reaso
 
 const no = (reason: string): GrantResult => ({ ok: false, reason });
 
-function inside(child: string, parent: string): boolean {
-  const rel = relative(parent, child);
-  return rel === "" || (!rel.startsWith("..") && !rel.startsWith("/"));
-}
-
 const real = (path: string): string => (existsSync(path) ? realpathSync(path) : resolve(path));
 
 export function grant(args: GrantArgs, akRoot: string): GrantResult {
@@ -72,11 +69,23 @@ export function grant(args: GrantArgs, akRoot: string): GrantResult {
 
   // A binding the worker could have written is one it could have widened (CONTRACT.md §5).
   const at = realpathSync(path);
+  const taskDir = dirname(at);
+  const data = dirname(taskDir);
+  const home = dirname(data);
+  if (basename(taskDir) !== binding.task_id || basename(data) !== "data" || !existsSync(join(home, ENV_FILE))) {
+    return no(`binding ${path} is not in data/${binding.task_id}/ of a Firstmate home with ${ENV_FILE}, where ak firstmate bind writes it`);
+  }
+  const recorded = join(taskDir, BINDING_SHA_FILE);
+  const sha = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+  if (!existsSync(recorded)) return no(`binding ${path} has no ${BINDING_SHA_FILE} beside it; ak firstmate bind did not write it`);
+  if (readFileSync(recorded, "utf8").trim() !== sha) {
+    return no(`binding ${path} hashes to ${sha}, not the ${recorded} ak firstmate bind wrote`);
+  }
   const top = git(args.cwd, ["rev-parse", "--show-toplevel"]);
   const worktree = top.code === 0 && top.text !== "" ? real(top.text) : real(args.cwd);
-  if (inside(at, worktree)) return no(`binding ${path} is inside the worktree ${worktree}, which the worker can write`);
+  if (isInside(at, worktree)) return no(`binding ${path} is inside the worktree ${worktree}, which the worker can write`);
   for (const dir of [binding.project.path, binding.project.workspace]) {
-    if (dir !== undefined && inside(at, real(dir))) return no(`binding ${path} is inside the project ${dir}, which the worker can write`);
+    if (dir !== undefined && isInside(at, real(dir))) return no(`binding ${path} is inside the project ${dir}, which the worker can write`);
   }
 
   const gate = GRANT_OPERATIONS[operation];
@@ -96,7 +105,7 @@ export function grant(args: GrantArgs, akRoot: string): GrantResult {
     record: {
       operation,
       binding: path,
-      binding_sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`,
+      binding_sha256: sha,
       task_id: binding.task_id,
       run_id: binding.run_id,
       granted_by: "firstmate-binding",
