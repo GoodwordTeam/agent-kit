@@ -5,17 +5,19 @@
  * ./fixture.ts, never the live one, and against a synthetic upstream commit and
  * patch standing in for a5d78f8 and 0001-agent-kit-mode.
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { runCli } from "../../src/cli.ts";
 import { bind } from "../../src/firstmate/bind.ts";
 import { install, remove } from "../../src/firstmate/install.ts";
+import { pinBundle, treeHash } from "../../src/firstmate/pin.ts";
 import { preflight } from "../../src/firstmate/preflight.ts";
 import { statusLine } from "../../src/firstmate/status.ts";
 import { validateBinding } from "../../src/firstmate/schema.ts";
-import { FIXED_NOW, makeBundle, makeDir, makeHome, makeProject, REPO } from "./fixture.ts";
+import { FIXED_NOW, gitIn, makeBundle, makeDir, makeHome, makeProject, REPO } from "./fixture.ts";
 
 function env(over: Partial<Parameters<typeof bind>[1]> = {}) {
   const { home, upstream } = makeHome({ patched: true });
@@ -83,6 +85,27 @@ describe("preflight", () => {
     expect(failed(r2.checks)).toEqual(["no-mistakes-auto-fix"]);
   });
 
+  test("the no-mistakes config is read from the default branch, not the working tree", () => {
+    const { home, opts } = env();
+    const good = "commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 0\n  ci: 0\n";
+    const check = (project: string) =>
+      preflight({ fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts).checks;
+
+    const worktreeOnly = makeProject("commands:\n  test: bun test\n");
+    writeFileSync(join(worktreeOnly, ".no-mistakes.yaml"), good);
+    expect(failed(check(worktreeOnly))).toEqual(["no-mistakes-auto-fix"]);
+
+    const committed = makeProject();
+    writeFileSync(join(committed, ".no-mistakes.yaml"), "auto_fix:\n  test: 3\n");
+    expect(failed(check(committed))).toEqual([]);
+
+    const noDefault = makeProject();
+    gitIn(noDefault, "branch", "-m", "trunk");
+    const c = check(noDefault).find((x) => x.id === "no-mistakes-auto-fix");
+    expect(c?.ok).toBe(false);
+    expect(c?.detail).toContain("default branch");
+  });
+
   test("a bundle missing a lifecycle skill or the transport reference is refused", () => {
     const { home, project, opts } = env();
     const r = preflight(
@@ -141,6 +164,24 @@ describe("bind", () => {
     expect(c.binding?.source_snapshot.revision).toBe(a.binding?.source_snapshot.revision);
     expect(c.binding?.source_snapshot.diff_hash).not.toBe(a.binding?.source_snapshot.diff_hash);
     expect(c.binding?.run_id).not.toBe(a.binding?.run_id);
+  });
+
+  test("a bind that loses the race to create a new pin reuses the winner's pin and leaves no staging directory", () => {
+    const bundleDir = makeBundle();
+    const pinsDir = makeDir();
+    const spy = spyOn(fs, "renameSync").mockImplementationOnce((from, to) => {
+      fs.cpSync(bundleDir, to as string, { recursive: true });
+      spy.mockRestore();
+      fs.renameSync(from, to);
+    });
+    try {
+      const pin = pinBundle(bundleDir, pinsDir);
+      expect(typeof pin).toBe("object");
+      expect((pin as { hash: string }).hash).toBe(`sha256:${treeHash(bundleDir)}`);
+      expect(fs.readdirSync(pinsDir)).toEqual([treeHash(bundleDir)]);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   test("the pinned bundle does not change when the kit is rebuilt", () => {

@@ -16,7 +16,7 @@ import { makeTree } from "../helpers/tree.ts";
 
 export const REPO = join(import.meta.dir, "..", "..");
 
-function git(cwd: string, ...args: string[]): string {
+export function gitIn(cwd: string, ...args: string[]): string {
   const proc = Bun.spawnSync(["git", ...args], {
     cwd,
     env: {
@@ -45,15 +45,15 @@ export interface Home {
  */
 export function makeHome(opts: { patched: boolean }): Home {
   const home = makeTree({ "bin/fm-dod-lib.sh": ORIGINAL, "config/.keep": "" });
-  git(home, "init", "-q", "-b", "main");
-  git(home, "add", "-A");
-  git(home, "commit", "-q", "-m", "upstream");
-  const commit = git(home, "rev-parse", "HEAD");
+  gitIn(home, "init", "-q", "-b", "main");
+  gitIn(home, "add", "-A");
+  gitIn(home, "commit", "-q", "-m", "upstream");
+  const commit = gitIn(home, "rev-parse", "HEAD");
 
   // The patch is produced by git itself, so the reverse check below is testing
   // a real patch rather than a hand-written one that happens to parse.
   writeFileSync(join(home, "bin/fm-dod-lib.sh"), PATCHED);
-  const diff = git(home, "diff", "--no-ext-diff", "--binary");
+  const diff = gitIn(home, "diff", "--no-ext-diff", "--binary");
   const patchDir = mkdtempSync(join(tmpdir(), "ak-fm-patch-"));
   const patchFile = join(patchDir, "0001-agent-kit-mode.patch");
   writeFileSync(patchFile, `${diff}\n`);
@@ -69,9 +69,9 @@ export function makeProject(noMistakes?: string): string {
     ".no-mistakes.yaml":
       noMistakes ?? "commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 0\n  ci: 0\n",
   });
-  git(project, "init", "-q", "-b", "main");
-  git(project, "add", "-A");
-  git(project, "commit", "-q", "-m", "init");
+  gitIn(project, "init", "-q", "-b", "main");
+  gitIn(project, "add", "-A");
+  gitIn(project, "commit", "-q", "-m", "init");
   return project;
 }
 

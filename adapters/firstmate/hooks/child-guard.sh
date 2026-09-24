@@ -10,12 +10,15 @@
 # untouched. A child may not:
 #   - start an agent (Task, Agent) or run `claude` or `codex`: depth is 1;
 #   - run Firstmate (`fm-*`) or no-mistakes;
-#   - `git push`, or `gh pr create` / `gh pr merge` (also through gh-axi);
+#   - `git push`, or `gh pr create` / `gh pr merge` (also through gh-axi), or
+#     `gh api` against a pulls endpoint with a mutating method or a merge path;
 #   - write outside the worktree, the binding's evidence store or $TMPDIR.
 #
 # The command check is by token and deliberately coarse: a command that names
 # one of those tools anywhere is denied, including inside a quoted string. A
 # false denial costs the child a retry; a false pass costs an unreviewed push.
+# Known limit: a git alias defined inline (`git -c alias.p=push p`) is not
+# resolved, so the guard is one part of the envelope and not all of it.
 #
 # A child call it cannot judge -- no jq, input that is not JSON, a binding that
 # is missing, unreadable or still the unsubstituted token -- is denied. The
@@ -95,9 +98,13 @@ check_command() {
   # Separators and quotes become spaces, so every word is a token.
   local flat
   flat=$(printf '%s' "$cmd" | tr ';&|()`"'"'"'\n\t' '          ')
+  local noglob=0
+  case $- in *f*) noglob=1 ;; esac
+  set -f
   # shellcheck disable=SC2206
   local -a tok=($flat)
-  local n=${#tok[@]} i j word base sub
+  [ "$noglob" = 1 ] || set +f
+  local n=${#tok[@]} i j word base sub method pulls merge body
   for ((i = 0; i < n; i++)); do
     word=${tok[$i]}
     base=${word##*/}
@@ -122,6 +129,28 @@ check_command() {
           case "${tok[$((i + 2))]-}" in
             create|merge) deny "a task-local child may not ${tok[$((i + 2))]} a pull request" ;;
           esac
+        elif [ "${tok[$((i + 1))]-}" = api ]; then
+          method="" pulls=0 merge=0 body=0
+          for ((j = i + 2; j < n; j++)); do
+            case "${tok[$j]}" in
+              -X|--method) method=${tok[$((j + 1))]-} ;;
+              -X*) method=${tok[$j]#-X} ;;
+              --method=*) method=${tok[$j]#--method=} ;;
+              -f|-F|--field|--raw-field|--input|-f*|-F*|--field=*|--raw-field=*|--input=*) body=1 ;;
+            esac
+            case "${tok[$j]}" in
+              */pulls|*/pulls/*|pulls|pulls/*) pulls=1 ;;
+            esac
+            case "${tok[$j]}" in */pulls/*/merge) merge=1 ;; esac
+          done
+          [ -z "$method" ] && [ "$body" = 1 ] && method=POST
+          method=$(printf '%s' "$method" | tr '[:lower:]' '[:upper:]')
+          if [ "$merge" = 1 ]; then deny "a task-local child may not merge a pull request"; fi
+          if [ "$pulls" = 1 ]; then
+            case "$method" in
+              POST|PUT|PATCH) deny "a task-local child may not change a pull request through gh api" ;;
+            esac
+          fi
         fi
         ;;
     esac

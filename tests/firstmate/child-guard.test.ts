@@ -28,8 +28,9 @@ interface Decision {
   code: number;
 }
 
-function guard(bindingPath: string, input: Record<string, unknown>): Decision {
+function guard(bindingPath: string, input: Record<string, unknown>, cwd?: string): Decision {
   const proc = Bun.spawnSync(["bash", HOOK, "--binding", bindingPath], {
+    cwd,
     stdin: new TextEncoder().encode(JSON.stringify(input)),
     env: { ...process.env, TMPDIR: "/nonexistent-tmp/" },
   });
@@ -81,6 +82,12 @@ describe("child-guard", () => {
       "git push no-mistakes feature",
       "claude -p hello",
       "codex exec hi",
+      "gh api -X POST repos/o/r/pulls -f title=x",
+      "gh api --method PATCH repos/o/r/pulls/3",
+      "gh api --method=post repos/o/r/pulls",
+      "gh api repos/o/r/pulls -f title=x -f head=b -f base=main",
+      "gh api -X PUT repos/o/r/pulls/3/merge",
+      "gh api repos/o/r/pulls/3/merge",
     ];
     for (const command of denied) {
       const d = guard(b, child("Bash", { command }));
@@ -92,9 +99,15 @@ describe("child-guard", () => {
   });
 
   test("ordinary child commands pass", () => {
-    for (const command of ["bun test", "git status", "git diff HEAD", "gh pr view 3", "cat CLAUDE.md", "grep -rn push src"]) {
+    for (const command of ["bun test", "git status", "git diff HEAD", "gh pr view 3", "cat CLAUDE.md", "grep -rn push src", "gh api repos/o/r/pulls/3", "gh api -X POST repos/o/r/issues/3/comments -f body=x"]) {
       expect({ command, denied: guard(b, child("Bash", { command })).denied }).toEqual({ command, denied: false });
     }
+  });
+
+  test("glob characters in a command are not expanded against the hook's directory", () => {
+    const dir = makeDir();
+    writeFileSync(join(dir, "push"), "");
+    expect(guard(b, child("Bash", { command: "git pu*" }), dir).denied).toBe(false);
   });
 
   test("a child writes inside the worktree or the evidence store, and nowhere else", () => {

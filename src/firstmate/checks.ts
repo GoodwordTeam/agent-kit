@@ -2,7 +2,7 @@
  * The checks preflight runs, one function per check, each returning a named
  * pass or fail with the reason. bind and install run the subset they depend on.
  */
-import { accessSync, constants, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -49,16 +49,23 @@ export function checkPatchApplied(fmHome: string, upstream: Upstream): Check {
 
 /**
  * The project's trusted no-mistakes config parks a failing gate instead of
- * committing a fix. The repository's value overrides the global default, and the
- * global default commits, so the repository must say 0 for each.
+ * committing a fix. no-mistakes reads the config only from the default branch,
+ * so that copy is the one judged: origin/HEAD, else main, else master. The
+ * repository's value overrides the global default, and the global default
+ * commits, so the repository must say 0 for each.
  */
 export function checkNoMistakesConfig(project: string): Check {
   const id = "no-mistakes-auto-fix";
-  const file = join(project, ".no-mistakes.yaml");
-  if (!existsSync(file)) return fail(id, `${file} is missing; the project must declare auto_fix.test, auto_fix.lint and auto_fix.ci as 0`);
+  const ref = ["origin/HEAD", "main", "master"].find(
+    (r) => git(project, ["rev-parse", "--verify", "--quiet", `${r}^{commit}`]).code === 0,
+  );
+  if (ref === undefined) return fail(id, `${project} has no resolvable default branch (origin/HEAD, main or master), so the trusted .no-mistakes.yaml cannot be read`);
+  const file = `${ref}:.no-mistakes.yaml`;
+  const shown = git(project, ["show", file]);
+  if (shown.code !== 0) return fail(id, `${file} is missing in ${project}; the default branch must declare auto_fix.test, auto_fix.lint and auto_fix.ci as 0`);
   let doc: unknown;
   try {
-    doc = parseYaml(readFileSync(file, "utf8"));
+    doc = parseYaml(shown.text);
   } catch (e) {
     return fail(id, `${file} does not parse: ${(e as Error).message}`);
   }
@@ -70,7 +77,7 @@ export function checkNoMistakesConfig(project: string): Check {
       `${file} must set auto_fix.${loose.join(", auto_fix.")} to 0, so a failing gate parks rather than committing a fix the lifecycle did not review (skills/super-ship/references/transport-no-mistakes.md)`,
     );
   }
-  return pass(id, "auto_fix.test, auto_fix.lint and auto_fix.ci are 0");
+  return pass(id, `${file} sets auto_fix.test, auto_fix.lint and auto_fix.ci to 0`);
 }
 
 /**

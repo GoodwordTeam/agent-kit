@@ -34,18 +34,26 @@ export interface Pin {
   path: string;
 }
 
+function trusted(path: string, hex: string): Pin | string {
+  const found = treeHash(path);
+  if (found !== hex) return `pin ${path} holds content hashing to ${found}; refusing a pin whose contents do not match its name`;
+  return { hash: `sha256:${hex}`, path };
+}
+
 export function pinBundle(bundleDir: string, pinsDir: string): Pin | string {
   const hex = treeHash(bundleDir);
   const path = join(pinsDir, hex);
-  if (existsSync(path)) {
-    const found = treeHash(path);
-    if (found !== hex) return `pin ${path} holds content hashing to ${found}; refusing a pin whose contents do not match its name`;
-    return { hash: `sha256:${hex}`, path };
-  }
+  if (existsSync(path)) return trusted(path, hex);
   mkdirSync(pinsDir, { recursive: true });
   const staging = `${path}.partial-${process.pid}`;
   rmSync(staging, { recursive: true, force: true });
   cpSync(bundleDir, staging, { recursive: true });
-  renameSync(staging, path);
-  return { hash: `sha256:${hex}`, path };
+  try {
+    renameSync(staging, path);
+  } catch (e) {
+    if (!existsSync(path)) return `could not pin ${bundleDir} at ${path}: ${(e as Error).message}`;
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
+  return trusted(path, hex);
 }
