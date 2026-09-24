@@ -48,7 +48,8 @@ export const ENV_HEADER = "# Written by ak firstmate install. Parsed by Firstmat
 
 /**
  * The token fm-spawn replaces with the task's binding path in the per-task settings file. Patch 0001
- * inserts the path already shell-quoted, so the token is written unquoted.
+ * inserts the bare absolute path and refuses one containing a single quote, so the token is written
+ * inside single quotes here.
  */
 export const BINDING_TOKEN = "__AK_FIRSTMATE_BINDING__";
 

@@ -97,8 +97,8 @@ that the home contains the upstream commit and that the patch is already applied
 `ak firstmate install` writes into the home's `config/` only: `agent-kit.env`, which holds exactly
 the three keys the patch parses (`AK_FIRSTMATE_BIN`, `AK_FIRSTMATE_PATCH`,
 `AK_FIRSTMATE_WORKER_SETTINGS`) and which the patch refuses if it holds any other;
-`agent-kit/worker-settings.json`, whose hook command carries `__AK_FIRSTMATE_BINDING__` for the
-patch to replace with the task's binding path; and, when an evidence store is given,
+`agent-kit/worker-settings.json`, whose hook command carries `'__AK_FIRSTMATE_BINDING__'`, in
+single quotes, for the patch to replace with the task's bare binding path; and, when an evidence store is given,
 `agent-kit/evidence.env`, which only `ak` reads. It is idempotent and `ak firstmate remove` deletes
 exactly those.
 

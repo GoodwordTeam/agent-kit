@@ -317,7 +317,8 @@ describe("install and remove", () => {
     const settings = JSON.parse(readFileSync(join(home, "config/agent-kit/worker-settings.json"), "utf8"));
     const command: string = settings.hooks.PreToolUse[0].hooks[0].command;
     expect(command).toContain("child-guard.sh");
-    expect(command).toContain("__AK_FIRSTMATE_BINDING__");
+    // Patch 0001 replaces the token with a bare absolute path, so the quotes around it are ours.
+    expect(command).toContain("--binding '__AK_FIRSTMATE_BINDING__'");
 
     const second = install({ fmHome: home, evidence: { store: "mock", location } }, opts);
     expect(second.ok).toBe(true);

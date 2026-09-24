@@ -55,7 +55,7 @@ function settingsText(akRoot: string): string {
       PreToolUse: [
         {
           matcher: "*",
-          hooks: [{ type: "command", command: `bash '${hook}' --binding ${BINDING_TOKEN}` }],
+          hooks: [{ type: "command", command: `bash '${hook}' --binding '${BINDING_TOKEN}'` }],
         },
       ],
     },

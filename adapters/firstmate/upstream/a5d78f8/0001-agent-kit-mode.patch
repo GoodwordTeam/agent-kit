@@ -1,30 +1,31 @@
-From ab602e61d0985437c269fa8be3a4d00b872fd6a4 Mon Sep 17 00:00:00 2001
+From 2cb92d1c463b8b7e5d5022bc367641eb2b13b6d5 Mon Sep 17 00:00:00 2001
 From: Pibomeister <edy7picazo@gmail.com>
 Date: Thu, 24 Sep 2026 11:03:17 -0600
 Subject: [PATCH] feat(delivery): opt-in agent-kit delivery mode
 
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 ---
  .agents/skills/project-management/SKILL.md |   1 +
  AGENTS.md                                  |  12 +-
  README.md                                  |   2 +-
- bin/fm-agent-kit-lib.sh                    | 168 +++++++++++++++++
+ bin/fm-agent-kit-lib.sh                    | 190 ++++++++++++++++++
  bin/fm-brief.sh                            |  45 ++++-
  bin/fm-control-lib.sh                      |   6 +-
- bin/fm-dod-lib.sh                          | 147 ++++++++++++---
+ bin/fm-dod-lib.sh                          | 147 +++++++++++---
  bin/fm-inactive-reconcile.sh               |   5 +-
  bin/fm-pr-check.sh                         |   6 +-
  bin/fm-project-mode.sh                     |  20 +-
  bin/fm-promote.sh                          |  41 +++-
- bin/fm-spawn.sh                            |  75 ++++++--
+ bin/fm-spawn.sh                            |  75 +++++--
  bin/fm-teardown.sh                         |   2 +-
  docs/architecture.md                       |   5 +-
  docs/scripts.md                            |   1 +
- tests/fixtures.sh                          |  38 ++++
- tests/fm-brief.test.sh                     |  98 ++++++++++
+ tests/fixtures.sh                          |  40 ++++
+ tests/fm-brief.test.sh                     |  98 +++++++++
  tests/fm-control-relaunch.test.sh          |  59 ++++++
  tests/fm-dod-lib.test.sh                   | 124 ++++++++++++
- tests/fm-task-delivery.test.sh             | 209 ++++++++++++++++++++-
- 20 files changed, 995 insertions(+), 69 deletions(-)
+ tests/fm-task-delivery.test.sh             | 221 ++++++++++++++++++++-
+ 20 files changed, 1031 insertions(+), 69 deletions(-)
  create mode 100644 bin/fm-agent-kit-lib.sh
 
 diff --git a/.agents/skills/project-management/SKILL.md b/.agents/skills/project-management/SKILL.md
@@ -96,10 +97,10 @@ index 601063d1..60281915 100644
  - **Optional Relay** - opt in with one local `.env` pairing token so firstmate can answer your public mentions on X and Discord alike, act on normal reversible mention requests through the same lifecycle as chat requests, acknowledge spawned work, and post up to three public-safe completion follow-ups within seven days for genuine milestones and the final outcome without changing non-Relay behavior; a final reply promised in a thread becomes durable state that is reconciled from disk, so a restart or a compacted conversation cannot lose it; dry-run preview records would-be replies and dismissals locally before go-live.
 diff --git a/bin/fm-agent-kit-lib.sh b/bin/fm-agent-kit-lib.sh
 new file mode 100644
-index 00000000..5db134e0
+index 00000000..4100ff23
 --- /dev/null
 +++ b/bin/fm-agent-kit-lib.sh
-@@ -0,0 +1,168 @@
+@@ -0,0 +1,190 @@
 +#!/usr/bin/env bash
 +# Single owner of the opt-in agent-kit delivery binding: the config/agent-kit.env
 +# parser, the `ak firstmate bind` call that renders a ship brief's
@@ -117,8 +118,9 @@ index 00000000..5db134e0
 +#   AK_FIRSTMATE_BIN              absolute path to an executable `ak`
 +#   AK_FIRSTMATE_PATCH            the Firstmate patch the binding targets; must be 0001-agent-kit-mode
 +#   AK_FIRSTMATE_WORKER_SETTINGS  absolute path to a JSON file whose `hooks` object guards child agents;
-+#                                 every __AK_FIRSTMATE_BINDING__ in a hook `command` string becomes the
-+#                                 task's shell-quoted binding path in the per-task settings file
++#                                 its hook `command` strings must carry the single-quoted token
++#                                 '__AK_FIRSTMATE_BINDING__', which becomes the task's absolute binding
++#                                 path in the per-task settings file
 +# A bind is accepted only when `ak` exits 0, writes the binding JSON, and prints
 +# a section whose first line is exactly `# agent-kit binding` and which holds no
 +# `Delivery contract: mode=` line, so the section can never override the mode
@@ -245,12 +247,27 @@ index 00000000..5db134e0
 +# Print <base-json> with the `hooks` object of AK_FIRSTMATE_WORKER_SETTINGS
 +# added, as one compact JSON line. Claude honours only the last --settings flag
 +# (verified on claude 2.1.281), so the child guard must ride in the same object
-+# as the launch's own settings rather than in a second flag. Each hook command
-+# is a shell line, so the binding placeholder is replaced by <binding-path>
-+# single-quoted for the shell; jq then encodes it as a JSON string.
++# as the launch's own settings rather than in a second flag. agent-kit's guard
++# denies every child call while its command still holds the token, so settings
++# with no token in any hook command are a stale install and are refused. The
++# token sits inside single quotes in the command, so it is replaced by the bare
++# absolute <binding-path>, and a path holding a single quote is refused rather
++# than allowed to end that quoting.
 +fm_agent_kit_claude_settings() {  # <base-json> <binding-path>
-+  local base=$1 settings=$AK_FIRSTMATE_WORKER_SETTINGS quoted
-+  quoted="'$(printf '%s' "$2" | sed "s/'/'\\\\''/g")'"
++  local base=$1 binding=$2 settings=$AK_FIRSTMATE_WORKER_SETTINGS
++  case "$binding" in
++    /*) ;;
++    *)
++      echo "error: agent-kit binding path $binding is not absolute" >&2
++      return 1
++      ;;
++  esac
++  case "$binding" in
++    *\'*)
++      echo "error: agent-kit binding path $binding holds a single quote and cannot be substituted into a hook command" >&2
++      return 1
++      ;;
++  esac
 +  if ! command -v jq >/dev/null 2>&1; then
 +    echo "error: agent-kit claude launches need jq to merge $settings" >&2
 +    return 1
@@ -263,8 +280,14 @@ index 00000000..5db134e0
 +    echo "error: agent-kit worker settings $settings are not a JSON object with a hooks object" >&2
 +    return 1
 +  fi
-+  jq -c --argjson base "$base" --arg placeholder "$FM_AGENT_KIT_BINDING_PLACEHOLDER" --arg binding "$quoted" '
-+    def subst: if type == "string" then split($placeholder) | join($binding) else . end;
++  if ! jq -e --arg token "$FM_AGENT_KIT_BINDING_PLACEHOLDER" \
++    '[.hooks | .. | objects | .command? | strings | select(contains($token))] | length > 0' \
++    "$settings" >/dev/null 2>&1; then
++    echo "error: agent-kit worker settings $settings carry no $FM_AGENT_KIT_BINDING_PLACEHOLDER in any hook command; reinstall agent-kit's firstmate adapter" >&2
++    return 1
++  fi
++  jq -c --argjson base "$base" --arg token "$FM_AGENT_KIT_BINDING_PLACEHOLDER" --arg binding "$binding" '
++    def subst: if type == "string" then split($token) | join($binding) else . end;
 +    $base + {hooks: (.hooks | walk(if type == "object" and has("command") then .command |= subst else . end))}
 +  ' "$settings"
 +}
@@ -847,7 +870,7 @@ index 1f53b8a5..4259f83c 100755
  BRIEF_ORIGINAL=
  fm_lock_release "$META_LOCK"
 diff --git a/bin/fm-spawn.sh b/bin/fm-spawn.sh
-index 518e905f..a6ed2b16 100755
+index 518e905f..61e9070c 100755
 --- a/bin/fm-spawn.sh
 +++ b/bin/fm-spawn.sh
 @@ -1,7 +1,7 @@
@@ -881,9 +904,9 @@ index 518e905f..a6ed2b16 100755
 +#   launch passes one per-task settings file,
 +#   state/<id>.agent-kit-settings.json - the launch's own inline settings plus
 +#   the `hooks` of config/agent-kit.env's worker settings, with each hook
-+#   command's __AK_FIRSTMATE_BINDING__ replaced by the quoted binding path - in place of the
-+#   inline JSON, because claude honours only the last --settings flag; missing
-+#   or invalid worker settings refuse the launch. Any other harness launches
++#   command's __AK_FIRSTMATE_BINDING__ replaced by the absolute binding path - in place of the
++#   inline JSON, because claude honours only the last --settings flag; missing,
++#   invalid, or token-less worker settings refuse the launch. Any other harness launches
 +#   with a notice that agent-kit's child guard is not enforced there.
  #   Ship/scout launches always put fm-dod-lib.sh's current worker role scope
  #   first in the private launch-brief overlay, including the exact task-owned
@@ -1093,10 +1116,10 @@ index 00e95210..85aac474 100644
  | `fm-herdr-lab-viewer.py` | The pty engine behind `fm-herdr-lab.sh viewer`: one real foreground Herdr client on a non-zero window grid |
  | `fm-install-herdr.sh`    | Install CI's exact-version Herdr pin with official asset URL, SHA-256, and protocol checks |
 diff --git a/tests/fixtures.sh b/tests/fixtures.sh
-index 559cd661..1bd3c7c3 100755
+index 559cd661..76ec0c73 100755
 --- a/tests/fixtures.sh
 +++ b/tests/fixtures.sh
-@@ -66,6 +66,44 @@ SH
+@@ -66,6 +66,46 @@ SH
    chmod +x "$fakebin/no-mistakes"
  }
  
@@ -1130,7 +1153,9 @@ index 559cd661..1bd3c7c3 100755
 +printf '%s\\n' '# agent-kit binding' 'Lifecycle: super-plan, super-build, super-verify, super-review, super-ship.' "Binding file: \$out"
 +SH
 +  chmod +x "$bindir/ak"
-+  printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"*","hooks":[{"type":"command","command":"ak-child-guard --binding __AK_FIRSTMATE_BINDING__"}]}]}}' \
++  # agent-kit's installed command form: the token already sits in single quotes.
++  jq -cn --arg cmd "bash '$bindir/child-guard.sh' --binding '__AK_FIRSTMATE_BINDING__'" \
++    '{hooks: {PreToolUse: [{matcher: "*", hooks: [{type: "command", command: $cmd}]}]}}' \
 +    > "$bindir/worker-settings.json"
 +  printf '%s\n' '# agent-kit binding for firstmate' \
 +    "AK_FIRSTMATE_BIN=$bindir/ak" \
@@ -1487,7 +1512,7 @@ index 91424c47..e137d1d9 100644
  
  echo "all fm-dod-lib tests passed"
 diff --git a/tests/fm-task-delivery.test.sh b/tests/fm-task-delivery.test.sh
-index 51dbf4bd..cd4db40c 100755
+index 51dbf4bd..60bb1f8c 100755
 --- a/tests/fm-task-delivery.test.sh
 +++ b/tests/fm-task-delivery.test.sh
 @@ -9,13 +9,16 @@
@@ -1549,7 +1574,7 @@ index 51dbf4bd..cd4db40c 100755
  }
  
  # Spawn and promotion refuse leftover Task-subsection placeholders through the
-@@ -881,6 +896,187 @@ EOF
+@@ -881,6 +896,199 @@ EOF
    pass "fm-spawn: every legacy worker receives scoped role instructions without changing project or primary instructions"
  }
  
@@ -1602,7 +1627,8 @@ index 51dbf4bd..cd4db40c 100755
 +}
 +
 +test_agent_kit_claude_launch_uses_the_task_settings_file() {
-+  local rec home proj wt fakebin log id=ak-launch-1 out status launch settings inline
++  local rec home proj wt fakebin log id=ak-launch-1 out status launch settings inline binding cmd
++  local -a words
 +  rec=$(ak_spawn_case ak-launch claude "$id")
 +  IFS='|' read -r home proj wt fakebin log <<EOF
 +$rec
@@ -1621,10 +1647,16 @@ index 51dbf4bd..cd4db40c 100755
 +  jq -e --argjson inline "$inline" '. == ($inline + {hooks: .hooks}) and (.hooks.PreToolUse[0].matcher == "*")' \
 +    "$settings" >/dev/null \
 +    || fail "per-task settings are not the inline settings plus the worker hooks: $(cat "$settings")"
-+  [ "$(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$settings")" = \
-+    "ak-child-guard --binding '$home/data/$id/agent-kit-binding.json'" ] \
-+    || fail "hook command does not carry the task's quoted binding path: $(cat "$settings")"
-+  assert_no_grep '__AK_FIRSTMATE_BINDING__' "$settings" "per-task settings kept the binding placeholder"
++  binding="$home/data/$id/agent-kit-binding.json"
++  cmd=$(jq -r '.hooks.PreToolUse[0].hooks[0].command' "$settings")
++  [ "$cmd" = "bash '$home/akbin/child-guard.sh' --binding '$binding'" ] \
++    || fail "hook command does not carry the task's binding path: $cmd"
++  assert_no_grep '__AK_FIRSTMATE_BINDING__' "$settings" "per-task settings kept the binding token"
++  # The command is a shell line: bash word-splitting must yield the binding
++  # path as one argument, with no doubled quotes changing its meaning.
++  eval "words=($cmd)"
++  [ "${#words[@]}" -eq 4 ] && [ "${words[2]}" = --binding ] && [ "${words[3]}" = "$binding" ] \
++    || fail "hook command does not split to the binding path as one argument: $cmd"
 +  assert_not_contains "$out" "child guard is not enforced" "claude launch printed the unenforced notice"
 +  grep -qx 'Delivery contract: mode=agent-kit' "$home/data/$id/launch-brief.md" \
 +    || fail "launch brief lacks the agent-kit delivery contract"
@@ -1640,22 +1672,27 @@ index 51dbf4bd..cd4db40c 100755
 +  IFS='|' read -r home proj wt fakebin log <<EOF
 +$rec
 +EOF
-+  for label in missing invalid nohooks; do
++  for label in missing invalid nohooks notoken; do
 +    case "$label" in
 +      missing) rm -f "$home/akbin/worker-settings.json" ;;
 +      invalid) printf 'not json\n' > "$home/akbin/worker-settings.json" ;;
 +      nohooks) printf '{"hooks":[]}\n' > "$home/akbin/worker-settings.json" ;;
++      notoken)
++        printf '%s\n' '{"hooks":{"PreToolUse":[{"matcher":"*","hooks":[{"type":"command","command":"bash /old/child-guard.sh"}]}]}}' \
++          > "$home/akbin/worker-settings.json" ;;
 +    esac
 +    : > "$log"
 +    out=$(FM_FAKE_LAUNCH_LOG="$log" fm_test_run_spawn "$home" "$wt" "$fakebin" "$id" "$proj" --mode agent-kit --yolo off)
 +    status=$?
 +    [ "$status" -ne 0 ] || fail "$label worker settings: agent-kit claude spawn should refuse"
 +    assert_contains "$out" "agent-kit claude launch for $id refused" "$label worker settings: refusal did not explain itself"
++    [ "$label" != notoken ] || assert_contains "$out" "carry no __AK_FIRSTMATE_BINDING__ in any hook command" \
++      "token-less worker settings were not refused as a stale install"
 +    assert_absent "$home/state/$id.meta" "$label worker settings: refused spawn recorded task metadata"
 +    assert_absent "$home/state/$id.agent-kit-settings.json" "$label worker settings: refused spawn wrote settings"
 +    [ ! -s "$log" ] || fail "$label worker settings: refused spawn typed a launch"
 +  done
-+  pass "fm-spawn: missing or invalid agent-kit worker settings refuse the claude launch"
++  pass "fm-spawn: missing, invalid, or token-less agent-kit worker settings refuse the claude launch"
 +}
 +
 +test_agent_kit_other_harness_prints_the_unenforced_notice() {
@@ -1737,7 +1774,7 @@ index 51dbf4bd..cd4db40c 100755
  test_authorized_intent_keeps_words_without_composed_address
  test_spawn_refreshes_legacy_worker_roles
  test_ship_spawn_requires_a_valid_delivery_contract
-@@ -893,4 +1089,9 @@ test_promote_refuses_a_symlinked_task_record
+@@ -893,4 +1101,9 @@ test_promote_refuses_a_symlinked_task_record
  test_promotion_delivers_the_real_definition_of_done
  test_project_mode_maps_the_conditional_policy
  test_spawn_and_promote_require_filled_task_subsections

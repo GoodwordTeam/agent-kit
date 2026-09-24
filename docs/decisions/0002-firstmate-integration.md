@@ -115,7 +115,7 @@ machinery, Firstmate's status verbs.
 ## Patch 0001
 
 `adapters/firstmate/upstream/a5d78f8/0001-agent-kit-mode.patch`: one commit over `a5d78f8`, 20 files,
-+995/−69, with a new `bin/fm-agent-kit-lib.sh` that owns the interface.
++1031/−69, with a new `bin/fm-agent-kit-lib.sh` that owns the interface.
 
 - **Config.** `config/agent-kit.env` is parsed, never sourced. It must hold exactly
   `AK_FIRSTMATE_BIN`, `AK_FIRSTMATE_PATCH` and `AK_FIRSTMATE_WORKER_SETTINGS`, each once. Any other
@@ -141,7 +141,9 @@ project):
 2. `preflight` refuses the project until its `.no-mistakes.yaml` sets `auto_fix` to 0, then passes
    all six checks.
 3. The patch's own `fm_agent_kit_bind` runs `ak` and accepts its section.
-4. `fm_agent_kit_claude_settings` writes a command that carries the binding path, quoted once.
+4. `fm_agent_kit_claude_settings` writes a command that carries the binding path inside agent-kit's
+   own single quotes. The patch refuses a path that is not absolute or that contains a quote, and
+   refuses worker settings with no placeholder, which is a stale install.
 5. That command, run as Claude Code runs a hook:
    - denies a child's `git push`;
    - denies a child's write to a file outside the worktree;
