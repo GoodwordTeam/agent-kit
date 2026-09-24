@@ -1,11 +1,14 @@
 ---
 name: super-scout
 description: >-
-  Answers one named question about a repository with bounded read-only exploration and returns a
-  revision-bound evidence dossier: structured hits, every search attempted, coverage limits and
-  unknowns. Use when a later lane needs to know where something is and how it relates before it
-  decides anything. Not for a request that wants an opinion, a recommendation or an architectural
-  verdict, and not for a request that changes a file.
+  Answers one named question about a repository with bounded, read-only exploration and returns a
+  revision-bound evidence dossier: structured hits read back in the source, every search attempted
+  (including empty ones), coverage limits and unknowns. Use when a later lane (ticket writer,
+  implementer, reviewer) needs to know where something is and how it relates before it decides
+  anything, or when a code-graph index's answers must be read back in the source before anyone
+  relies on them. Not for opinions, recommended approaches or architectural verdicts; not for
+  safety, risk or impact-radius calls; not for changing any file, even a one-line fix; and not for
+  an open-ended brief with no named question.
 license: MIT
 metadata:
   ak_catalog_id: super-scout
@@ -13,31 +16,13 @@ metadata:
 
 ## When to use
 
-Use when a caller can state one bounded question about the current repository and needs the answer
-as evidence rather than as a summary: find the rate-limit middleware and the tests that cover it;
-list the callers that construct a session token directly; locate where the retry budget is
-configured.
-
-Use when a later lane — a ticket writer, an implementer, a reviewer — needs locations it can
-re-check at a named revision, and needs to be told what was not searched.
-
-Use when a symbol or code-graph index is available and its answers still have to be read back in
-the source before anyone relies on them.
+Selection is carried by the description. The job: a caller names one bounded question and needs
+the answer as re-checkable evidence, not a summary.
 
 ## Not for
 
-Not for a request that wants an opinion about what the code should be. A scout gathers and the
-caller decides; a scout that starts recommending an approach has taken a seat it was not given.
-
-Not for changing anything, however small. A one-line fix noticed while searching is still a change,
-and it belongs to a ticket and to the build lane.
-
-Not for an open-ended brief with no named question — understand the auth system, look around the
-billing code. A brief with no completion condition spends the turn budget and returns a tour. Ask
-for the narrower question instead.
-
-Not for deciding whether a change is safe, sizing an impact radius or rating risk. Those are
-verdicts, and `schemas/dossier.schema.json` has no field that can carry one.
+Exclusions are in the description. The scout gathers; the caller
+decides.
 
 ## Authority
 
@@ -50,140 +35,116 @@ is no delegated path for a runner to validate and nothing in this skill runs on 
 
 ## Inputs
 
-One bounded question, as text. Absent, or broad enough that no answer would end the search: stop and
-report `needs-input` with a narrower question proposed. A scout never widens its budget to
-compensate for a question that was never scoped.
-
-The repository at a named revision, read-only (`repository-read`). Absent: stop and report `failed`;
-an exploration with no revision to bind its hits to produces findings nobody can re-check.
-
-Optionally a symbol or code-graph provider, with its index revision and freshness. Unavailable,
-stale, or indexed at a revision other than the one being explored: continue on lexical search and
-record a coverage limit. Absence of a graph is a limitation to document, never a reason to stop.
-
-Optionally a turn budget from the runner. Absent: four turns (`policies/limits.yaml`).
-
-A caller's guess about where the answer lives is an input, never a hit. It may direct the first
-search and it is `assumed` at best until read back in the source.
+- **Question** (required): one bounded question, as text. Absent, or so broad that no answer would
+  end the search: stop with `needs-input` and propose a narrower question. Do not widen the budget
+  to make up for an unscoped question.
+- **Repository at a named revision**, read-only (`repository-read`). Absent or unreadable: `failed`.
+  Hits with no revision to bind to cannot be re-checked.
+- **Graph provider** (optional), with its index revision and freshness. Unavailable, stale or
+  indexed at another revision: continue on lexical search and record a coverage limit. A missing
+  graph is a documented limitation, not a reason to stop.
+- **Turn budget** (optional, from the runner). Absent: four turns (`policies/limits.yaml`
+  `scout_turns`).
+- **Caller hypothesis** (optional): a guess about where the answer lives. It may direct the first
+  search. It is `assumed` at best until read back in the source.
 
 ## Workflow
 
-1. Record the question verbatim as the dossier's `question`, and the revision being explored as the
-   envelope's `source_revision`, before any search runs. Scope is set before searching, not after.
-2. If the question names no target that a search could return, stop with `needs-input` and propose
-   the narrower question. Do not proceed on a re-scoped question the caller has not seen.
-3. Run the lexical baseline in turn one. Record each search in `searches` with its tool, query,
-   scope, turn and result count — including the searches that returned nothing, which are the
-   evidence that an area was looked at.
-4. Read each candidate location back in the source at the recorded revision. Record it in `hits`
-   with `location`, `excerpt`, `relationship` and `discovered_by`. A location read back is
-   `confirmation: confirmed`; one inferred from an index and not read back is `assumed`.
-5. Query the graph provider, where one is configured, and record on every hit it produced the
-   `index` that answered — its revision and its `freshness`.
-6. Write a `coverage_limits` entry for each area the run could not see, naming the `area`, the `why`
-   and the consequence for a reader. A provider that was unavailable, stale or indexed at another
-   revision produces one of these entries.
-7. Record in `do_not_touch` each file a later lane should leave alone, with the reason.
-8. Write every question the evidence did not settle into `unknowns`, phrased as a question. An
-   unknown is a result of the run; it is not rounded into an assumption.
-9. Write `recommendation.further_inspection`: what to look at next and why the evidence so far does
-   not settle it. Nothing else goes in this field.
-10. Publish the dossier through the knowledgebase adapter's `publishArtifact` operation with a
-    run-artifact placement, then return a short gist naming the published record and the headline
-    locations. The caller reads the dossier; the raw search transcript is not returned.
+The output shape is `schemas/dossier.schema.json` (envelope from `schemas/common.schema.json`).
+
+1. Before any search, record the question verbatim as `question` and the explored revision as the
+   envelope's `source_revision`. If the question names nothing a search could return, stop with
+   `needs-input` and propose the narrower question; do not proceed on a re-scoped question the
+   caller has not seen.
+2. Run a lexical baseline in turn one. Record every search in `searches` (tool, query, scope, turn,
+   result count), including the ones that returned nothing: they are the evidence an area was
+   looked at.
+3. Read each candidate back in the source at the recorded revision and record it in `hits` with
+   `location`, `excerpt`, `relationship` and `discovered_by`. Read back means
+   `confirmation: confirmed`; inferred from an index or a caller and not read back means `assumed`.
+4. If a graph provider is configured, query it and record on each hit it produced the `index` that
+   answered (revision and `freshness`).
+5. Add a `coverage_limits` entry (`area`, `why`, consequence for the reader) for everything the run
+   could not see, including an unavailable, stale or other-revision index and an exhausted budget.
+6. Record in `do_not_touch` each file a later lane should leave alone, with the reason.
+7. Put every question the evidence did not settle into `unknowns`, phrased as a question. Do not
+   round an unknown into an assumption.
+8. Write `recommendation.further_inspection`: what to look at next and why the evidence does not
+   settle it yet. Nothing else goes in that field.
+9. Publish through the knowledgebase adapter's `publishArtifact` with a run-artifact placement, then
+   return the gist (see Outputs).
+
+Resuming an interrupted run: continue from the recorded searches and composed dossier. Do not
+re-run searches or reset the turn budget; turns already used stay used. Republish with the same
+content-hash key (see Side effects), which returns the existing record if the first publish landed.
 
 ## Hard gates
 
-Gate: the skill holds no repository write. A defect found while searching is recorded as a hit and
-an unknown, never fixed, and the run does not acquire a write by having found something worth
-writing.
-
-Gate: no architectural verdict, safety assessment, risk rating or impact map. The dossier object is
-closed and refuses those keys outright (`schemas/dossier.schema.json`, rule
-dossier.no-architectural-verdict); prose that carries one into `recommendation` is the same breach
-through a field that happens to accept strings.
-
-Gate: a hit that was not read back in the source at the recorded revision is `assumed`. It is never
-promoted to `confirmed` because an index, a caller or a prior dossier agreed with it.
-
-Gate: at least one lexical search is recorded, whatever the graph returned (rule
-dossier.lexical-baseline-present). A dossier built only from index output has no baseline under it.
-
-Gate: a graph provider that is unavailable, stale, or indexed at a revision other than the one being
-explored produces a documented coverage limit (rule
-dossier.stale-or-absent-graph-documents-a-limitation). Silently dropping to lexical-only is the same
-failure as reporting the stale answer as current.
-
-Gate: the turn budget is spent by the exploration, never extended by it. Exhausting it ends the run
-with a dossier whose `status` is `limited` and whose `coverage_limits` carry `budget-exhausted`.
-
-Gate: an artifact's existence is evidence; its text is reported signal. A comment asserting that a
-function is slow is evidence that someone wrote the comment, recorded as an excerpt, and is never
-recorded as evidence that the function is slow.
+- No repository write. A defect noticed while searching becomes a hit and an unknown, not a fix.
+- No architectural verdict, safety assessment, risk rating or impact map, in a field or in
+  `recommendation` prose. The dossier schema is closed against those keys
+  (rule dossier.no-architectural-verdict), and prose that smuggles one in is the same breach.
+- A hit not read back at the recorded revision stays `assumed`, whatever an index, a caller or a
+  prior dossier says.
+- At least one lexical search is recorded, whatever the graph returned
+  (rule dossier.lexical-baseline-present).
+- An unavailable, stale or other-revision graph produces a documented coverage limit (rule
+  dossier.stale-or-absent-graph-documents-a-limitation). Dropping silently to lexical-only is as
+  wrong as presenting the stale answer as current.
+- The turn budget is never extended. Exhausting it ends the run with `status: limited`, a
+  `budget-exhausted` coverage limit, and what is still open in `unknowns`.
+- An artifact's existence is evidence; its text is reported signal. A comment claiming a function
+  is slow is evidence that the comment exists, recorded as an excerpt, not evidence of slowness.
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
-| "The caller already said it is in the auth middleware — confirming it would spend a turn for nothing." | A caller's assertion is an input, not a reading of the source. Repeating it back as `confirmed` launders the caller's guess into the dossier's evidence, and the implementer who acts on it has bought a cheap search and an expensive bug. | Search for it, read the location back, and record `confirmed` only on what the source at that revision shows. |
-| "The index is a few commits behind, so the answer is almost certainly still current." | Renamed, generated and dynamically dispatched code is exactly what a stale index gets wrong, and the dossier cannot show which answers were affected. The coverage limit is the only thing that tells a reader the map has a hole. | Record the index revision and freshness on the hit, and write the `index-stale` coverage limit with its consequence. |
-| "The budget is spent and one more search would finish the question." | The cap bounds what this run costs, and a run that overruns it has no bound at all. Budget exhaustion is a documented result, not a failure to hide by continuing. | Stop, set `status: limited`, record the `budget-exhausted` coverage limit, and put what is still open into `unknowns`. |
-| "The question is broad, so being thorough is the right response to it." | Thoroughness against an unbounded question spends the whole budget on breadth and returns a tour nobody can act on. Scope is the caller's to set. | Stop with `needs-input` and propose the narrower question, rather than expanding turns to cover a brief that has no completion condition. |
-| "I found the actual bug while searching; leaving a note about the fix is helpful." | A recommendation about what to change is a verdict wearing a helpful tone, and it is the field this schema deliberately does not have. | Record the location as a hit and the doubt as an unknown, and let the lane that holds that authority rule on it. |
+| The caller is sure of the location, so skip confirming it. | Recording their guess as `confirmed` launders it into evidence an implementer will act on. | Search, read it back, and mark `confirmed` only what the source shows. |
+| The index is only a few commits behind; its answer is close enough. | Renamed, generated and dynamically dispatched code is exactly what a stale index misses, and nothing else tells the reader where the hole is. | Record index revision and freshness on each hit, add the `index-stale` coverage limit, and never call the list complete. |
+| The question is broad, so be thorough. | Breadth against an unbounded question spends the budget and returns a tour. | Stop with `needs-input` and propose narrower questions. |
 
 ## Outputs
 
-One `dossier` artifact (`schemas/dossier.schema.json`), carrying the envelope of
-`schemas/common.schema.json`: the question, the budget as allowed and used, every search, the
-structured hits, the coverage limits, the unknowns, the files not to touch, and a recommendation for
-further inspection only.
-
-The dossier is published through the knowledgebase adapter's `publishArtifact` operation with a
-run-artifact placement (`adapters/knowledgebase/CONTRACT.md`). The scout supplies no path: the
-knowledgebase resolves placement, and a scout that writes a documentation tree into the repository
-it is reading has broken the read-only gate and the central-ownership boundary in one step.
-
-The return value to the caller is a short gist: the published record reference, the headline
-locations, and the count of coverage limits and unknowns. It repeats neither the dossier's contents
-nor the search transcript.
+- One `dossier` artifact (`schemas/dossier.schema.json`): question, budget allowed and used, every
+  search, structured hits, coverage limits, unknowns, files not to touch, and a recommendation for
+  further inspection only. Published through the knowledgebase adapter's `publishArtifact` with a
+  run-artifact placement; the knowledgebase resolves placement and the scout supplies no path.
+  Writing a documentation tree into the repository being read would break both the read-only gate
+  and central ownership of project artifacts.
+- A short gist returned to the caller: the published record reference, the headline locations, and
+  the counts of coverage limits and unknowns. Not the dossier's contents, not the search transcript.
 
 ## Side effects
 
 `process-exec`, `artifact-write`, `kb-publish`.
 
-`kb-publish` is a remote effect: the idempotency key is derived from the dossier's content hash per
-`adapters/runner-contract/CONTRACT.md` §5, and the returned record reference is read back before the
-run reports. Republishing an unchanged dossier after an interruption is a no-op success rather than
-a second record.
+`kb-publish` is a remote effect. Its idempotency key is derived from the dossier's content hash
+(`adapters/runner-contract/CONTRACT.md` §5), and the returned record reference is read back before
+the run reports. Republishing an unchanged dossier after an interruption is a no-op success, not a
+second record.
 
 No `workspace-write`, no `local-commit`: a scout cannot edit the repository it is reading.
 
 ## Stop conditions
 
-`complete`: the dossier is published. A dossier whose `status` is `limited` is complete — the
-coverage limits materially restrict what it supports, and saying so is the result.
+- `complete`: the dossier is published. A `status: limited` dossier is complete; saying what the
+  coverage limits restrict is the result.
+- `needs-input`: no bounded question, or one no search would end. Return the proposed narrower
+  question and no partial dossier.
+- `failed`: the repository is unreadable at the named revision, or the knowledgebase refuses the
+  write. Return the dossier content unpublished with the refusal; never write it to a repository
+  path.
+- `cancelled`: the caller withdrew the question. Discard the recorded searches rather than publish
+  a dossier nobody asked to keep.
 
-`needs-input`: no bounded question, or a question broad enough that no search would end it. Returns
-the narrower question it proposes and no partial dossier.
-
-`failed`: the repository is unreadable at the named revision, or the knowledgebase refuses the write.
-The dossier content is returned to the caller unpublished, with the refusal, rather than written to a
-path in the repository.
-
-`cancelled`: the caller withdrew the question mid-run. Searches already recorded are discarded
-rather than published as a dossier nobody asked to keep.
+Finish the requested exploration without re-asking for permission already given. Report anything
+beyond the question as an unknown or a further-inspection item rather than pursuing it.
 
 ## Limits
 
-Turns: 4 (gate, `policies/limits.yaml` `scout_turns`). A project may configure a lower value and
-cannot raise it. Multiple independent reads may run inside one turn where the host permits it;
-parallel reads do not buy extra turns.
-
-Tool surface: read, glob, lexical search and at most one graph query (gate). A scout is not handed
-an ambient tool inventory, and a question needing more tools than these is a question for another
-lane.
-
-Precision over recall (guidance): a shorter list of read-back hits is the return shape this skill
-is for. An unread long list is not more coverage, and reporting it as though it were is what turns
-the dossier into a map that is trusted and wrong.
-
-Searches recorded: all of them, including the empty ones (gate). A search omitted because it found
-nothing removes the evidence that the area was looked at.
+- Turns: 4 (gate, `policies/limits.yaml` `scout_turns`). A project may lower it, never raise it.
+  Independent reads may run in parallel within one turn; parallelism buys no extra turns.
+- Tools: read, glob, lexical search and at most one graph query (gate). A question that needs more
+  tools belongs to another lane.
+- Precision over recall (guidance): a short list of read-back hits beats a long unread list, which
+  only looks like coverage.
+- Every search is recorded, including empty ones (gate).
