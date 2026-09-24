@@ -15,6 +15,7 @@ import { describeInstall, loadInstallConfig } from "./packaging/install.ts";
 import { ADAPTATIONS_FILE, checkAdaptationsSync } from "./validation/provenance.ts";
 import type { CheckContext } from "./validation/context.ts";
 import { runValidation } from "./validation/run.ts";
+import { isSkillStyleIssue } from "./validation/skill-style.ts";
 import { blockingSkips, formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
 
 export interface CliIo {
@@ -31,6 +32,7 @@ const USAGE = [
   "ak — the agent-kit contract tool",
   "",
   "  ak validate [--profile <id>] [--json]      check the tree against catalog.yaml",
+  "  ak validate --skill-style                  print only the skill-authoring style warnings",
   "  ak build [--check] [--profile <id>]        emit dist/claude-code and dist/codex",
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
   "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home",
@@ -73,7 +75,13 @@ function parse(argv: readonly string[]): Parsed {
   return { command: positional[0], positional: positional.slice(1), flags, unknown };
 }
 
-function report(io: CliIo, issues: readonly Issue[], label: string, install?: string): number {
+function report(
+  io: CliIo,
+  issues: readonly Issue[],
+  label: string,
+  install?: string,
+  skipSource: readonly Issue[] = issues,
+): number {
   const sorted = sortIssues(issues);
   for (const issue of sorted) io.out(formatIssue(issue));
   const counts = { error: 0, warning: 0, note: 0 };
@@ -90,10 +98,23 @@ function report(io: CliIo, issues: readonly Issue[], label: string, install?: st
   // sitting in front of it and no authority to judge it by, and only the second
   // fails the run. Collapsed into a single count, the summary said "1 check
   // skipped" for both and a reader gating on the exit code saw no difference.
-  const missed = skippedChecks(sorted);
-  const blocked = blockingSkips(sorted);
+  // Computed from `skipSource`, not `sorted`: a display filter (`--skill-style`)
+  // narrows what gets printed above, but whether a check ran at all is a fact
+  // about the whole run, not about which lines a reader asked to see. Deriving
+  // these from the filtered set would let "0 checks skipped" stand in for a run
+  // that really did skip one, which is the exact lie this pair of clauses exists
+  // to rule out.
+  const missed = skippedChecks(skipSource);
+  const blocked = blockingSkips(skipSource);
   const clause = (n: number, word: string, names: string[]) =>
     `${n} check${n === 1 ? "" : "s"} ${word}${names.length === 0 ? "" : `: ${names.join(", ")}`}`;
+
+  // Named on its own rather than folded into the warning count: skill-style
+  // findings are `warning` or `note` severity depending on the check, so a
+  // reader scanning only the warning count would undercount them. Printed at
+  // zero for the same reason the skip clauses are (see below): its absence
+  // would otherwise read as "not measured" rather than "measured, found none".
+  const skillStyleCount = sorted.filter(isSkillStyleIssue).length;
   // The install configuration rides on the summary line rather than a line of
   // its own, because the summary line is the receipt: it is what gets quoted,
   // and `research/probes/validate-figure.sh` takes the last line of output as
@@ -104,7 +125,7 @@ function report(io: CliIo, issues: readonly Issue[], label: string, install?: st
   // nothing was measured under any configuration.
   const under = install === undefined ? "" : `; install: ${install}`;
   io.out(
-    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${clause(missed.length, "skipped", missed)}, ${clause(blocked.length, "unavailable", blocked)}${under}`,
+    `${label}: ${counts.error} error${counts.error === 1 ? "" : "s"}, ${counts.warning} warning${counts.warning === 1 ? "" : "s"}, ${counts.note} note${counts.note === 1 ? "" : "s"}, ${skillStyleCount} skill-style warning${skillStyleCount === 1 ? "" : "s"}, ${clause(missed.length, "skipped", missed)}, ${clause(blocked.length, "unavailable", blocked)}${under}`,
   );
   return hasErrors(sorted) || blocked.length > 0 ? 1 : 0;
 }
@@ -126,6 +147,13 @@ function buildOptions(parsed: Parsed): BuildOptions {
 function validate(parsed: Parsed, options: CliOptions): number {
   const result = runValidation(options.cwd, { build: buildOptions(parsed) });
   const install = result.catalog === null ? undefined : loadInstallConfig(options.cwd, result.catalog);
+  // `--skill-style` narrows what is *printed* to the skill-authoring style
+  // warnings alone; it never narrows what the exit code answers for. Those
+  // warnings can never fail a run (src/validation/skill-style.ts), so an exit
+  // code derived from the filtered set would always read 0 and would quietly
+  // stop meaning "the tree is clean" the moment a real error sat outside it.
+  const skillStyleOnly = parsed.flags.get("skill-style") === true;
+  const shown = skillStyleOnly ? result.issues.filter(isSkillStyleIssue) : result.issues;
   if (parsed.flags.get("json") === true) {
     // `skipped` is beside `ok` and not only inside the issues, because `ok: true`
     // on a machine with no donor clones is the same value as `ok: true` on one
@@ -139,7 +167,7 @@ function validate(parsed: Parsed, options: CliOptions): number {
           skipped: skippedChecks(result.issues),
           unavailable: blockingSkips(result.issues),
           install: install === undefined ? null : { file: install.file, attached: install.attached },
-          issues: result.issues,
+          issues: shown,
         },
         null,
         2,
@@ -147,7 +175,14 @@ function validate(parsed: Parsed, options: CliOptions): number {
     );
     return result.ok ? 0 : 1;
   }
-  return report(options.io, result.issues, "ak validate", install === undefined ? undefined : describeInstall(install));
+  report(
+    options.io,
+    shown,
+    "ak validate",
+    install === undefined ? undefined : describeInstall(install),
+    result.issues,
+  );
+  return result.ok ? 0 : 1;
 }
 
 function build(parsed: Parsed, options: CliOptions): number {
