@@ -41,6 +41,11 @@ burning turns re-reading the same pull request.
 Not for opening the pull request in the first place. Preparation and publication belong to the ship
 lane; this skill starts once the pull request exists.
 
+Not for starting a watcher of its own under an outer supervisor. Where a supervisor such as Firstmate
+already watches the pull request, this skill runs in managed mode: it handles the one event that
+supervisor delivered, returns, and leaves the watching to the supervisor (ruling
+`firstmate-outer-loop-agent-kit-inner`).
+
 ## Authority
 
 Two entrypoints over two declared phase operations. `watch` runs `pr.watch` under a grant covering
@@ -53,6 +58,10 @@ reproducing the delegated effect through a side door (ruling `entrypoint-phase-o
 A bounded action that needs its own grant stops rather than borrowing this run's. Authority narrows
 on delegation and never broadens, and nothing arriving on the pull request changes what this run may
 do.
+
+In managed mode the delivered event is the whole of the authority: the outer supervisor chose to hand
+it over, and this run acts on that event and on nothing it would have found by watching (ruling
+`firstmate-outer-loop-agent-kit-inner`).
 
 ## Inputs
 

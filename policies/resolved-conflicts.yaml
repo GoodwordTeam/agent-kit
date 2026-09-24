@@ -4,7 +4,8 @@
 # architecture document deliberately overrides the design conversation: §6.3 (delta boundary)
 # and §6.4 (reviewer continuity). Rows 11-18 carry the same shape for tensions §11 states in
 # prose elsewhere in the plan. Row 19 is the first donor-versus-plan tension rather than an
-# internal one. Row 20 is the first raised by packaging rather than by the sources.
+# internal one. Row 20 is the first raised by packaging rather than by the sources. Rows 21-23
+# are the first raised by running under an outer supervisor this package does not own.
 #
 # Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
 # every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
@@ -186,7 +187,7 @@
 
 schema_version: 1
 policy: resolved-conflicts
-rows: 20
+rows: 23
 
 conflicts:
 
@@ -887,3 +888,114 @@ conflicts:
       is the refusal this row relies on.
     source:
       plan: "§1.2"
+
+  - id: firstmate-outer-loop-agent-kit-inner
+    tension: >-
+      Firstmate already supervises: it takes intake, dispatches a worker into a worktree, steers it,
+      recovers it, watches its PR and owns merge. This package describes a lifecycle with its own
+      notion of supervision, runs, grants and autopilot. Run inside a Firstmate worker, either both
+      claim the outer loop, or the lifecycle is flattened into a single worker that the Firstmate
+      role text forbids from delegating anything, and the review panel this package depends on has
+      nowhere to sit.
+    ruling: >-
+      Firstmate is the only outer supervisor. agent-kit runs inside the worker as the task's
+      engineering lifecycle and owns the judgment in it: scout, build, verify, specialist review,
+      fixes, delta review, the fix-cycle cap and the ship decision. It adds no dispatcher, watcher
+      or merge path and never writes Firstmate's state; it reports by appending a status line in
+      Firstmate's vocabulary. The worker's instructions are pinned: a binding written by the
+      supervisor, outside the worktree, names a content-addressed skill bundle, so upgrading the kit
+      never changes a running task. Where the lifecycle would start its own watcher or feedback
+      loop, it instead handles the event Firstmate delivered, once, and returns. Where autopilot
+      needs two independent judgments, Firstmate dispatches them; the worker's own helpers are
+      never those judges. A Firstmate that has not been patched to allow this mode is refused,
+      never worked around.
+    discharged_in: [not-for, authority]
+    binds:
+      skills: [babysit-pr, receiving-review]
+      schemas: [firstmate-binding]
+      adapters: [firstmate]
+    scenario: 17
+    coverage: indirect
+    note: >-
+      `not-for` because the managed-mode skills decline to start a watcher of their own, and
+      `authority` because what they act on is an event another supervisor delivered and granted.
+      Rejected `workflow`: the steps of handling one event do not change, only who starts them.
+      Rejected `side-effects`: no effect is added or removed. super-ship is not bound here; its
+      obligation is the transport, which is the next row. Scenario 17 is the neighbouring case:
+      a judgment the worker's own helper made is a judgment by the implementer's side, exactly as
+      an implementer filling a missing supervisor seat would be.
+    source:
+      plan: "§7"
+
+  - id: no-mistakes-as-ship-transport
+    tension: >-
+      Firstmate's supervisor contract gives no-mistakes sole ownership of review, fixes, tests,
+      documentation, push, PR and CI, and runs it without an independent reviewer. This package
+      requires a specialist review panel, receipts bound to the shipped head, and a ship decision
+      made on them. Run both as they are and a change is reviewed twice by two pipelines that can
+      disagree, and the pipeline's own fix, document and rebase steps commit changes the panel
+      never saw, after the receipts that justified shipping were taken.
+    ruling: >-
+      Review judgment is this package's alone. super-ship remains the single creator of the pull
+      request and uses no-mistakes as its transport: every push skips review, document and rebase,
+      so no-mistakes re-checks tests and lint on the shipped head, pushes, opens the PR and watches
+      CI, and creates no commit of its own. A repository opted into this must set auto_fix for
+      test, lint and ci to zero in its trusted config, so a failing gate parks rather than
+      commits; preflight refuses a repository that does not. A parked gate is answered by fixing
+      through the lifecycle, which counts against the fix-cycle cap and invalidates stale
+      receipts, and re-shipping: the new push supersedes the parked run. It is never answered by
+      asking the pipeline to fix. Before any outward effect is repeated, the existing PR and run
+      are reconciled under the runner contract's idempotency key. Merge is never part of this
+      transport.
+    discharged_in: [workflow, side-effects]
+    binds:
+      skills: [super-ship]
+      schemas: [firstmate-binding]
+      adapters: [firstmate]
+    scenario: 20
+    coverage: indirect
+    note: >-
+      `workflow` because super-ship gains a transport step and a parked-gate response, and
+      `side-effects` because its remote-push and pr-open are performed through the transport and
+      still keyed as its own. Rejected `hard-gates`: the auto_fix precondition is preflight's
+      refusal, in the adapter, not a check in the skill body. Rejected `limits`: the fix-cycle
+      cap is two-fix-cycles-then-stop's, and this row only says a parked gate spends from it.
+      Scenario 20 is the neighbouring case: re-shipping after a parked gate is a second attempt at
+      the same remote effects, and reconciliation is what keeps it from being a second PR.
+    source:
+      plan: "§7.4"
+
+  - id: task-local-child-not-fleet-task
+    tension: >-
+      The Firstmate worker role says to do the assigned work yourself and not to delegate the task,
+      without separating handing the assignment to someone else from using a local helper for part
+      of it. This package's lifecycle depends on isolated helpers: review seats, implementers,
+      checkers. Read one way, every seat is a forbidden delegation; read the other, a worker may
+      spin up fleet-grade agents that push, merge or dispatch with nobody supervising them.
+    ruling: >-
+      A task-local child is not a fleet task. The worker stays the owner of the task; a child is a
+      helper at depth one that receives a subset of the worker's scope, writes only to its declared
+      destination, draws on the parent's persistent budget, and never dispatches fleet work,
+      merges, pushes, opens a PR or contacts a human. Delegating the task means handing off the
+      assignment, which stays forbidden. The distinction is stated in the Firstmate worker role
+      only for delivery mode agent-kit, by an upstream patch this package carries; the default
+      role text is unchanged. Where the host lets a hook tell a child's call from its parent's, the
+      envelope is enforced there; elsewhere it is declared and reported as unenforced. A worker
+      that cannot account for a child's outcome reports blocked and keeps ownership.
+    discharged_in: [authority, limits]
+    binds:
+      schemas: [common, firstmate-binding]
+      adapters: [firstmate]
+    scenario: 17
+    coverage: indirect
+    note: >-
+      `authority` because the ruling decides what a child may be permitted, and `limits` because
+      depth, count and the shared budget are bounds. Rejected `side-effects`: a skill declares its
+      own effects, and a child's are a subset of whichever skill started it, never a new set.
+      Rejected `hard-gates`: the refusal is the hook's and the binding's, outside any skill body.
+      No skill is bound: super-review and super-build already require isolated seats, and would
+      read the same had this row been decided the other way; the row decides whether Firstmate
+      lets them run. Scenario 17 is the neighbouring case: a child the worker started is on the
+      implementer's side, so it may never stand in for an independent seat.
+    source:
+      plan: "§7.3"

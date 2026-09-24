@@ -28,7 +28,9 @@ law:
       rule: >-
         A user-invoked (U) skill is started by a human only. On a host with a slash-command
         surface, only the slash command counts as the human act.
-      enforced_by: packager emits disable-model-invocation for every U skill
+      enforced_by: >-
+        the skill's own authority step and its description's non-trigger clause; no host flag is
+        emitted (docs/decisions/0003-model-invocation.md)
     - id: u-may-call-m
       rule: A user-invoked skill may call model-invoked (M) skills directly.
     - id: u-may-not-call-u

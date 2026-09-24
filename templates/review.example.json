@@ -75,7 +75,11 @@
           "ref": "projects/example-project/runs/example-run-1/verification.json",
           "kind": "receipt"
         }
-      ]
+      ],
+      "raw_output": {
+        "id": "raw-code-review-correctness",
+        "hash": "sha256:3f49591ef69ee05fddd4feab053e3f58178ed7cc52103791c35242e749160109"
+      }
     },
     {
       "role": "code-review/security",
@@ -94,7 +98,11 @@
           "schema": "finding",
           "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
         }
-      ]
+      ],
+      "raw_output": {
+        "id": "raw-code-review-security",
+        "hash": "sha256:4f7b2e1b274469df74a76987a1bcbfa0a358a7f463d4418bf9b0461dd5f5df90"
+      }
     },
     {
       "role": "code-review/frontend-races",

@@ -61,17 +61,33 @@ the project's.
 
 ## Lane results
 
-`complete` — the seat ran on the snapshot and returned its findings, possibly none.
-`empty` — the seat ran and has nothing to report on its axis.
-`unavailable` — the seat could not run, could not be given its required context, or failed.
+Two vocabularies, one per layer. A seat returns a lane result from `policies/review.yaml`
+`lane_results`; the review records a lane state from `schemas/review.schema.json`. The review never
+records a seat's result verbatim.
 
-A required lane that is `unavailable` blocks approval, is never downgraded to `empty`, and is never
-backfilled by the author, the implementer, another seat or the synthesis step. "We could not look"
+| Seat returned | Review records | Meaning |
+|---|---|---|
+| `complete` | `covered` | The seat ran on the snapshot and returned its findings, possibly none |
+| `empty` | `covered`, no findings, reason kept | The seat ran and its axis did not apply, such as standards where the project declares none |
+| `unavailable` | `unavailable`, reason kept | The seat could not run, could not be given its required context, or failed |
+| (not dispatched) | `skipped`, reason kept | A conditional seat whose selection signal was absent |
+
+Every `covered` lane carries the seat's raw output, preserved as a run artifact before synthesis
+reads it.
+
+A required lane is never `skipped`. A required lane that is `unavailable` blocks approval, is never
+downgraded to `covered` or `skipped`, and is never backfilled by the author, the implementer,
+another seat or the synthesis step. "We could not look"
 and "we looked and found nothing" are different claims, and the review reports which lane was
 unavailable and why while staying resumable (ruling `required-lane-failure-is-unavailable`).
 
 A seat that suppressed every candidate on its axis returns `complete` with no findings, never
-`empty`.
+`empty`: `empty` says the axis did not apply. Both are recorded as `covered`, so the seat's result
+is kept as the lane's reason and its raw output shows what it suppressed.
+
+In a delta, a regression found in a caller the fix never touched is still reported when it is
+affected behavior: the novelty evidence is the fix that reached it, and scope discipline is not a
+reason to drop it (ruling `delta-scope-affected-behavior`).
 
 ## Evidence
 

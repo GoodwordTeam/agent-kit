@@ -192,8 +192,11 @@ packaging:
     disable-model-invocation: true
   hosts:
     - adapter: claude-code
-      mode: guided
+      mode: manual
       unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
         - >-
           isolated worktrees are not provided by the host. Where the run cannot be isolated, the
           mutation record and the invalidation notice are the only protection the reviewer has, and

@@ -181,17 +181,7 @@ describe("the invocation law", () => {
 });
 
 describe("packager enforcement of the law", () => {
-  test("every U skill is verified to receive disable-model-invocation: true", () => {
-    const ctx = ctxFor({
-      "policies/invocation.yaml": POLICY,
-      "skills/ship/SKILL.md": head("ship"),
-      "skills/compound/SKILL.md": head("compound"),
-      "skills/scout/SKILL.md": head("scout"),
-    });
-    expect(checkInvocation(ctx).filter((i) => i.rule === "invocation.missing-disable-model-invocation")).toEqual([]);
-  });
-
-  test("a U skill whose generated frontmatter lacks the key is reported", () => {
+  test("a U skill cannot be downgraded to M from its skill.yaml", () => {
     const ctx = ctxFor({
       "policies/invocation.yaml": POLICY,
       "skills/ship/SKILL.md": head("ship"),

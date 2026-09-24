@@ -170,7 +170,9 @@ describe("host capability honesty", () => {
 
   test("claude-code does not claim to enforce a tool allowlist: it is pre-approval, not a sandbox", () => {
     const caps = loadHostCapabilities(ctxFor().root, "claude-code");
-    expect(caps.enforces.has("no-model-invocation")).toBe(true);
+    // Not claimed either: the host honors disable-model-invocation, and this
+    // package no longer emits it (docs/decisions/0003-model-invocation.md).
+    expect(caps.enforces.has("no-model-invocation")).toBe(false);
     expect(caps.enforces.has("tool-allowlist-enforced")).toBe(false);
     expect(caps.notes.join(" ")).toContain("pre-approval");
   });
@@ -251,10 +253,14 @@ describe("the licence files the distribution is obliged to carry", () => {
 });
 
 describe("bundle planning", () => {
-  test("every U skill gets disable-model-invocation: true in the generated frontmatter", () => {
-    const plan = planBundle(ctxFor(), "claude-code", {});
-    expect(plan.files.get("skills/alpha/SKILL.md")?.contents).toContain("disable-model-invocation: true");
-    expect(plan.files.get("skills/beta/SKILL.md")?.contents).not.toContain("disable-model-invocation");
+  test("no skill gets disable-model-invocation, U or M, on either host", () => {
+    // docs/decisions/0003-model-invocation.md: every skill is loadable by the
+    // model, and a U skill's gate is its own authority step.
+    for (const host of ["claude-code", "codex"] as const) {
+      const plan = planBundle(ctxFor(), host, {});
+      expect(plan.files.get("skills/alpha/SKILL.md")?.contents).not.toContain("disable-model-invocation");
+      expect(plan.files.get("skills/beta/SKILL.md")?.contents).not.toContain("disable-model-invocation");
+    }
   });
 
   test("argument-hint and allowed-tools are generated from skill.yaml, never copied from the body", () => {
@@ -1120,8 +1126,8 @@ describe("the two host bundles, compared", () => {
     // And the frontmatter genuinely is generated per host, so the equality above
     // is a statement about bodies rather than about two identical files.
     const claudeAlpha = claude.files.get("skills/alpha/SKILL.md")?.contents ?? "";
-    expect(claudeAlpha).toContain("disable-model-invocation");
-    expect(codex.files.get("skills/alpha/SKILL.md")?.contents ?? "").not.toContain("disable-model-invocation");
+    expect(claudeAlpha).toContain("allowed-tools:");
+    expect(codex.files.get("skills/alpha/SKILL.md")?.contents ?? "").not.toContain("allowed-tools:");
   });
 
   /**
@@ -1148,7 +1154,9 @@ describe("the two host bundles, compared", () => {
     // alpha is a U skill declaring allowed_tools, so claude-code is where both
     // keys are required. Asserted, not assumed: absent from codex means nothing
     // if the fixture never produced them anywhere.
-    expect(alphaIn(claude)).toContain("disable-model-invocation: true");
+    // disable-model-invocation is on neither host's list any more
+    // (docs/decisions/0003-model-invocation.md), so it must reach neither bundle.
+    expect(alphaIn(claude)).not.toContain("disable-model-invocation");
     expect(alphaIn(claude)).toContain("allowed-tools:");
 
     for (const leaked of ["disable-model-invocation", "allowed-tools"]) {
@@ -1663,7 +1671,9 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     // Both halves in one test on purpose: "codex forces manual" and "this is a
     // codex rule" are the same claim, and a test that only showed the first
     // would pass just as well against a packager that forced manual everywhere.
-    const ctx = ctxFor(alpha(BOTH_GUIDED));
+    // No default host enforces no-model-invocation now, so "elsewhere" is a
+    // host that declares it does.
+    const ctx = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/claude-code/capabilities.yaml": "enforces: [no-model-invocation]\n" });
     expect(decisionFor(planBundle(ctx, "codex", {}), "alpha")?.mode).toBe("manual");
     expect(decisionFor(planBundle(ctx, "claude-code", {}), "alpha")?.mode).toBe("guided");
     expect(planBundle(ctx, "codex", {}).files.get("skills/alpha/SKILL.md")?.contents).toContain("mode: manual");
@@ -1683,8 +1693,9 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     expect(issue?.file).toBe("skills/alpha/skill.yaml");
     expect(issue?.message).toContain("guided");
     expect(issue?.message).toContain("codex");
-    // And not on the host where the declaration is legal.
-    expect(planBundle(ctxFor(alpha(BOTH_GUIDED)), "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
+    // And not on a host where the declaration is legal: one that enforces no-model-invocation.
+    const enforcing = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/claude-code/capabilities.yaml": "enforces: [no-model-invocation]\n" });
+    expect(planBundle(enforcing, "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
   });
 
   test("goes to manual, not to the guided that §4's downgrade alone would give it", () => {
@@ -1978,7 +1989,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(describeInstall(loadInstallConfig(empty.root, empty.catalog))).toBe("ak.install.yaml: attached none");
   });
 
-  test("the real contracts supply kb-write from the knowledgebase and runner-grants from the runner, and nothing else", () => {
+  test("the real contracts supply kb-write from the knowledgebase, runner-grants from the runner and firstmate-supervision from firstmate, and nothing else", () => {
     // The only case reading this repository, and it reads the contracts, never
     // an install file: loadAdapterSupplies does not open one.
     const { catalog } = loadCatalog(REPO);
@@ -1988,6 +1999,10 @@ describe("the adapters an install attaches, and what they lift", () => {
     const byAdapter = Object.fromEntries(adapters.map((a) => [a.adapter, [...a.capabilities].sort()]));
     // kb-read is absent on purpose: unconfigured, it answers unavailable and the
     // run continues, which is reported but not refused.
-    expect(byAdapter).toEqual({ knowledgebase: ["kb-write"], "runner-contract": ["runner-grants"] });
+    expect(byAdapter).toEqual({
+      firstmate: ["firstmate-supervision"],
+      knowledgebase: ["kb-write"],
+      "runner-contract": ["runner-grants"],
+    });
   });
 });

@@ -12,8 +12,10 @@ export interface GeneratedFrontmatter {
 
 /**
  * Host frontmatter is generated, never copied: the canonical file carries only
- * Agent Skills spec keys. `disable-model-invocation: true` is emitted for every
- * U skill on a host that defines it, because only a human may start one.
+ * Agent Skills spec keys. `disable-model-invocation: true` would be emitted for
+ * every U skill on a host that defines it; no host does any more
+ * (docs/decisions/0003-model-invocation.md), and the guard stays so a host that
+ * adds the key back gets it for exactly the U skills.
  *
  * `host` is a parameter because it was not one, and a function that generates
  * host frontmatter without knowing the host generated the same frontmatter for
