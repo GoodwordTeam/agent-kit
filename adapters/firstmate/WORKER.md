@@ -35,6 +35,14 @@ A receipt or a verdict is evidence only for the revision and diff hash it names.
 is stale and the gate runs again. The fix-cycle cap is the lifecycle's; at the cap you stop and report,
 you do not start another cycle.
 
+Each phase leaves a gate record when its own gates pass. Record it with
+`{{gate_cmd}} record --run {{run_id}} --dir {{evidence_dir}} --gate <gate>`: `build-checks` after
+super-build, `verify` after super-verify, `review-full`, `review-delta` and `review-readiness` after
+the matching super-review mode, and `ship-preflight` after super-ship's preconditions hold. Before it
+ships, super-ship runs `{{gate_cmd}} check --run {{run_id}} --dir {{evidence_dir}}`; a refusal names
+the phase you skipped or whose evidence went stale, and you go back and run it. Skipping a phase is
+not a shortcut: `done` is refused without its record.
+
 ## Your children
 
 "Do the work yourself" means you keep the assignment. You may start task-local helpers inside this task
@@ -69,7 +77,10 @@ inside the pipeline. With a `dry-run` delivery nothing is pushed and no pull req
 ## How you report
 
 Append one line to your status file, printed by
-`ak firstmate status {{binding_path}} <outcome> …`. For example, a complete dry run with evidence refs
+`ak firstmate status {{binding_path}} <outcome> …`. `complete` is audited first: every required gate
+needs a record current for the head your ship-preflight record names, and every grant record must name
+this binding with the hash the ledger registered. A refusal prints why and `needs-decision`; nothing is
+appended. For example, a complete dry run with evidence refs
 `r1,v1` prints `done [at=<epoch>]: dry-run ship prepared, nothing published evidence=r1,v1`. A child in
 an unknown state is reported as `blocked`, whatever else is true. Write nothing else into Firstmate's
 files, and do not edit this brief.

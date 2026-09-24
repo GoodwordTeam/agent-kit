@@ -8,6 +8,7 @@
 
 import { attach, formatAttachResult } from "./attach/index.ts";
 import { runFirstmate } from "./firstmate/cli.ts";
+import { main as runLifecycle } from "./lifecycle/gate.ts";
 import { loadCatalog } from "./catalog/load.ts";
 import type { BuildOptions } from "./packaging/build.ts";
 import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.ts";
@@ -35,7 +36,8 @@ const USAGE = [
   "  ak validate --skill-style                  print only the skill-authoring style warnings",
   "  ak build [--check] [--profile <id>]        emit dist/claude-code and dist/codex",
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
-  "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home",
+  "  ak lifecycle record|check …                the gate records super-ship checks before it ships",
+  "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home (optional)",
   "",
   "Exit 0 when nothing failed, non-zero on any error.",
 ];
@@ -245,6 +247,7 @@ function attachCommand(parsed: Parsed, options: CliOptions): number {
 
 export function runCli(argv: readonly string[], options: CliOptions): number {
   // Its own flags and its own parser: see src/firstmate/cli.ts.
+  if (argv[0] === "lifecycle") return runLifecycle(argv.slice(1), options.io, options.cwd);
   if (argv[0] === "firstmate") return runFirstmate(argv.slice(1), options.io);
   const parsed = parse(argv);
   for (const token of parsed.unknown) options.io.err(`ak: ${token} needs a value`);

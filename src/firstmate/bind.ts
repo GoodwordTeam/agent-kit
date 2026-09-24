@@ -30,7 +30,8 @@ import { evidenceFromEnv, readHomeEnv } from "./envfile.ts";
 import { pinBundle } from "./pin.ts";
 import { preflight } from "./preflight.ts";
 import { validateBinding, type Binding } from "./schema.ts";
-import { takeSnapshot } from "./snapshot.ts";
+import { takeSnapshot } from "../lifecycle/gate.ts";
+import { GATE_FILE } from "../packaging/plan.ts";
 
 export interface BindArgs {
   fmHome: string;
@@ -175,6 +176,8 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
     host: args.host,
     charter: charter === null ? "none. This run holds no sensitive-action authority and acquires none by running" : `${charter.ref} (${charter.hash})`,
     gates: gates.join(", "),
+    gate_cmd: `node ${join(pin.path, GATE_FILE)}`,
+    evidence_dir: store.location,
     max_children: String(binding.child_budget.max_children),
     max_concurrent: String(binding.child_budget.max_concurrent),
     roles: binding.child_budget.roles.join(", "),

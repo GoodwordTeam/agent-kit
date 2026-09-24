@@ -232,6 +232,37 @@ Follow-ups the runs exposed:
 - Eval sandbox on this machine: any symlink under `~/.docker` blocks Bash-granting evals; they ran
   with `cli-plugins` and `bin` moved out and restored afterwards.
 
+### Lifecycle fidelity, enforced in core (2026-09-24)
+
+Principle: **Firstmate is optional.** Standalone, meaning sessions a person opens, each in its own
+worktree, is the default way to run agent-kit, and every lifecycle check lands in core first. The
+Firstmate adapter only calls into core. No core command, test or CI job needs Firstmate installed.
+
+The first follow-up above is closed this way:
+
+- `src/lifecycle/gate.ts` (`ak lifecycle record|check`, and `bin/ak-gate.mjs` in every bundle that
+  carries a super-* skill, run with plain node) defines one gate record format:
+  `{run_id, gate, snapshot{repo, revision, diff_hash}, recorded_at}`. The snapshot helpers moved here
+  from `src/firstmate/snapshot.ts`. super-build, super-verify and super-review record their gate when
+  they pass. super-ship checks first and records `ship-preflight` last. Standalone records default to
+  `<git common dir>/agent-kit/evidence/<branch>/`, so every worktree of a repository shares them and
+  the tree stays clean.
+- The check reads "current" per gate. `verify`, `review-delta`, `review-readiness` and `ship-preflight`
+  must name the exact head, revision and diff hash. `build-checks` and `review-full` may name an earlier
+  revision in the head's history, because a fix loop moves the head after them, but a `review-full` on
+  an earlier head counts only with a `review-delta` at this one. The pre-ship default checks
+  `build-checks, verify, review-full, review-readiness`, since `ship-preflight` does not exist yet
+  when super-ship checks.
+- `bind` adds `build-checks` to `required_gates`. `ak firstmate status complete` audits before it
+  prints `done`: the same core check over the binding's store and gates, against the head the latest
+  `ship-preflight` record names, then the grant audit ADR-0004 describes. `status --verify` runs the
+  audit alone.
+- Replay, with the practice runs restated in the new record format. The runs predate the format, so
+  their stores held free-form files; `tests/firstmate/status.test.ts` records exactly the gates each
+  run left evidence for. Run 2 (only a dry-run ship) is refused, naming `build-checks`, `verify`,
+  `review-full` and `review-readiness`. Run 1 (every phase) passes. A tampered grant record and a
+  hand-edited binding are both refused.
+
 ## Consequences
 
 - A project opts in per task with `--mode agent-kit`; nothing else on the machine changes.

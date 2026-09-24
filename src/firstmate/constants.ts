@@ -75,7 +75,7 @@ export const TRANSPORT_REFERENCE = "skills/super-ship/references/transport-no-mi
 export const CHILD_ROLES = ["implementer", "reviewer-spec", "reviewer-standards"] as const;
 export const CHILD_ROLE_FAMILY = "code-review";
 
-export const DEFAULT_GATES = ["verify", "review-full", "review-readiness", "ship-preflight"] as const;
+export const DEFAULT_GATES = ["build-checks", "verify", "review-full", "review-readiness", "ship-preflight"] as const;
 
 export const DEFAULT_CHILD_BUDGET = { max_children: 6, max_concurrent: 3 } as const;
 

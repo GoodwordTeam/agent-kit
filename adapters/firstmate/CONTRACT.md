@@ -24,6 +24,12 @@ The files beside this one:
 
 ## 1. Capabilities and side effects
 
+Firstmate is optional. agent-kit runs two ways, and standalone is the default: you open one or more
+sessions yourself, each in its own worktree, and run the super-* lifecycle in each. Every lifecycle
+check, including the pre-ship gate check, lives in core and needs nothing from Firstmate. Firstmate is
+the opt-in for supervised multi-agent work, and this adapter only calls into core. No core command,
+test or CI job needs Firstmate installed (ADR 0002).
+
 This adapter supplies `firstmate-supervision` (`common#/$defs/capability`): a supervisor outside
 the worker that dispatched the task, holds its steering inbox, watches its PR and owns merge.
 Neither coding-agent host provides it.
@@ -126,6 +132,18 @@ effects unowned. `ak firstmate status <binding> <outcome>` prints these lines; i
 
 `evidence=` refs are the verification receipts and the review the ship rested on, by artifact id.
 With no knowledgebase they point into the labeled mock store, and the line says `dry-run`.
+
+`complete` is audited before its line is printed, by the same core check a standalone super-ship runs
+(`src/lifecycle/gate.ts`, `ak lifecycle check`). Every gate in the binding's `required_gates`, which
+`bind` sets to `build-checks, verify, review-full, review-readiness, ship-preflight`, needs a gate
+record in the binding's evidence store, for this run, current for the head the latest `ship-preflight`
+record names. `build-checks` and `review-full` may sit on an earlier head in that head's history; a
+`review-full` on an earlier head also needs a `review-delta` at this one. Then every grant the run
+needed must have left a grant record naming this binding by path and by the hash the ledger registered,
+and the binding must still hash to it. Any refusal prints `refused: …` lines and a `needs-decision`
+hint, exits 1, and prints no `done` line. `ak firstmate status <binding> --verify` runs the same audit
+on its own, for a supervisor that wants to check a `done` it was handed. A knowledgebase store fails
+closed here too: the audit cannot read it, so it refuses.
 
 ---
 

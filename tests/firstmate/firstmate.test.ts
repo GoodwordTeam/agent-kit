@@ -416,9 +416,10 @@ describe("the ak firstmate command", () => {
     const { home, project, opts } = env();
     const out = join(home, "data/T-8/binding.json");
     bind({ fmHome: home, taskId: "T-8", project, mode: "agent-kit", host: "claude-code", bindingOut: out, evidence: { store: "mock", location: makeDir() } }, opts);
-    const r = run(["firstmate", "status", out, "complete", "--evidence", "r1", "--at", "5"]);
+    // complete is audited first, which tests/firstmate/status.test.ts covers against a temp ledger.
+    const r = run(["firstmate", "status", out, "failed", "--reason", "tests red", "--at", "5"]);
     expect(r.code).toBe(0);
-    expect(r.out).toEqual(["done [at=5]: dry-run ship prepared, nothing published evidence=r1"]);
+    expect(r.out).toEqual(["failed [at=5]: tests red"]);
   });
 
   test("an unknown flag is an error, never ignored", () => {
