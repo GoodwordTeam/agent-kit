@@ -212,7 +212,19 @@ describe("the secret stays in the folder and out of git", () => {
   test("a history scan that runs out of time is a warning, not a pass", () => {
     const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": ".linear-token\n", ".linear-token": TOKEN });
     const binding = loadTrackerBinding(dir, REPO).binding!;
-    const issues = checkTrackerSecret(dir, binding, 1);
+    // A real `git log` on a one-commit fixture can finish inside any timeout, so the
+    // scan is made to hang: a `git` first on PATH sleeps on `log` and defers the rest.
+    const bin = mkdtempSync(join(tmpdir(), "ak-slow-git-"));
+    writeFileSync(join(bin, "git"), `#!/bin/sh\nfor a in "$@"; do [ "$a" = log ] && exec sleep 30; done\nexec ${Bun.which("git")} "$@"\n`);
+    chmodSync(join(bin, "git"), 0o755);
+    const saved = process.env["PATH"];
+    process.env["PATH"] = `${bin}:${saved}`;
+    let issues;
+    try {
+      issues = checkTrackerSecret(dir, binding, 200);
+    } finally {
+      process.env["PATH"] = saved;
+    }
     expect(issues.map((i) => `${i.severity} ${i.rule}`)).toEqual(["warning tracker.history-unreadable"]);
     expect(issues[0]!.message).toContain("did not finish");
   });
