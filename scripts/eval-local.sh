@@ -20,7 +20,7 @@ command -v jq >/dev/null || { echo "eval-local: jq is required" >&2; exit 2; }
 
 revision="$(git -C "$root" rev-parse HEAD 2>/dev/null || echo unknown)"
 [[ -z "$(git -C "$root" status --porcelain 2>/dev/null)" ]] || revision+=" (dirty)"
-if [[ -n "$(cd "$root" && find catalog.yaml skills packs protocols roles references adapters schemas policies profiles provenance src -newer "$bundle" -print -quit 2>/dev/null)" ]]; then
+if [[ -n "$(cd "$root" && find catalog.yaml skills packs protocols roles references adapters schemas policies profiles provenance src evals -newer "$bundle" -print -quit 2>/dev/null)" ]]; then
   echo "eval-local: $bundle is older than its sources; run 'bun run build' to measure this tree" >&2
 fi
 
