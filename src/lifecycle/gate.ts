@@ -2,8 +2,8 @@
  * Lifecycle fidelity: each phase leaves a gate record bound to the snapshot it judged, and super-ship
  * refuses to start until every phase before it has one for the head it would ship.
  *
- * Known limit: a standalone run is named after its branch, and earlier records are bounded by the fork
- * point from the default branch. After a squash or rebase merge, a branch reused by merging the default
+ * Known limit: a standalone run is named after its branch, and its earlier records are bounded by the
+ * fork point from the default branch (an explicit `--run` is not). After a squash or rebase merge, a branch reused by merging the default
  * branch back in keeps the old run's `build-checks` and `review-full` records in its history, and they
  * count. Use one branch per task, or pass `--run` for a fresh run id.
  *
@@ -235,6 +235,11 @@ export interface CheckArgs {
    * publish has moved the tree since.
    */
   head?: Snapshot;
+  /**
+   * Bound earlier records by the fork point from the default branch. Only for a run named after its
+   * branch, which a reused branch would otherwise share with an old run; an explicit run id is unique.
+   */
+  forkBound?: boolean;
 }
 
 export interface CheckResult {
@@ -288,7 +293,7 @@ export function checkGates(a: CheckArgs): CheckResult {
   }
   const refusals: string[] = [];
   const stale = (g: Gate, why: string) => refusals.push(`refused: gate ${g} has no current evidence (${why})`);
-  const fork = a.gates.some((g) => EARLIER.has(g)) ? forkPoint(a.project, head.revision) : undefined;
+  const fork = a.forkBound === true && a.gates.some((g) => EARLIER.has(g)) ? forkPoint(a.project, head.revision) : undefined;
 
   for (const gate of a.gates) {
     const records = readRecords(a.dir, a.run, gate);
@@ -411,7 +416,7 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
     io.err(`ak lifecycle check: --gates takes ${GATES.join(", ")}${unknown.length > 0 ? `, not ${unknown.join(", ")}` : ""}`);
     return 2;
   }
-  const result = checkGates({ dir, run, gates: names as Gate[], project });
+  const result = checkGates({ dir, run, gates: names as Gate[], project, forkBound: str("run") === undefined });
   if (flags.get("json") === true) io.out(JSON.stringify({ run, dir, gates: names, ...result }, null, 2));
   else if (result.ok) io.out(`ok: run ${run} has current evidence for ${names.join(", ")} at ${short(result.head!)}`);
   else for (const r of result.refusals) io.err(r);

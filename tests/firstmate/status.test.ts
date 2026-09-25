@@ -19,7 +19,7 @@ import { bind } from "../../src/firstmate/bind.ts";
 import { runFirstmate } from "../../src/firstmate/cli.ts";
 import { DEFAULT_GATES } from "../../src/firstmate/constants.ts";
 import { grantRecordPath } from "../../src/firstmate/grant.ts";
-import { FIXED_NOW, makeBundle, makeDir, makeHome, makeProject, REPO } from "./fixture.ts";
+import { FIXED_NOW, gitIn, makeBundle, makeDir, makeHome, makeProject, REPO } from "./fixture.ts";
 
 const OPERATIONS = ["review.full", "review.readiness", "ship.prepare"] as const;
 
@@ -105,6 +105,23 @@ describe("ak firstmate status complete is audited", () => {
     expect(fm("status", bindingPath, "--verify").code).toBe(0);
     writeFileSync(join(project, "src/a.ts"), "export const a = 10;\n"); // after ship: not what was shipped
     expect(fm("status", bindingPath, "--verify").code).toBe(0);
+  });
+
+  test("a run the supervisor has since merged into main still verifies", () => {
+    const { project, bindingPath, binding, fm, grants, record } = bound();
+    grants(...OPERATIONS);
+    gitIn(project, "checkout", "-q", "-b", "fm/T-S");
+    writeFileSync(join(project, "src/a.ts"), "export const a = 2;\n");
+    record("build-checks");
+    gitIn(project, "commit", "-qam", "build");
+    record(...binding.required_gates.filter((g) => g !== "build-checks"));
+    expect(fm("status", bindingPath, "--verify").code).toBe(0);
+    gitIn(project, "checkout", "-q", "main");
+    gitIn(project, "merge", "-q", "--no-ff", "-m", "merge", "fm/T-S");
+    gitIn(project, "checkout", "-q", "fm/T-S");
+    const r = fm("status", bindingPath, "--verify");
+    expect(r.err).toBe("");
+    expect(r.code).toBe(0);
   });
 
   test("a gate that ran without its grant is refused", () => {
