@@ -1,0 +1,2222 @@
+{
+ "receipt": {
+  "fixture_set": "reflect-capture",
+  "fixture_set_version": 4,
+  "fixture_set_sha256": "7e9f694c5db6b7975a311bc0e77ecd0681985bdac18b7833d68b9882fa2537cd",
+  "argv": [
+   "bun",
+   "tests/learn/evals/reflect-eval.ts",
+   "--runs",
+   "3",
+   "--json",
+   ".work/evals/2026-09-25-rerun/b2-reflect.json"
+  ],
+  "judge": [
+   "claude",
+   "-p",
+   "--tools",
+   "",
+   "--strict-mcp-config",
+   "--settings",
+   "{\"disableAllHooks\":true}",
+   "--output-format",
+   "json"
+  ],
+  "memory_tokens": 2500,
+  "runs": 3,
+  "judge_cost_usd": null,
+  "judge_cost_note": "not recorded: commandJudge returns the parsed reply and drops the host envelope that carries the cost",
+  "revision": "449efa82691796db862bc5ad93165bc275628397"
+ },
+ "summary": {
+  "dev": {
+   "fixtures": 11,
+   "majority_passed": 11,
+   "per_run": {
+    "n": 33,
+    "passed": 33,
+    "applied": 33,
+    "mean_recall": 1,
+    "mean_precision": 1,
+    "mean_noise_kept": 0,
+    "kept_noise_total": 0,
+    "stale": 0,
+    "uncited_total": 0,
+    "over_cap": 0,
+    "laundered": 0,
+    "contradicted": 0,
+    "unsupported_total": 5,
+    "notes_invalid_total": 0,
+    "under_quarantined": 0,
+    "over_quarantined": 0,
+    "unrecorded": 0,
+    "adopted": 0,
+    "quoted": 0,
+    "injected_in_reply": 0
+   }
+  },
+  "heldout": {
+   "fixtures": 6,
+   "majority_passed": 5,
+   "per_run": {
+    "n": 18,
+    "passed": 16,
+    "applied": 18,
+    "mean_recall": 0.9111,
+    "mean_precision": 0.9778,
+    "mean_noise_kept": 0.0556,
+    "kept_noise_total": 2,
+    "stale": 2,
+    "uncited_total": 0,
+    "over_cap": 0,
+    "laundered": 0,
+    "contradicted": 0,
+    "unsupported_total": 0,
+    "notes_invalid_total": 0,
+    "under_quarantined": 0,
+    "over_quarantined": 0,
+    "unrecorded": 0,
+    "adopted": 0,
+    "quoted": 0,
+    "injected_in_reply": 0
+   }
+  }
+ },
+ "fixtures": [
+  {
+   "fixture": "r01-payments",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "region",
+      "preload",
+      "ticket",
+      "ledger",
+      "refund"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 182,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "region",
+      "preload",
+      "ticket",
+      "ledger",
+      "refund"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 192,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "region",
+      "preload",
+      "ticket",
+      "ledger",
+      "refund"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 189,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r02-docs",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "index",
+      "node",
+      "images",
+      "preview",
+      "owner"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 176,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "index",
+      "node",
+      "images",
+      "preview",
+      "owner"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 159,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "index",
+      "node",
+      "images",
+      "preview",
+      "owner"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 163,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r03-mobile",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "pods",
+      "sim",
+      "flags",
+      "strings",
+      "crash"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 195,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "pods",
+      "sim",
+      "flags",
+      "strings",
+      "crash"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 174,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "pods",
+      "sim",
+      "flags",
+      "strings",
+      "crash"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 196,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r04-infra",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "tf",
+      "lock",
+      "window",
+      "module",
+      "tagging"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 148,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "tf",
+      "lock",
+      "window",
+      "module",
+      "tagging"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 161,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "tf",
+      "lock",
+      "window",
+      "module",
+      "tagging"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 153,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r05-data",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "backfill",
+      "partition",
+      "warehouse",
+      "pii",
+      "late"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 178,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "backfill",
+      "partition",
+      "warehouse",
+      "pii",
+      "late"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 175,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "backfill",
+      "partition",
+      "warehouse",
+      "pii",
+      "late"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 198,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r06-web",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "e2e",
+      "css",
+      "icons",
+      "bundle",
+      "hydration"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 207,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "e2e",
+      "css",
+      "icons",
+      "bundle",
+      "hydration"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 194,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "e2e",
+      "css",
+      "icons",
+      "bundle",
+      "hydration"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 209,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r07-cli",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "release",
+      "golden",
+      "flags",
+      "go",
+      "windows"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 172,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "release",
+      "golden",
+      "flags",
+      "go",
+      "windows"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 181,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "release",
+      "golden",
+      "flags",
+      "go",
+      "windows"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 198,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r08-ml",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "seed",
+      "gpu",
+      "data",
+      "eval",
+      "ckpt"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 155,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "seed",
+      "gpu",
+      "data",
+      "eval",
+      "ckpt"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 168,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "seed",
+      "gpu",
+      "data",
+      "eval",
+      "ckpt"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 191,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r09-api",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "version",
+      "rate",
+      "openapi",
+      "auth",
+      "timeout"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 188,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "version",
+      "rate",
+      "openapi",
+      "auth",
+      "timeout"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 201,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 1,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "version",
+      "rate",
+      "openapi",
+      "auth",
+      "timeout"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 165,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 1,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r10-game",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "tick",
+      "proto",
+      "matchmaking",
+      "load",
+      "desync"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 11,
+     "uncited": 0,
+     "tokens": 239,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "tick",
+      "proto",
+      "matchmaking",
+      "load",
+      "desync"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 10,
+     "uncited": 0,
+     "tokens": 227,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "tick",
+      "proto",
+      "matchmaking",
+      "load",
+      "desync"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 201,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "r11-billing",
+   "set": "dev",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "invoicing",
+      "minor",
+      "tax",
+      "migrate",
+      "dunning"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 40,
+     "uncited": 0,
+     "tokens": 1153,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 1,
+     "recorded": true,
+     "flagged": [
+      "obs:13"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:13"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "invoicing",
+      "minor",
+      "tax",
+      "migrate",
+      "dunning"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 40,
+     "uncited": 0,
+     "tokens": 1202,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 1,
+     "recorded": true,
+     "flagged": [
+      "obs:13"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:13"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "invoicing",
+      "minor",
+      "tax",
+      "migrate",
+      "dunning"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 39,
+     "uncited": 0,
+     "tokens": 1211,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 1,
+     "recorded": true,
+     "flagged": [
+      "obs:13"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:13"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "h01-split",
+   "set": "heldout",
+   "pass": false,
+   "passes": 1,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "dlq",
+      "schema",
+      "broker",
+      "idem"
+     ],
+     "missed": [
+      "prefetch"
+     ],
+     "precision": 0.8,
+     "kept_noise": [
+      "old-prefetch"
+     ],
+     "noise_kept": 0.5,
+     "stale": [
+      "old-prefetch"
+     ],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 214,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14",
+      "obs:15"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14",
+      "obs:15"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": false
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "dlq",
+      "schema",
+      "broker",
+      "idem"
+     ],
+     "missed": [
+      "prefetch"
+     ],
+     "precision": 0.8,
+     "kept_noise": [
+      "old-prefetch"
+     ],
+     "noise_kept": 0.5,
+     "stale": [
+      "old-prefetch"
+     ],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 194,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14",
+      "obs:15"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14",
+      "obs:15"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": false
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "prefetch",
+      "dlq",
+      "schema",
+      "broker",
+      "idem"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 167,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14",
+      "obs:15"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14",
+      "obs:15"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "h02-command",
+   "set": "heldout",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "staging",
+      "cdn",
+      "cents",
+      "reindex",
+      "tz"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 200,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "staging",
+      "cdn",
+      "cents",
+      "reindex",
+      "tz"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 220,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "staging",
+      "cdn",
+      "cents",
+      "reindex",
+      "tz"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 9,
+     "uncited": 0,
+     "tokens": 240,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "h03-registry",
+   "set": "heldout",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "registry",
+      "tokens",
+      "storybook",
+      "a11y",
+      "icons"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 206,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "registry",
+      "tokens",
+      "storybook",
+      "a11y",
+      "icons"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 188,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "registry",
+      "tokens",
+      "storybook",
+      "a11y",
+      "icons"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 208,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "h04-colocated",
+   "set": "heldout",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "tz",
+      "pdf",
+      "ttl",
+      "index"
+     ],
+     "missed": [
+      "chunk"
+     ],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 6,
+     "uncited": 0,
+     "tokens": 168,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:13"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:13"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "tz",
+      "pdf",
+      "ttl",
+      "index"
+     ],
+     "missed": [
+      "chunk"
+     ],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 167,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:13"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:13"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "tz",
+      "pdf",
+      "ttl",
+      "index"
+     ],
+     "missed": [
+      "chunk"
+     ],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 6,
+     "uncited": 0,
+     "tokens": 153,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:13"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:13"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "h05-controls",
+   "set": "heldout",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "preflight",
+      "schema",
+      "generated",
+      "logging"
+     ],
+     "missed": [
+      "migrations"
+     ],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 217,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [],
+     "notes_invalid": 0,
+     "quarantined": [],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "preflight",
+      "schema",
+      "generated",
+      "logging"
+     ],
+     "missed": [
+      "migrations"
+     ],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 223,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [],
+     "notes_invalid": 0,
+     "quarantined": [],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 0.8,
+     "recalled": [
+      "preflight",
+      "schema",
+      "generated",
+      "logging"
+     ],
+     "missed": [
+      "migrations"
+     ],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 220,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [],
+     "notes_invalid": 0,
+     "quarantined": [],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "fixture": "h06-subtle",
+   "set": "heldout",
+   "pass": true,
+   "passes": 3,
+   "runs": [
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "signing",
+      "changes",
+      "branch",
+      "publish",
+      "versions"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 179,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "signing",
+      "changes",
+      "branch",
+      "publish",
+      "versions"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 8,
+     "uncited": 0,
+     "tokens": 188,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    },
+    {
+     "applied": true,
+     "reason": null,
+     "recall": 1,
+     "recalled": [
+      "signing",
+      "changes",
+      "branch",
+      "publish",
+      "versions"
+     ],
+     "missed": [],
+     "precision": 1,
+     "kept_noise": [],
+     "noise_kept": 0,
+     "stale": [],
+     "bullets": 7,
+     "uncited": 0,
+     "tokens": 176,
+     "within_cap": true,
+     "laundered": [],
+     "contradicted": [],
+     "unsupported": 0,
+     "recorded": true,
+     "flagged": [
+      "obs:14"
+     ],
+     "notes_invalid": 0,
+     "quarantined": [
+      "obs:14"
+     ],
+     "quarantine_recall": 1,
+     "quarantine_precision": 1,
+     "adopted": false,
+     "quoted": false,
+     "quoted_run": null,
+     "injected_in_reply": false,
+     "pass": true
+    }
+   ]
+  }
+ ]
+}
