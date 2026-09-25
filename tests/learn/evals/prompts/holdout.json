@@ -1,14 +1,81 @@
-[
- {"arm": "catalog", "prompt": "I'm landing cold in this repo. Survey the storage layer and list what you verified and what you could not.", "expected": ["super-scout"]},
- {"arm": "catalog", "prompt": "Implement the approved change to the rate limiter; write the failing test before the code.", "expected": ["super-build"]},
- {"arm": "catalog", "prompt": "Show me a matrix of acceptance criteria against the commands that prove them on this commit.", "expected": ["super-verify"]},
- {"arm": "catalog", "prompt": "Is this requirements doc coherent enough to plan from? Point out ambiguity.", "expected": ["doc-review"]},
- {"arm": "catalog", "prompt": "Users report a memory leak after an hour of uptime. Track down why.", "expected": ["diagnose"]},
- {"arm": "catalog", "prompt": "The date parser returns the wrong day around midnight UTC. Figure out the cause and fix it.", "expected": ["diagnose"]},
- {"arm": "candidate", "prompt": "The bot's review is stale again after my push, have it look at the new head.", "expected": ["rerun-bot-review"],
-  "draft": {"name": "rerun-bot-review", "description": "Re-request the review bot at the current head and wait for fresh checks. Use when the bot review is stale.", "steps": ["gh pr comment $PR --body '@review-bot review'", "poll gh pr checks until the bot's run finishes"]}},
- {"arm": "candidate", "prompt": "Time to ship 2.3. Do the changelog and the tag.", "expected": ["cut-release-notes"],
-  "draft": {"name": "cut-release-notes", "description": "Write the changelog entry from merged PRs and tag the release. Use when cutting a release or bumping the version.", "steps": ["gh pr list --state merged --base main", "append the entry to CHANGELOG.md", "git tag vX.Y.Z"]}},
- {"arm": "candidate", "prompt": "Refresh the seed data in the local database so the demo accounts exist again.", "expected": ["reseed-local-db"],
-  "draft": {"name": "reseed-local-db", "description": "Drop and reseed the local development database with the demo accounts. Use when local data is stale or demo users are missing.", "steps": ["bun run db:reset", "bun run db:seed"]}}
-]
+{
+ "id": "trigger-holdout",
+ "version": 2,
+ "about": "Skill-routing holdout set: the same 15 skills x (1 positive + 1 negative). Not tuned against; run it only to report. tests/learn/trigger-prompts.test.ts holds the split and the leakage guard.",
+ "cases": [
+  {"id": "ho-super-align-p1", "skill": "super-align", "polarity": "positive", "invocation": "U", "expected": ["super-align"],
+   "prompt": "Kick off /ak:super-align for the idea of letting customers export their dashboards. Nobody agrees yet on formats or who gets access."},
+  {"id": "ho-super-align-n1", "skill": "super-align", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-align"],
+   "prompt": "We haven't settled whether the new importer should dedupe records or just flag them. Can you lay out the options and pick one?"},
+
+  {"id": "ho-super-bound-p1", "skill": "super-bound", "polarity": "positive", "invocation": "U", "expected": ["super-bound"],
+   "prompt": "Run /ak:super-bound now: we agreed to move sessions from cookies to server-side storage and I want the implementation plan and tickets."},
+  {"id": "ho-super-bound-n1", "skill": "super-bound", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-bound"],
+   "prompt": "We signed off on replacing the cron scheduler with a queue. Write up the spec and break it into work items."},
+
+  {"id": "ho-super-ship-p1", "skill": "super-ship", "polarity": "positive", "invocation": "U", "expected": ["super-ship"],
+   "prompt": "Go ahead with /ak:super-ship for the rate limiter branch, dry run only, nothing leaves this machine."},
+  {"id": "ho-super-ship-n1", "skill": "super-ship", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-ship"],
+   "prompt": "Everything on feature/rate-limit is approved. Check it for leaked secrets, commit, and open the pull request."},
+
+  {"id": "ho-super-review-p1", "skill": "super-review", "polarity": "positive", "invocation": "U", "expected": ["super-review"],
+   "prompt": "Kick off /ak:super-review readiness for feature/session-store."},
+  {"id": "ho-super-review-n1", "skill": "super-review", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-review"],
+   "prompt": "Take a hard look at the changes in src/billing before I open the PR. Anything that would get rejected?"},
+
+  {"id": "ho-compound-p1", "skill": "compound", "polarity": "positive", "invocation": "U", "expected": ["compound"],
+   "prompt": "Invoke /ak:compound for the reviewer's catch about unbounded retries; I want it kept as a lesson."},
+  {"id": "ho-compound-n1", "skill": "compound", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["compound"],
+   "prompt": "We finally figured out why the webhook signature check failed in staging. Save what we learned somewhere the team will find it."},
+
+  {"id": "ho-compound-refresh-p1", "skill": "compound-refresh", "polarity": "positive", "invocation": "U", "expected": ["compound-refresh"],
+   "prompt": "Kick off /ak:compound-refresh. Two of our notes about caching now say opposite things."},
+  {"id": "ho-compound-refresh-n1", "skill": "compound-refresh", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["compound-refresh"],
+   "prompt": "Our written guidance on error handling has drifted and some entries clash. Can you reconcile them?"},
+
+  {"id": "ho-receiving-review-p1", "skill": "receiving-review", "polarity": "positive", "invocation": "U", "expected": ["receiving-review"],
+   "prompt": "Invoke /ak:receiving-review for pull request 77. Some of the suggestions look wrong to me."},
+  {"id": "ho-receiving-review-n1", "skill": "receiving-review", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["receiving-review"],
+   "prompt": "The bot left twenty suggestions on my PR. Apply the good ones and reply to the rest."},
+
+  {"id": "ho-babysit-pr-p1", "skill": "babysit-pr", "polarity": "positive", "invocation": "U", "expected": ["babysit-pr"],
+   "prompt": "Invoke /ak:babysit-pr for pull request 88 until the checks settle."},
+  {"id": "ho-babysit-pr-n1", "skill": "babysit-pr", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["babysit-pr"],
+   "prompt": "My PR keeps going red whenever main moves. Stay on it and react when something new happens."},
+
+  {"id": "ho-ultraqa-p1", "skill": "ultraqa", "polarity": "positive", "invocation": "U", "expected": ["ultraqa"],
+   "prompt": "Kick off /ak:ultraqa on the file upload endpoint in the local build."},
+  {"id": "ho-ultraqa-n1", "skill": "ultraqa", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["ultraqa"],
+   "prompt": "Try to break the new import command with weird inputs and tell me what crashes."},
+
+  {"id": "ho-wayfind-p1", "skill": "wayfind", "polarity": "positive", "invocation": "U", "expected": ["wayfind"],
+   "prompt": "Invoke /ak:wayfind for the observability overhaul. We don't know the path yet."},
+  {"id": "ho-wayfind-n1", "skill": "wayfind", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["wayfind"],
+   "prompt": "Moving everything onto the new event bus is full of unknowns. List the big open decisions for me."},
+
+  {"id": "ho-super-scout-p1", "skill": "super-scout", "polarity": "positive", "invocation": "M", "expected": ["super-scout"],
+   "prompt": "I'm landing cold in this repo. Survey the storage layer and list what you verified and what you could not."},
+  {"id": "ho-super-scout-n1", "skill": "super-scout", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["super-scout"],
+   "prompt": "Rename the config loader's search path variable everywhere it's used."},
+
+  {"id": "ho-super-build-p1", "skill": "super-build", "polarity": "positive", "invocation": "M", "expected": ["super-build"],
+   "prompt": "Implement the approved change to the rate limiter; write the failing test before the code."},
+  {"id": "ho-super-build-n1", "skill": "super-build", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["super-build"],
+   "prompt": "Here's a rough idea about caching that nobody has looked at yet. Should we even do it?"},
+
+  {"id": "ho-super-verify-p1", "skill": "super-verify", "polarity": "positive", "invocation": "M", "expected": ["super-verify"],
+   "prompt": "Show me a matrix of acceptance criteria against the commands that prove them on this commit."},
+  {"id": "ho-super-verify-n1", "skill": "super-verify", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["super-verify"],
+   "prompt": "Two of the acceptance checks fail on this branch. Change the code until they pass."},
+
+  {"id": "ho-doc-review-p1", "skill": "doc-review", "polarity": "positive", "invocation": "M", "expected": ["doc-review"],
+   "prompt": "Is this requirements doc coherent enough to plan from? Point out ambiguity."},
+  {"id": "ho-doc-review-n1", "skill": "doc-review", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["doc-review"],
+   "prompt": "Look through the diff in src/api for bugs."},
+
+  {"id": "ho-diagnose-p1", "skill": "diagnose", "polarity": "positive", "invocation": "M", "expected": ["diagnose"],
+   "prompt": "Search got about three times slower after last week's deploy and nobody knows why. Track it down."},
+  {"id": "ho-diagnose-n1", "skill": "diagnose", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["diagnose"],
+   "prompt": "It's basically a bug that the app has no dark mode. Add one."}
+ ]
+}
