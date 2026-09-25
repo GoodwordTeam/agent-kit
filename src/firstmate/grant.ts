@@ -9,8 +9,8 @@
  * binding does not name; merge and scope changes are never on it.
  */
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 
 import { isInside } from "../util/fs.ts";
 import type { LedgerRecord } from "./constants.ts";
@@ -102,15 +102,26 @@ export function grant(args: GrantArgs, akRoot: string, ledgerDir: string): Grant
     return no(`the pinned bundle ${pin} hashes to ${found}, not the bound ${binding.skill_bundle.hash}`);
   }
 
-  return {
-    ok: true,
-    record: {
-      operation,
-      binding: path,
-      binding_sha256: sha,
-      task_id: binding.task_id,
-      run_id: binding.run_id,
-      granted_by: "firstmate-binding",
-    },
+  const granted: GrantRecord = {
+    operation,
+    binding: path,
+    binding_sha256: sha,
+    task_id: binding.task_id,
+    run_id: binding.run_id,
+    granted_by: "firstmate-binding",
   };
+  // Kept beside the run's gate records, where `ak firstmate status` audits it against the ledger. The
+  // knowledgebase store fails closed (CONTRACT.md §1), so only a mock store receives one.
+  if (binding.evidence.store === "mock") {
+    const kept = grantRecordPath(binding, operation);
+    mkdirSync(dirname(kept), { recursive: true });
+    writeFileSync(`${kept}.partial-${process.pid}`, `${JSON.stringify(granted, null, 2)}\n`);
+    renameSync(`${kept}.partial-${process.pid}`, kept);
+  }
+  return { ok: true, record: granted };
+}
+
+/** Where a grant's record is kept: `<evidence store>/<run_id>/grants/<operation>.json`. */
+export function grantRecordPath(binding: Pick<Binding, "evidence" | "run_id">, operation: GrantOperation): string {
+  return join(binding.evidence.location, binding.run_id, "grants", `${operation}.json`);
 }

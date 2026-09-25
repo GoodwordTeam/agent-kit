@@ -36,6 +36,19 @@ The lifecycle is seven skills, not twenty. Each has one job, one required output
 Plus `autopilot`: a human-started supervisor pair exercising explicitly delegated checkpoint authority
 over those same skills. It implements nothing itself.
 
+## Two ways to run
+
+**Standalone is the default.** You open one or more sessions yourself, each in its own worktree, and run
+the lifecycle in each. Every phase leaves a gate record (`bin/ak-gate.mjs record`, or
+`ak lifecycle record` in this checkout), and `super-ship` runs `ak-gate.mjs check` before it ships: a
+session that skipped `super-build`, or whose review went stale after an edit, is refused with
+`refused: gate <g> has no current evidence`. No supervisor is needed for that.
+
+**Firstmate is optional**, for people who want one supervisor running several agents at once.
+`ak firstmate bind` hands a Firstmate worker the same lifecycle, and `ak firstmate status complete`
+runs the same core check before it reports `done` (`adapters/firstmate/CONTRACT.md`). Nothing in core,
+its tests or CI needs Firstmate installed.
+
 ## Catalog
 
 Every entry is declared in `catalog.yaml`. The validator fails on an entry with no directory and on a

@@ -61,9 +61,13 @@ The skills say this in one paragraph each; `adapters/firstmate/CONTRACT.md` §6 
   a subagent's `ak firstmate bind`, `install` or `remove` and any command or write naming the
   ledger, but it is a token-matching tripwire for a helper's accidental or naive call, not a
   security boundary: shell indirection gets past it, and the main-thread worker is not hooked for
-  these at all. The supervisor detects a forgery by comparing each grant record's `binding_sha256`
-  and `binding` path with the binding Firstmate wrote. Preventing it needs a grant issuer outside
-  the worker's reach: the unbuilt runner's validated grants (`research/briefs/carried-forward.md`).
+  these at all. Detection is a real check now: each successful grant writes a grant record into the
+  binding's evidence store, and `ak firstmate status complete` (or `status --verify`) refuses the run
+  unless every grant record's `binding_sha256` and `binding` path match the ledger entry and the
+  binding still hashes to it (`src/firstmate/audit.ts`, CONTRACT.md §4). A worker that re-binds or
+  edits the ledger and the grant records consistently still passes; preventing that needs a grant
+  issuer outside the worker's reach: the unbuilt runner's validated grants
+  (`research/briefs/carried-forward.md`).
 - The binding carries no signature. Firstmate can change it by binding again, which re-registers
   it; that is intended, since Firstmate is the controller.
 - Outside Firstmate nothing changes. A host with no binding still stops for explicit invocation.

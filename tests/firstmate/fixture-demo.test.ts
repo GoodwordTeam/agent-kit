@@ -18,7 +18,7 @@ import { join } from "node:path";
 
 import { bind } from "../../src/firstmate/bind.ts";
 import { MOCK_LABEL } from "../../src/firstmate/constants.ts";
-import { takeSnapshot } from "../../src/firstmate/snapshot.ts";
+import { takeSnapshot } from "../../src/lifecycle/gate.ts";
 import { statusLine } from "../../src/firstmate/status.ts";
 import { compileSchemas } from "../../src/validation/schemas.ts";
 import { FIXED_NOW, makeBundle, makeDir, makeHome, makeProject, REPO } from "./fixture.ts";

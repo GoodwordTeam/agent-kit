@@ -9,6 +9,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import { auditRun } from "./audit.ts";
 import { bind } from "./bind.ts";
 import {
   defaultLedgerDir,
@@ -23,7 +24,7 @@ import { evidenceFromEnv, readHomeEnv } from "./envfile.ts";
 import { grant } from "./grant.ts";
 import { install, remove } from "./install.ts";
 import { preflight } from "./preflight.ts";
-import { validateBinding } from "./schema.ts";
+import { validateBinding, type Binding } from "./schema.ts";
 import { OUTCOMES, statusLine, type Outcome } from "./status.ts";
 
 interface Io {
@@ -43,13 +44,15 @@ export const FIRSTMATE_USAGE = [
   "  ak firstmate remove --fm-home <dir>",
   "  ak firstmate status <binding.json> complete|needs-input|cap-reached|failed|cancelled",
   "                      [--pr <url>] [--evidence <id,id>] [--reason <text>] [--open-findings <id,id>]",
-  "                      [--by <who>] [--unknown-child <id>] [--at <epoch>]",
+  "                      [--by <who>] [--unknown-child <id>] [--at <epoch>] [--project <dir>]",
+  "  ak firstmate status <binding.json> --verify [--project <dir>]",
+  "                      audit the run: a current gate record per required gate, grants that match the ledger",
   "  ak firstmate grant --binding <file> --operation review.full|review.readiness|ship.prepare [--cwd <dir>]",
   "",
   "Nothing here applies the patch or writes Firstmate state. See adapters/firstmate/CONTRACT.md.",
 ];
 
-const BOOL = new Set(["json", "dry-run"]);
+const BOOL = new Set(["json", "dry-run", "verify"]);
 const ALLOWED: Record<string, readonly string[]> = {
   preflight: ["fm-home", "project", "host", "evidence", "evidence-location", "bundle-dir", "pins-dir", "json"],
   bind: [
@@ -69,7 +72,7 @@ const ALLOWED: Record<string, readonly string[]> = {
   ],
   install: ["fm-home", "evidence", "evidence-location"],
   remove: ["fm-home"],
-  status: ["pr", "evidence", "reason", "open-findings", "by", "unknown-child", "at"],
+  status: ["pr", "evidence", "reason", "open-findings", "by", "unknown-child", "at", "verify", "project"],
   grant: ["binding", "operation", "cwd"],
 };
 
@@ -222,8 +225,9 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
     }
     case "status": {
       const [file, outcome] = a.positional;
-      if (file === undefined || outcome === undefined || !(OUTCOMES as readonly string[]).includes(outcome)) {
-        io.err(`ak firstmate status: needs <binding.json> and one of ${OUTCOMES.join(", ")}`);
+      const verifyOnly = a.flags.get("verify") === true;
+      if (file === undefined || (verifyOnly ? outcome !== undefined : outcome === undefined || !(OUTCOMES as readonly string[]).includes(outcome))) {
+        io.err(`ak firstmate status: needs <binding.json> and one of ${OUTCOMES.join(", ")}, or <binding.json> --verify`);
         return 2;
       }
       if (!existsSync(file)) {
@@ -242,7 +246,23 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
         for (const e of invalid) io.err(`ak firstmate status: binding does not validate: ${e}`);
         return 1;
       }
-      const b = binding as { run_id: string; delivery: { action: "publish" | "dry-run" } };
+      const b = binding as Binding;
+      // Done is checked, not taken on the worker's word: the same audit Firstmate runs with --verify.
+      if (verifyOnly || outcome === "complete") {
+        const project = str(a, "project");
+        const refusals = auditRun({ binding: b, bindingPath: file, ledgerDir: opts.ledgerDir, project: project === undefined ? undefined : resolve(project) });
+        for (const r of refusals) io.err(`ak firstmate status: ${r}`);
+        if (refusals.length > 0) {
+          io.err(
+            `needs-decision: this run is not done. Run the missing phases through the lifecycle, or report ak firstmate status ${file} needs-input --reason "<which gate and why>"`,
+          );
+          return 1;
+        }
+        if (verifyOnly) {
+          io.out(`verified: run ${b.run_id} has a current record for ${b.required_gates.join(", ")} and every grant matches the ledger`);
+          return 0;
+        }
+      }
       const list = (name: string) => str(a, name)?.split(",").filter((s) => s !== "");
       const at = str(a, "at");
       if (at !== undefined && !/^\d+$/.test(at)) {

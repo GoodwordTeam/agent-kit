@@ -214,6 +214,19 @@ describe("bind", () => {
     expect(second.binding?.skill_bundle.hash).not.toBe(first.binding?.skill_bundle.hash);
   });
 
+  test("refuses a bundle built without the lifecycle gate, and writes no binding", () => {
+    const { home, project, opts } = env();
+    fs.rmSync(join(opts.bundleDir, "bin"), { recursive: true });
+    const bindingOut = join(home, "data/T-5/binding.json");
+    const r = bind(
+      { fmHome: home, taskId: "T-5", project, mode: "agent-kit", host: "claude-code", bindingOut, evidence: { store: "mock", location: makeDir() } },
+      opts,
+    );
+    expect(r.ok).toBe(false);
+    expect(r.errors.join("\n")).toContain("has no bin/ak-gate.mjs");
+    expect(existsSync(bindingOut)).toBe(false);
+  });
+
   test("refuses a mode other than agent-kit, a knowledgebase store, an unpatched home and a binding the worker could write", () => {
     const { home, project, opts } = env();
     const base = { fmHome: home, taskId: "T-4", project, host: "claude-code" as const, bindingOut: join(home, "data/T-4/binding.json") };
@@ -416,9 +429,10 @@ describe("the ak firstmate command", () => {
     const { home, project, opts } = env();
     const out = join(home, "data/T-8/binding.json");
     bind({ fmHome: home, taskId: "T-8", project, mode: "agent-kit", host: "claude-code", bindingOut: out, evidence: { store: "mock", location: makeDir() } }, opts);
-    const r = run(["firstmate", "status", out, "complete", "--evidence", "r1", "--at", "5"]);
+    // complete is audited first, which tests/firstmate/status.test.ts covers against a temp ledger.
+    const r = run(["firstmate", "status", out, "failed", "--reason", "tests red", "--at", "5"]);
     expect(r.code).toBe(0);
-    expect(r.out).toEqual(["done [at=5]: dry-run ship prepared, nothing published evidence=r1"]);
+    expect(r.out).toEqual(["failed [at=5]: tests red"]);
   });
 
   test("an unknown flag is an error, never ignored", () => {
