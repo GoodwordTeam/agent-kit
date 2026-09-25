@@ -63,8 +63,8 @@ export function loadTrackerBinding(projectRoot: string, schemaRoot: string): Bin
   }
   if (!validate(value)) {
     // Messages name the path and the constraint, never the value: a token
-    // pasted into the file is the error this reports, and echoing the offending
-    // value would print it.
+    // pasted under an unknown key is one error this reports, and echoing the
+    // offending value would print it.
     const detail = (validate.errors ?? [])
       .slice(0, 6)
       .map((e) => `${e.instancePath === "" ? "(root)" : e.instancePath} ${e.message ?? "is invalid"}${e.keyword === "additionalProperties" ? ` (${String((e.params as { additionalProperty?: string }).additionalProperty)})` : ""}`)
