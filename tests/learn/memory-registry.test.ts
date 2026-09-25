@@ -2,17 +2,17 @@
  * Project discovery from claude-mem tool use: stat-only root resolution,
  * worktree and cache skips, the look-back window, newest sighting wins.
  */
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { projectFolderName, registryPath, rootOf } from "../../src/learn/core/paths.ts";
 import { discoverProjects, discoverySince, readRegistry, registerRoot } from "../../src/learn/memory/registry.ts";
 import { ClaudeMemSource, type CwdRow } from "../../src/learn/sources/claude-mem.ts";
-import { MemFixture, scratch, testContext } from "./helpers.ts";
+import { MemFixture, projectScratch, removeProjectScratch, scratch, testContext } from "./helpers.ts";
 
 function setup() {
   const dir = scratch();
-  const repo = join(dir, "myrepo");
+  const repo = join(projectScratch(), "myrepo");
   mkdirSync(join(repo, "packages", "api"), { recursive: true });
   mkdirSync(join(repo, ".git"));
   const worktree = join(dir, "wt");
@@ -33,6 +33,8 @@ function rows(dir: string, uses: Array<{ project: string; cwd: string; at: numbe
     source.close();
   }
 }
+
+afterAll(removeProjectScratch);
 
 describe("registry", () => {
   test("a subdirectory resolves to its root and a worktree suffix is stripped", () => {

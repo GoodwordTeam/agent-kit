@@ -4,7 +4,7 @@
  * fixture database carrying only the columns the runtime reads.
  */
 import { Database } from "bun:sqlite";
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "../../src/learn/core/config.ts";
@@ -15,6 +15,25 @@ import { run } from "../../src/learn/core/proc.ts";
 /** A fresh directory with one canonical spelling (macOS `/var` is a symlink). */
 export function scratch(prefix = "ak-learn-"): string {
   return realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+}
+
+const projectScratches: string[] = [];
+
+/**
+ * A fresh directory for a fixture project that discovery must find. It sits
+ * under the repository's `.work/`, not `tmpdir()`: on Linux that is `/tmp`,
+ * which discovery skips as scratch space. Remove with `removeProjectScratch`.
+ */
+export function projectScratch(): string {
+  const base = join(import.meta.dir, "..", "..", ".work");
+  mkdirSync(base, { recursive: true });
+  const dir = realpathSync(mkdtempSync(join(base, "ak-learn-")));
+  projectScratches.push(dir);
+  return dir;
+}
+
+export function removeProjectScratch(): void {
+  for (const dir of projectScratches.splice(0)) rmSync(dir, { recursive: true, force: true });
 }
 
 export const ROLE_IDS = ["pattern-maintainer", "reflector", "consolidator", "lesson-merger", "skill-scout"] as const;

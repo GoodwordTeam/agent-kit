@@ -3,7 +3,7 @@
  * exits without opening claude-mem, forcing without a job runs every job, and
  * a scheduled tick that discovers a project and never writes inside it.
  */
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { acquireLock } from "../../src/learn/core/ledger.ts";
@@ -12,7 +12,7 @@ import { readJsonl } from "../../src/learn/core/store.ts";
 import { memoryDir, type MemoryState } from "../../src/learn/memory/ledger.ts";
 import { readRegistry } from "../../src/learn/memory/registry.ts";
 import { decide, type DecideInput, tick } from "../../src/learn/memory/tick.ts";
-import { gitRepo, MemFixture, scratch, testContext } from "./helpers.ts";
+import { gitRepo, MemFixture, projectScratch, removeProjectScratch, scratch, testContext } from "./helpers.ts";
 
 const NOON = new Date(2026, 8, 18, 12, 0);
 const NIGHT = new Date(2026, 8, 18, 2, 10);
@@ -57,7 +57,7 @@ describe("decide", () => {
 
 function fixtureProject() {
   const dir = scratch();
-  const root = gitRepo(join(dir, "shop"));
+  const root = gitRepo(join(projectScratch(), "shop"));
   const dbPath = join(dir, "mem.db");
   const mem = new MemFixture(dbPath);
   const now = Date.now();
@@ -67,6 +67,8 @@ function fixtureProject() {
   mem.close();
   return { root, ctx: testContext({ cwd: root, env: { AK_LEARN_MEM_DB: dbPath } }) };
 }
+
+afterAll(removeProjectScratch);
 
 describe("tick", () => {
   test("a held lock exits 0 without opening claude-mem", () => {
