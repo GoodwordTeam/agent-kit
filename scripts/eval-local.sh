@@ -165,7 +165,10 @@ else
         console.log([selected ? "run" : "skip", tools.join(","), relative(root, dirname(file)), name].join("\t"));
       }')" || { echo "eval-local: could not read the cases under $bundle/$eval_dir" >&2; exit 2; }
   while IFS= read -r key; do groups+=("$key"); done < <(awk -F'\t' '$1 == "run" { print $2 }' <<<"$listing" | sort -u)
-  [[ ${#groups[@]} -gt 0 ]] || groups=("")
+  if [[ ${#groups[@]} -eq 0 ]]; then
+    echo "eval-local: no case under $bundle/$eval_dir matches the --case and --tag filters; nothing run" >&2
+    exit 2
+  fi
 fi
 
 aggregate=0
