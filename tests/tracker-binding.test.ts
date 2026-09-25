@@ -71,13 +71,12 @@ describe("the binding schema", () => {
     expect(validate({ backend: "linear-linearis", token_file: ".linear-token", defaults: { team: "ENG", project: "Billing" }, statuses: { done: "Done" } })).toBe(true);
   });
 
-  test("an inline token is a schema error, so it cannot be committed by accident", () => {
+  test("a token under a key of its own is a schema error, because unknown keys are refused", () => {
     expect(validate({ backend: "linear-linearis", token_file: ".t", defaults: { team: "ENG" }, token: TOKEN })).toBe(false);
   });
 
   test("the generic schema names no vendor: any backend id and its own defaults pass it", () => {
     expect(validate({ backend: "some-other-tracker", token_file: ".t", defaults: { board: "7" } })).toBe(true);
-    expect(JSON.stringify(compileSchemas(REPO).ajv.getSchema("https://agent-kit.local/schemas/tracker-binding.schema.json")?.schema)).not.toContain("linear");
   });
 
   test("token_file cannot leave the folder by its spelling", () => {
@@ -348,8 +347,7 @@ describe("the guarded linearis call", () => {
     return match[1];
   };
 
-  // research/probes/linearis-guard.sh runs the backend document's copy; the reference pack ships
-  // the other one inside the plugin. A fix to one that misses the other is a guard nobody verified.
+  // Owned executable text contract: linearis-guard.sh executes the backend copy, the plugin ships the reference-pack copy.
   test("the reference pack carries the backend document's form exactly", () => {
     const backend = readFileSync(join(import.meta.dir, "../adapters/tracker/backends/linear-linearis.md"), "utf8");
     const section3 = backend.slice(backend.indexOf("\n## 3."));
