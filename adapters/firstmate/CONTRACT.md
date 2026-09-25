@@ -156,7 +156,8 @@ history and they count, so use one branch per task or pass `--run` for a fresh r
 grant the run needed must have left a grant record naming this binding by path and by the hash the ledger registered,
 and the binding must still hash to it. Any refusal prints `refused: …` lines and a `needs-decision`
 hint, exits 1, and prints no `done` line. `ak firstmate status <binding> --verify` runs the same audit
-on its own, for a supervisor that wants to check a `done` it was handed. A knowledgebase store fails
+on its own, for a supervisor that wants to check a `done` it was handed; with patch 0002 Firstmate
+runs it on every agent-kit `done:` (§3). A knowledgebase store fails
 closed here too: the audit cannot read it, so it refuses.
 
 ---

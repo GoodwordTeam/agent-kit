@@ -41,7 +41,8 @@ export const MOCK_LABEL = "mock evidence store: fixture demonstration, not a kno
 
 /**
  * The files `ak firstmate install` writes, relative to the home. Nothing else. ENV_FILE holds only
- * the three keys patch 0001 accepts; the evidence store, which only `ak` reads, is kept apart.
+ * the three keys patch 0001 requires (0002's optional budget key is maintainer-added); the evidence
+ * store, which only `ak` reads, is kept apart.
  */
 export const ENV_FILE = "config/agent-kit.env";
 export const EVIDENCE_FILE = "config/agent-kit/evidence.env";

@@ -205,7 +205,7 @@ Firstmate supervisor, worker and local subagent ran together.
 | 9 | Parent crashes with children active | `status` reports `blocked … child <id> state unknown` and keeps the task. Reconciling children needs the runner | mock/contract; recovery **blocked on runner** |
 | 10 | Same event arrives twice | idempotent run id; super-ship reconciles open PR and active run before pushing; managed `babysit-pr` handles one delivered event | mock/contract (run id) ; prose |
 | 11 | Launch, promotion, resume | Firstmate: fresh launch, promotion and relaunch carry the same DoD, binding and role clause; spawn and relaunch refuse without a binding (patch tests) | real host (Firstmate bash tests on a scratch clone, with a stub `ak`) |
-| 12 | Upstream version conflict | preflight refuses a missing upstream commit and an unapplied patch; the CLI refuses on a home without `a5d78f8` | mock/contract |
+| 12 | Upstream version conflict | preflight refuses a missing upstream commit, an unapplied patch and a stack missing 0002; the CLI refuses on a home without `a5d78f8` | mock/contract |
 | 13 | PR open, merge not authorized | binding `delivery.merge` is `false` by schema; super-ship never merges | mock/contract |
 | 14 | Setup twice, then removed | install is idempotent, writes only its own files (the env file holds exactly the patch's three keys), refuses files it did not write; remove deletes exactly those | mock/contract |
 
