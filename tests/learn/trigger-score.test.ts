@@ -109,13 +109,14 @@ describe("readOnlyShell", () => {
       "rg foo src 2>/dev/null | head",
       "nl -ba src/a.ts | sed -n 1,40p",
       "echo oops >&2",
+      "ls &>/dev/null",
     ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
     }
   });
 
   test("anything that writes is not", () => {
-    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "echo x > f", "ls 2> err.log", "ls &>out.log", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
+    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "echo x > f", "ls 2> err.log", "ls &>out.log", "ls&>out.log", "cat a.md&>x", "echo x >&out.log", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
   });

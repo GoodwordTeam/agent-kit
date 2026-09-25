@@ -227,7 +227,8 @@ export function readOnlyShell(command: string): boolean {
           continue;
         }
         const target = redirect[4] !== "" ? redirect[4] : segment[++i];
-        if (redirect[2] !== "<" && redirect[3] !== "&" && target !== "/dev/null") return false;
+        const harmless = redirect[2] === "<" || (redirect[3] === "&" ? /^(?:\d+|-)$/.test(target ?? "") : target === "/dev/null");
+        if (!harmless) return false;
       }
       const writes = program.some((w) => WRITING_FLAGS.has(w) || (program[0] === "sed" && /^-\w*i/.test(w)));
       return !writes && READ_ONLY_SHELL.test(program.join(" "));

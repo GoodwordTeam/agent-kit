@@ -130,6 +130,7 @@ describe("shell reads", () => {
     expect(unwrap("bash -lc \"head -n 5 x\"")).toBe("head -n 5 x");
     expect(words(`cat "a b" 'c' d\\ e && ls`)).toEqual(["cat", "a b", "c", "d e", "&&", "ls"]);
     expect(words("git status 2>&1 >&2 &>/dev/null & ls")).toEqual(["git", "status", "2>&1", ">&2", "&>/dev/null", "&", "ls"]);
+    expect(words("ls&>out.log")).toEqual(["ls", "&>out.log"]);
     expect(readsOf("cat SKILL.md | head -5")).toEqual(["SKILL.md"]);
     expect(readsOf("sed -n '1,20p' x/SKILL.md; tail -n 3 log.txt 2>/dev/null")).toEqual(["x/SKILL.md", "log.txt"]);
     expect(readsOf("sed -e s/a/b/ in.txt")).toEqual(["in.txt"]);

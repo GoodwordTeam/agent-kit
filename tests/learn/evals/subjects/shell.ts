@@ -36,7 +36,8 @@ export function words(command: string): string[] {
       started = true;
     } else if (/\s/.test(ch)) {
       push();
-    } else if (ch === "&" && (word.endsWith(">") || command[i + 1] === ">")) {
+    } else if (ch === "&" && (/^\d*>$/.test(word) || command[i + 1] === ">")) {
+      if (!/^\d*>$/.test(word)) push();
       word += ch;
       started = true;
     } else if (";|&".includes(ch)) {
