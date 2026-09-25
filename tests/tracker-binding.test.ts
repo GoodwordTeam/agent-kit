@@ -71,7 +71,7 @@ describe("the binding schema", () => {
     expect(validate({ backend: "linear-linearis", token_file: ".linear-token", defaults: { team: "ENG", project: "Billing" }, statuses: { done: "Done" } })).toBe(true);
   });
 
-  test("a token under a key of its own is a schema error, because unknown keys are refused", () => {
+  test("a token under an unknown top-level key is a schema error, because the root refuses unknown keys", () => {
     expect(validate({ backend: "linear-linearis", token_file: ".t", defaults: { team: "ENG" }, token: TOKEN })).toBe(false);
   });
 

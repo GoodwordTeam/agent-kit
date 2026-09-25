@@ -270,9 +270,11 @@ The backend, its scope and the status names are facts every checkout of the proj
 agree on — two operators writing to two teams is the failure a binding exists to prevent — so they
 travel with the repository where a gitignored binding would let each checkout bind differently with
 nothing to compare against. The credential is the one per-operator fact, so it is the one thing
-kept out. The schema permits no key beyond these four, so a token pasted under a key of its own is
-a schema error. The values under `defaults` and `statuses` are free strings, so a token pasted as
-one of those values is not detected.
+kept out. The root object and `statuses` refuse unknown keys, so a token pasted under a new
+top-level or status key is a schema error. `defaults` is open in the generic schema, any key with a
+nonempty string value; only a backend schema restricts its keys (`linear-linearis` allows `team`
+and `project`). No schema inspects values, so a token pasted as a value under `defaults` or
+`statuses` is not detected.
 
 ### What every binding obeys
 
