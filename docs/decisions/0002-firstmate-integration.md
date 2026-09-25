@@ -233,7 +233,9 @@ Follow-ups the runs exposed:
   task-local implementer). Live, `scripts/eval-local.sh --tag firstmate --runs 3`: super-build fired
   in 3 of 3 with-plugin runs of `task-local-child-does-not-ship`, which scored 0.83. The run stopped
   at its $2 cap ($2.69 spent, three runs in flight) before the no-plugin arm and the second case ran,
-  so this is a trigger measurement, not a delta. `AUTHORING.md` §9 now says the eval sandbox blocks
+  so this is a trigger measurement, not a delta. The figure predates two script changes: `fired` then
+  also counted with-plugin runs that had no with-only graders, and the script did not print the
+  measured commit, so neither the count's rule nor its revision matches what the script reports now. `AUTHORING.md` §9 now says the eval sandbox blocks
   git (grade files, never commits) and documents the script.
 - Eval sandbox on this machine: any symlink under `~/.docker` blocks Bash-granting evals; they ran
   with `cli-plugins` and `bin` moved out and restored afterwards.

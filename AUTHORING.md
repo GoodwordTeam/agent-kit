@@ -1282,7 +1282,10 @@ Never make a commit the pass criterion.
 Docker Desktop, the sandbox will not start a Bash-granting case while any symlink sits under
 `~/.docker`, so the script moves `~/.docker/cli-plugins` and `~/.docker/bin` aside for the run and
 restores them on every exit, Ctrl-C included. It runs only when you invoke it; CI does not run evals.
-Build first (`bun run build`), and pass `--max-cost-usd` for a paid run.
+Build first (`bun run build`), and pass `--max-cost-usd` for a paid run. The script warns when
+`dist/claude-code` is older than its sources, and the summary names the commit it measured, marked
+`(dirty)` when the working tree had changes; quote that line with any figure. The `fired` column counts
+a with-plugin run only when it has with-only graders and passed all of them.
 
 ---
 
