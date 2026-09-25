@@ -6,9 +6,11 @@
  * the file and the rule that produced it.
  */
 
+import { readFileSync } from "node:fs";
 import { attach, formatAttachResult } from "./attach/index.ts";
 import { runFirstmate } from "./firstmate/cli.ts";
 import { main as runLifecycle } from "./lifecycle/gate.ts";
+import { runLearn } from "./learn/cli.ts";
 import { loadCatalog } from "./catalog/load.ts";
 import type { BuildOptions } from "./packaging/build.ts";
 import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.ts";
@@ -27,6 +29,8 @@ export interface CliIo {
 export interface CliOptions {
   cwd: string;
   io: CliIo;
+  /** A host hook's JSON payload, read from stdin by the entrypoint for `ak learn hook`. */
+  stdin?: string;
 }
 
 const USAGE = [
@@ -38,6 +42,7 @@ const USAGE = [
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
   "  ak lifecycle record|check …                the gate records super-ship checks before it ships",
   "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home (optional)",
+  "  ak learn <area> <verb> ...                 the opt-in learning runtime (`ak learn` for help)",
   "",
   "Exit 0 when nothing failed, non-zero on any error.",
 ];
@@ -249,6 +254,11 @@ export function runCli(argv: readonly string[], options: CliOptions): number {
   // Its own flags and its own parser: see src/firstmate/cli.ts.
   if (argv[0] === "lifecycle") return runLifecycle(argv.slice(1), options.io, options.cwd);
   if (argv[0] === "firstmate") return runFirstmate(argv.slice(1), options.io);
+  // `ak learn` has its own argument grammar per area, so it is dispatched before
+  // this file's parser sees flags it does not know.
+  if (argv[0] === "learn") {
+    return runLearn(argv.slice(1), { cwd: options.cwd, io: options.io, stdin: options.stdin });
+  }
   const parsed = parse(argv);
   for (const token of parsed.unknown) options.io.err(`ak: ${token} needs a value`);
   if (parsed.unknown.length > 0) return 2;
@@ -270,10 +280,21 @@ export function runCli(argv: readonly string[], options: CliOptions): number {
   }
 }
 
+function readHookStdin(argv: readonly string[]): string | undefined {
+  if (argv[0] !== "learn" || argv[1] !== "hook" || process.stdin.isTTY) return undefined;
+  try {
+    return readFileSync(0, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
 if (import.meta.main) {
-  const code = runCli(process.argv.slice(2), {
+  const argv = process.argv.slice(2);
+  const code = runCli(argv, {
     cwd: process.cwd(),
     io: { out: (line) => console.log(line), err: (line) => console.error(line) },
+    stdin: readHookStdin(argv),
   });
   process.exit(code);
 }

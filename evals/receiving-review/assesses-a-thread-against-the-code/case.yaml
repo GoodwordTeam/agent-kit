@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: a-thread-is-assessed-against-the-code-not-against-its-tone
-tags: [positive]
+tags: [positive, unscaffolded]
 execution:
   prompt: >-
     There are six unresolved threads on PR 812. One of them claims `resolveTenant` dereferences a
@@ -26,3 +26,9 @@ graders:
     criteria: >-
       Accepted items are routed to the action that owns them and acted on only inside the grant this
       run holds.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?receiving-review"'
+    arm: with-only
+    weight: 1

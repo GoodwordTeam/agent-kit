@@ -20,8 +20,8 @@ contradicts a lesson the project recorded.
   not this seat's act. It reads through the adapter and reports; the central knowledgebase owns
   every project-derived artifact and this package owns reusable instructions only (ruling
   `central-kb-owns-project-artifacts`).
-- **The lesson's author.** Whether a recorded learning was right when it was written is not
-  reopened here. This seat reports the conflict between the learning and the present code and
+- **The lesson's author.** Whether a recorded lesson was right when it was written is not
+  reopened here. This seat reports the conflict between the lesson and the present code and
   lets the reader judge.
 
 ## What it must be given
@@ -34,6 +34,12 @@ contradicts a lesson the project recorded.
   `central-kb-owns-project-artifacts`; `adapters/knowledgebase/CONTRACT.md`).
 - The project's own vocabulary as the knowledgebase exposes it, so a search is grounded in the
   terms this project uses rather than in generic ones.
+- Where the opt-in `learning` profile is installed (ruling `learning-runtime-is-host-adapter`), the
+  runtime's ledgers for this project as a second corpus: review patterns that reached guardrail
+  status and lessons marked `confirmed`. Candidate patterns and `hypothesis` lessons are context only, never grounds for a finding. A
+  ledger entry is a draft the runtime kept, not published project knowledge, and it carries no
+  more weight than its quoted evidence (ruling `learning-drafts-not-publishes`; protocol
+  `evidence-gate`).
 - Not the implementer's narrative, rationale or self-assessment
   (`policies/review.yaml` `pass_1.seat_context`).
 

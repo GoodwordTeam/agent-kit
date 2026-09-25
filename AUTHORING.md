@@ -1154,7 +1154,11 @@ contract requires three**, because a skill with no adversarial case has never be
 gate under pressure — which is the only property most of these gates exist for:
 
 1. **Positive trigger** — a prompt in the skill's `## When to use` territory; the skill fires.
-2. **Non-trigger** — a prompt from `## Not for`; the skill does **not** fire.
+2. **Non-trigger** — a prompt from `## Not for`; the skill does **not** fire. For a model-invoked
+   skill, a run that loads the skill and then stops with needs-input or a refusal also passes, so
+   the case asserts "no side effect" (`tool_used … max: 0` on the granted write tools, `llm` with
+   `focus: trace`), not "no load"; a Skill `max: 0` grader belongs only on a case whose `expect`
+   says the skill does not fire.
 3. **Adversarial / pressure-to-skip** — a prompt that supplies a plausible reason to bypass a hard
    gate (urgency, an assertion that a step already happened, an instruction embedded in fixture
    content); the gate holds.
@@ -1185,6 +1189,8 @@ graders:
   - name: skill-fired
     type: tool_used
     tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
     weight: 1
   - name: refuses-to-approve
     type: llm
@@ -1193,22 +1199,89 @@ graders:
       It does not approve, and does not substitute the other lanes' agreement for the missing lane.
 ```
 
-Grader types available: `tool_used`, `llm`, `regex`, `file_exists`, `tool_order`, `baseline`. Each
-grader needs a `name` and a `type`. Prefer a deterministic grader (`regex`, `file_exists`,
-`tool_order`) over `llm` wherever the pass criterion is observable; use `llm` for the judgment
-cases, with `criteria` that a reader could score by hand.
+Every grader needs a `name` and a `type`, and may carry a `weight` and an `arm`. The types are
+`tool_used`, `llm`, `regex`, `file_exists`, `tool_order` and `baseline`. Prefer a deterministic
+grader (`tool_used`, `regex`, `file_exists`, `tool_order`) wherever the pass criterion is
+observable. Use `llm` for the judgment cases, with `criteria` that a reader could score by hand.
 
-These three field names are **measured against the host**, not derived here: they are what
-`claude plugin eval` accepted at `claude 2.1.278`, loading the built bundle. This section said
-`expected_outcome` for `llm` until the runner was first pointed at the corpus, and it refused every
-case over that one key. `schemas/case.schema.json` and `src/validation/evals.ts` had both agreed
-with this section rather than with the runner, so three sources said the same wrong thing and none
-of them had ever asked.
+The host's grader objects are closed: a key a type does not define makes the whole case fail to
+load. The fields each type takes:
+
+| Type | Fields | Passes when |
+|---|---|---|
+| `tool_used` | `tool`; optional `input_match`, `min` (default 1), `max` | The number of calls to `tool` whose input matches `input_match` is between `min` and `max` |
+| `regex` | `pattern`; optional `target` (default `last_message`), `match`, `flags` | `match: contains` (the default) finds the pattern, `not_contains` does not, `count:N` finds it exactly N times |
+| `llm` | `criteria`; optional `focus` (default `last_message`) | A judge reading the `focus` surface finds the `criteria` met |
+| `file_exists` | `path`; optional `exists` (default true) | A file created during the run matches `path`, or none does when `exists: false` |
+| `tool_order` | `before`, `after` | The first call matching `before` comes before the first call matching `after` |
+| `baseline` | `baseline_file`, `criteria` | A judge scores the run against the named file |
+
+Five details decide whether a grader measures what its name says:
+
+- **`input_match` is a JavaScript regular expression, not a substring**, and it is tested against
+  the call's input serialized as JSON. A Skill call reads `{"skill":"ak:diagnose"}`, so match the
+  skill with `'"skill"\s*:\s*"(?:[^"]*:)?diagnose"'` rather than the bare id, which also matches
+  any other input that mentions the word.
+- **A must-not-call assertion is `min: 0`, `max: 0`, `arm: both`.** Without `min: 0` the default of
+  1 makes the grader demand the call it means to forbid.
+- **A grader on a tool the case does not grant cannot fail.** Put `tool_used … max: 0` only on a
+  tool in `execution.allowed_tools`; otherwise the case already forbids the call and the grader adds
+  nothing.
+- **`file_exists` sees only files created during the run.** `path` is a glob — `**` spans any depth,
+  `*` stays inside one path segment, `?` is one character — matched against the created-file list.
+  A file that existed before the run and was edited is not on that list, so "no file was written"
+  is `file_exists` with `path: "**"` and `exists: false` together with `tool_used` on `Edit` with
+  `max: 0`.
+- **`tool_order` fails when either side is never called.** Each side is a tool name or
+  `{tool, input_match}`. It cannot express "the skill loads before any write, or nothing is
+  written", so give it only to a case whose pass requires both calls.
+
+`arm` takes `with-only` or `both`. A `with-only` grader is an ablation indicator: it reports on the
+run with the plugin loaded and is not part of the score. Write the skill-fired grader that way, as
+`tool_used` on `Skill` with the `input_match` above and `arm: with-only`. A grader that must hold
+whether or not the plugin is loaded, such as a must-not-call, is `arm: both`.
+
+**The scoring surface.** An `llm` grader reads its `focus` and a `regex` grader its `target`. Both
+accept `last_message`, `trace`, `files`, `mock_calls`, or `{source: file, path}`:
+
+| Surface | What the grader reads |
+|---|---|
+| `last_message` | The run's final message. The default for both keys |
+| `trace` | The run's tool calls and their inputs, in order |
+| `files` | The newline-separated list of paths created during the run |
+| `{source: file, path}` | The contents of one file the run created |
+| `mock_calls` | The calls the run made to mocked tools |
+
+The default is the trap. An `llm` grader whose `criteria` say "no file is created" and that carries
+no `focus` is judged on what the run *said*, and passes a run that wrote the file and did not mention
+it. Where the claim is about what the run did, write the deterministic form above, or set `focus:
+trace`; where it is about a file's contents, `focus: {source: file, path}`. `ak validate` raises
+`evals.llm-file-claim-without-focus` (`checkGraderSurfaces` in `src/validation/graders.ts`) on an
+`llm` grader with no `focus` whose `criteria` contain one sentence naming both a filesystem object
+and a write to it. The check is a heuristic with a narrow reach: a claim with no filesystem noun,
+such as "no ticket is cut", is not caught, and aiming it is the author's job. Writing `focus:
+last_message` explicitly clears the check, and is the author's statement that the default was
+chosen.
+
+`tests/grader-lint.test.ts` covers the other direction for the deterministic types. For every
+deterministic grader in `evals/` it builds a transcript the grader must fail, and one it must pass
+where one can be built, and scores both with `evaluate` in `src/validation/grader-eval.ts`, a local
+copy of the host's scoring rules. A grader that no transcript can fail breaks the test. `llm`
+graders are judged by a model, so no local transcript can score them: they are covered by the
+surface check above and not by this test. `baseline` graders are covered by neither.
+
+The field names are **measured against the host**, not derived here. `criteria`, `tool` and
+`pattern` are what `claude plugin eval` accepted at `claude 2.1.278`, loading the built bundle, and
+the fields of the other types were read off the host's loader definition in the same binary. This
+section said `expected_outcome` for `llm` until the runner was first pointed at the corpus, and it
+refused every case over that one key. `schemas/case.schema.json` and `src/validation/evals.ts` had
+both agreed with this section rather than with the runner, so three sources said the same wrong
+thing and none of them had ever asked.
 
 **What was wrong was the address, not the name.** `expected_outcome` is a key the host accepts — at
 the case root, as free text. Its grader objects are closed and refuse it there, which is where this
 section put it. So a check of the form *does the host know this key* answers yes and is no help: the
-fields below are correct only at the level they are written at, and nothing in this repository
+fields above are correct only at the level they are written at, and nothing in this repository
 checks a level.
 
 The figure that records it is **87 of 87**, and the population is part of it: 87 is the bundle, not
@@ -1222,45 +1295,6 @@ re-takes the measurement or notices when the host moves one: the check that read
 them from a table, and a table agreeing with this section is the failure that produced the paragraph
 you are reading.
 
-What `file_exists`, `tool_order` and `baseline` accept was unmeasured when the paragraph above was
-written and is not now. The host's loader definition is readable in the `claude 2.1.278` binary, and
-against it `file_exists` takes `path` and an optional `exists`, `tool_order` takes `before` and
-`after`, and `baseline` takes `baseline_file` and `criteria`. Every grader type also takes an
-optional `arm` of `with-only` or `both`, which decides whether the grader scores the run or only
-reports — a grader marked `with-only` is an ablation indicator and not part of the score. None of
-these is specified below, and writing one still authors the specification by example.
-
-**Limit on the recommendation above, and the sharper half of the same reading.** A grader is scored
-against a surface, and the surface has a default this section never stated. An `llm` grader takes an
-optional `focus` and a `regex` grader an optional `target`; both default to `last_message`, and both
-accept `trace`, `last_message`, `files`, `mock_calls`, or `{source: file, path}`. So an `llm` grader
-with `criteria` about a file on disk is scored against what the run *said*, not what it *did*, and
-passes a run that created the file and did not mention it. Neither key appears anywhere else in this
-repository.
-
-That is why the preference above is stated the way it is: `file_exists` reads the created-file list
-directly and cannot be satisfied by a sentence. Where the pass criterion is a file, write
-`file_exists`. Where you write `llm` about anything other than the last message, write the `focus`
-as well — §9 said neither until `CONTRACT-DEFECTS.md` filed it, and the 256 `llm` graders in the
-tree carry no `focus` at all.
-
-**This section specifies the fields of two of those six types, and a case using the other four is
-not held to anything it says.** The worked example above is the whole of the specification:
-`tool_used` takes `tool`, `llm` takes `criteria`. `regex` takes `pattern` — required by
-`schemas/case.schema.json` and carried by all four `regex` cases in the tree — and this section has
-never said so, which is §5's distinction arriving in a checklist: the field is published where it is
-derived and not where it is written, so a writer reading §9 alone cannot learn it and a writer
-grepping §9 for it concludes there is none. `file_exists`, `tool_order` and `baseline` are named
-here and specified nowhere below. No case uses any of them, and `schemas/case.schema.json` leaves
-its grader object open rather than guess at field names no run had produced — which is a stated
-limit rather than a silent one, and is why this paragraph can be written at all. The host's grader
-objects are closed, so that openness buys nothing against the runner: it admits exactly the surplus
-the runner will reject. The consequence is uneven and worth knowing before you pick a type: a
-`regex` case is validated against its field by the schema even though this section is silent, and a
-`file_exists`, `tool_order` or `baseline` case parses, validates, and is checked against nothing,
-because there is no record of what to check. Writing one authors the specification by example. Say
-so in the batch report rather than leaving the next reader to infer the shape from your case.
-
 Tag every case with the release scenario it exercises, written `scenario-N` with no leading zero:
 `scenario-6`, never `scenario-06`. Both count toward coverage — `ak validate` reads the number, not
 the spelling — so this is not about the checks. It is that a corpus spelling one scenario two ways
@@ -1271,6 +1305,54 @@ case corpus must cover **all 24** release scenarios in the plan's "Evaluation an
 `ak validate` reports uncovered scenario numbers. A writer covers the scenarios its dossier assigns
 to its batch and reports any it cannot exercise, rather than tagging a case that does not actually
 test the scenario.
+
+**The eval sandbox blocks git.** Every git binary is denied inside a case run, so a case cannot commit,
+and a grader that checks a commit, a branch or `git log` scores a run that did the work as a failure.
+Grade what the run left on disk instead: a `regex` grader with `target: files`, or `file_exists`.
+Never make a commit the pass criterion.
+
+**Running the suite locally.** `scripts/eval-local.sh [claude plugin eval options…]` runs
+`claude plugin eval dist/claude-code` and prints a with/without/delta table per case. On a machine with
+Docker Desktop, the sandbox will not start a Bash-granting case while any symlink sits under
+`~/.docker`, so the script moves `~/.docker/cli-plugins` and `~/.docker/bin` aside for the run and
+restores them on every exit, Ctrl-C included. It runs only when you invoke it; CI does not run evals.
+Build first (`bun run build`), and pass `--max-cost-usd` for a paid run. The script warns when
+`dist/claude-code` is older than its sources, and the summary names the commit it measured, marked
+`(dirty)` when the working tree had changes; quote that line with any figure. The `fired` column counts
+a with-plugin run only when it has with-only graders and passed all of them.
+
+**Isolation and the receipt.** The host already runs every arm with its own scratch home and
+configuration, so the operator's settings, hooks, `CLAUDE.md`, plugins, MCP servers and memory
+never reach the agent under test. What does reach it is the launching shell's `ANTHROPIC_*`,
+`CLAUDE_CODE_*` and `EVAL_*` variables. `eval-local.sh` therefore starts the host under `env -i`
+with a short allowlist: home, path, locale, proxies and auth. Add a name to `$AK_EVAL_PASS_ENV` when
+a run needs it. `--inherit-env` turns the allowlist off, and it exists only for the control run.
+`research/evals/2026-09-25-isolation.md` has the measurement, and `scripts/eval-isolation-probe.sh
+on|off` repeats it for about $0.30. A case cannot set `CLAUDE_CONFIG_DIR` or any other non-`EVAL_*`
+key in `execution.env`: the host rejects that case's runs. Gated tools a case lists in
+`allowed_tools` (`Bash`, `Write`, `Edit`, `WebFetch`, `mcp__*`) reach the agent only through the
+host's `--allow-tools`, and that grant applies to every case in the invocation. So the script
+groups the selected cases (after `--case` and `--tag`) by their gated tools and runs each group
+separately, against a staged copy of the bundle that holds only that group's cases. That way every
+case gets exactly the tools it declares. `--max-cost-usd` is one budget across the groups. An
+explicit `--allow-tools` overrides the grouping and runs once with that grant.
+
+Each run writes `<result>.receipt.json` beside the JSON result. It records:
+
+- the measured commit and whether the tree was dirty;
+- the bundle's path, its content sha256, and whether any source is newer than it (the packager
+  writes no build stamp, so that comparison is the freshness check);
+- the install configuration and whether `.donors/` was present;
+- `claude --version`, the isolation method with the variable names it passed, and whether the grants
+  came from the cases or the user;
+- per invocation: the grant, its cases, the staged bundle's sha256, the exact runner command, the
+  exit status, the cost and whether it was partial, or `skipped` when the budget ran out first;
+- the exit status, cost, duration and `partial`;
+- per case and arm: `n`, passes, rate and a 95% Wilson interval (the same formula as
+  `tests/learn/evals/stats.ts`), plus the fired count.
+
+A figure quoted from a run carries that receipt, or the fields of it the figure depends on. The
+judge is bound by the runner, and neither the script nor this section names it.
 
 ---
 
@@ -2133,11 +2215,11 @@ not be given its required context returns `unavailable`, which is a result rathe
 is never downgraded to an empty result and is never backfilled. This contract routed the second kind
 into the word the first kind owns, which is the one thing the ruling forbids.
 
-The vocabulary is not a single token, and the bodies establish the range. Twenty-six of the
-twenty-nine role bodies return `unavailable` under that heading. The three that do not are the core
-roles: `roles/supervisor/ROLE.md` returns no choice, `roles/implementer/ROLE.md` returns `BLOCKED`,
-and `roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and
-all three satisfy it, because what it requires is a result that blocks and is never read as assent
+The vocabulary is not a single token, and the bodies establish the range. Every role body but
+three returns `unavailable` under that heading. The three that do not are the core roles:
+`roles/supervisor/ROLE.md` returns no choice, `roles/implementer/ROLE.md` returns `BLOCKED`, and
+`roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and all
+three satisfy it, because what it requires is a result that blocks and is never read as assent
 rather than a particular word — and all three carry the ruling itself, as the same `## Never` row,
 in `roles/implementer/ROLE.md`, `roles/plan-review/planner/ROLE.md` and
 `roles/supervisor/ROLE.md`. What no seat may do is leave the same trace for *found nothing* and

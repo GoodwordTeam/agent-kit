@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-still-dispatches-genuinely-independent-tickets-together
-tags: [positive, scenario-13]
+tags: [positive, scenario-13, unscaffolded]
 execution:
   prompt: >-
     Tickets AK-420 and AK-421 are both approved. AK-420 changes the email templating module and its
@@ -23,3 +23,9 @@ graders:
       The response names the surfaces it checked to reach independence — declared files, generated
       artifacts, migrations, exported interfaces — rather than asserting independence because the
       prompt described the tickets as separate.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    arm: with-only
+    weight: 1

@@ -1,0 +1,10 @@
+[Unit]
+Description=dreamd scheduled memory tick
+
+[Service]
+Type=oneshot
+ExecStart=$python $tick
+Environment=CLAUDE_CONFIG_DIR=$config_dir
+Environment=PATH=$path
+StandardOutput=append:$log
+StandardError=append:$log

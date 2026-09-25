@@ -1,0 +1,13 @@
+This zip installs the review-learn / skill-index / dreamd stack.
+
+  unzip <this file> -d stack
+  python3 stack/skills/stack-setup/scripts/install.py doctor
+  python3 stack/skills/stack-setup/scripts/install.py apply --from stack
+  python3 ~/.claude/skills/stack-setup/scripts/install.py wire
+  python3 ~/.claude/skills/stack-setup/scripts/install.py schedule --load
+  python3 ~/.claude/skills/stack-setup/scripts/install.py seed --repo /path/to/repo
+  python3 ~/.claude/skills/stack-setup/scripts/install.py verify
+
+The skills must live at ~/.claude/skills/<name>; they import each other through that path.
+Full guide for a fresh machine, a shared skills repo, and the quirks: skills/stack-setup/references/INTEGRATION-GUIDE.md
+Ledgers are written under $CLAUDE_CONFIG_DIR/projects/<repo-folder>/ and never inside a repo.

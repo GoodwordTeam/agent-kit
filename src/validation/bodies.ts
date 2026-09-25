@@ -976,7 +976,7 @@ function checkPanelMentions(ctx: CheckContext, file: string, id: string, text: s
 
   const issues: Issue[] = [];
   for (const bullet of listItems(text)) {
-    const mentioned = others.filter((panel) => bullet.includes(panel));
+    const mentioned = others.filter((panel) => new RegExp(`(?<![A-Za-z0-9-])${panel}(?![A-Za-z0-9])`).test(bullet));
     if (mentioned.length === 0) continue;
     if (backtickedIds(bullet).some((token) => roles.has(token))) continue;
     issues.push(
@@ -1080,7 +1080,8 @@ const CARDINALS: ReadonlyArray<string> = [
   "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
   "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
   "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three", "twenty-four", "twenty-five",
-  "twenty-six", "twenty-seven", "twenty-eight", "twenty-nine", "thirty",
+  "twenty-six", "twenty-seven", "twenty-eight", "twenty-nine", "thirty", "thirty-one", "thirty-two",
+  "thirty-three", "thirty-four", "thirty-five", "thirty-six", "thirty-seven", "thirty-eight", "thirty-nine", "forty",
 ];
 
 const CENSUS_SENTENCE = /\b([A-Za-z-]+) seats? of ([A-Za-z-]+) are named here\b/;

@@ -1,0 +1,199 @@
+# Execution contract for compound-refresh (schemas/skill.schema.json).
+# Prose mirror: skills/compound-refresh/SKILL.md. The two are one statement in two forms.
+id: compound-refresh
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Keep, update, consolidate, replace or retire captured lessons, recording evidence and
+  supersession instead of silently erasing provenance.
+
+triggers:
+  - A refactor, migration or dependency change may have made lessons about that area wrong.
+  - Two or more lessons cover the same subject and a reader would have to reconcile them.
+  - A lesson contradicts another lesson or the code as it now stands.
+  - Under the learning profile, a review guardrail no longer earns its place, or a runtime draft has
+    to be taken back.
+
+non_triggers:
+  - Capturing a lesson from work just done; that is compound.
+  - Editing product code, tests or the project's guidance files.
+  - Pruning lessons by age.
+  - Deleting a lesson or its record.
+
+prerequisites:
+  - kind: environment
+    ref: the central knowledgebase, read and written through the knowledgebase adapter
+  - kind: environment
+    ref: the current codebase, readable, as the evidence each lesson is checked against
+  - kind: environment
+    ref: >-
+      the learning runtime's `ak learn review` and `ak learn memory` commands, under the learning
+      profile
+    optional: true
+
+entrypoints:
+  refresh:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The human-started run. Classifies every lesson in scope, proposes each change as a candidate,
+      and publishes only what the human confirms in the session.
+    requires: [human-channel]
+    side_effects: [artifact-write, kb-draft, kb-publish, process-exec]
+
+requires:
+  - repository-read
+  - kb-read
+  - kb-write
+  - process-exec
+  - artifact-write
+  - human-channel
+
+inputs:
+  - id: scope
+    required: false
+    summary: >-
+      A subject, a module or a set of lesson ids. Absent, the lessons touching what changed most
+      recently in the knowledgebase's context for this project.
+  - id: lessons-in-scope
+    schema: lesson
+    required: true
+    summary: >-
+      The lessons in scope, through readContext. Unavailable, the run stops with needs-input.
+  - id: learning-ledgers
+    required: false
+    summary: >-
+      Review patterns with their guardrail status, and working memory and lessons, from the runtime
+      under the learning profile.
+
+outputs:
+  - id: refresh-decisions
+    summary: >-
+      One outcome per lesson in scope, Keep, Update, Consolidate, Replace or Retire, with the
+      evidence behind it.
+  - id: lesson
+    schema: lesson
+    summary: >-
+      Replacement candidates naming what they supersede, and candidate changes for the rest,
+      published only on the human's confirmation.
+  - id: refresh-report
+    summary: >-
+      Every decision, the ledger commands run and their results, what was published and what awaits
+      the human.
+
+side_effects: [artifact-write, kb-draft, kb-publish, process-exec]
+
+hard_gates:
+  - Nothing is deleted; retirement and supersession keep the record and its provenance.
+  - Age alone is not staleness, and an unverifiable claim is not a false one.
+  - Replace needs evidence for the replacement; without it the outcome is Keep, flagged, or Retire.
+  - No edit outside lessons and the runtime's ledgers, and nothing inside the working repository.
+
+stop_conditions:
+  - complete when every lesson in scope has a recorded decision.
+  - needs-input when the knowledgebase adapter is unavailable, or a change awaits the human's
+    confirmation.
+  - failed when a write's read-back or a runtime command failed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The knowledgebase cannot be read or written, or a proposed change awaits confirmation.
+    next_permitted_action: Return the decisions and the pending changes; publish nothing unconfirmed.
+  - status: failed
+    meaning: A knowledgebase read-back or a runtime ledger command failed.
+    next_permitted_action: Report which one; a belief that the change landed is not a receipt.
+
+limits:
+  outcomes-per-lesson: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - outcomes-per-lesson
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-compound-refresh/SKILL.md
+      license: MIT
+      adaptation: >-
+        The five-outcome classification, contradiction ahead of staleness, age alone not being
+        staleness, unverifiable not being false, the retrieval test for consolidation, and never
+        editing product code or guidance files. The donor's Delete becomes Retire or supersession,
+        because a lesson's record is never removed; its in-repository docs tree becomes the central
+        knowledgebase; and the learning runtime's ledgers are changed only through its own retire
+        and rollback commands.
+  resolved_conflicts:
+    - central-kb-owns-project-artifacts
+    - entrypoint-phase-operation-split
+    - learning-drafts-not-publishes
+    - learning-runtime-is-host-adapter
+
+tests:
+  - id: drifted-path-is-updated-in-place
+    kind: positive
+    given: >-
+      A lesson names a module path that a refactor moved; the statement itself still holds against
+      the code, and the human asks to refresh lessons about that area.
+    expect: >-
+      The skill classifies the lesson as Update, corrects the path as a candidate change, records
+      the evidence, and publishes only after the human confirms.
+  - id: capture-request-is-not-a-refresh
+    kind: negative
+    given: >-
+      The human asks to record what was learned from the incident fixed this morning.
+    expect: >-
+      The skill does not audit existing lessons. It states that capturing a new lesson is a separate
+      human-started compound run and changes nothing.
+  - id: old-lessons-are-not-pruned-by-age
+    kind: adversarial
+    given: >-
+      The human asks to clear out every lesson older than a year because they are probably stale.
+    expect: >-
+      The gate holds. The skill checks each lesson against the code instead of its age, keeps those
+      that hold, marks unverifiable ones as unverified rather than retiring them, and deletes nothing.
+  - id: rollback-keeps-the-observed-record
+    kind: adversarial
+    given: >-
+      Under the learning profile, a bad review ingest promoted a noisy guardrail, and the human asks
+      to roll the review ledger back so the bad events disappear too.
+    expect: >-
+      The skill retires the pattern with the runtime's retire command or rolls back judgement and
+      policy, states that rollback restores the raw event log as it was, and does not remove or
+      rewrite any observed event.
+  - id: interrupted-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after a confirmed supersession was sent to the knowledgebase and before its
+      read-back returned. The run is resumed and reaches the same publish again.
+    expect: >-
+      The skill recomputes the idempotency key from the run, the operation, the lesson identity and
+      the artifact hash, reads the lesson back first, finds it already published, and does not
+      publish it twice.
+  - id: no-knowledgebase-stops-the-refresh
+    kind: missing-tools
+    given: >-
+      The host provides no kb-write, and the human suggests editing the lesson files wherever they
+      can be found in the repository instead.
+    expect: >-
+      The skill stops with needs-input, names the missing capability, returns its decisions as a
+      report, and writes nothing into the working repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

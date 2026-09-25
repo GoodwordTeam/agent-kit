@@ -1,6 +1,6 @@
 # agent-kit
 
-One engineering lifecycle, amalgamated from six MIT-licensed donors into a single installable
+One engineering lifecycle, amalgamated from eight donors (seven MIT-licensed, one Apache-2.0) into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
 **33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 4 reference packs · 18 schemas**,
@@ -134,9 +134,13 @@ and the release scenario that tests it; the ids below are the lookup keys.
 
 ## Provenance
 
-Six donors, all MIT, pinned to exact commits in `provenance/upstream.lock.yaml` (pinned 2026-09-18):
-`EveryInc/compound-engineering-plugin`, `obra/superpowers`, `mattpocock/skills`,
-`addyosmani/agent-skills`, `Yeachan-Heo/oh-my-claudecode`, `Yeachan-Heo/oh-my-codex`.
+Eight donors, pinned to exact commits in `provenance/upstream.lock.yaml`. Six MIT donors make up the
+engineering lifecycle (pinned 2026-09-18): `EveryInc/compound-engineering-plugin`, `obra/superpowers`,
+`mattpocock/skills`, `addyosmani/agent-skills`, `Yeachan-Heo/oh-my-claudecode`,
+`Yeachan-Heo/oh-my-codex`. Two more feed the opt-in learning runtime: `BayramAnnakov/claude-reflect`
+(MIT) and `thedotmack/claude-mem`, which is **Apache-2.0**, not MIT. Its licence text and NOTICE are in
+`provenance/licenses/`, the root `NOTICE` carries its NOTICE, and each file adapted from it records
+what was changed.
 
 Every adapted file records its `donor@commit:path` in `provenance/adaptations.yaml`, and that path is
 verified to exist at the pin. Capabilities that came from the design conversation rather than a donor

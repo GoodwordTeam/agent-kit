@@ -1,0 +1,126 @@
+# Provenance fragment for the "learning" batch: compound, compound-refresh, the skill scout, the
+# evidence-source contracts, the claude-mem mode file and the review-event schema.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). One fragment owns each adapted path.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every source path below
+# was verified to exist at its pin with `git cat-file -e` in the pinned clone before it was written
+# here. The rest of the learning batch — the evidence-gate protocol and four of the five learn
+# roles — has no upstream source and is recorded in provenance/conversation-map.yaml instead.
+#
+# claude-mem is Apache-2.0. Each row adapted from it states what was changed, as section 4(b) of
+# that license requires of a modified file.
+
+adaptations:
+
+  # --- compound -----------------------------------------------------------------
+
+  - path: skills/compound/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/SKILL.md
+    rationale: >-
+      The counterfactual eligibility bar, one learning per run, updating an existing inaccurate
+      learning instead of duplicating it, and asking nothing in a non-interactive run are adapted.
+      The donor's write into a repository docs tree becomes a candidate proposed to the central
+      knowledgebase (ruling central-kb-owns-project-artifacts), and publication moves behind
+      explicit authorization or a lesson-publication grant (ruling learning-drafts-not-publishes).
+
+  - path: skills/compound/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/references/assembly.md
+    rationale: >-
+      The assembly of a learning from its trigger, evidence and applicability is adapted into the
+      lesson schema's fields. The donor's file layout and frontmatter are dropped: the knowledgebase
+      adapter resolves placement.
+
+  - path: skills/compound/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/SKILL.md
+    rationale: >-
+      The triggers, non-triggers, hard gates and the one-lesson limit condense the same donor text
+      the body adapts. The capture and publish entrypoints are this package's, split by ruling
+      entrypoint-phase-operation-split; the donor has one command.
+
+  # --- compound-refresh ---------------------------------------------------------
+
+  - path: skills/compound-refresh/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/SKILL.md
+    rationale: >-
+      The five outcomes, contradiction ahead of staleness, age alone not being staleness,
+      unverifiable not being false, Replace needing real evidence, and never editing product code
+      or guidance files are adapted. The donor's Delete becomes Retire or supersession, because the
+      lesson schema never removes a record.
+
+  - path: skills/compound-refresh/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/per-action-flows.md
+    rationale: >-
+      The per-outcome handling is condensed into the Workflow's classification list. The donor's
+      file moves and renames become knowledgebase candidate changes, and the learning runtime's
+      ledgers change only through its retire and rollback commands.
+
+  - path: skills/compound-refresh/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/worth-audit.md
+    rationale: >-
+      The retrieval-value test for consolidation is adapted: merge only where the merged lesson is
+      as findable as each original.
+
+  - path: skills/compound-refresh/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/SKILL.md
+    rationale: >-
+      The triggers, non-triggers and hard gates condense the same donor text the body adapts.
+
+  # --- learn roles --------------------------------------------------------------
+
+  - path: roles/learn/skill-scout/ROLE.md
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:commands/reflect-skills.md
+    rationale: >-
+      Finding repeated user requests across sessions and proposing them as candidate skills is
+      adapted as a judge prompt. The donor's in-command skill-file writing is dropped: the role
+      returns candidates to the runtime, which records them as drafts and installs nothing (ruling
+      learning-drafts-not-publishes). The session threshold is the runtime's, not the judge's.
+
+  # --- evidence-source contracts --------------------------------------------------
+
+  - path: adapters/observation-source/CONTRACT.md
+    source: claude-mem@02cd0c9c47e38a849e764477290c571e84dfa043:src/services/sqlite/SessionStore.ts
+    rationale: >-
+      Changed: the store's table and column vocabulary is restated as read-only operations
+      (listProjects, observationsSince, sessions, summaries, sessionPrompts) that any observer can
+      answer. No code is copied; every write path of the donor store is excluded.
+
+  - path: adapters/observation-source/CONTRACT.md
+    source: claude-mem@02cd0c9c47e38a849e764477290c571e84dfa043:src/services/sqlite/tool-uses.ts
+    rationale: >-
+      Changed: the tool-use table is restated as two optional read operations, editedFiles and
+      toolUseCwds, with the contract's behaviour when an observer cannot answer them. No code is
+      copied.
+
+  - path: adapters/observation-source/claude-mem/code--review-learning.json
+    source: claude-mem@02cd0c9c47e38a849e764477290c571e84dfa043:plugin/modes/code.json
+    rationale: >-
+      Changed: two observation types (review-finding, review-resolution) and one concept
+      (recurrence) are added to the code mode, with prompt text telling the observer to record a
+      reviewer's finding and its resolution as first-class observations. Named review products and
+      named review skills in the added text are replaced by generic descriptions. The code mode's
+      existing types and concepts are kept as they are.
+
+  - path: schemas/review-event.schema.json
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
+    rationale: >-
+      The correction record's shape (message, sentiment, timestamp) is adapted into the correction
+      kind of review event, which shares one schema with review findings and resolutions. The
+      donor's confidence score is kept as an optional field and never read as a gate.
+
+  # --- runtime ports (src/learn) --------------------------------------------------
+
+  - path: src/learn/review/hooks.ts
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
+    rationale: >-
+      detectPatterns is a port of detect_patterns: the same pattern tables, thresholds and order of
+      checks, translated to TypeScript. A detected correction becomes a review event of kind
+      correction in the runtime's own ledger rather than an entry in the donor's learnings queue.
+
+  - path: src/learn/skills/learn.ts
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
+    rationale: >-
+      extractUserMessages ports extract_user_messages, with should_include_message's filter: user
+      turns of a JSONL transcript, meta turns and non-text parts dropped. The messages feed the skill
+      scout's repetition count; the donor's in-command skill writing is not ported.

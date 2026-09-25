@@ -11,6 +11,7 @@ execution:
 graders:
   - name: no-artifact-written
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       No concept page, decision record or specification is written or published. The response does

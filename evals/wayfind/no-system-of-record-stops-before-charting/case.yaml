@@ -13,10 +13,21 @@ graders:
     type: regex
     weight: 1
     pattern: "needs-input"
+  - name: no-file-created
+    type: file_exists
+    path: "**"
+    exists: false
+    weight: 1
   - name: no-session-only-map
     type: llm
     weight: 1
     criteria: >-
-      No map is charted that lives only in the conversation, and no file is created in the working
-      repository as a substitute. The response names the missing capability and states that a map
-      no other session can read is not a shared map.
+      No map is charted that lives only in the conversation. The response names the missing
+      capability and states that a map no other session can read is not a shared map.
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1

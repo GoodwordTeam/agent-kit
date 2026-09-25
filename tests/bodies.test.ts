@@ -40,7 +40,7 @@ const TABLE = [
 function sectionBody(heading: string): string {
   if (heading === "## Hard gates" || heading === "## Rationalizations this seat makes") return TABLE;
   // The two universal rows plus the plain authorship row: the shape §12.2 puts
-  // in twenty-seven of the twenty-nine seats. Defined below, next to the other
+  // in thirty-two of the thirty-four seats. Defined below, next to the other
   // governed rows, so the whole contract reads in one place.
   if (heading === "## Never") return COMPLIANT_JUDGING_SEAT;
   return "Prose for this section.\n";
@@ -1028,28 +1028,28 @@ describe("the gate against the real contract and the real seats", () => {
       bodies += 1;
     }
     // The denominator this gate is measured on. §12.2 mandates the universal
-    // rows in twenty-nine seats and `required-lane-failure-is-unavailable`
-    // binds exactly twenty-nine role ids.
-    expect(bodies).toBe(29);
+    // rows in thirty-four seats and `required-lane-failure-is-unavailable`
+    // binds exactly thirty-four role ids.
+    expect(bodies).toBe(34);
     return ctxFor(files);
   }
 
-  test("all twenty-nine authored bodies carry the contract's rows exactly", () => {
+  test("all thirty-four authored bodies carry the contract's rows exactly", () => {
     const issues = checkBodyShapes(realTree()).filter((i) => i.rule.startsWith("role.never-row"));
     expect(issues).toEqual([]);
   });
 
-  test("the census over the real tree names 29, 27 and 2", () => {
+  test("the census over the real tree names 34, 32 and 2", () => {
     const census = checkBodyShapes(realTree()).find((i) => i.rule === "role.mandated-row-population");
-    expect(census?.message).toContain("29 for each universal row");
-    expect(census?.message).toContain("27 for the plain authorship row");
+    expect(census?.message).toContain("34 for each universal row");
+    expect(census?.message).toContain("32 for the plain authorship row");
     expect(census?.message).toContain("2 for the converse");
     expect(census?.message).toContain("2 for standards grounding");
   });
 
   test("narrowing one real body's row 2 by one clause is caught, naming that body", () => {
-    // The paired assertion. Silence over twenty-nine real bodies is evidence
-    // only if the gate can tell them apart from twenty-nine narrowed ones, and
+    // The paired assertion. Silence over thirty-four real bodies is evidence
+    // only if the gate can tell them apart from thirty-four narrowed ones, and
     // a gate that located nothing would be silent in exactly the same way.
     let edited = 0;
     const ctx = realTree((id, text) => {

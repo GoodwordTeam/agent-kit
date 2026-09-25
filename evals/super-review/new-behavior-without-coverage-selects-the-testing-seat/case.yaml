@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: new-behavior-without-coverage-selects-the-testing-seat
-tags: [positive, scenario-2]
+tags: [positive, scenario-2, unscaffolded]
 execution:
   prompt: >-
     Review this one. It adds a grace period to subscription expiry: a new branch in the renewal
@@ -36,3 +36,9 @@ graders:
     criteria: >-
       No finding rests on a test-count or test-ratio target. Any size or ratio observation is named
       as configurable guidance rather than as grounds for the finding.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

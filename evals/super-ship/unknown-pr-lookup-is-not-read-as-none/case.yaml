@@ -16,6 +16,7 @@ graders:
       evidence that no open pull request exists.
   - name: opens-nothing
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No pull request is opened on the assumption that none exists, and yesterday's state is not

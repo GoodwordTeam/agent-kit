@@ -1,0 +1,83 @@
+# profiles/learning.yaml — the opt-in learning runtime: review patterns, session memory, skill scouting.
+#
+# Authority: plan §1.3 and §2.6 (no model routing; judgement bound by the runner), §7.1 and §8
+# (lessons are captured as candidates and published only under explicit authority), §11 (opt-in
+# profiles). The design and its deviations from the reference implementation are recorded in
+# research/dossiers/learning.md.
+#
+# Machine-read by `ak validate` against the `profiles:` field in catalog.yaml.
+#
+# A profile is a capability and scope set. It names no model, provider, cost or routing rule. The
+# runtime's judge is one configurable command (AK_LEARN_JUDGE); nothing here selects what answers it.
+
+schema_version: 1
+profile: learning
+default: false
+requires: [core]
+
+why_it_exists: >-
+  Two skills and a runtime that turn what already happened — review findings, user corrections and
+  session history — into drafts a human can accept: recurring review patterns promoted to guardrail
+  drafts, a working memory per repository, lessons confirmed across sessions, and candidate skills.
+  Everything it produces lives in ledgers under the host's configuration directory, and nothing it
+  produces is published or installed without a human.
+
+includes:
+  skills:
+    count: 2
+    entries: [compound, compound-refresh]
+    notes:
+      compound: >-
+        Also in core. Listed here because under this profile it reads the runtime's confirmed
+        patterns and lessons as evidence through `ak learn review report` and `ak learn memory show`
+        before capturing one lesson.
+      compound-refresh: >-
+        Also in maintainer. Under this profile it also retires ledger patterns and rolls ledger
+        state back through `ak learn review retire|rollback` and `ak learn memory rollback`.
+    overlap_with_core:
+      - skill: compound
+        note: >-
+          Installed by core already. Its presence in both profile lists is intentional and matches
+          catalog.yaml; a skill is installed once.
+
+  packs: []
+  protocols: [evidence-gate]
+  roles: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
+  references: []
+  adapters: [observation-source, review-source]
+  rationale_for_empty: >-
+    The runtime attaches no domain pack and loads no reference pack: its judges read role prompts
+    and ledger evidence, not project constraints.
+
+  capabilities:
+    required: [repository-read, process-exec, artifact-write]
+    commonly_added: [kb-read, kb-write, network-fetch]
+    note: >-
+      The runtime reads the repository and never writes it. `artifact-write` covers its own
+      ledgers only. `kb-write` is needed only to hand a promoted guardrail or confirmed lesson to
+      the knowledgebase as a candidate draft.
+
+prerequisites:
+  - an observation source for the memory loop; claude-mem is the first binding
+  - a review source for the review loop; the `gh` CLI, authenticated, is the first binding
+  - a judge command in `AK_LEARN_JUDGE`, defaulting to the host CLI's non-interactive mode; a judged job whose command fails records the failure and writes nothing
+  - "`ak learn setup wire` run once to register the host hooks and the observer's mode file"
+
+deliberately_excludes:
+  - id: writes-inside-a-project-repository
+    why: >-
+      Every ledger lives under the host configuration directory or the configured runtime
+      directory. A team file a pattern names as its target is offered as a draft, never written.
+  - id: judge-set-counts-or-status
+    why: >-
+      A judge proposes prose and matches. Counts, statuses, ids and rates are the runtime's, and
+      any the judge sends are ignored.
+  - id: automatic-publication
+    why: >-
+      A promoted guardrail, a confirmed lesson and a skill candidate are drafts. Publication and
+      installation stay human acts.
+  - id: model-selection
+    why: >-
+      The judge is one command the operator configures. The catalog names no model, tier or cost.
+
+rulings: [learning-runtime-is-host-adapter, learning-judge-is-runner-bound, learning-drafts-not-publishes, full-catalog-opt-in-profiles]

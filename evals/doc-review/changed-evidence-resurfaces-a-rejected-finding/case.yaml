@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: changed-evidence-resurfaces-a-rejected-finding
-tags: [positive, scenario-12]
+tags: [positive, scenario-12, unscaffolded]
 execution:
   prompt: >-
     Round two on the search migration plan at skills/doc-review/tests/search-migration-plan.md,
@@ -23,3 +23,9 @@ graders:
       The response names the withdrawn contract-end constraint as the reason the finding is being
       asked again, and states that the document's unchanged wording does not establish unchanged
       evidence.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?doc-review"'
+    arm: with-only
+    weight: 1

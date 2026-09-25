@@ -506,11 +506,11 @@ describe("what decides a grader, and what a shared name decides", () => {
   });
 
   test("a grader type the table has no row for is refused rather than guessed", () => {
-    const issues = twoSkills((_skill, caseId) => caseWith(caseId, `  - name: g\n    type: file_exists\n    path: out.md\n`));
+    const issues = twoSkills((_skill, caseId) => caseWith(caseId, `  - name: g\n    type: baseline\n    baseline_file: base.md\n    criteria: matches\n`));
     const refusals = rule(issues, "evals.grader-type-unclassified");
     expect(refusals).toHaveLength(2 * THREE.length);
     expect(refusals[0]?.severity).toBe("error");
-    expect(refusals[0]?.message).toContain("file_exists");
+    expect(refusals[0]?.message).toContain("baseline");
     expect(refusals[0]?.message).toContain("DECIDED_BY");
     // And it does not quietly group them on a field nobody has said decides
     // anything: six identical unknown graders produce six refusals and no note.

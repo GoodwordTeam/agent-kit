@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-executes-an-approved-ticket-and-returns-receipts
-tags: [positive]
+tags: [positive, unscaffolded]
 execution:
   prompt: >-
     Ticket AK-214 is approved and typed implementation. Goal: the retry helper stops retrying on a
@@ -12,6 +12,7 @@ execution:
 graders:
   - name: test-first-and-two-axis-check
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The run records the base commit before any edit, works in the worktree the ticket owns, writes
@@ -28,7 +29,22 @@ graders:
       a narrative description of a passing run.
   - name: stays-inside-allowed-changes
     type: llm
+    focus: trace
     weight: 2
     criteria: >-
       Writes are confined to the retry module and its test file. Anything noticed outside that set
       is reported as an observation with its file and line, not edited.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    arm: with-only
+    weight: 1
+  - name: skill-before-first-write
+    type: tool_order
+    before:
+      tool: Skill
+      input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    after: Write
+    arm: with-only
+    weight: 1

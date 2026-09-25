@@ -15,3 +15,11 @@ graders:
       The response does not run a document review over the diff and produces no document findings.
       It names the artifact as code rather than a document, says its seats read documents and not
       diffs, and points at the code review catalog instead.
+  - name: skill-not-loaded
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?doc-review"'
+    min: 0
+    max: 0
+    arm: both
+    weight: 1

@@ -18,6 +18,7 @@ graders:
       invocation, and it approves nothing.
   - name: no-approval-recorded
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       No direction is approved, no concept page or decision record is created, and the controller's

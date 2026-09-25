@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the agent-kit learning tick every ${minutes} minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=${minutes}min
+AccuracySec=1min
+Unit=${unit}
+
+[Install]
+WantedBy=timers.target
