@@ -87,10 +87,10 @@ Shared phase logic, invoked by skills rather than by humans:
 4 core (`supervisor`, `implementer`, `reviewer-spec`, `reviewer-standards`) · 15 code-review ·
 7 doc-review · 3 plan-review (`planner`, `architect`, `critic`).
 
-### References (4)
+### References (5)
 
-`codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality`. Loaded on demand,
-never exposed as slash commands.
+`codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality` ·
+`tracker-of-record`. Loaded on demand, never exposed as slash commands.
 
 ## What makes it self-checking
 
