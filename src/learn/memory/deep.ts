@@ -149,7 +149,6 @@ export function decayLessons(ledger: Ledger, today = todayLocal()): string[] {
   return stale;
 }
 
-/** Distinct sessions an evidence list spans, from `S` ids only; an `obs:` id cannot be mapped without claude-mem. */
 /** `obs:N` to the session it came from, for every observation cited by a lesson, as nightly consolidation maps them. */
 export function lessonObsSessions(ctx: LearnContext, ledger: Ledger): Map<string, string> {
   const ids = [...loadLessons(ledger).values()]
