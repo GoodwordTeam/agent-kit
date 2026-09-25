@@ -3,7 +3,7 @@ name: loose-effort-charts-a-map
 tags: [positive, unscaffolded]
 execution:
   prompt: >-
-    We want to get off the vendor's hosted search by the end of the quarter. I do not know yet
+    /ak:wayfind We want to get off the vendor's hosted search by the end of the quarter. I do not know yet
     whether we self-host the index, whether the relevance work moves with it, or what happens to
     the analytics that read from it. Where do we even start?
   max_turns: 18
@@ -17,9 +17,3 @@ graders:
       yet specified and Out of scope, cuts one decision ticket per question it can state sharply,
       leaves what it cannot phrase sharply in Not yet specified, and stops without resolving any of
       the tickets it created.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?wayfind"'
-    arm: with-only
-    weight: 1

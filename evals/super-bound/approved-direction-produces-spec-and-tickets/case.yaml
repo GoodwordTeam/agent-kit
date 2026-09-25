@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: approved-direction-produces-spec-and-tickets
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    We agreed yesterday and I said yes: sandbox provisioning moves behind a self-serve endpoint,
+    /ak:super-bound We agreed yesterday and I said yes: sandbox provisioning moves behind a self-serve endpoint,
     scoped to the billing service, with the existing tenant model unchanged. That approval is
     against the current head. Take it from here and get it ready to build.
   max_turns: 20
@@ -17,9 +17,3 @@ graders:
       before tickets are cut, takes the specification approval against a stated artifact hash, and
       then emits tickets that each carry the interfaces they consume and produce, their owned
       files, acceptance criteria and a command that verifies them.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-bound"'
-    arm: with-only
-    weight: 1

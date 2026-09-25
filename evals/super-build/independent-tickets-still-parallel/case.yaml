@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-still-dispatches-genuinely-independent-tickets-together
-tags: [positive, scenario-13, unscaffolded]
+tags: [positive, scenario-13, unscaffolded, needs-fixture]
 execution:
   prompt: >-
     Tickets AK-420 and AK-421 are both approved. AK-420 changes the email templating module and its

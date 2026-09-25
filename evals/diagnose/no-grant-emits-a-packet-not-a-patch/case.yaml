@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: diagnose-emits-a-packet-where-no-grant-covers-the-fix
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
     Sessions are being dropped after exactly fifteen minutes even though the configured timeout is

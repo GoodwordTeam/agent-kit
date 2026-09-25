@@ -48,6 +48,10 @@ was called with (ruling `entrypoint-phase-operation-split`; protocol `phase-oper
 2. **Check every cited id against the input set.** An id the judge was not shown is dropped with the
    claim it carries. A new pattern citing no event, or any hash outside the input, is refused whole.
    A memory bullet with no surviving id is dropped. A lesson with no surviving evidence is dropped.
+   For the working memory, an observation the reflector flagged in `security_notes` is then
+   quarantined: every bullet citing it is dropped, as is any bullet carrying a token that only a
+   flagged observation holds, and the runtime writes one fixed `## Unresolved` bullet per flag from
+   the id, its session and the kind. These drops are counted apart from the id check's.
 3. **Count in the runtime.** Pattern counts, sources, pull requests and reviewers are recomputed
    from the events the gate kept, never read from the reply. An event counted once against a page
    is not counted again on replay.
@@ -72,7 +76,7 @@ was called with (ruling `entrypoint-phase-operation-split`; protocol `phase-oper
    - any non-heading line appears three or more times;
    - it collapsed below 0.3 of the previous memory's length from under 5,000 input tokens;
    - any of the six required sections is missing;
-   - the id check dropped more than half its bullets.
+   - the id check dropped more than half its bullets. Security drops do not count toward this.
    A rejected rewrite leaves the previous memory in place, does not advance the watermark, and is
    recorded with its reason.
 6. **Hand promotions on as drafts.** A promoted guardrail and a newly confirmed lesson go to the
@@ -102,7 +106,7 @@ Gate: a degenerate rewrite is rejected whole. A gutted memory is worse than a st
 ## Outputs
 
 Only what passed: pattern pages with runtime-computed counts and status, a working memory whose
-every bullet cites a shown id, lesson pages whose evidence is a subset of the input, and a run-log
+every bullet cites a shown id and repeats nothing a flagged observation alone said, lesson pages whose evidence is a subset of the input, and a run-log
 line (`schemas/memory-run.schema.json`) naming what was dropped or why the reply was rejected.
 Promotions leave as candidate drafts through the knowledgebase adapter's `proposeLesson`. Nothing
 is written inside a project repository.

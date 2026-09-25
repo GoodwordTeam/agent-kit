@@ -3,6 +3,7 @@
 #
 #   scripts/eval-local.sh [--inherit-env] [claude plugin eval options…]
 #   scripts/eval-local.sh --tag firstmate --runs 3 --max-cost-usd 2
+#   scripts/eval-local.sh --exclude-tag needs-fixture
 #
 # Grants. Each case gets the gated tools its case.yaml declares and no others. The cases are
 # grouped by those tools and each group runs as its own host invocation (see "Grants" below), so a
@@ -25,7 +26,9 @@
 #
 # Reads: dist/claude-code (run `bun run build` first), or $AK_EVAL_BUNDLE. Writes: evals/results/
 # under the bundle, the JSON result to $AK_EVAL_JSON (default: a temp file whose path is printed),
-# and the receipt beside it as <result>.receipt.json.
+# and the receipt beside it as <result>.receipt.json. Each run's trace is copied under
+# <result>.traces/<case dir>/<arm>-<n>.jsonl, because the host leaves it in a temporary directory
+# that the system cleans.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -35,15 +38,26 @@ command -v jq >/dev/null || { echo "eval-local: jq is required" >&2; exit 2; }
 
 # The script reads four of the host's options itself: --case and --tag (to know which cases run),
 # --eval-dir (where they live) and --max-cost-usd (one budget across every invocation). The first
-# three still go through to the host. --allow-tools is taken out and replaced by the case grants
+# three still go through to the host, as do --runs and --ablation, which it also notes to tell
+# which cases a cut-short invocation left short. --allow-tools is taken out and replaced by the case grants
 # unless the user passed it, in which case it goes through unchanged and overrides them.
+# --scaffold is added when the host offers it and the user passed neither it nor --no-scaffold; the
+# cases in this repository are ours, so their scaffold scripts are trusted. When scaffolds do not
+# run, each invocation lists the cases that declare one in `scaffoldSkipped`.
+# --exclude-tag is the script's own; the host has no exclude. A selected case carrying any excluded
+# tag is dropped from the staged copy before the host sees it, and the receipt lists it under
+# `exclusions`, so a quoted figure says which cases it leaves out.
 isolation=env-allowlist
 args=()
 case_globs=()
 tags=()
+exclude_tags=()
 user_tools=()
 budget=
 eval_dir=
+runs=
+ablation=
+scaffold=auto
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --inherit-env) isolation=inherited-env; shift ;;
@@ -51,8 +65,16 @@ while [[ $# -gt 0 ]]; do
     --case=*) case_globs+=("${1#*=}"); args+=("$1"); shift ;;
     --eval-dir) eval_dir="$2"; args+=("$1" "$2"); shift 2 ;;
     --eval-dir=*) eval_dir="${1#*=}"; args+=("$1"); shift ;;
+    --runs) runs="$2"; args+=("$1" "$2"); shift 2 ;;
+    --runs=*) runs="${1#*=}"; args+=("$1"); shift ;;
+    --ablation) ablation="$2"; args+=("$1" "$2"); shift 2 ;;
+    --ablation=*) ablation="${1#*=}"; args+=("$1"); shift ;;
+    --scaffold) scaffold=on; args+=("$1"); shift ;;
+    --no-scaffold) scaffold=off; args+=("$1"); shift ;;
     --max-cost-usd) budget="$2"; shift 2 ;;
     --max-cost-usd=*) budget="${1#*=}"; shift ;;
+    --exclude-tag) exclude_tags+=("$2"); shift 2 ;;
+    --exclude-tag=*) exclude_tags+=("${1#*=}"); shift ;;
     --tag=*) tags+=("${1#*=}"); args+=(--tag "${1#*=}"); shift ;;
     --allow-tools=*) user_tools+=("${1#*=}"); shift ;;
     --tag | --allow-tools)
@@ -85,6 +107,14 @@ install=default
 donors=false
 [[ -d "$root/.donors" ]] && donors=true
 host_version="$(claude --version 2>/dev/null || echo unknown)"
+if [[ "$scaffold" == auto ]]; then
+  if claude plugin eval --help 2>/dev/null | grep -qE -- '--scaffold( |$)'; then
+    scaffold=on
+    args+=(--scaffold)
+  else
+    scaffold=unsupported
+  fi
+fi
 
 pass_env=(HOME USER LOGNAME PATH SHELL TERM LANG TMPDIR
   HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy NODE_EXTRA_CA_CERTS SSL_CERT_FILE
@@ -136,17 +166,13 @@ receipt="${json%.json}.receipt.json"
 # that list the tool (research/evals/2026-09-25-isolation.md), so one union grant would widen every
 # case that lists fewer. The selected cases are grouped by the gated tools they declare, and each
 # group runs in its own invocation against a staged copy of the bundle whose eval directory holds
-# only that group's cases. One group runs against the bundle itself.
+# only that group's cases. One group with no excluded case runs against the bundle itself.
 [[ -n "$eval_dir" ]] || eval_dir="$(jq -r '.experimental.evals // "evals"' "$bundle/.claude-plugin/plugin.json" 2>/dev/null || echo evals)"
-groups=()
-if [[ ${#user_tools[@]} -gt 0 ]]; then
-  grant_source=user
-  groups=("$(IFS=,; echo "${user_tools[*]}")")
-else
-  grant_source=cases
-  listing="$(cd "$root" && AK_EVALS_DIR="$bundle/$eval_dir" \
+# One line per case: run, skip (not selected) or exclude (selected, but carries an excluded tag).
+listing="$(cd "$root" && AK_EVALS_DIR="$bundle/$eval_dir" \
     AK_CASE_GLOBS="$(printf '%s\n' "${case_globs[@]+"${case_globs[@]}"}")" \
-    AK_TAGS="$(printf '%s\n' "${tags[@]+"${tags[@]}"}")" bun -e '
+    AK_TAGS="$(printf '%s\n' "${tags[@]+"${tags[@]}"}")" \
+    AK_EXCLUDE_TAGS="$(printf '%s\n' "${exclude_tags[@]+"${exclude_tags[@]}"}")" bun -e '
       import { parse } from "yaml";
       import { readdirSync, readFileSync } from "fs";
       import { basename, dirname, join, relative } from "path";
@@ -154,6 +180,7 @@ else
       const lines = (v?: string) => (v ?? "").split("\n").filter(Boolean);
       const globs = lines(process.env.AK_CASE_GLOBS).map((g) => new Bun.Glob(g));
       const tags = lines(process.env.AK_TAGS);
+      const excluded = lines(process.env.AK_EXCLUDE_TAGS);
       const gated = (t: string) => /^(Bash|Write|Edit|WebFetch|NotebookEdit)(\(|$)/.test(t) || t.startsWith("mcp__");
       const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) =>
         e.isDirectory() ? (d === root && e.name === "results" ? [] : walk(join(d, e.name)))
@@ -161,28 +188,46 @@ else
       for (const file of walk(root).sort()) {
         const doc = parse(readFileSync(file, "utf8")) ?? {};
         const name = String(doc.name ?? basename(dirname(file)));
+        const own: string[] = doc.tags ?? [];
         const selected = (globs.length === 0 || globs.some((g) => g.match(name)))
-          && (tags.length === 0 || (doc.tags ?? []).some((t: string) => tags.includes(t)));
+          && (tags.length === 0 || own.some((t) => tags.includes(t)));
+        const status = !selected ? "skip" : own.some((t) => excluded.includes(t)) ? "exclude" : "run";
         const tools = [...new Set<string>((doc.execution?.allowed_tools ?? doc.allowed_tools ?? []).filter(gated))].sort();
-        console.log([selected ? "run" : "skip", tools.join(","), relative(root, dirname(file)), name].join("\t"));
+        const runs = Number.isInteger(doc.runs) ? String(doc.runs) : "";
+        const scaffold = doc.context?.scaffold_script ?? doc.scaffold_script ? "scaffold" : "";
+        console.log([status, tools.join(","), relative(root, dirname(file)), name, runs, scaffold].join("\t"));
       }')" || { echo "eval-local: could not read the cases under $bundle/$eval_dir" >&2; exit 2; }
+if ! awk -F'\t' '$1 == "run" { found = 1 } END { exit !found }' <<<"$listing"; then
+  echo "eval-local: no case under $bundle/$eval_dir matches the --case, --tag and --exclude-tag filters; nothing run" >&2
+  exit 2
+fi
+exclusions="$(awk -F'\t' -v d="$eval_dir" '$1 == "exclude" { print d "/" $3 "\t" $4 }' <<<"$listing" \
+  | jq -Rsc --args 'split("\n") | map(select(. != "") | split("\t") | {dir: .[0], name: .[1]})
+               | {tags: $ARGS.positional, cases: .}' "${exclude_tags[@]+"${exclude_tags[@]}"}")"
+excluding="$(jq -r '.cases | length > 0' <<<"$exclusions")"
+[[ "$excluding" == false ]] || echo "eval-local: $(jq '.cases | length' <<<"$exclusions") case(s) excluded by tag" >&2
+groups=()
+if [[ ${#user_tools[@]} -gt 0 ]]; then
+  grant_source=user
+  groups=("$(IFS=,; echo "${user_tools[*]}")")
+else
+  grant_source=cases
   while IFS= read -r key; do groups+=("$key"); done < <(awk -F'\t' '$1 == "run" { print $2 }' <<<"$listing" | sort -u)
-  if [[ ${#groups[@]} -eq 0 ]]; then
-    echo "eval-local: no case under $bundle/$eval_dir matches the --case and --tag filters; nothing run" >&2
-    exit 2
-  fi
 fi
 
 aggregate=0
 spent=0
 invocations="${json%.json}.invocations.jsonl"
 : >"$invocations"
+traces_dir="${json%.json}.traces"
+traces="${json%.json}.traces.jsonl"
+: >"$traces"
 parts=()
 for i in "${!groups[@]}"; do
   key="${groups[$i]}"
   target="$bundle"
   out="$json"
-  if [[ ${#groups[@]} -gt 1 ]]; then
+  if [[ ${#groups[@]} -gt 1 || "$excluding" == true ]]; then
     target="${json%.json}.groups/$i/$(basename "$bundle")"
     out="${json%.json}.group-$i.json"
     rm -rf "$target"
@@ -191,7 +236,17 @@ for i in "${!groups[@]}"; do
     rm -rf "${target:?}/$eval_dir/results"
     while IFS= read -r dir; do
       if [[ "$dir" != . ]]; then rm -rf "${target:?}/$eval_dir/${dir:?}"; fi
-    done < <(awk -F'\t' -v k="$key" '!($1 == "run" && $2 == k) { print $3 }' <<<"$listing")
+    done < <(awk -F'\t' -v k="$key" -v src="$grant_source" '$1 != "run" || (src == "cases" && $2 != k) { print $3 }' <<<"$listing")
+  fi
+  # The group's cases with their own run counts; null when the user's grant replaced the listing.
+  wanted=null
+  scaffold_skipped=null
+  if [[ "$grant_source" == cases ]]; then
+    wanted="$(awk -F'\t' -v k="$key" '$1 == "run" && $2 == k { print $4 "\t" $5 "\t" $6 }' <<<"$listing" \
+      | jq -Rsc 'split("\n") | map(select(. != "") | split("\t")
+                 | {name: .[0], runs: (.[1] | tonumber? // null), scaffold: (.[2] == "scaffold")})')"
+    scaffold_skipped="$(jq -nc --argjson wanted "$wanted" --arg mode "$scaffold" \
+      'if $mode == "on" then [] else [$wanted[] | select(.scaffold) | .name] end')"
   fi
   grant=()
   [[ -z "$key" ]] || { IFS=, read -r -a tools_list <<<"$key"; grant=(--allow-tools "${tools_list[@]}"); }
@@ -200,7 +255,9 @@ for i in "${!groups[@]}"; do
     left="$(jq -n --argjson b "$budget" --argjson s "$spent" '($b - $s) * 10000 | floor / 10000')"
     if jq -e -n --argjson l "$left" '$l <= 0' >/dev/null; then
       echo "eval-local: budget spent; group [${key:-no gated tools}] not run" >&2
-      jq -nc --arg tools "$key" '{grant: ($tools | split(",") | map(select(. != ""))), skipped: "budget", partial: true}' >>"$invocations"
+      jq -nc --arg tools "$key" --argjson wanted "$wanted" \
+        '{grant: ($tools | split(",") | map(select(. != ""))), cases: ($wanted | if . == null then null else map(.name) end),
+          skipped: "budget", partial: true}' >>"$invocations"
       aggregate=2
       continue
     fi
@@ -218,17 +275,40 @@ for i in "${!groups[@]}"; do
   partial=true
   if [[ -s "$out" ]]; then
     parts+=("$out")
+    while IFS=$'\t' read -r dir name arm n from; do
+      to=
+      if [[ -n "$from" && -f "$from" ]]; then
+        to="$traces_dir/$dir/$arm-$n.jsonl"
+        mkdir -p "$(dirname "$to")"
+        cp "$from" "$to"
+      fi
+      jq -nc --arg dir "$dir" --arg name "$name" --arg arm "$arm" --argjson run "$n" --arg from "$from" --arg to "$to" \
+        '{dir: $dir, name: $name, arm: $arm, run: $run, hostPath: $from, copy: (if $to == "" then null else $to end)}' >>"$traces"
+    done < <(jq -r '.cases[]? | (.dir // .name) as $d | .name as $c | (.arms // {}) | to_entries[] | .key as $a
+                    | .value | to_entries[] | [$d, $c, $a, (.key + 1), (.value.tracePath // "")] | @tsv' "$out")
     cost="$(jq '.costUsd // 0' "$out")"
     partial="$(jq '.partial == true' "$out")"
     spent="$(jq -n --argjson a "$spent" --argjson b "$cost" '$a + $b')"
   fi
+  # Cases with fewer runs on an arm than were asked for (--runs, else the case's runs, else the
+  # host's default of 3), or absent from the result. The without arm counts unless --ablation none.
+  incomplete="$(jq -c --argjson wanted "$wanted" --arg runs "$runs" --arg ablation "$ablation" '
+    if $wanted == null then null else (.cases // []) as $got
+      | [$wanted | group_by(.name)[] | .[0].name as $n | [$got[] | select(.name == $n)] as $g
+         | select(($g | length) < length or any(range(0; $g | length) as $i
+             | (if $runs != "" then ($runs | tonumber) else (.[$i].runs // 3) end) as $r
+             | (($g[$i].arms.with // []) | length) < $r
+               or ($ablation != "none" and (($g[$i].arms.without // []) | length) < $r); .))
+         | $n] end' "$(if [[ -s "$out" ]]; then echo "$out"; else echo /dev/null; fi)")"
+  [[ -n "$incomplete" ]] || incomplete="$(jq -nc --argjson wanted "$wanted" 'if $wanted == null then null else $wanted | map(.name) | unique end')"
   target_sha="$(cd "$target" && find . -type f ! -path "./$eval_dir/results/*" -print0 | LC_ALL=C sort -z \
     | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1)"
   jq -nc --arg tools "$key" --arg command "${cmdline% }" --argjson status "$status" --argjson cost "$cost" \
     --argjson partial "$partial" --arg bundle "$target" --arg sha "$target_sha" --arg out "$out" \
-    --argjson cases "$(if [[ "$grant_source" == cases ]]; then awk -F'\t' -v k="$key" '$1 == "run" && $2 == k { print $4 }' <<<"$listing" | jq -Rsc 'split("\n") | map(select(. != ""))'; else echo null; fi)" \
-    '{grant: ($tools | split(",") | map(select(. != ""))), cases: $cases, bundle: $bundle, bundleSha256: $sha,
-      command: $command, exitStatus: $status, costUsd: $cost, partial: $partial, result: $out}' >>"$invocations"
+    --argjson wanted "$wanted" --argjson incomplete "$incomplete" --argjson scaffold_skipped "$scaffold_skipped" \
+    '{grant: ($tools | split(",") | map(select(. != ""))), cases: ($wanted | if . == null then null else map(.name) end),
+      bundle: $bundle, bundleSha256: $sha, command: $command, exitStatus: $status, costUsd: $cost, partial: $partial,
+      incomplete_cases: $incomplete, scaffoldSkipped: $scaffold_skipped, result: $out}' >>"$invocations"
 done
 status=$aggregate
 
@@ -240,17 +320,23 @@ if [[ ${#groups[@]} -gt 1 ]]; then
           aggregates: {overallScore: ([.[].cases[].aggregates.score | numbers] | if length > 0 then add / length else null end),
                        meanDelta: ([.[].cases[].aggregates.delta | numbers] | if length > 0 then add / length else null end)},
           merged: length}' "${parts[@]}" >"$json"
+elif [[ "$excluding" == true ]]; then
+  cp "${parts[0]}" "$json"
 fi
 
 # Per case and arm: n runs, passes (a run passes when every grader that counts toward the score
-# passed; with-only graders are the fired indicator, not the score), the rate with its 95% Wilson
-# interval, and the fired count on the with arm.
+# passed; with-only graders do not count toward the score), the rate with its 95% Wilson interval,
+# and the fired count on the with arm. A run fired when every with-only `tool_used` grader on the
+# Skill tool passed; the case's grader definitions in the result name them. Other with-only graders,
+# such as a negative's check that the workflow was not carried out, are not firing. A case with no
+# such grader has fired null.
 # shellcheck disable=SC2094 # reads $json, writes $receipt: two files
 jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
    --arg bundle_sha "$bundle_sha" --argjson fresh "$fresh" --arg install "$install" \
    --argjson donors "$donors" --arg host "$host_version" --arg isolation "$isolation" \
    --argjson status "$status" --arg json "$json" --arg grant_source "$grant_source" \
-   --slurpfile invocations "$invocations" \
+   --slurpfile invocations "$invocations" --slurpfile traces "$traces" --arg scaffold "$scaffold" \
+   --argjson exclusions "$exclusions" \
    --args '
   def wilson($k; $n): if $n == 0 then {lo: 0, hi: 1} else
       ($k / $n) as $p | 3.8416 as $z2
@@ -260,9 +346,10 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
   def pass: [.graders[]? | select(.withOnly | not) | .passed] | length > 0 and all;
   def arm($runs): ($runs | length) as $n | ([$runs[] | select(pass)] | length) as $k
       | {n: $n, passes: $k, rate: (if $n == 0 then null else $k / $n end), wilson95: wilson($k; $n)};
-  def fired($runs): [$runs[] | [.graders[]? | select(.withOnly) | .passed]]
+  def fired($runs; $skill): [$runs[] | [.graders[]? | select(.withOnly and (.name | IN($skill[]))) | .passed]]
       | if (map(length) | add // 0) == 0 then null
         else {n: length, fired: map(select(length > 0 and all)) | length} end;
+  def skill_graders: [.graders[]? | select(.type == "tool_used" and .config.tool == "Skill") | .name];
   {
     measured: {revision: $revision, dirty: $dirty},
     bundle: {path: $bundle, sha256: $bundle_sha, freshAgainstSources: $fresh},
@@ -271,14 +358,17 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
     host: $host,
     isolation: {method: ("host-sandbox+" + $isolation), envPassed: (if $isolation == "inherited-env" then "all" else $ARGS.positional end)},
     grants: {source: $grant_source, union: ([$invocations[].grant[]] | unique)},
+    scaffold: $scaffold,
+    exclusions: $exclusions,
     invocations: $invocations,
     exitStatus: $status,
     result: $json,
-    cases: [.cases[] | {name, with: arm(.arms.with // []), without: arm(.arms.without // []),
-                        fired: fired(.arms.with // []), score: .aggregates.score,
+    cases: [.cases[] | {name, dir, with: arm(.arms.with // []), without: arm(.arms.without // []),
+                        fired: fired(.arms.with // []; skill_graders), score: .aggregates.score,
                         scoreWithout: .aggregates.scoreWithout, delta: .aggregates.delta}],
     overall: {score: .aggregates.overallScore, meanDelta: .aggregates.meanDelta,
               mergedFrom: (.merged // 1)},
+    traces: $traces,
     costUsd: .costUsd, durationSeconds: .durationSeconds,
     partial: (.partial or any($invocations[]; .partial))
   }' "${passed[@]+"${passed[@]}"}" <"$json" >"$receipt" \
@@ -292,7 +382,9 @@ jq -r '
   (.cases[] | [.name[0:60], (.with | ci), (.without | ci), (.delta | n),
                (if .fired then "\(.fired.fired)/\(.fired.n)" else "-" end)] | @tsv),
   (["overall", (.overall.score | n), "-", (.overall.meanDelta | n), "-"] | @tsv),
-  "cost $\(.costUsd | n)  \(.durationSeconds | n)s  partial=\(.partial)"
+  "cost $\(.costUsd | n)  \(.durationSeconds | n)s  partial=\(.partial)",
+  (if (.exclusions.cases | length) > 0
+   then "excluded \(.exclusions.cases | length) case(s) tagged \(.exclusions.tags | join(", "))" else empty end)
 ' "$receipt" | column -t -s $'\t' || echo "eval-local: could not summarise $receipt" >&2
 jq -r '"eval-local: measured \(.bundle.path) (sha256 \(.bundle.sha256[0:12]), fresh=\(.bundle.freshAgainstSources))",
        "eval-local: tree \(.measured.revision)\(if .measured.dirty then " (dirty)" else "" end)  .donors=\(.donorsPresent)  install=\(.install)",

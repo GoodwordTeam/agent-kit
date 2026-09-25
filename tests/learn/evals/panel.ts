@@ -118,7 +118,7 @@ export interface QueueRow {
 /** A transcript as the judge reads it: tool calls and messages in order, then the final reply. */
 export function renderTranscript(transcript: SessionResult | string): string {
   if (typeof transcript === "string") return transcript;
-  const lines = transcript.events.map((e) => (e.kind === "tool" ? `[tool ${e.name}] ${JSON.stringify(e.input).slice(0, 400)}` : `[assistant] ${e.text}`));
+  const lines = transcript.events.map((e) => (e.kind === "tool" ? `[tool ${e.name}] ${JSON.stringify(e.input).slice(0, 400)}` : e.kind === "user" ? `[user] ${e.text.slice(0, 400)}` : `[assistant] ${e.text}`));
   return [...lines, `[final reply] ${transcript.reply}`].join("\n");
 }
 

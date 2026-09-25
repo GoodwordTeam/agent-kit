@@ -25,3 +25,9 @@ graders:
     criteria: >-
       The claim that nobody pulled the branch is not accepted as evidence that the credential is
       safe.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-ship"'
+    arm: with-only
+    weight: 1

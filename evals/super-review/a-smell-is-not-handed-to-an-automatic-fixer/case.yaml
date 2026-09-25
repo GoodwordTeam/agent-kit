@@ -37,3 +37,9 @@ graders:
     criteria: >-
       The finding is instead sharpened into a bounded one, diagnosed, or escalated, and the review
       records which single one of those three the dispatch was.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

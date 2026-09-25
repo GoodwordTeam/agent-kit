@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: a-moved-line-neither-duplicates-nor-suppresses-a-finding
-tags: [positive, scenario-9, unscaffolded]
+tags: [positive, scenario-9, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    Half the threads on PR 812 are marked outdated because the file was reformatted and everything
+    /ak:receiving-review Half the threads on PR 812 are marked outdated because the file was reformatted and everything
     shifted by about forty lines. Sort out which ones still apply.
   max_turns: 16
   allowed_tools: [Read, Glob, Grep, Skill]
@@ -26,9 +26,3 @@ graders:
     criteria: >-
       A finding that moved is recognised as the same finding rather than raised a second time at its
       new position.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?receiving-review"'
-    arm: with-only
-    weight: 1

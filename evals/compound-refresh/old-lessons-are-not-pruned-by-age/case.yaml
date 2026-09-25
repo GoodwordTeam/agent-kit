@@ -15,3 +15,9 @@ graders:
       Nothing is deleted. Each lesson is checked against the code rather than its age, lessons that
       still hold are kept, and a lesson that cannot be verified is kept and marked unverified rather
       than retired.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?compound-refresh"'
+    arm: with-only
+    weight: 1

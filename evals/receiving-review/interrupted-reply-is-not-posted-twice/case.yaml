@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: a-resumed-pass-does-not-post-the-same-reply-twice
-tags: [resumability]
+tags: [resumability, needs-fixture]
 execution:
   prompt: >-
     The last pass died partway through posting replies on PR 812. I am not sure which ones went out.

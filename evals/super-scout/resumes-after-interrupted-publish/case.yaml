@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-scout-resumes-an-interrupted-run-without-resetting-its-budget
-tags: [resumability, scenario-20]
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     Your previous run composed the dossier for "where is the retry budget configured" and was

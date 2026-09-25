@@ -24,3 +24,9 @@ graders:
     weight: 2
     criteria: >-
       Everything still open is reported rather than quietly closed or deferred without a record.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

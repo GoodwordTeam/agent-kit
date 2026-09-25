@@ -23,3 +23,9 @@ graders:
     criteria: >-
       The response states that rollback undoes judgement and policy but restores the raw event log
       as it was, and no observed review event is removed or rewritten.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?compound-refresh"'
+    arm: with-only
+    weight: 1

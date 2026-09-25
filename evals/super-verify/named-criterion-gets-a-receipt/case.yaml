@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-verify-produces-a-receipt-for-a-named-criterion
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
     AC-2 on ticket AK-214 says a 400 response is not retried. The change is in. Confirm it at the

@@ -1,6 +1,6 @@
 schema_version: "1.1"
-name: interrupted-publish-resumes-on-the-idempotency-key
-tags: [resumability, scenario-20]
+name: doc-review-interrupted-publish-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     Resuming the review run. The round-one review record was sent to the knowledgebase and the

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agent-kit.local/schemas/memory-run.schema.json",
   "title": "Memory run",
-  "description": "One line of the memory ledger's run log, runs.jsonl. Every job records one, including a rejected or failed one, so an empty memory can be told apart from a memory whose rewrite was refused (protocol evidence-gate). 'dropped_by_provenance' is how many claims the evidence gate removed because they cited no id the judge was shown. Jobs may add fields of their own, so the object stays open.",
+  "description": "One line of the memory ledger's run log, runs.jsonl. Every job records one, including a rejected or failed one, so an empty memory can be told apart from a memory whose rewrite was refused (protocol evidence-gate). 'dropped_by_provenance' is how many claims the evidence gate removed because they cited no id the judge was shown; 'dropped_by_redaction' is how many the reflector's security channel removed, citing a flagged observation or carrying wording only it held, and 'security_notes' how many observations were flagged. Jobs may add fields of their own, so the object stays open.",
   "type": "object",
   "required": ["ts", "job", "status"],
   "properties": {
@@ -16,6 +16,9 @@
     "trigger": { "type": "string" },
     "id": { "type": "string" },
     "dropped_by_provenance": { "type": "integer", "minimum": 0 },
+    "dropped_by_redaction": { "type": "integer", "minimum": 0 },
+    "security_notes": { "type": "integer", "minimum": 0 },
+    "security_notes_rejected": { "type": "integer", "minimum": 0 },
     "tokens_in": { "type": "integer", "minimum": 0 },
     "tokens_out": { "type": "integer", "minimum": 0 },
     "max_obs_id": { "type": "integer", "minimum": 0 },

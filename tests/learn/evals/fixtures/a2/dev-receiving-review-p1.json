@@ -1,0 +1,56 @@
+{
+ "source": ".work/evals/2026-09-25/a2-natural-tx (natural arm, bundle on, roster on), trimmed to case, reply and events; home and temp paths scrubbed",
+ "case": {
+  "id": "dev-receiving-review-p1",
+  "skill": "receiving-review",
+  "polarity": "positive",
+  "invocation": "U",
+  "expected": [
+   "receiving-review"
+  ],
+  "prompt": "Please run /ak:receiving-review on PR 318; there are a dozen comments from the bot and two from Dana."
+ },
+ "reply": "I haven't assessed PR 318 yet because I couldn't read it. My calls to `git remote` and `gh pr view 318` both came back with \"requires approval\" and never ran. Without the PR's threads and the code they point at, I have nothing to check the comments against, so nothing has been assessed and nothing has been posted.\n\nTo continue I need two things from you:\n\n1. **Read access.** Please approve (or allowlist) read-only `gh` and `git` commands for this repo. I'd use `gh pr view 318`, `gh api` to read the review threads, and `git fetch`/`git show` to read the code at the PR's latest commit. The local checkout only has `main` at `ae8f46f init`, so I'll need to fetch the PR branch.\n\n2. **Permission to reply and resolve.** These are two separate permissions, and you haven't given me either:\n   - **Reply:** may I post one reply per thread explaining my decision, with the evidence?\n   - **Resolve:** may I also resolve threads, or should I only reply and leave them open for you or Dana?\n\n   If you only want the assessment first, I'll write it up locally and post nothing to the PR.\n\nOnce I can read the PR, I'll collect all the threads (about a dozen from the bot and two from Dana) and check each comment against the code. Where comments share one root cause I'll group them and answer them with one decision. Each comment will be marked valid, invalid, out of scope or needing a human, with the code evidence behind it. I won't make any code changes: fixes for valid items go to a separate fix step, which you'd start (for example `/ak:super-build`).",
+ "events": [
+  {
+   "kind": "tool",
+   "name": "Skill",
+   "raw": "Skill",
+   "input": {
+    "skill": "ak:receiving-review",
+    "args": "PR 318"
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "git remote -v && gh pr view 318 --json number,title,headRefName,headRefOid,state,author,url 2>&1 | head -50",
+    "description": "Check remote and PR 318 metadata"
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "git -C /tmp/ak-eval/repo remote -v",
+    "description": "List git remotes"
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "gh pr view 318 --json number,title,headRefName,headRefOid,state,url",
+    "description": "Fetch PR 318 metadata"
+   }
+  },
+  {
+   "kind": "message",
+   "text": "I haven't assessed PR 318 yet because I couldn't read it. My calls to `git remote` and `gh pr view 318` both came back with \"requires approval\" and never ran. Without the PR's threads and the code they point at, I have nothing to check the comments against, so nothing has been assessed and nothing has been posted.\n\nTo continue I need two things from you:\n\n1. **Read access.** Please approve (or allowlist) read-only `gh` and `git` commands for this repo. I'd use `gh pr view 318`, `gh api` to read the review threads, and `git fetch`/`git show` to read the code at the PR's latest commit. The local checkout only has `main` at `ae8f46f init`, so I'll need to fetch the PR branch.\n\n2. **Permission to reply and resolve.** These are two separate permissions, and you haven't given me either:\n   - **Reply:** may I post one reply per thread explaining my decision, with the evidence?\n   - **Resolve:** may I also resolve threads, or should I only reply and leave them open for you or Dana?\n\n   If you only want the assessment first, I'll write it up locally and post nothing to the PR.\n\nOnce I can read the PR, I'll collect all the threads (about a dozen from the bot and two from Dana) and check each comment against the code. Where comments share one root cause I'll group them and answer them with one decision. Each comment will be marked valid, invalid, out of scope or needing a human, with the code evidence behind it. I won't make any code changes: fixes for valid items go to a separate fix step, which you'd start (for example `/ak:super-build`)."
+  }
+ ]
+}

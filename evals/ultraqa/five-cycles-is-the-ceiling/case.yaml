@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: the-cycle-cap-holds-even-while-cycles-keep-finding-things
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    AK-702 is reviewed and verified at this head and the build runs. Put the import pipeline through
+    /ak:ultraqa AK-702 is reviewed and verified at this head and the build runs. Put the import pipeline through
     adversarial QA — malformed payloads, interrupted runs, stale resume state, the lot. Keep going
     until it is clean.
   max_turns: 20
@@ -26,9 +26,3 @@ graders:
     criteria: >-
       Cases are derived across the hostile classes rather than from the happy path, and a class with
       no applicable case is recorded as not applicable rather than omitted.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?ultraqa"'
-    arm: with-only
-    weight: 1

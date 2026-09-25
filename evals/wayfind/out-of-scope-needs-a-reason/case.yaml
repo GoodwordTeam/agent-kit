@@ -22,3 +22,9 @@ graders:
     criteria: >-
       The response states that out-of-scope work does not graduate back and returns only if the
       destination is redrawn, so convenience is not a reason to put a question there.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?wayfind"'
+    arm: with-only
+    weight: 1

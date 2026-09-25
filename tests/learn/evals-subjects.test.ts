@@ -36,6 +36,24 @@ describe("claude", () => {
     expect(skillLoads(parsed.events).map((l) => l.skill)).toEqual(["greet"]);
   });
 
+  test("the model the host reports serving the session comes from the init line, and is absent without one", () => {
+    const init = JSON.stringify({ type: "system", subtype: "init", model: "model-under-test" });
+    const result = JSON.stringify({ type: "result", result: "ok", num_turns: 1 });
+    expect(claude.parse(`${init}\n${result}`).model).toBe("model-under-test");
+    expect(claude.parse(result).model).toBeUndefined();
+  });
+
+  test("a typed slash command's expansion becomes a user event the scorer reads as a load; tool results do not", () => {
+    const expansion = JSON.stringify({
+      type: "user",
+      message: { content: [{ type: "text", text: "<command-message>ak:compound is running</command-message>\n<command-name>/ak:compound</command-name>" }] },
+    });
+    const toolResult = JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", content: "file contents" }] } });
+    const parsed = claude.parse(`${expansion}\n${toolResult}\n${JSON.stringify({ type: "result", result: "done" })}`);
+    expect(parsed.events.map((e) => e.kind)).toEqual(["user"]);
+    expect(skillLoads(parsed.events).map((l) => [l.skill, l.via])).toEqual([["compound", "expansion"]]);
+  });
+
   test("argv: isolation flags always, model, cap, bundle and appended context only when given", () => {
     expect(claude.command(req, undefined)).toEqual([
       "claude", "-p", "--output-format", "stream-json", "--verbose",
@@ -60,6 +78,7 @@ describe("codex", () => {
     ]);
     expect(parsed.reply).toBe("ok");
     expect(skillLoads(parsed.events).map((l) => l.skill)).toContain("greet");
+    expect(parsed.model).toBeUndefined();
   });
 
   test("documented items: file changes, MCP, web search, and a command cut off by the timeout", () => {
@@ -102,6 +121,13 @@ describe("grok", () => {
     expect(parsed.reply).toBe("ok");
     expect(parsed.turns).toBe(2);
     expect(skillLoads(parsed.events).map((l) => l.skill)).toEqual(["greet"]);
+  });
+
+  test("the served models come from the end line's usage, sorted and joined", () => {
+    expect(grok.parse(fixture("grok-skill.jsonl")).model).toBe("subject-model");
+    const end = (usage: Record<string, unknown>) => JSON.stringify({ type: "end", num_turns: 1, modelUsage: usage });
+    expect(grok.parse(end({ "model-under-test": {}, "helper-under-test": {} })).model).toBe("helper-under-test,model-under-test");
+    expect(grok.parse(end({})).model).toBeUndefined();
   });
 
   test("a live session under dontAsk: the refused write is still an Edit event, and there is no reply", () => {

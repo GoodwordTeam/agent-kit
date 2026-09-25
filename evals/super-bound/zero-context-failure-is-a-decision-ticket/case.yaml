@@ -18,3 +18,9 @@ graders:
       slice as a decision ticket naming the open fork between the two storage shapes, and states
       that a ticket a fresh implementer could not execute is not an implementation ticket however
       much time it would save.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-bound"'
+    arm: with-only
+    weight: 1

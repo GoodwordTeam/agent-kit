@@ -35,3 +35,9 @@ graders:
     criteria: >-
       An explicit blocked-or-replan decision is returned naming the auth-token refresh regression as
       the failure that reached its cap, rather than declaring the run as a whole blocked.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?ultraqa"'
+    arm: with-only
+    weight: 1

@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: drafted-spec-gets-a-panel
-tags: [positive, scenario-1, unscaffolded]
+tags: [positive, scenario-1, unscaffolded, needs-fixture]
 execution:
   prompt: >-
     Before I cut tickets from this, review the payments settlement plan at

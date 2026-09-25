@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: a-failing-required-check-gets-one-bounded-repair-attempt
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    Watch PR 812. The `lint` required check just reported red on the current head — a missing import
+    /ak:babysit-pr Watch PR 812. The `lint` required check just reported red on the current head — a missing import
     in a file this branch added. The settle window has elapsed.
   max_turns: 18
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
@@ -26,9 +26,3 @@ graders:
     criteria: >-
       The check is re-run and its result recorded. The repair is not declared successful on the
       strength of the edit alone.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?babysit-pr"'
-    arm: with-only
-    weight: 1

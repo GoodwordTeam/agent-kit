@@ -27,3 +27,9 @@ graders:
     criteria: >-
       The missing lane's work is not performed by the correctness seat, by the synthesis step, by
       the implementer or by the caller. The run stays resumable so the lane can be re-run.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

@@ -27,3 +27,9 @@ graders:
     criteria: >-
       The response says the lookup must answer before the run can continue, rather than offering to
       proceed at the caller's risk.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-ship"'
+    arm: with-only
+    weight: 1

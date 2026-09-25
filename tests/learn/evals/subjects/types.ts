@@ -25,7 +25,17 @@ export interface MessageEvent {
   text: string;
 }
 
-export type SessionEvent = ToolEvent | MessageEvent;
+/**
+ * A user-side stream line: the host's expansion of a typed slash command, or injected context.
+ * Claude Code expands `/ak:<id>` on the client, so a typed command can load a skill with no Skill
+ * call; the expansion shows only here. Hosts whose stream carries no such line emit none.
+ */
+export interface UserEvent {
+  kind: "user";
+  text: string;
+}
+
+export type SessionEvent = ToolEvent | MessageEvent | UserEvent;
 
 export interface SessionResult {
   /** The subject id from the matrix (a role label such as `subject-a`), never a model name in committed code. */
@@ -38,6 +48,10 @@ export interface SessionResult {
   timedOut: boolean;
   costUsd?: number;
   turns?: number;
+  /** The model the host reported serving the session, as it named it; absent when the host does not say. */
+  model?: string;
+  /** The slash commands the host listed for the session (Claude Code's init line); absent when the host does not say. */
+  slashCommands?: string[];
   durationMs: number;
   /** What the host's isolation did not cover for this session (from `Isolation.leaks`). */
   leaks?: string[];
@@ -62,7 +76,7 @@ export interface SubjectAdapter {
   /** The argv this adapter would run, for the receipt. `model` is the matrix binding, passed through opaquely. */
   command(req: SessionRequest, model: string | undefined): string[];
   /** Parse the host's stdout into the shared event shape. Pure, so it is tested on stored transcripts. */
-  parse(stdout: string): { events: SessionEvent[]; reply: string; costUsd?: number; turns?: number };
+  parse(stdout: string): { events: SessionEvent[]; reply: string; costUsd?: number; turns?: number; model?: string; slashCommands?: string[] };
   /**
    * Set up a private host home under `scratch` (credentials, the bundle's skills, compatibility
    * scans off) and return the environment overrides that point the host at it, plus `release`,
