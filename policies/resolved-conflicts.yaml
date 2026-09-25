@@ -6,6 +6,8 @@
 # prose elsewhere in the plan. Row 19 is the first donor-versus-plan tension rather than an
 # internal one. Row 20 is the first raised by packaging rather than by the sources. Rows 21-23
 # are the first raised by running under an outer supervisor this package does not own.
+# Rows 24-26 bound the opt-in learning runtime: where it runs, who judges for it, and what
+# form its output takes.
 #
 # Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
 # every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
@@ -187,7 +189,7 @@
 
 schema_version: 1
 policy: resolved-conflicts
-rows: 23
+rows: 26
 
 conflicts:
 
@@ -317,7 +319,7 @@ conflicts:
     binds:
       skills: [super-verify, super-review, diagnose, super-build, ultraqa]
       protocols: [apply-findings, review-delta, tdd]
-      roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
+      roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document, learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
       schemas: [finding, verification, review]
       policies: [review, authority-defaults]
       doctrine: [AUTHORING.md]
@@ -527,10 +529,12 @@ conflicts:
       reference packs. No duplicate donor lifecycles, no second run-everything entrypoint. The
       default profile is the useful first operational release; the other profiles add scope
       without adding a competing lifecycle. Progressive disclosure is the mechanism, not a
-      body that depends on another package's hooks.
+      body that depends on another package's hooks. Where a capability genuinely needs hooks or
+      a scheduler, it ships as a host-side runtime behind its own opt-in profile, and the
+      boundary is decided by `learning-runtime-is-host-adapter`.
     discharged_in: [when-to-use, inputs]
     binds:
-      profiles: [core, autonomy, product, maintainer]
+      profiles: [core, autonomy, product, maintainer, learning]
       references: [codebase-design, domain-modeling, engineering-principles, prose-quality]
       doctrine: [AUTHORING.md]
     scenario: 24
@@ -647,7 +651,7 @@ conflicts:
     discharged_in: [hard-gates, outputs]
     binds:
       skills: [super-review, receiving-review]
-      roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document]
+      roles: [supervisor, implementer, reviewer-spec, reviewer-standards, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document, learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
       protocols: [review-delta]
       schemas: [review]
       policies: [review, authority-defaults]
@@ -999,3 +1003,102 @@ conflicts:
       implementer's side, so it may never stand in for an independent seat.
     source:
       plan: "§7.3"
+  - id: learning-runtime-is-host-adapter
+    tension: >-
+      The reference learning stack wires session hooks and a scheduler into the host so that
+      learning happens without anyone asking, and writes what it learns into the project's own
+      instruction files. This package ships skill bodies that must work on any host, and forbids
+      a body that depends on another package's hooks.
+    ruling: >-
+      Hooks, the scheduler and every background learning job live only in the `ak learn` runtime,
+      installed under the opt-in `learning` profile. A packaged skill body never depends on a hook
+      having fired: it reads the learning ledgers through `ak learn` commands when the profile is
+      installed, and does its whole job without them when it is not. The runtime writes only under
+      its per-project ledgers in the host's configuration directory or the configured runtime
+      directory, never inside a project repository. Removing the profile removes the runtime and
+      leaves every ledger, lesson and history intact.
+    discharged_in: [workflow]
+    overrides:
+      source: donor
+      locator: "claude-reflect:commands/reflect.md#L25"
+      position: "syncs learnings to CLAUDE.md files (including subdirectories), skill files, and AGENTS.md"
+      reason: >-
+        Correction capture and pattern detection survive as runtime inputs. The destination moves
+        out of the repository: the runtime keeps a ledger outside it, and anything meant for the
+        project travels as a knowledgebase draft under ruling `learning-drafts-not-publishes`.
+    binds:
+      skills: [compound, compound-refresh]
+      profiles: [learning]
+      adapters: [claude-code, codex, observation-source, review-source]
+    scenario: 21
+    coverage: indirect
+    note: >-
+      Scenario 21 tests the half of this row that keeps project material out of the repository;
+      the hook half has no numbered scenario, and is checked statically, because no packaged body
+      may name a hook as a prerequisite. Scenario 24 exercises the removal half: taking the
+      profile away is a rollback that must not take the learned history with it.
+      Runner-up `not-for`: "never depends on a hook" reads as a declined case. Rejected because the
+      row does not tell a skill to turn a request away; it tells the skill how to proceed when the
+      ledger is present and when it is absent, which is an ordering and step obligation.
+    source:
+      plan: "§1.3, §2.6, §11"
+
+  - id: learning-judge-is-runner-bound
+    tension: >-
+      The reference learning stack picks a named model for each background job, and this catalog
+      strips model selection, effort and routing from every file it ships.
+    ruling: >-
+      Every judgement the learning runtime needs goes through one configurable judge command,
+      bound by whoever runs the runtime through `AK_LEARN_JUDGE`, with hooks disabled in the
+      judge's own session. The repository names no model, tier or effort for any learn role. The
+      judge receives a role prompt read verbatim from roles/learn/, followed by an output contract
+      and the inputs, both appended by the runtime. The judge never sets counts, status, ids or
+      rates; the runtime computes them. A judge that returns nothing, or output the contract
+      rejects, fails the job, the failure is recorded, and nothing is written from it.
+    discharged_in: [authority]
+    binds:
+      roles: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
+      profiles: [learning]
+    scenario: 23
+    coverage: indirect
+    note: >-
+      Scenario 23 is exercised at one remove: because the judge cannot set a count or a status, a
+      routine run in which it proposes a lesson still cannot promote one past the evidence gate.
+      Runner-up `outputs`: the row constrains what the judge may return. Rejected because the
+      output limits follow from the decision the row actually makes, which is who fills the
+      judging seat: the runner binds it, and nothing in this repository may name or choose it.
+    source:
+      plan: "§1.3, §2.6"
+
+  - id: learning-drafts-not-publishes
+    tension: >-
+      The learning loop turns review findings and session evidence into guardrails and lessons
+      continuously and unattended, while the knowledgebase treats publishing a lesson as a
+      separate act that needs authority.
+    ruling: >-
+      Every guardrail promoted from the review ledger and every confirmed lesson from the memory
+      ledger becomes a `proposeLesson` candidate draft, a lesson with status `candidate`, never a
+      published lesson. Publishing needs the runner's `publish-lesson` grant or a human's explicit
+      authorization in the session. A pattern or lesson is admitted only on the evidence gate's
+      thresholds, and the runtime, never the judge, sets its counts and status. Where no
+      knowledgebase adapter is bound, the draft stays in the ledger and the run says so; it is
+      never written into the project repository instead.
+    discharged_in: [outputs]
+    binds:
+      skills: [compound, compound-refresh]
+      protocols: [evidence-gate]
+      roles: [learn/pattern-maintainer, learn/consolidator, learn/lesson-merger, learn/skill-scout, code-review/learnings]
+      schemas: [lesson, review-pattern]
+      profiles: [learning]
+      adapters: [knowledgebase]
+    scenario: 23
+    coverage: direct
+    note: >-
+      Scenario 23 is this row head-on: a routine run with no failure, correction or surprising
+      review result produces no draft, and a run that does produce one produces a candidate.
+      Runner-up `authority`: publishing needs a grant. Rejected because the grant rule is already
+      decided by authority-defaults' `publish-lesson` entry; what this row decides is the form in
+      which learning output leaves the runtime, which is a constraint on what is emitted.
+    source:
+      plan: "§7.1, §8"
+      locator: G:L1618

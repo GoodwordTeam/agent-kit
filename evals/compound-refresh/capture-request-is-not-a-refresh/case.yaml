@@ -1,0 +1,16 @@
+schema_version: "1.1"
+name: capture-request-is-not-a-refresh
+tags: [negative]
+execution:
+  prompt: >-
+    We fixed the deadlock in the payment worker this morning after two failed attempts. Write down
+    what we learned from it.
+  max_turns: 8
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: no-refresh-run
+    type: llm
+    weight: 1
+    criteria: >-
+      No existing lesson is audited or changed. The response states that capturing a new lesson is a
+      separate, human-started compound run.

@@ -2133,11 +2133,11 @@ not be given its required context returns `unavailable`, which is a result rathe
 is never downgraded to an empty result and is never backfilled. This contract routed the second kind
 into the word the first kind owns, which is the one thing the ruling forbids.
 
-The vocabulary is not a single token, and the bodies establish the range. Twenty-six of the
-twenty-nine role bodies return `unavailable` under that heading. The three that do not are the core
-roles: `roles/supervisor/ROLE.md` returns no choice, `roles/implementer/ROLE.md` returns `BLOCKED`,
-and `roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and
-all three satisfy it, because what it requires is a result that blocks and is never read as assent
+The vocabulary is not a single token, and the bodies establish the range. Every role body but
+three returns `unavailable` under that heading. The three that do not are the core roles:
+`roles/supervisor/ROLE.md` returns no choice, `roles/implementer/ROLE.md` returns `BLOCKED`, and
+`roles/plan-review/planner/ROLE.md` returns the missing input. The ruling binds all three and all
+three satisfy it, because what it requires is a result that blocks and is never read as assent
 rather than a particular word — and all three carry the ruling itself, as the same `## Never` row,
 in `roles/implementer/ROLE.md`, `roles/plan-review/planner/ROLE.md` and
 `roles/supervisor/ROLE.md`. What no seat may do is leave the same trace for *found nothing* and

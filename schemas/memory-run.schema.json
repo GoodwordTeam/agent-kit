@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/memory-run.schema.json",
+  "title": "Memory run",
+  "description": "One line of the memory ledger's run log, runs.jsonl. Every job records one, including a rejected or failed one, so an empty memory can be told apart from a memory whose rewrite was refused (protocol evidence-gate). 'dropped_by_provenance' is how many claims the evidence gate removed because they cited no id the judge was shown. Jobs may add fields of their own, so the object stays open.",
+  "type": "object",
+  "required": ["ts", "job", "status"],
+  "properties": {
+    "ts": { "$ref": "common.schema.json#/$defs/timestamp" },
+    "job": { "enum": ["reflect", "nightly", "weekly", "episodes"] },
+    "status": {
+      "description": "'ok' was written; 'rejected' passed parsing but failed the gate and left the previous state in place; 'failed' produced nothing usable.",
+      "enum": ["ok", "rejected", "failed"]
+    },
+    "reason": { "type": "string" },
+    "trigger": { "type": "string" },
+    "id": { "type": "string" },
+    "dropped_by_provenance": { "type": "integer", "minimum": 0 },
+    "tokens_in": { "type": "integer", "minimum": 0 },
+    "tokens_out": { "type": "integer", "minimum": 0 },
+    "max_obs_id": { "type": "integer", "minimum": 0 },
+    "episodes": { "type": "integer", "minimum": 0 },
+    "selected": { "type": "integer", "minimum": 0 },
+    "compacted_pages": { "type": "integer", "minimum": 0 },
+    "stale_lessons": { "type": "integer", "minimum": 0 },
+    "new": { "type": "integer", "minimum": 0 }
+  }
+}

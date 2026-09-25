@@ -1,0 +1,249 @@
+import { describe, expect, test } from "bun:test";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { RunResult } from "../../src/learn/core/proc.ts";
+import { reflectFolderName } from "../../src/learn/core/paths.ts";
+import { GitHubReviewSource, paginatedArray, type ReviewComment } from "../../src/learn/sources/github.ts";
+import { appendEvents, eventHash, loadEvents, makeEvent, parseSeverity } from "../../src/learn/review/events.ts";
+import { correctionEvent, githubCommentEvent, ingest, observationEvent, reportEvent } from "../../src/learn/review/ingest.ts";
+import { reviewLedger } from "../../src/learn/review/ledger.ts";
+import { gitRepo, MemFixture, scratch, testContext } from "./helpers.ts";
+
+// Shapes as `gh api repos/<owner>/<name>/pulls/<n>/comments` returns them; names and text are generic.
+const FINDING: ReviewComment = {
+  id: 1001,
+  in_reply_to_id: null,
+  path: "src/orders/settle.ts",
+  line: null,
+  original_line: 262,
+  created_at: "2026-09-16T22:10:00Z",
+  user: { login: "review-bot[bot]" },
+  html_url: "https://github.com/acme/app/pull/42#discussion_r1001",
+  body:
+    '<a href="#"><img alt="P1" src="https://example.test/badges/p1.svg" align="top"></a> **Escalation can ' +
+    "overwrite settlement**\n\nThe check reads `stillOpen`",
+};
+const REPLY: ReviewComment = {
+  id: 1002,
+  in_reply_to_id: 1001,
+  path: FINDING.path,
+  line: null,
+  original_line: 262,
+  created_at: "2026-09-16T23:00:00Z",
+  user: { login: "alice" },
+  html_url: "https://github.com/acme/app/pull/42#discussion_r1002",
+  body: "Fixed in a8e01de",
+};
+
+function ok(stdout: string): RunResult {
+  return { code: 0, stdout, stderr: "", timedOut: false };
+}
+
+describe("github comment parsing", () => {
+  test("badge severity, author, line fallback, stripped text and a stable hash", () => {
+    const event = githubCommentEvent(FINDING, new Map([[FINDING.id, FINDING]]), 42, "122fc42b", "alice", "app");
+    expect(event.severity).toBe("P1");
+    expect(event.author).toBe("review-bot[bot]");
+    expect([event.source, event.kind]).toEqual(["github", "finding"]);
+    expect(event.line).toBe(262);
+    expect(event.text.startsWith("**Escalation can overwrite settlement**")).toBe(true);
+    // Computed independently: sha1(b"github\x00" + url)[:16].
+    expect(event.hash).toBe("26ae41648928cffe");
+  });
+
+  test("a reply by the PR author is a resolution linked to its parent finding", () => {
+    const event = githubCommentEvent(REPLY, new Map([[FINDING.id, FINDING]]), 42, "122fc42b", "alice", "app");
+    expect([event.source, event.kind]).toEqual(["author-reply", "resolution"]);
+    expect(event.in_reply_to).toBe("26ae41648928cffe");
+    expect(event.severity).toBeNull();
+  });
+
+  test("a reply by a third party is a github-reply; an unknown parent leaves no link", () => {
+    const event = githubCommentEvent(REPLY, new Map(), 42, "x", "bob", "app");
+    expect(event.source).toBe("github-reply");
+    expect(event.in_reply_to).toBeUndefined();
+  });
+
+  test("severity from bare text, and none", () => {
+    expect(parseSeverity("P2: unguarded read")).toBe("P2");
+    expect(parseSeverity("looks good")).toBeNull();
+    expect(parseSeverity("P9 is not a level")).toBeNull();
+  });
+
+  test("an issue comment counts only as a review report, and bot noise is dropped", () => {
+    const base = { html_url: "https://github.com/acme/app/pull/42#issuecomment-1", created_at: "2026-09-16T00:00:00Z", user: { login: "carol" } };
+    expect(reportEvent({ ...base, body: "## Review\n\n- the lock is taken late" }, 42, "s", "app")?.source).toBe("review-report");
+    expect(reportEvent({ ...base, body: "thanks, merging" }, 42, "s", "app")).toBeNull();
+    expect(reportEvent({ ...base, body: "## Review\nMergify Payload" }, 42, "s", "app")).toBeNull();
+  });
+});
+
+describe("gh pagination", () => {
+  test("concatenated pages flatten, and a `][` inside a body does not split a page", () => {
+    const text = '[{"id":1,"body":"a ][ b"}][{"id":2,"body":"c"}]\n';
+    expect(paginatedArray<{ id: number }>(text).map((item) => item.id)).toEqual([1, 2]);
+    expect(paginatedArray("")).toEqual([]);
+    expect(paginatedArray("not json")).toEqual([]);
+  });
+
+  test("the source asks gh for the right endpoints and never for a token", () => {
+    const calls: string[][] = [];
+    const source = new GitHubReviewSource("/work", (args) => {
+      calls.push([...args]);
+      if (args[0] === "repo") return ok("acme/app\n");
+      if (args[0] === "pr") return ok(JSON.stringify({ number: 42, headRefOid: "abc", author: { login: "alice" } }));
+      return ok("[]");
+    });
+    expect(source.repo()).toBe("acme/app");
+    expect(source.pullRequests("acme/app", [42]).map((pr) => pr.number)).toEqual([42]);
+    source.reviewComments("acme/app", 42);
+    expect(calls.at(-1)).toEqual(["api", "--paginate", "repos/acme/app/pulls/42/comments"]);
+    expect(calls.flat().some((arg) => /token/i.test(arg))).toBe(false);
+  });
+});
+
+describe("raw layer", () => {
+  test("appending twice adds once, in order", () => {
+    const ctx = testContext();
+    const ledger = reviewLedger(ctx.config, scratch());
+    const make = (text: string) =>
+      makeEvent({
+        source: "github",
+        kind: "finding",
+        project: "app",
+        pr: 1,
+        sha: null,
+        author: "a",
+        severity: null,
+        path: null,
+        line: null,
+        text,
+        url: null,
+        ts: null,
+      });
+    const events = [make("a"), make("b")];
+    expect(appendEvents(ledger, events)).toBe(2);
+    expect(appendEvents(ledger, [...events, make("c")])).toBe(1);
+    expect(loadEvents(ledger).map((event) => event.text)).toEqual(["a", "b", "c"]);
+  });
+
+  test("the hash is sha1 over source NUL key, 16 hex", () => {
+    expect(eventHash("github", "https://github.com/acme/app/pull/42#discussion_r1001")).toBe("26ae41648928cffe");
+    expect(eventHash("github", "k")).not.toBe(eventHash("github-reply", "k"));
+  });
+
+  test("a correction is keyed on its day and text, so two recorders of one correction make one event", () => {
+    const a = correctionEvent("no, use the fixture clock", "2026-09-16T10:00:00Z", "app", "claude");
+    const b = correctionEvent("no, use the fixture clock", "2026-09-16T18:30:00Z", "app", "codex");
+    expect(a.hash).toBe(b.hash);
+    expect(correctionEvent("no, use the fixture clock", "2026-09-17T10:00:00Z", "app", "claude").hash).not.toBe(a.hash);
+  });
+});
+
+describe("claude-mem observations", () => {
+  const row = (over: Partial<Parameters<typeof observationEvent>[0]>) => ({
+    id: 7,
+    memory_session_id: "s",
+    project: "app",
+    type: "review-finding",
+    title: "Reviewer: teardown leaks rows #812",
+    subtitle: null,
+    narrative: "teardown removes some rows",
+    facts: null,
+    concepts: "[]",
+    files_read: null,
+    files_modified: '["tests/setup.ts"]',
+    discovery_tokens: 0,
+    created_at: "2026-09-16T00:00:00Z",
+    created_at_epoch: 0,
+    platform_source: "codex",
+    ...over,
+  });
+
+  test("review observations and review-flavoured gotchas become events; others do not", () => {
+    const finding = observationEvent(row({}), "app")!;
+    expect([finding.source, finding.kind, finding.pr, finding.path, finding.platform, finding.obs_id]).toEqual([
+      "claude-mem",
+      "finding",
+      812,
+      "tests/setup.ts",
+      "codex",
+      7,
+    ]);
+    expect(finding.hash).toBe(eventHash("claude-mem", "obs:7"));
+    expect(observationEvent(row({ type: "review-resolution" }), "app")!.kind).toBe("resolution");
+    expect(observationEvent(row({ type: "discovery", concepts: '["gotcha"]', title: "P2 finding on the cache" }), "app")).not.toBeNull();
+    expect(observationEvent(row({ type: "discovery", concepts: '["gotcha"]', title: "Bun caches lockfiles" }), "app")).toBeNull();
+    expect(observationEvent(row({ type: "discovery" }), "app")).toBeNull();
+  });
+
+  test("ingest reads after the watermark, then advances it", () => {
+    const base = scratch();
+    const memDb = join(base, "mem.db");
+    const mem = new MemFixture(memDb);
+    const repo = gitRepo(join(base, "app"));
+    mem.observation({
+      sid: "s1",
+      project: "app",
+      type: "review-finding",
+      title: "Reviewer: lock taken late",
+      at: Date.parse("2026-09-10T00:00:00Z"),
+    });
+    mem.observation({ sid: "s1", project: "app/wt", type: "discovery", title: "unrelated", at: Date.parse("2026-09-10T00:00:00Z") });
+    const ctx = testContext({ env: { AK_LEARN_MEM_DB: memDb } });
+    const ledger = reviewLedger(ctx.config, repo);
+    expect(ingest(ctx, ledger, repo, { skipGithub: true }).fresh).toBe(1);
+    expect(JSON.parse(readFileSync(ledger.path("raw/.watermark.json"), "utf8")).claude_mem_max_id).toBe(2);
+    mem.observation({ sid: "s2", project: "app", type: "review-finding", title: "Reviewer: second", at: Date.parse("2026-09-11T00:00:00Z") });
+    mem.close();
+    expect(ingest(ctx, ledger, repo, { skipGithub: true }).fresh).toBe(1);
+    expect(ledger.git(["log", "--format=%s"]).stdout).toContain("ingest: +1 events");
+  });
+});
+
+describe("ingest end to end", () => {
+  test("github, reflect queue and dedup across runs; codex skips the reflect queue; dry run writes nothing", () => {
+    const base = scratch();
+    const repo = gitRepo(join(base, "app"));
+    const ctx = testContext();
+    const queueDir = join(ctx.config.configDir, "projects", reflectFolderName(repo));
+    mkdirSync(queueDir, { recursive: true });
+    writeFileSync(
+      join(queueDir, "learnings-queue.json"),
+      JSON.stringify([
+        { sentiment: "correction", message: "no, the fixtures live in tests/fixtures", timestamp: "2026-09-16T10:00:00Z" },
+        { sentiment: "positive", message: "great approach", timestamp: "2026-09-16T10:00:00Z" },
+      ]),
+    );
+    const runner = (args: readonly string[]): RunResult => {
+      const path = args[2] ?? "";
+      if (args[0] === "pr") return ok(JSON.stringify({ number: 42, headRefOid: "abc", author: { login: "alice" } }));
+      if (path.endsWith("pulls/42/comments")) return ok(JSON.stringify([FINDING]) + JSON.stringify([REPLY]));
+      if (path.endsWith("pulls/42/reviews")) return ok(JSON.stringify([{ body: "", html_url: "u", submitted_at: null, user: { login: "x" } }]));
+      return ok("[]");
+    };
+    const github = new GitHubReviewSource(repo, runner);
+    const ledger = reviewLedger(ctx.config, repo);
+
+    const dry = testContext({ env: { AK_LEARN_DRY_RUN: "1", CLAUDE_CONFIG_DIR: ctx.config.configDir } });
+    expect(ingest(dry, ledger, repo, { repo: "acme/app", prs: [42], github, skipMem: true }).events).toHaveLength(3);
+    expect(loadEvents(ledger)).toHaveLength(0);
+
+    const first = ingest(ctx, ledger, repo, { repo: "acme/app", prs: [42], github, skipMem: true });
+    expect(first.fresh).toBe(3);
+    expect(loadEvents(ledger).map((event) => event.kind)).toEqual(["finding", "resolution", "correction"]);
+    expect(ingest(ctx, ledger, repo, { repo: "acme/app", prs: [42], github, skipMem: true }).fresh).toBe(0);
+    const codex = ingest(ctx, ledger, repo, { repo: "acme/app", prs: [42], github, skipMem: true, source: "codex" });
+    expect(codex.events.some((event) => event.kind === "correction")).toBe(false);
+  });
+
+  test("a GitHub source that cannot be read is reported unavailable, not taken as no findings", () => {
+    const repo = gitRepo(join(scratch(), "repo"));
+    const ctx = testContext({ cwd: repo });
+    const github = new GitHubReviewSource(repo, (): RunResult => ({ code: 1, stdout: "", stderr: "no remote", timedOut: false }));
+    const result = ingest(ctx, reviewLedger(ctx.config, repo), repo, { github, skipMem: true, source: "codex" });
+    expect(result.unavailable).toEqual(["github"]);
+    expect(ctx.err.join("\n")).toContain("review source github unavailable");
+    expect(ingest(ctx, reviewLedger(ctx.config, repo), repo, { skipGithub: true, skipMem: true, source: "codex" }).unavailable).toEqual([]);
+  });
+});

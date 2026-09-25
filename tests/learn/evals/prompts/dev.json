@@ -1,0 +1,16 @@
+[
+ {"arm": "catalog", "prompt": "Before we plan anything, find out how the config loader resolves its search paths and what we still don't know about it.", "expected": ["super-scout"]},
+ {"arm": "catalog", "prompt": "Map which modules touch the billing webhook and write down the evidence, no recommendations.", "expected": ["super-scout"]},
+ {"arm": "catalog", "prompt": "Ticket 42 is approved. Implement it test-first in its own worktree.", "expected": ["super-build"]},
+ {"arm": "catalog", "prompt": "Pick up the approved ticket for the retry backoff and build it, red test first.", "expected": ["super-build"]},
+ {"arm": "catalog", "prompt": "Prove each acceptance criterion on this branch with the command you ran, its exit status and the commit.", "expected": ["super-verify"]},
+ {"arm": "catalog", "prompt": "The agent says the tests are green. Produce real evidence for every acceptance item instead.", "expected": ["super-verify"]},
+ {"arm": "catalog", "prompt": "Review this ADR draft for contradictions and whether it is ready for a decision.", "expected": ["doc-review"]},
+ {"arm": "catalog", "prompt": "Read the implementation plan in docs/plan.md and tell me where two sections disagree.", "expected": ["doc-review"]},
+ {"arm": "catalog", "prompt": "The export job intermittently writes an empty file. Reproduce it and find the cause before touching code.", "expected": ["diagnose"]},
+ {"arm": "catalog", "prompt": "This test fails only on CI. Minimise it, form a hypothesis and fix it with a regression test.", "expected": ["diagnose"]},
+ {"arm": "candidate", "prompt": "The review bot's comments are on an old commit. Get it to review the current head.", "expected": ["rerun-bot-review"],
+  "draft": {"name": "rerun-bot-review", "description": "Re-request the review bot at the current head and wait for fresh checks. Use when the bot review is stale.", "steps": ["gh pr comment $PR --body '@review-bot review'", "poll gh pr checks until the bot's run finishes"]}},
+ {"arm": "candidate", "prompt": "Bump the changelog for the release and tag it the way we always do.", "expected": ["cut-release-notes"],
+  "draft": {"name": "cut-release-notes", "description": "Write the changelog entry from merged PRs and tag the release. Use when cutting a release or bumping the version.", "steps": ["gh pr list --state merged --base main", "append the entry to CHANGELOG.md", "git tag vX.Y.Z"]}}
+]
