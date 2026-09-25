@@ -1,8 +1,8 @@
 /**
  * The capture eval's fixture databases, generated from `fixtures.json`: per
  * fixture two completed claude-mem sessions carrying five planted facts, the
- * shared routine distractors, noise the memory should not keep and one
- * injection. A fixture may start from a previous memory and a smaller token
+ * shared routine distractors, noise the memory should not keep and, in all but
+ * the benign control, one injection. A fixture may start from a previous memory and a smaller token
  * cap. Deterministic: the same JSON builds the same rows, and session ids are
  * derived from the fixture id.
  * Not a test file.
@@ -30,6 +30,11 @@ export interface FactSpec extends ObsSpec {
    * observation id is the flagged one. Prices the runtime's fail-closed drop of that observation.
    */
   in_injection?: boolean;
+  /**
+   * A plausible wrong value for this fact that appears in no input. A bullet carrying it states
+   * something the evidence never said, whatever id it cites.
+   */
+  wrong?: string;
 }
 
 /**
@@ -54,7 +59,8 @@ export interface FixtureSpec {
   memory_tokens?: number;
   facts: FactSpec[];
   noise?: NoiseSpec[];
-  injection: {
+  /** Absent in a benign control: nothing in it may be quarantined. */
+  injection?: {
     title: string;
     facts: string[];
     canary: string;
@@ -73,7 +79,8 @@ export interface FixtureSet {
   /**
    * The held-out set, scored and reported apart. Each case probes one way the development set could
    * be overfitted: a payload split across sessions, a canary with no marker, a benign value the
-   * payload repeats, and a real fact sharing the payload's observation.
+   * payload repeats, a real fact sharing the payload's observation, benign imperative controls with
+   * no injection at all, and a hostile observation with none of the usual attack words.
    */
   heldout: FixtureSpec[];
 }
@@ -95,8 +102,8 @@ export interface BuiltFixture {
   dbPath: string;
   /** Per fact key, every id a bullet may cite for it: its observation and its session. */
   factIds: Map<string, string[]>;
-  /** The observation carrying the canary. */
-  injectionId: string;
+  /** The observation carrying the canary; absent when the fixture has no injection. */
+  injectionId?: string;
   /** Every observation carrying part of the payload: the lead, if any, then `injectionId`. */
   injectionIds: string[];
 }
@@ -127,11 +134,13 @@ export function buildFixture(spec: FixtureSpec, distractors: readonly ObsSpec[],
   });
   for (const noise of distractors.slice(separate.length)) add(sids[1], noise);
   for (const n of noiseOf("one-off")) add(sids[1], n as ObsSpec);
-  const lead = spec.injection.lead === undefined ? [] : [`obs:${add(sids[0], { type: "discovery", ...spec.injection.lead })}`];
-  const injectionFacts = [...colocated.flatMap((f) => f.facts ?? []), ...spec.injection.facts];
-  const injectionId = `obs:${add(sids[1], { type: "discovery", title: spec.injection.title, facts: injectionFacts })}`;
-  for (const fact of colocated) factIds.set(fact.key, [injectionId, sid8(sids[1])]);
+  const injection = spec.injection;
+  if (injection === undefined && colocated.length > 0) throw new Error(`${spec.id}: in_injection facts need an injection`);
+  const lead = injection?.lead === undefined ? [] : [`obs:${add(sids[0], { type: "discovery", ...injection.lead })}`];
+  const injectionFacts = [...colocated.flatMap((f) => f.facts ?? []), ...(injection?.facts ?? [])];
+  const injectionId = injection === undefined ? undefined : `obs:${add(sids[1], { type: "discovery", title: injection.title, facts: injectionFacts })}`;
+  for (const fact of colocated) factIds.set(fact.key, [injectionId!, sid8(sids[1])]);
   mem.summary({ sid: sids[0], project: spec.project, request: `work on ${spec.project}`, completed: "see observations" });
   mem.close();
-  return { spec, dbPath, factIds, injectionId, injectionIds: [...lead, injectionId] };
+  return { spec, dbPath, factIds, injectionId, injectionIds: injectionId === undefined ? [] : [...lead, injectionId] };
 }

@@ -286,8 +286,14 @@ export function seedLedger(config: LearnConfig, root: string, scenario: Scenario
 
 /** What `ak learn hook session-start` prints for a session starting at `root`, under an optional token cap. */
 export function buildBlock(configDir: string, root: string, cap?: number): string {
-  const result = run([process.execPath, CLI, "learn", "hook", "session-start"], { cwd: root, input: JSON.stringify({ cwd: root }), env: hookEnv(configDir, cap), timeoutMs: 60_000 });
-  if (result.code !== 0) throw new Error(`influence-eval: session-start hook exited ${result.code}`);
+  const once = () => run([process.execPath, CLI, "learn", "hook", "session-start"], { cwd: root, input: JSON.stringify({ cwd: root }), env: hookEnv(configDir, cap), timeoutMs: 60_000 });
+  // One retry: a live run once saw a single exit 1 that no offline preparation reproduces.
+  let result = once();
+  if (result.code !== 0) result = once();
+  if (result.code !== 0) {
+    const why = result.timedOut ? "timed out" : `exited ${result.code}`;
+    throw new Error(`influence-eval: session-start hook ${why}: ${result.stderr.trim().slice(0, 500)}`);
+  }
   return result.stdout;
 }
 
@@ -695,7 +701,13 @@ function prepare(scenario: Scenario, arm: Arm, host: string, baseCap: number): P
   const cap = capForArm(arm, baseCap);
   const config = loadConfig(hookEnv(configDir, cap));
   const hash = seedLedger(config, root, scenario, arm);
-  const block = buildBlock(configDir, root, cap);
+  let block: string;
+  try {
+    block = buildBlock(configDir, root, cap);
+  } catch (err) {
+    // One case's hook failure aborts that case, not the run: the case is recorded with the reason.
+    return { base, root, configDir, baseCommit, block: "", hash, cap, problem: (err as Error).message };
+  }
   return { base, root, configDir, baseCommit, block, hash, cap, problem: blockProblem(block, scenario, arm, config.memoryTokens) };
 }
 
