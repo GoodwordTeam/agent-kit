@@ -15,7 +15,7 @@ import { reviewLedger, reviewLedgerDir } from "./ledger.ts";
 import { maintain } from "./maintain.ts";
 import { pendingPromotions, promoteById, propose, retire, rollback } from "./propose.ts";
 
-/** `--repo PATH` is the project root, as in every other area; `--cwd` is kept as an alias. */
+/** `--repo PATH` is the project root, as in every other area; without it the root of `--cwd`. */
 function rootFor(args: LearnArgs, ctx: LearnContext): string | null {
   const root = mainRepoRoot(flag(args, "repo") ?? flag(args, "cwd") ?? ctx.cwd);
   if (root === null) ctx.io.err("ak learn review: not inside a git repository");
@@ -53,9 +53,13 @@ export function prNumbers(value: string | undefined): number[] {
   });
 }
 
-/** Ingest options from the flags. `--gh-repo` names the GitHub repository; without it the source infers it from the git remote. */
-export function ingestOptions(args: LearnArgs): IngestOptions {
+/**
+ * Ingest options from the flags. `--gh-repo` names the GitHub repository; without it the source infers it from the git remote.
+ * `--cwd` is the session's working directory, so a linked worktree's branch picks the PR, not the main checkout's.
+ */
+export function ingestOptions(args: LearnArgs, ctx: LearnContext): IngestOptions {
   return {
+    cwd: flag(args, "cwd") ?? flag(args, "repo") ?? ctx.cwd,
     prs: prNumbers(flag(args, "pr")),
     since: flag(args, "since"),
     repo: flag(args, "gh-repo"),
@@ -66,7 +70,7 @@ export function ingestOptions(args: LearnArgs): IngestOptions {
 }
 
 function doIngest(args: LearnArgs, ctx: LearnContext, ledger: Ledger, root: string): void {
-  const result = ingest(ctx, ledger, root, ingestOptions(args));
+  const result = ingest(ctx, ledger, root, ingestOptions(args, ctx));
   if (ctx.config.dryRun) {
     for (const event of result.events) {
       const where = `${event.path ?? ""}:${event.line ?? ""}`;
@@ -83,7 +87,7 @@ export const reviewArea: LearnArea = {
   summary: "review findings -> pattern ledger -> guardrails, with the repeat rate per run",
   verbs: {
     run: {
-      usage: "review run [--pr N[,N]] [--repo PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--source codex]   ingest, maintain, propose",
+      usage: "review run [--pr N[,N]] [--repo PATH] [--cwd PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--source codex]   ingest, maintain, propose",
       run: (args, ctx) =>
         locked(args, ctx, (ledger, root) => {
           // Maintain runs even with nothing fresh: a batch the judge failed on earlier is still waiting.
@@ -94,7 +98,7 @@ export const reviewArea: LearnArea = {
         }),
     },
     ingest: {
-      usage: "review ingest [--pr N[,N]] [--repo PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--no-github] [--no-mem]",
+      usage: "review ingest [--pr N[,N]] [--repo PATH] [--cwd PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--no-github] [--no-mem]",
       run: (args, ctx) =>
         locked(args, ctx, (ledger, root) => {
           doIngest(args, ctx, ledger, root);

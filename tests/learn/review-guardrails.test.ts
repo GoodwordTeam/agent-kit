@@ -147,9 +147,9 @@ describe("ak learn review", () => {
     expect(ctx.out.at(-1)).toBe(`ledger: ${reviewLedgerDir(ctx.config, repo)}`);
     expect(run("report", ["--cwd", repo], ctx)).toBe(0);
     expect(ctx.out.at(-1)).toBe(`ledger: ${reviewLedgerDir(ctx.config, repo)}`);
-    expect(ingestOptions(parseLearnArgs(["--repo", repo, "--gh-repo", "acme/app", "--pr", "4,5"]))).toMatchObject({ repo: "acme/app", prs: [4, 5] });
-    expect(ingestOptions(parseLearnArgs(["--gh-repo=acme/app"])).repo).toBe("acme/app");
-    expect(ingestOptions(parseLearnArgs(["--repo", repo])).repo).toBeUndefined();
+    expect(ingestOptions(parseLearnArgs(["--repo", repo, "--gh-repo", "acme/app", "--pr", "4,5"]), ctx)).toMatchObject({ repo: "acme/app", prs: [4, 5] });
+    expect(ingestOptions(parseLearnArgs(["--gh-repo=acme/app"]), ctx).repo).toBe("acme/app");
+    expect(ingestOptions(parseLearnArgs(["--repo", repo]), ctx).repo).toBeUndefined();
   });
 
   test("dry runs report and write nothing; a bad --pr and a non-git directory fail", () => {

@@ -4,7 +4,7 @@
 import { resolve } from "node:path";
 import { flag, type LearnArea, type LearnArgs, type LearnContext } from "../core/context.ts";
 import { mainRepoRoot } from "../core/paths.ts";
-import { discover, loadRegistry, promoteCandidate, rejectCandidate, skillsLedger } from "./learn.ts";
+import { discover, loadRegistry, promoteCandidate, rejectCandidate, runSkillLearn, skillsLedger } from "./learn.ts";
 import { rosterSection } from "./roster.ts";
 
 /** `--repo`, else the working directory, resolved to its main repository root. */
@@ -57,6 +57,16 @@ export const skillsArea: LearnArea = {
         }
         const summary = discover(ctx, root, { days, force: args.flags.has("force") });
         ctx.io.out(summary === "" ? "another discovery holds the skills ledger; skipped" : summary);
+        return 0;
+      },
+    },
+    run: {
+      usage: "skills run [--repo P]                        discovery at most once a day, then refresh candidate use counts",
+      run: (args, ctx) => {
+        const root = needRoot(args, ctx);
+        if (root === null) return 2;
+        const summary = runSkillLearn(ctx, root);
+        if (summary !== "") ctx.io.out(summary);
         return 0;
       },
     },

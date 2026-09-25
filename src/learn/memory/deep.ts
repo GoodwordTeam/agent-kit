@@ -14,6 +14,8 @@ import type { LearnContext } from "../core/context.ts";
 import type { Ledger } from "../core/ledger.ts";
 import { buildPrompt } from "../core/roles.ts";
 import { nowMs, todayLocal } from "../core/store.ts";
+import { ClaudeMemSource } from "../sources/claude-mem.ts";
+import { sessionsOf } from "./consolidate.ts";
 import {
   appendRun,
   list,
@@ -24,6 +26,7 @@ import {
   readState,
   rewriteIndex,
   saveState,
+  sid8,
   str,
   writeLesson,
 } from "./ledger.ts";
@@ -147,8 +150,22 @@ export function decayLessons(ledger: Ledger, today = todayLocal()): string[] {
 }
 
 /** Distinct sessions an evidence list spans, from `S` ids only; an `obs:` id cannot be mapped without claude-mem. */
-function sessionsOf(evidence: readonly string[]): Set<string> {
-  return new Set(evidence.filter((id) => id.startsWith("S")).map((id) => id.slice(1)));
+/** `obs:N` to the session it came from, for every observation cited by a lesson, as nightly consolidation maps them. */
+export function lessonObsSessions(ctx: LearnContext, ledger: Ledger): Map<string, string> {
+  const ids = [...loadLessons(ledger).values()]
+    .flatMap(({ meta }) => list(meta.evidence))
+    .filter((id) => /^obs:\d+$/.test(id))
+    .map((id) => Number(id.slice(4)));
+  const mem = ClaudeMemSource.open(ctx.config.memDb);
+  if (mem === null || ids.length === 0) {
+    mem?.close();
+    return new Map();
+  }
+  try {
+    return new Map([...mem.observationSessions(ids)].map(([id, sid]) => [`obs:${id}`, sid8(sid).slice(1)]));
+  } finally {
+    mem.close();
+  }
 }
 
 function pairsOf(value: unknown, known: ReadonlyMap<string, unknown>): Array<[string, string]> {
@@ -168,11 +185,18 @@ export interface PairResult {
 /**
  * Apply merge and contradiction pairs. A merge keeps the lower id, unions
  * evidence and tags (so the dropped page's decay protection survives), keeps
- * both statements, and recomputes status from the sessions the evidence spans.
+ * both statements, and recomputes status from the sessions the evidence spans
+ * (`obs:N` through `obsSession`). A merge never lowers the session count and
+ * never demotes a confirmed lesson.
  * A contradiction marks both sides `conflict`, which keeps them out of the
  * session-start block.
  */
-export function applyPairs(ledger: Ledger, reply: Record<string, unknown>, today = todayLocal()): PairResult {
+export function applyPairs(
+  ledger: Ledger,
+  reply: Record<string, unknown>,
+  today = todayLocal(),
+  obsSession: ReadonlyMap<string, string> = new Map(),
+): PairResult {
   const lessons = loadLessons(ledger);
   const result: PairResult = { merged: [], conflicts: [], confirmed: [] };
   for (const pair of pairsOf(reply.merge, lessons)) {
@@ -187,8 +211,8 @@ export function applyPairs(ledger: Ledger, reply: Record<string, unknown>, today
     km.tags = [...new Set([...list(km.tags), ...list(dm.tags)])].sort();
     km.last_seen = [str(km.last_seen), str(dm.last_seen)].sort().at(-1)!;
     km.merged = [...new Set([...list(km.merged), drop])].sort();
-    km.sessions = sessionsOf(km.evidence).size;
-    if (km.status === "hypothesis" || km.status === "confirmed") km.status = km.sessions >= 2 ? "confirmed" : "hypothesis";
+    km.sessions = Math.max(sessionsOf(km.evidence, obsSession).size, Number(km.sessions) || 0, Number(dm.sessions) || 0);
+    if (km.status === "hypothesis") km.status = km.sessions >= 2 ? "confirmed" : "hypothesis";
     const body =
       `\n## Statement\n${str(km.statement)}\n\n## Merged from ${drop}\n${str(dm.statement)}\n\n## Evidence\n` +
       km.evidence.map((id) => `- ${id}\n`).join("");
@@ -233,7 +257,7 @@ export function deep(ctx: LearnContext, ledger: Ledger, root: string, review: Le
   let pairs: PairResult = { merged: [], conflicts: [], confirmed: [] };
   if (index !== "(none)") {
     const reply = ctx.judge(deepPrompt(ctx, index));
-    if (reply !== null) pairs = applyPairs(ledger, reply);
+    if (reply !== null) pairs = applyPairs(ledger, reply, todayLocal(), lessonObsSessions(ctx, ledger));
   }
   const runId = `weekly-${todayLocal()}-${nowMs() % 100_000}`;
   const lessons = loadLessons(ledger);

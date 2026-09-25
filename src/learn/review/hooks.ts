@@ -2,7 +2,7 @@
  * The review loop's host hooks.
  *
  * Stop: gate, debounce ten minutes per project, then detach `ak learn review
- * run` followed by `ak learn skills discover` so the session never waits on a
+ * run` followed by `ak learn skills run` so the session never waits on a
  * judge call. Prompt: a submitted prompt that reads as a correction of the
  * agent is appended to the raw layer as a `correction` event.
  *
@@ -41,21 +41,23 @@ function shellQuote(value: string): string {
 }
 
 /**
- * `sh -c` running the review pipeline then skill discovery for `root`, both appending to the pipeline log.
- * The script text is fixed: root, source and log reach it only as the positional parameters `$1`, `$2`
- * and `$3`, always double-quoted, so no path can be read as shell syntax. `ak` replaces the CLI in tests.
+ * `sh -c` running the review pipeline then the debounced skill-learn entry for `root`, both appending to the
+ * pipeline log. `cwd` is the session's working directory, where the current branch's PR is resolved.
+ * The script text is fixed: root, source, log and cwd reach it only as the positional parameters `$1` to
+ * `$4`, always double-quoted, so no path can be read as shell syntax. `ak` replaces the CLI in tests.
  */
 export function pipelineCommand(
   root: string,
+  cwd: string,
   source: string,
   logFile: string,
   ak: readonly string[] = [process.execPath, join(PACKAGE_ROOT, "src", "cli.ts")],
 ): string[] {
   const cli = ak.map(shellQuote).join(" ");
-  const review = `${cli} 'learn' 'review' 'run' '--repo' "$1" '--source' "$2" >> "$3" 2>&1`;
-  const skills = `${cli} 'learn' 'skills' 'discover' '--repo' "$1" >> "$3" 2>&1`;
+  const review = `${cli} 'learn' 'review' 'run' '--repo' "$1" '--cwd' "$4" '--source' "$2" >> "$3" 2>&1`;
+  const skills = `${cli} 'learn' 'skills' 'run' '--repo' "$1" >> "$3" 2>&1`;
   const stamp = `printf '== %s %s %s\\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$2" "$1" >> "$3"`;
-  return ["sh", "-c", `${stamp}; ${review}; ${skills}`, "sh", root, source, logFile];
+  return ["sh", "-c", `${stamp}; ${review}; ${skills}`, "sh", root, source, logFile, cwd];
 }
 
 function touch(path: string): void {
@@ -79,7 +81,7 @@ export function stopHook(ctx: LearnContext, payload: HookPayload, args: LearnArg
   const ledger = reviewLedger(ctx.config, root);
   touch(mark);
   const source = flag(args, "source") === "codex" ? "codex" : "claude";
-  spawner(pipelineCommand(root, source, ledger.path(PIPELINE_LOG)), { cwd: root });
+  spawner(pipelineCommand(root, cwd, source, ledger.path(PIPELINE_LOG)), { cwd: root });
 }
 
 export type DetectionType = "explicit" | "guardrail" | "positive" | "auto";

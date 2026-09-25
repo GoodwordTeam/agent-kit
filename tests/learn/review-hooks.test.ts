@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, utimesSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseLearnArgs } from "../../src/learn/core/context.ts";
 import { run } from "../../src/learn/core/proc.ts";
@@ -38,10 +38,10 @@ describe("stop hook", () => {
     expect(argv.slice(0, 2)).toEqual(["sh", "-c"]);
     const script = argv[2]!;
     const cli = `'${join(PACKAGE_ROOT, "src", "cli.ts")}'`;
-    expect(argv.slice(3)).toEqual(["sh", repo, "claude", join(reviewLedgerDir(ctx.config, repo), PIPELINE_LOG)]);
-    expect(script).toContain(`${cli} 'learn' 'review' 'run' '--repo' "$1" '--source' "$2" >> "$3" 2>&1`);
-    expect(script).toContain(`${cli} 'learn' 'skills' 'discover' '--repo' "$1" >> "$3" 2>&1`);
-    expect(script.indexOf("'review' 'run'")).toBeLessThan(script.indexOf("'skills' 'discover'"));
+    expect(argv.slice(3)).toEqual(["sh", repo, "claude", join(reviewLedgerDir(ctx.config, repo), PIPELINE_LOG), repo]);
+    expect(script).toContain(`${cli} 'learn' 'review' 'run' '--repo' "$1" '--cwd' "$4" '--source' "$2" >> "$3" 2>&1`);
+    expect(script).toContain(`${cli} 'learn' 'skills' 'run' '--repo' "$1" >> "$3" 2>&1`);
+    expect(script.indexOf("'review' 'run'")).toBeLessThan(script.indexOf("'skills' 'run'"));
     expect(script).not.toContain(repo);
     const mark = join(reviewLedgerDir(ctx.config, repo), LAST_RUN_FILE);
     expect(existsSync(mark)).toBe(true);
@@ -62,14 +62,44 @@ describe("stop hook", () => {
     mkdirSync(marks);
     const root = `${base}/x$(touch ${marks}/dollar)y\`touch ${marks}/tick\`"q'z; touch ${marks}/semi`;
     const log = join(base, "pipeline.log");
-    const argv = pipelineCommand(root, "claude", log, ["printf", "[%s]"]);
+    const argv = pipelineCommand(root, `${root}/wt`, "claude", log, ["printf", "[%s]"]);
     const result = run(argv, { cwd: base });
     expect(result.code).toBe(0);
     expect(readdirSync(marks)).toEqual([]);
     const lines = readFileSync(log, "utf8").split("\n");
     expect(lines[0]).toMatch(/^== \d{4}-\d{2}-\d{2}T\S+Z claude /);
     expect(lines[0]!.endsWith(` ${root}`)).toBe(true);
-    expect(lines[1]).toBe(`[learn][review][run][--repo][${root}][--source][claude][learn][skills][discover][--repo][${root}]`);
+    expect(lines[1]).toBe(`[learn][review][run][--repo][${root}][--cwd][${root}/wt][--source][claude][learn][skills][run][--repo][${root}]`);
+  });
+
+  test("a session in a linked worktree hands the pipeline its worktree, and the PR is looked up there", () => {
+    const base = scratch();
+    const repo = gitRepo(join(base, "app"));
+    const wt = join(base, "wt");
+    run(["git", "worktree", "add", "-q", "-b", "feature-x", wt], { cwd: repo });
+    const ctx = testContext();
+    const { spawner, calls } = recorder();
+    stopHook(ctx, { cwd: wt }, parseLearnArgs([]), spawner);
+    const argv = calls[0]!.argv;
+    expect(argv.slice(3)).toEqual(["sh", repo, "claude", join(reviewLedgerDir(ctx.config, repo), PIPELINE_LOG), wt]);
+
+    const bin = join(base, "bin");
+    mkdirSync(bin);
+    const seen = join(base, "gh-cwd");
+    writeFileSync(
+      join(bin, "gh"),
+      `#!/bin/sh\nif [ "$1" = repo ]; then echo acme/app; exit 0; fi\nif [ "$1" = pr ]; then pwd -P >> '${seen}'; git branch --show-current >> '${seen}'; fi\nexit 1\n`,
+    );
+    chmodSync(join(bin, "gh"), 0o755);
+    const path = process.env.PATH;
+    process.env.PATH = `${bin}:${path}`;
+    try {
+      const args = parseLearnArgs(["--repo", repo, "--cwd", wt, "--source", "codex", "--no-mem"]);
+      expect(reviewArea.verbs.ingest!.run(args, testContext({ cwd: base }))).toBe(0);
+    } finally {
+      process.env.PATH = path;
+    }
+    expect(readFileSync(seen, "utf8").split("\n").slice(0, 2)).toEqual([wt, "feature-x"]);
   });
 
   test("the mark and the log are ignored by the ledger, so a debounce never makes a commit", () => {

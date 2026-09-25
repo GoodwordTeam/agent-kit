@@ -237,6 +237,8 @@ export interface IngestOptions {
   prs?: readonly number[];
   /** `YYYY-MM-DD`: lower bound for claude-mem observations, and PR selection when no numbers are given. */
   since?: string;
+  /** The session's working directory; `gh` resolves the current branch's PR there. The root when absent. */
+  cwd?: string;
   /** `owner/name`; resolved through `gh` when absent. */
   repo?: string;
   /** `codex` sessions have no claude-reflect queue. */
@@ -264,7 +266,7 @@ export function ingest(ctx: LearnContext, ledger: Ledger, root: string, options:
   const unavailable: string[] = [];
 
   if (options.skipGithub !== true) {
-    const github = options.github ?? new GitHubReviewSource(root);
+    const github = options.github ?? new GitHubReviewSource(options.cwd ?? root);
     const repo = options.repo ?? github.repo();
     if (repo === null) {
       // An absent source is reported, never read as "no findings": a quiet run would look like a clean one.

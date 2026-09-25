@@ -12,7 +12,7 @@ import { applyConsolidation } from "../../src/learn/memory/consolidate.ts";
 import { applyPairs, compactEvidence, compactReviewLedger, decayLessons, deep } from "../../src/learn/memory/deep.ts";
 import { ensureMemoryLedger, loadLessons, writeLesson } from "../../src/learn/memory/ledger.ts";
 import { reviewLedger } from "../../src/learn/review/ledger.ts";
-import { gitRepo, scratch, testContext } from "./helpers.ts";
+import { gitRepo, MemFixture, scratch, testContext } from "./helpers.ts";
 
 const PAGE = `---
 id: rp-003
@@ -189,5 +189,41 @@ describe("weekly", () => {
     expect((record.draft.trigger as { kind: string }).kind).toBe("failure");
     expect(existsSync(join(root, ".claude"))).toBe(false);
     expect(ledger.git(["status", "--porcelain"]).stdout.trim()).toBe("");
+  });
+
+  test("obs evidence counts its sessions through claude-mem: a merge never demotes a confirmed lesson and can confirm two hypotheses", () => {
+    const root = gitRepo(join(scratch(), "shop"));
+    const memDb = join(scratch(), "mem.db");
+    const mem = new MemFixture(memDb);
+    const obs = ["aaaaaaaa-1", "bbbbbbbb-2", "cccccccc-3", "dddddddd-4", "eeeeeeee-5"].map((sid) =>
+      mem.observation({ sid, project: "shop", type: "bugfix", at: Date.now() }),
+    );
+    mem.close();
+    const ledger = ensureMemoryLedger(join(scratch(), "memory"));
+    const ids = obs.map((n) => `obs:${n}`);
+    applyConsolidation(
+      ledger,
+      {
+        lessons: [
+          { statement: "confirmed across two sessions", evidence: [ids[0], ids[1]], confidence: 0.8 },
+          { statement: "same lesson seen once", evidence: [ids[2]], confidence: 0.6 },
+          { statement: "a hypothesis about fixtures", evidence: [ids[3]], confidence: 0.6 },
+          { statement: "the same hypothesis about fixtures", evidence: [ids[4]], confidence: 0.6 },
+        ],
+      },
+      new Set(ids),
+      new Map(ids.map((id, i) => [id, ["aaaaaaaa", "bbbbbbbb", "cccccccc", "dddddddd", "eeeeeeee"][i]!])),
+    );
+    expect([...loadLessons(ledger).values()].map(({ meta }) => meta.status)).toEqual(["confirmed", "hypothesis", "hypothesis", "hypothesis"]);
+    const ctx = testContext({
+      cwd: root,
+      env: { AK_LEARN_MEM_DB: memDb },
+      replies: [{ merge: [["ls-001", "ls-002"], ["ls-003", "ls-004"]], contradict: [] }],
+    });
+    expect(deep(ctx, ledger, root, null)).toBe("weekly: 0 review pattern pages compacted, 0 stale, 2 merged, 0 conflicts");
+    const lessons = loadLessons(ledger);
+    expect([lessons.get("ls-001")!.meta.sessions, lessons.get("ls-001")!.meta.status]).toEqual([3, "confirmed"]);
+    expect([lessons.get("ls-003")!.meta.sessions, lessons.get("ls-003")!.meta.status]).toEqual([2, "confirmed"]);
+    expect(readdirSync(ledger.path("proposals"))).toEqual(["learn-shop-ls-003.json"]);
   });
 });

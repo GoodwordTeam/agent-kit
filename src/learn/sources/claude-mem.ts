@@ -118,6 +118,21 @@ export class ClaudeMemSource {
       .all(memorySessionId);
   }
 
+  /** The memory session each observation id belongs to. Unknown ids are absent. */
+  observationSessions(ids: readonly number[]): Map<number, string> {
+    const out = new Map<number, string>();
+    for (let i = 0; i < ids.length; i += 500) {
+      const chunk = ids.slice(i, i + 500);
+      const rows = this.db
+        .query<{ id: number; memory_session_id: string }, number[]>(
+          `select id, memory_session_id from observations where id in (${chunk.map(() => "?").join(", ")})`,
+        )
+        .all(...chunk);
+      for (const row of rows) out.set(row.id, row.memory_session_id);
+    }
+    return out;
+  }
+
   /** Sessions started since `sinceMs` that have completed, or started before `staleBeforeMs` (abandoned). */
   sessions(project: string, sinceMs: number, staleBeforeMs: number): SessionRow[] {
     return this.db

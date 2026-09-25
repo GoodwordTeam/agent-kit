@@ -251,6 +251,19 @@ describe("uses and promotion", () => {
     expect(loadRegistry(ledger).candidates["sk-001"]!.uses).toBe(2);
   });
 
+  test("skills run discovers at most once a day, so fresh sessions on the next stop make no judge call", () => {
+    const { ctx, root } = fixture([{ candidates: [CAND] }, { candidates: [] }]);
+    expect(skillsArea.verbs.run!.run(parseLearnArgs(["--repo", root]), ctx)).toBe(0);
+    expect(ctx.prompts).toHaveLength(1);
+    expect(ctx.out.at(-1)).toContain("1 candidates pending (bot-re-review=0)");
+    transcript(ctx, root, "dddd4444-0000", ["ask the bot to re-review again", "the head moved once more"]);
+    transcript(ctx, root, "eeee5555-0000", ["re-trigger the review bot please", "after the rebase landed"]);
+    transcript(ctx, root, "ffff6666-0000", ["bot review is stale again, rerun", "the fix is pushed now"]);
+    expect(skillsArea.verbs.run!.run(parseLearnArgs(["--repo", root]), ctx)).toBe(0);
+    expect(ctx.prompts).toHaveLength(1);
+    expect(ctx.out.at(-1)).toBe("1 candidates pending (bot-re-review=0)");
+  });
+
   test("promote prints a writing-skills input, marks the hand-off, and installs nothing", () => {
     const { ctx, root, packageRoot } = fixture([{ candidates: [CAND] }]);
     discover(ctx, root, { packageRoot });
