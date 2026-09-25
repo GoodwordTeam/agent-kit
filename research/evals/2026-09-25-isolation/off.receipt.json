@@ -1,0 +1,55 @@
+{
+  "measured": {
+    "revision": "740d336fe2aecb81d56326435cb4dba67420988d",
+    "dirty": true
+  },
+  "bundle": {
+    "path": "/private/var/folders/93/6w1bxqxn2yb92mt6rmt5zbzw0000gn/T/ak-isolation-probe.hP5T8H/ak-probe",
+    "sha256": "a3a9c5ad55036fa7ce009ebfbe33a9e290b00106a55600f8140385de7e8c9d4b",
+    "freshAgainstSources": null
+  },
+  "install": "default",
+  "donorsPresent": true,
+  "host": "2.1.282 (Claude Code)",
+  "command": "claude plugin eval /private/var/folders/93/6w1bxqxn2yb92mt6rmt5zbzw0000gn/T/ak-isolation-probe.hP5T8H/ak-probe --no-publish --json /private/var/folders/93/6w1bxqxn2yb92mt6rmt5zbzw0000gn/T/ak-isolation-probe.hP5T8H/result.json --trust-plugin --keep-temp --allow-tools Bash --runs 1 --max-cost-usd 1 ",
+  "isolation": {
+    "method": "host-sandbox+inherited-env",
+    "envPassed": []
+  },
+  "exitStatus": 0,
+  "result": "/private/var/folders/93/6w1bxqxn2yb92mt6rmt5zbzw0000gn/T/ak-isolation-probe.hP5T8H/result.json",
+  "cases": [
+    {
+      "name": "context-and-env",
+      "with": {
+        "n": 1,
+        "passes": 1,
+        "rate": 1,
+        "wilson95": {
+          "lo": 0.20654329147389294,
+          "hi": 1
+        }
+      },
+      "without": {
+        "n": 1,
+        "passes": 1,
+        "rate": 1,
+        "wilson95": {
+          "lo": 0.20654329147389294,
+          "hi": 1
+        }
+      },
+      "fired": null,
+      "score": 1,
+      "scoreWithout": 1,
+      "delta": 0
+    }
+  ],
+  "overall": {
+    "score": 1,
+    "meanDelta": 0
+  },
+  "costUsd": 0.2689644,
+  "durationSeconds": 37,
+  "partial": false
+}
