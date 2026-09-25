@@ -2,10 +2,11 @@
 name: super-build
 description: >-
   Executes one approved implementation ticket in a worktree the ticket owns, test first, then has the
-  result checked on two independent axes before the ticket is reported done. Use when an approved
-  ticket names its acceptance criteria and the verification that shows each one met. Not for a
-  decision ticket, an unapproved draft, a finding too vague to specify, or a quick fix with no ticket
-  behind it.
+  result checked on two independent axes before the ticket is reported done. Use when asked to build,
+  implement or execute a ticket ("build ticket T2", "implement AK-214"), including as a worker's
+  task-local implementer, and the ticket names its acceptance criteria and the verification that
+  shows each one met. Not for a decision ticket, an unapproved draft, a finding too vague to specify,
+  or a quick fix with no ticket behind it.
 license: MIT
 metadata:
   ak_catalog_id: super-build

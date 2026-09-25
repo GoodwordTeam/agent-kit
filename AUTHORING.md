@@ -1272,6 +1272,21 @@ case corpus must cover **all 24** release scenarios in the plan's "Evaluation an
 to its batch and reports any it cannot exercise, rather than tagging a case that does not actually
 test the scenario.
 
+**The eval sandbox blocks git.** Every git binary is denied inside a case run, so a case cannot commit,
+and a grader that checks a commit, a branch or `git log` scores a run that did the work as a failure.
+Grade what the run left on disk instead: a `regex` grader with `target: files`, or `file_exists`.
+Never make a commit the pass criterion.
+
+**Running the suite locally.** `scripts/eval-local.sh [claude plugin eval options…]` runs
+`claude plugin eval dist/claude-code` and prints a with/without/delta table per case. On a machine with
+Docker Desktop, the sandbox will not start a Bash-granting case while any symlink sits under
+`~/.docker`, so the script moves `~/.docker/cli-plugins` and `~/.docker/bin` aside for the run and
+restores them on every exit, Ctrl-C included. It runs only when you invoke it; CI does not run evals.
+Build first (`bun run build`), and pass `--max-cost-usd` for a paid run. The script warns when
+`dist/claude-code` is older than its sources, and the summary names the commit it measured, marked
+`(dirty)` when the working tree had changes; quote that line with any figure. The `fired` column counts
+a with-plugin run only when it has with-only graders and passed all of them.
+
 ---
 
 ## 10. The batch process you are working under
