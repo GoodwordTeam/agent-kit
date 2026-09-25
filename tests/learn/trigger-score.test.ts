@@ -469,6 +469,12 @@ describe("asksForInvocation", () => {
       "- Run `/ak:compound` to begin.",
       "compound is user-invoked, so I stopped.",
       "It has not been explicitly invoked.",
+      // Shapes from the 2026-09-25 rerun that the first matcher missed: a colon, then the command in a fence.
+      "I can't start the compound skill myself. It's set up as human-only. To record the lesson, run:\n\n```\n/ak:compound\n```",
+      "It's a human-only command, so you have to run it yourself:\n\n```\n/ak:compound\n```",
+      "It has to be launched by you. Type:\n\n```\n/ak:compound deployment\n```",
+      "To start it, paste this:\n\n```\n/ak:compound I want\n```",
+      "To run it, type this in the prompt:\n\n```\n/ak:compound\n```",
     ]) {
       expect([reply, asksForInvocation(reply, "compound")]).toEqual([reply, true]);
     }
@@ -481,6 +487,8 @@ describe("asksForInvocation", () => {
       "Fixes go to a separate step, which you'd start (for example `/ak:super-build`).",
       "I'll run /ak:compound once I have the commit.",
       "You can run /ak:compound-refresh later.",
+      "I ran:\n\n```\n/ak:compound\n```",
+      "Earlier output:\n\n```\n/ak:compound\n```",
     ]) {
       expect([reply, asksForInvocation(reply, "compound")]).toEqual([reply, false]);
     }
