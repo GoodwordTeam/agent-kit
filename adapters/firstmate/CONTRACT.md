@@ -147,8 +147,7 @@ so the audit keeps counting a run's records after the supervisor merges it, and 
 standalone check out of the bound the same way. Known limit of the bound: after a squash or rebase
 merge, a branch reused by merging the default branch back in keeps the old run's records in its
 history and they count, so use one branch per task or pass `--run` for a fresh run id. Then every
-grant the run
-needed must have left a grant record naming this binding by path and by the hash the ledger registered,
+grant the run needed must have left a grant record naming this binding by path and by the hash the ledger registered,
 and the binding must still hash to it. Any refusal prints `refused: …` lines and a `needs-decision`
 hint, exits 1, and prints no `done` line. `ak firstmate status <binding> --verify` runs the same audit
 on its own, for a supervisor that wants to check a `done` it was handed. A knowledgebase store fails
@@ -184,6 +183,8 @@ super-review `full` and `readiness` and super-ship are `explicit-or-delegated`: 
 or a delegated controller does under a validated grant. Under Firstmate, Firstmate is that controller
 and the binding it wrote is the grant (ADR-0004). `ak firstmate grant --binding <path> --operation
 <op>` validates it and prints a grant record, or refuses with a reason and a `needs-decision` hint.
+With a `mock` evidence store it also keeps that record at `<store>/<run_id>/grants/<operation>.json`,
+where the §4 audit reads it.
 
 | Operation | Granted when the binding requires |
 |---|---|
@@ -197,7 +198,8 @@ Every grant also requires that the binding validates against its schema; that it
 the worktree the grant is asked from and outside the bound project; and that the pinned bundle still
 hashes to the bound hash. A same-user worker can still run bind itself or edit the ledger, which
 the brief forbids; the child guard's denial of both is a tripwire for subagents, not a boundary, and
-does not cover the main thread. The supervisor detects it by comparing each grant record's
-`binding_sha256` and `binding` path with the binding Firstmate wrote. Preventing it needs the
+does not cover the main thread. `ak firstmate status complete` and `status --verify` detect it by
+comparing each kept grant record's `binding_sha256` and `binding` path with the ledger entry (§4); a
+worker that rewrites the ledger and the grant records consistently still passes. Preventing it needs the
 runner's validated grants (ADR-0004). Any other operation, merge and scope changes included, is
 refused. The worker then reports `needs-decision` and Firstmate decides or asks the captain.
