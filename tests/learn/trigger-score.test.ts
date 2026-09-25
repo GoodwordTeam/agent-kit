@@ -110,13 +110,19 @@ describe("readOnlyShell", () => {
       "nl -ba src/a.ts | sed -n 1,40p",
       "echo oops >&2",
       "ls &>/dev/null",
+      "git status>&1",
+      "echo x>&2",
+      "ls>&1",
+      "cat<in.txt",
+      "echo x>>/dev/null",
+      "echo hi >> /dev/null",
     ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
     }
   });
 
   test("anything that writes is not", () => {
-    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "echo x > f", "ls 2> err.log", "ls &>out.log", "ls&>out.log", "cat a.md&>x", "echo x >&out.log", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
+    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "echo x > f", "ls 2> err.log", "ls &>out.log", "ls&>out.log", "cat a.md&>x", "echo x >&out.log", "cat a.md>x", "ls>out.log", "echo x>out.log", "nl -ba a.md>out", "echo x>&ls", "echo x>>out.log", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
   });

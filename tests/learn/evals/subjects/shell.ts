@@ -36,6 +36,13 @@ export function words(command: string): string[] {
       started = true;
     } else if (/\s/.test(ch)) {
       push();
+    } else if (ch === ">" || ch === "<") {
+      // A redirect is its own word (`a.md>x`, `status>&1`). It stays attached to an fd (`2>`),
+      // to `&` (`&>file`), or while `>>` is still growing (`>>`, `2>>`, `&>>`).
+      const stays = /^\d+$/.test(word) || word === "&" || (ch === ">" && /^(?:\d+|&)?>$/.test(word));
+      if (word !== "" && !stays) push();
+      word += ch;
+      started = true;
     } else if (ch === "&" && (/^\d*>$/.test(word) || command[i + 1] === ">")) {
       if (!/^\d*>$/.test(word)) push();
       word += ch;
