@@ -2,8 +2,8 @@
  * Throwaway Firstmate homes and projects for the firstmate CLI tests.
  *
  * Every home here is a temp git repository standing in for a Firstmate
- * checkout: one commit plays the upstream commit, and a synthetic patch plays
- * 0001-agent-kit-mode. No test reads, writes or even resolves the live
+ * checkout: one commit plays the upstream commit, and two synthetic patches play
+ * 0001-agent-kit-mode and 0002-agent-kit-audit. No test reads, writes or even resolves the live
  * Firstmate home; the real-upstream check is recorded separately, against a
  * scratch clone, and says so.
  */
@@ -33,6 +33,8 @@ export function gitIn(cwd: string, ...args: string[]): string {
 
 const ORIGINAL = "fm_dod_block() {\n  echo default\n}\n";
 const PATCHED = "fm_dod_block() {\n  echo default\n}\n# agent-kit mode\n";
+// 0002 rewrites a line 0001 added, as the real 0002 does, so a check that does not peel the stack fails.
+const PATCHED_2 = "fm_dod_block() {\n  echo default\n}\n# agent-kit mode, audited\n";
 
 export interface Home {
   home: string;
@@ -40,26 +42,36 @@ export interface Home {
 }
 
 /**
- * A home at a synthetic upstream commit. `patched` applies the synthetic patch
- * to the working tree, which is what a maintainer applying 0001 does.
+ * A home at a synthetic upstream commit with a synthetic two-patch stack.
+ * `patched: true` applies both to the working tree, which is what a maintainer
+ * applying 0001 then 0002 does; `"0001"` applies only the first; `false` neither.
  */
-export function makeHome(opts: { patched: boolean }): Home {
+export function makeHome(opts: { patched: boolean | "0001" }): Home {
   const home = makeTree({ "bin/fm-dod-lib.sh": ORIGINAL, "config/.keep": "" });
   gitIn(home, "init", "-q", "-b", "main");
   gitIn(home, "add", "-A");
   gitIn(home, "commit", "-q", "-m", "upstream");
   const commit = gitIn(home, "rev-parse", "HEAD");
 
-  // The patch is produced by git itself, so the reverse check below is testing
-  // a real patch rather than a hand-written one that happens to parse.
-  writeFileSync(join(home, "bin/fm-dod-lib.sh"), PATCHED);
-  const diff = gitIn(home, "diff", "--no-ext-diff", "--binary");
+  // The patches are produced by git itself, so the reverse check is testing
+  // real patches rather than hand-written ones that happen to parse.
   const patchDir = mkdtempSync(join(tmpdir(), "ak-fm-patch-"));
-  const patchFile = join(patchDir, "0001-agent-kit-mode.patch");
-  writeFileSync(patchFile, `${diff}\n`);
-  if (!opts.patched) writeFileSync(join(home, "bin/fm-dod-lib.sh"), ORIGINAL);
+  const file = join(home, "bin/fm-dod-lib.sh");
+  const stack: Upstream["stack"] = [];
+  let before = ORIGINAL;
+  for (const [id, after] of [["0001-agent-kit-mode", PATCHED], ["0002-agent-kit-audit", PATCHED_2]] as const) {
+    writeFileSync(file, before);
+    gitIn(home, "add", "-A");
+    writeFileSync(file, after);
+    const patchFile = join(patchDir, `${id}.patch`);
+    writeFileSync(patchFile, `${gitIn(home, "diff", "--no-ext-diff", "--binary")}\n`);
+    stack.push({ id, file: patchFile });
+    before = after;
+  }
+  gitIn(home, "reset", "-q");
+  writeFileSync(file, opts.patched === true ? PATCHED_2 : opts.patched === "0001" ? PATCHED : ORIGINAL);
 
-  return { home, upstream: { commit, patch: "0001-agent-kit-mode", patchFile } };
+  return { home, upstream: { commit, patch: "0001-agent-kit-mode", stack } };
 }
 
 /** A project checkout with a trusted no-mistakes config, as preflight requires. */

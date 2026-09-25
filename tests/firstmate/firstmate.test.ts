@@ -3,7 +3,7 @@
  *
  * Label: mock/contract. Every case runs against a temp Firstmate home built by
  * ./fixture.ts, never the live one, and against a synthetic upstream commit and
- * patch standing in for a5d78f8 and 0001-agent-kit-mode.
+ * patch stack standing in for a5d78f8, 0001-agent-kit-mode and 0002-agent-kit-audit.
  */
 import { describe, expect, spyOn, test } from "bun:test";
 import * as fs from "node:fs";
@@ -12,6 +12,7 @@ import { join } from "node:path";
 
 import { runCli } from "../../src/cli.ts";
 import { bind } from "../../src/firstmate/bind.ts";
+import { checkPatchApplied } from "../../src/firstmate/checks.ts";
 import { install, remove } from "../../src/firstmate/install.ts";
 import { pinBundle, treeHash } from "../../src/firstmate/pin.ts";
 import { preflight } from "../../src/firstmate/preflight.ts";
@@ -56,6 +57,27 @@ describe("preflight", () => {
     );
     expect(failed(result.checks)).toEqual(["patch-applied"]);
     expect(result.ok).toBe(false);
+  });
+
+  test("a home with 0001 but not 0002 is refused, naming 0002", () => {
+    const { home, upstream } = makeHome({ patched: "0001" });
+    const result = preflight(
+      { fmHome: home, project: makeProject(), host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW },
+    );
+    expect(failed(result.checks)).toEqual(["patch-applied"]);
+    expect(result.checks.find((c) => c.id === "patch-applied")!.detail).toContain("0002-agent-kit-audit is not applied");
+  });
+
+  test("the stack is checked in a scratch index: a committed stack passes and the home's index is untouched", () => {
+    const { home, upstream } = makeHome({ patched: true });
+    const staged = gitIn(home, "diff", "--cached", "--name-only");
+    const check = checkPatchApplied(home, upstream);
+    expect(check).toEqual({ id: "patch-applied", ok: true, detail: "0001-agent-kit-mode, 0002-agent-kit-audit are applied" });
+    expect(gitIn(home, "diff", "--cached", "--name-only")).toBe(staged);
+    expect(gitIn(home, "status", "--porcelain")).toBe("M bin/fm-dod-lib.sh");
+    gitIn(home, "commit", "-qam", "apply 0001 and 0002");
+    expect(checkPatchApplied(home, upstream).ok).toBe(true);
   });
 
   test("a home that does not contain the upstream commit is refused", () => {
