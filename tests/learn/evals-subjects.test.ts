@@ -1,0 +1,192 @@
+/**
+ * The subject adapters on stored transcripts. `*-skill.jsonl` and `grok-denied-write.jsonl` are
+ * real headless sessions (one per host, scrubbed of paths and bindings); `*.doc-derived.jsonl` are
+ * written from each host's documented event shapes to reach tools the live sessions did not call.
+ * No host CLI runs here.
+ */
+import { afterAll, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { skillLoads } from "./evals/trigger-eval.ts";
+import { claude } from "./evals/subjects/claude.ts";
+import { codex } from "./evals/subjects/codex.ts";
+import { grok } from "./evals/subjects/grok.ts";
+import { privateHome } from "./evals/subjects/home.ts";
+import { adapterFor, BUNDLE_FOR, runSubject, withoutParentSession } from "./evals/subjects/index.ts";
+import { readsOf, unwrap, words } from "./evals/subjects/shell.ts";
+import type { SessionRequest, SubjectAdapter, ToolEvent } from "./evals/subjects/types.ts";
+
+const FIXTURES = join(import.meta.dir, "evals", "fixtures", "transcripts");
+const fixture = (name: string) => readFileSync(join(FIXTURES, name), "utf8");
+const tools = (events: ReturnType<SubjectAdapter["parse"]>["events"]) => events.filter((e): e is ToolEvent => e.kind === "tool");
+
+const scratch = realpathSync(mkdtempSync(join(tmpdir(), "ak-subjects-test-")));
+afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+
+const req: SessionRequest = { prompt: "Load the greet skill.", cwd: "/scratch/repo", env: {}, timeoutMs: 1000 };
+
+describe("claude", () => {
+  test("a live session: the Skill call, the reply, cost and turns", () => {
+    const parsed = claude.parse(fixture("claude-skill.jsonl"));
+    expect(tools(parsed.events).map((e) => [e.name, e.input.skill])).toEqual([["Skill", "greet"]]);
+    expect(parsed.reply).toBe("ok");
+    expect(parsed.turns).toBe(3);
+    expect(parsed.costUsd).toBeGreaterThan(0);
+    expect(skillLoads(parsed.events).map((l) => l.skill)).toEqual(["greet"]);
+  });
+
+  test("argv: isolation flags always, model, cap, bundle and appended context only when given", () => {
+    expect(claude.command(req, undefined)).toEqual([
+      "claude", "-p", "--output-format", "stream-json", "--verbose",
+      "--settings", '{"disableAllHooks":true}', "--setting-sources", "project,local", "--strict-mcp-config",
+      "--no-session-persistence",
+      "Load the greet skill.",
+    ]);
+    const full = claude.command({ ...req, maxTurns: 3, bundleDir: "/dist/claude-code", appendSystemPrompt: "ROSTER" }, "bound-a");
+    expect(full.slice(5, 9)).toEqual(["--model", "bound-a", "--max-turns", "3"]);
+    expect(full).toContain("--plugin-dir");
+    expect(full.slice(-3)).toEqual(["--append-system-prompt", "ROSTER", "Load the greet skill."]);
+    expect(claude.injection).toBe("append-system-prompt");
+  });
+});
+
+describe("codex", () => {
+  test("a live session: the shell cat of SKILL.md is a Bash call and a Read of that path", () => {
+    const parsed = codex.parse(fixture("codex-skill.jsonl"));
+    expect(tools(parsed.events).map((e) => [e.name, e.input.command ?? e.input.file_path])).toEqual([
+      ["Bash", "cat .agents/skills/greet/SKILL.md"],
+      ["Read", ".agents/skills/greet/SKILL.md"],
+    ]);
+    expect(parsed.reply).toBe("ok");
+    expect(skillLoads(parsed.events).map((l) => l.skill)).toContain("greet");
+  });
+
+  test("documented items: file changes, MCP, web search, and a command cut off by the timeout", () => {
+    const parsed = codex.parse(fixture("codex-tools.doc-derived.jsonl"));
+    expect(tools(parsed.events).map((e) => e.name)).toEqual([
+      "Bash", "Read", "Read", "Write", "Edit", "mcp__tracker__get_issue", "WebSearch", "Bash",
+    ]);
+    const reads = tools(parsed.events).filter((e) => e.name === "Read").map((e) => e.input.file_path);
+    expect(reads).toEqual(["skills/super-align/SKILL.md", "README.md"]);
+    expect(parsed.reply).toBe("Loaded super-align.");
+    expect(tools(parsed.events).at(-1)!.input.command).toBe("bun test");
+  });
+
+  test("argv: appended context is a developer_instructions TOML string; no turn cap flag exists", () => {
+    const argv = codex.command({ ...req, maxTurns: 4, appendSystemPrompt: 'line "one"\nline two' }, "bound-b");
+    expect(argv.slice(0, 2)).toEqual(["codex", "exec"]);
+    expect(argv).toContain("--json");
+    expect(argv.slice(argv.indexOf("-m"), argv.indexOf("-m") + 2)).toEqual(["-m", "bound-b"]);
+    expect(argv).toContain('developer_instructions="line \\"one\\"\\nline two"');
+    expect(argv.join(" ")).not.toContain("turn");
+    expect(argv.at(-1)).toBe("Load the greet skill.");
+    expect(codex.injection).toBe("developer-instructions");
+  });
+});
+
+describe("grok", () => {
+  test("a live session: read_file of SKILL.md is a Read, text chunks join into the reply", () => {
+    const parsed = grok.parse(fixture("grok-skill.jsonl"));
+    const calls = tools(parsed.events);
+    expect(calls.map((e) => [e.name, e.raw])).toEqual([["Read", "read_file"]]);
+    expect(String(calls[0]!.input.file_path)).toEndWith("/skills/greet/SKILL.md");
+    expect(parsed.reply).toBe("ok");
+    expect(parsed.turns).toBe(2);
+    expect(skillLoads(parsed.events).map((l) => l.skill)).toEqual(["greet"]);
+  });
+
+  test("a live session under dontAsk: the refused write is still an Edit event, and there is no reply", () => {
+    const parsed = grok.parse(fixture("grok-denied-write.jsonl"));
+    expect(tools(parsed.events).map((e) => e.name)).toEqual(["Read", "Edit"]);
+    expect(parsed.reply).toBe("");
+  });
+
+  test("documented tools map onto the shared names; unmapped ones keep their own", () => {
+    const parsed = grok.parse(fixture("grok-tools.doc-derived.jsonl"));
+    expect(tools(parsed.events).map((e) => e.name)).toEqual(["Grep", "Bash", "Read", "list_dir", "Write"]);
+    expect(parsed.events.filter((e) => e.kind === "message").map((e) => (e.kind === "message" ? e.text : ""))).toEqual(["Reading it now.", "ok"]);
+    expect(parsed.reply).toBe("ok");
+  });
+
+  test("argv: prompt after -p, rules for appended context, dontAsk always", () => {
+    const argv = grok.command({ ...req, maxTurns: 2, appendSystemPrompt: "ROSTER" }, "bound-c");
+    expect(argv.slice(0, 3)).toEqual(["grok", "-p", "Load the greet skill."]);
+    expect(argv.join(" ")).toContain("-m bound-c --max-turns 2 --permission-mode dontAsk --rules ROSTER");
+  });
+});
+
+describe("shell reads", () => {
+  test("unwraps login shells and finds printed files across pipelines, skipping options, scripts and output redirects", () => {
+    expect(unwrap("/bin/zsh -lc 'cat a b'")).toBe("cat a b");
+    expect(unwrap("bash -lc \"head -n 5 x\"")).toBe("head -n 5 x");
+    expect(words(`cat "a b" 'c' d\\ e && ls`)).toEqual(["cat", "a b", "c", "d e", "&&", "ls"]);
+    expect(readsOf("cat SKILL.md | head -5")).toEqual(["SKILL.md"]);
+    expect(readsOf("sed -n '1,20p' x/SKILL.md; tail -n 3 log.txt 2>/dev/null")).toEqual(["x/SKILL.md", "log.txt"]);
+    expect(readsOf("sed -e s/a/b/ in.txt")).toEqual(["in.txt"]);
+    expect(readsOf("ls skills && rg foo")).toEqual([]);
+    expect(readsOf("cat < in.txt > out.txt")).toEqual(["in.txt"]);
+  });
+});
+
+describe("isolation", () => {
+  test("codex and grok get a private home with the credentials and the bundle's skills; claude isolates by argv and drops CLAUDE.md", () => {
+    const callerHome = join(scratch, "caller");
+    mkdirSync(join(callerHome, ".codex"), { recursive: true });
+    mkdirSync(join(callerHome, ".grok"), { recursive: true });
+    writeFileSync(join(callerHome, ".codex", "auth.json"), "{\"codex\":1}");
+    writeFileSync(join(callerHome, ".grok", "auth.json"), "{\"grok\":1}");
+    const bundle = join(scratch, "dist");
+    mkdirSync(join(bundle, "skills", "super-align"), { recursive: true });
+    writeFileSync(join(bundle, "skills", "super-align", "SKILL.md"), "---\nname: super-align\n---\n");
+
+    const c = codex.isolate!(join(scratch, "s1"), { ...req, env: { HOME: callerHome }, bundleDir: bundle });
+    expect(readFileSync(join(c.env.CODEX_HOME!, "auth.json"), "utf8")).toBe("{\"codex\":1}");
+    expect(existsSync(join(c.env.CODEX_HOME!, "skills", "super-align", "SKILL.md"))).toBe(true);
+    expect(c.env.HOME).not.toBe(callerHome);
+
+    const g = grok.isolate!(join(scratch, "s2"), { ...req, env: { HOME: callerHome }, bundleDir: bundle });
+    expect(existsSync(join(g.env.GROK_HOME!, "skills", "super-align", "SKILL.md"))).toBe(true);
+    expect(g.env.GROK_CLAUDE_SKILLS_ENABLED).toBe("false");
+    expect(g.env.GROK_MEMORY).toBe("0");
+
+    expect(claude.isolate!(scratch, req).env).toEqual({ CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1", CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" });
+    expect(withoutParentSession({ CLAUDE_CODE_ENTRYPOINT: "cli", EVAL_X: "1", CLAUDECODE: "1", ANTHROPIC_API_KEY: "k", PATH: "/bin" })).toEqual({ ANTHROPIC_API_KEY: "k", PATH: "/bin" });
+    expect(BUNDLE_FOR).toEqual({ claude: "claude-code", codex: "codex", grok: "claude-code" });
+  });
+
+  test("a refreshed credential is written back only while the caller's copy is unchanged", () => {
+    const creds = join(scratch, "creds.json");
+    writeFileSync(creds, "v1");
+    const home = privateHome(join(scratch, "h1"), creds, undefined, "skills");
+    writeFileSync(join(home.dir, "auth.json"), "v2");
+    home.release();
+    expect(readFileSync(creds, "utf8")).toBe("v2");
+
+    const other = privateHome(join(scratch, "h2"), creds, undefined, "skills");
+    writeFileSync(join(other.dir, "auth.json"), "v3");
+    writeFileSync(creds, "refreshed-elsewhere");
+    other.release();
+    expect(readFileSync(creds, "utf8")).toBe("refreshed-elsewhere");
+  });
+});
+
+describe("runSubject", () => {
+  test("runs the adapter's argv under its isolation env, parses stdout, and releases", async () => {
+    let released = false;
+    const fake: SubjectAdapter = {
+      ...claude,
+      command: () => ["sh", "-c", 'printf \'{"type":"result","result":"%s","num_turns":1}\\n\' "$MARK"'],
+      isolate: () => ({ env: { MARK: "isolated" }, leaks: ["none"], release: () => (released = true) }),
+    };
+    const result = await runSubject(fake, "subject-a", "bound-a", { ...req, cwd: scratch, env: { PATH: process.env.PATH ?? "" } });
+    expect(result).toMatchObject({ subject: "subject-a", host: "claude", reply: "isolated", exitCode: 0, timedOut: false, turns: 1, leaks: ["none"] });
+    expect(released).toBe(true);
+  });
+
+  test("adapterFor knows every host", () => {
+    expect(adapterFor("claude").host).toBe("claude");
+    expect(adapterFor("codex").host).toBe("codex");
+    expect(adapterFor("grok").host).toBe("grok");
+  });
+});

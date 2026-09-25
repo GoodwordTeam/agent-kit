@@ -1,0 +1,57 @@
+/**
+ * One entry point for every host: pick the adapter, run one isolated session, parse it.
+ * Not a test file.
+ */
+import { mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { runAsync } from "../session.ts";
+import { claude } from "./claude.ts";
+import { codex } from "./codex.ts";
+import { grok } from "./grok.ts";
+import type { HostKind, SessionRequest, SessionResult, SubjectAdapter } from "./types.ts";
+
+const ADAPTERS: Record<HostKind, SubjectAdapter> = { claude, codex, grok };
+
+/** Which `dist/` bundle each host installs. Grok reads Claude Code skill frontmatter. */
+export const BUNDLE_FOR: Record<HostKind, string> = { claude: "claude-code", codex: "codex", grok: "claude-code" };
+
+export function adapterFor(host: HostKind): SubjectAdapter {
+  const adapter = ADAPTERS[host];
+  if (adapter === undefined) throw new Error(`no subject adapter for host '${String(host)}'`);
+  return adapter;
+}
+
+/**
+ * The launching session's own variables (`CLAUDE_CODE_*`, `EVAL_*`) reach a child that inherits
+ * them; the host-eval isolation probe planted canaries that arrived this way. Auth variables stay.
+ */
+export function withoutParentSession(env: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith("CLAUDE_CODE_") && !key.startsWith("EVAL_") && key !== "CLAUDECODE"));
+}
+
+/** Run one session for `subjectId` under the adapter's isolation. `model` is the matrix binding, passed through opaquely. */
+export async function runSubject(adapter: SubjectAdapter, subjectId: string, model: string | undefined, req: SessionRequest): Promise<SessionResult> {
+  const scratch = realpathSync(mkdtempSync(join(tmpdir(), `ak-subject-${adapter.host}-`)));
+  const isolation = adapter.isolate?.(scratch, req);
+  const started = Date.now();
+  try {
+    const result = await runAsync(adapter.command(req, model), { cwd: req.cwd, env: { ...withoutParentSession(req.env), ...isolation?.env }, timeoutMs: req.timeoutMs });
+    const parsed = adapter.parse(result.stdout);
+    return {
+      subject: subjectId,
+      host: adapter.host,
+      events: parsed.events,
+      reply: result.timedOut && parsed.reply === "" ? "TIMEOUT" : parsed.reply,
+      exitCode: result.code,
+      timedOut: result.timedOut,
+      ...(parsed.costUsd === undefined ? {} : { costUsd: parsed.costUsd }),
+      ...(parsed.turns === undefined ? {} : { turns: parsed.turns }),
+      durationMs: Date.now() - started,
+      ...(isolation === undefined ? {} : { leaks: isolation.leaks }),
+    };
+  } finally {
+    isolation?.release();
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
