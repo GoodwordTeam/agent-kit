@@ -1346,7 +1346,7 @@ Each run writes `<result>.receipt.json` beside the JSON result. It records:
 - `claude --version`, the isolation method with the variable names it passed, and whether the grants
   came from the cases or the user;
 - per invocation: the grant, its cases, the staged bundle's sha256, the exact runner command, the
-  exit status and the cost, or `skipped` when the budget ran out first;
+  exit status, the cost and whether it was partial, or `skipped` when the budget ran out first;
 - the exit status, cost, duration and `partial`;
 - per case and arm: `n`, passes, rate and a 95% Wilson interval (the same formula as
   `tests/learn/evals/stats.ts`), plus the fired count.

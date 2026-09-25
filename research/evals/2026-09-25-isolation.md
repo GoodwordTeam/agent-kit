@@ -189,7 +189,11 @@ invocation, the grant, the cases, the staged bundle's sha256, the command, the e
 cost. Checked live on the same two-case bundle with no `--allow-tools` ($0.04, smallest tier). The
 script made two invocations. `without-bash` ran with a grant of none: its init event listed Task,
 Glob, Grep, Read, Skill, the Task* tools and ToolSearch, with no Bash, and it answered `NO_BASH`.
-`with-bash` ran with a grant of `[Bash]`, listed Bash and ran it. On the current `dist/` (stale,
+`with-bash` ran with a grant of `[Bash]`, listed Bash and ran it. I reran it after adding the per-invocation `partial` flag and the stop on an empty selection
+($0.04, budget $0.15). The result was the same: `without-bash` had no Bash in its init event and
+answered `NO_BASH`, and `with-bash` had Bash, called it once and answered `TOOLPROBE_42`. The two
+invocations cost $0.016 and $0.024, each with `partial: false`. When `--case` and `--tag` select no
+case, the script stops with exit 2 before calling the host. On the current `dist/` (stale,
 95 cases), an offline run against a stub host formed five groups: none 35, Bash 21,
 Bash+Edit+Write 18, Edit+Write 20, Write 1.
 
