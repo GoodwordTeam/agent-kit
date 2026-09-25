@@ -431,7 +431,7 @@ export function measureUses(ctx: LearnContext, ledger: Ledger, registry: SkillRe
 }
 
 /**
- * The scheduled entry: discovery at most once a day, then a use count for every
+ * The debounced entry (`skills run`, detached by the Stop hook): discovery at most once a day, then a use count for every
  * pending candidate. Nothing is promoted here; the use count is what a human
  * weighs when deciding to promote.
  */
