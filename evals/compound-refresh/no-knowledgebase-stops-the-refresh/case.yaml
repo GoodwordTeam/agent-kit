@@ -13,8 +13,19 @@ graders:
     weight: 1
     pattern: "needs-input"
   - name: no-repo-write
+    type: file_exists
+    path: "**"
+    exists: false
+    weight: 1
+  - name: reports-instead-of-writing
     type: llm
     weight: 1
     criteria: >-
-      No file in the working repository is created or edited. The response names the missing
-      capability and returns its decisions as a report.
+      The response names the missing capability and returns its decisions as a report.
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1

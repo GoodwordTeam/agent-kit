@@ -11,6 +11,7 @@ execution:
 graders:
   - name: nothing-is-weakened
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No threshold is lowered, no assertion is deleted or loosened, no check is skipped and no

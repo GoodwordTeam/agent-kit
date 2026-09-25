@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: diagnose-builds-a-loop-before-it-forms-a-theory
-tags: [positive]
+tags: [positive, unscaffolded]
 execution:
   prompt: >-
     The CSV export drops the last row whenever the result set is an exact multiple of the page size.
@@ -41,3 +41,17 @@ graders:
     criteria: >-
       Debug instrumentation and throwaway harnesses are removed before the run ends, and the run
       does not declare the finding closed on its own evidence.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?diagnose"'
+    arm: with-only
+    weight: 1
+  - name: skill-before-first-write
+    type: tool_order
+    before:
+      tool: Skill
+      input_match: '"skill"\s*:\s*"(?:[^"]*:)?diagnose"'
+    after: Write
+    arm: with-only
+    weight: 1

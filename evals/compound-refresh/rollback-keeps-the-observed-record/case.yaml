@@ -11,12 +11,14 @@ execution:
 graders:
   - name: runtime-commands-only
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The ledger is changed only through the runtime's retire or rollback commands, never by editing
       its files directly.
   - name: observed-record-kept
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response states that rollback undoes judgement and policy but restores the raw event log

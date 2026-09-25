@@ -165,12 +165,8 @@ interface DecisiveField {
 /**
  * The field each grader type is decided by.
  *
- * AUTHORING.md §9 lists five grader types and documents the field of three:
- * `tool` for `tool_used`, `pattern` for `regex`, `criteria` for `llm`.
- * `schemas/case.schema.json` says the same in its own words and leaves the
- * grader object open for it -- "what `file_exists` and `tool_order` take is
- * written down nowhere in this repository". This table records the three that
- * are written down and refuses the rest.
+ * AUTHORING.md §9 specifies each grader type's fields. This table records the
+ * one field each type is decided by and refuses a type with no row.
  *
  * `llm`'s field was `expected_outcome` here until the host was run against the
  * corpus for the first time and rejected every case: `claude plugin eval`
@@ -188,8 +184,8 @@ interface DecisiveField {
  * that makes a note class unclearable.
  *
  * An unrecognized type is refused rather than defaulted, and the two available
- * defaults are the argument. Read it as free text and a future `tool_order`
- * grader groups on a sequence of tool names, which is the corpus-reports-itself
+ * defaults are the argument. Read it as free text and a `tool_order` grader
+ * groups on a sequence of tool names, which is the corpus-reports-itself
  * failure arriving by another door. Read it as closed and a future free-text
  * type escapes unexamined, which is the `regex` gap this table was written to
  * close, pre-installed. Neither is safe to pick on behalf of someone who has
@@ -199,6 +195,11 @@ const DECIDED_BY: Readonly<Record<string, DecisiveField>> = {
   llm: { field: "criteria", free: true },
   regex: { field: "pattern", free: true },
   tool_used: { field: "tool", free: false },
+  // A glob and a pair of tool names. Neither is text written per case: `**`
+  // with `exists: false` is legitimately the same assertion in every case
+  // that forbids a created file, as `tool: Skill` is for `tool_used`.
+  file_exists: { field: "path", free: false },
+  tool_order: { field: "before", free: false },
 };
 
 /** The two keys a case's graders contribute, and the types neither key can read. */

@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: tenant-isolation-change-activates-security-and-adversarial-seats
-tags: [positive, scenario-3]
+tags: [positive, scenario-3, unscaffolded]
 execution:
   prompt: >-
     Review the branch on AK-702. It changes the tenant scoping in the query builder so a request
@@ -27,3 +27,9 @@ graders:
     criteria: >-
       A tenant-isolation finding is not closed on an assertion that the bypass flag is
       internal-only. Closure waits on verification evidence bound to the reviewed revision.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

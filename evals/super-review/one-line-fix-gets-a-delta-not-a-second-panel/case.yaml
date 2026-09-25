@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: a-one-line-fix-gets-a-delta-pass-not-a-repeat-of-the-panel
-tags: [positive, scenario-7]
+tags: [positive, scenario-7, unscaffolded]
 execution:
   prompt: >-
     You raised a null-check finding on the payment webhook handler last round. I pushed the fix —
@@ -26,3 +26,9 @@ graders:
     criteria: >-
       Discovery is not restarted for unrelated low-priority issues. A new finding is admitted only
       with novelty evidence tying it to what changed.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

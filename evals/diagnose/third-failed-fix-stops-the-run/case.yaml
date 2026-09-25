@@ -12,6 +12,7 @@ execution:
 graders:
   - name: no-fourth-attempt
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No fourth fix is applied. The one-liner in the lock helper is not written, and the run does not

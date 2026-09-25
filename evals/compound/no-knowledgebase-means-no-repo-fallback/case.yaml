@@ -14,8 +14,19 @@ graders:
     weight: 1
     pattern: "needs-input"
   - name: no-repo-write
+    type: file_exists
+    path: "**"
+    exists: false
+    weight: 1
+  - name: hands-the-draft-back
     type: llm
     weight: 1
     criteria: >-
-      No file is created or edited in the working repository. The response names the missing
-      capability and hands the drafted lesson text back instead.
+      The response names the missing capability and hands the drafted lesson text back instead.
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1

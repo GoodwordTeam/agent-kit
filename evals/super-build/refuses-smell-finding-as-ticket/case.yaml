@@ -25,6 +25,29 @@ graders:
       finding so that it becomes executable. It returns the finding for sharpening, diagnosis or
       escalation, and names which.
   - name: no-edits
-    type: llm
+    type: file_exists
+    path: "**"
+    exists: false
     weight: 2
-    criteria: No file is created or modified during the run.
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: no-write-call
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: stopped-at-authority
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      Either no Skill tool call in the trace loads the super-build skill, or the run loads it and then
+      stops with needs-input or a refusal. In both cases the run takes no side-effect action: it
+      edits or writes no file, pushes nothing, and opens or changes no ticket or pull request.
