@@ -7,7 +7,7 @@
  * behind, which is the host-neutral half (a codex file change carries a path but
  * no content).
  */
-import { unwrap } from "../subjects/shell.ts";
+import { unwrap, words } from "../subjects/shell.ts";
 import type { SessionEvent, ToolEvent } from "../subjects/types.ts";
 
 export interface Transcript {
@@ -35,9 +35,24 @@ export function commandsOf(events: readonly SessionEvent[]): string[] {
   return out;
 }
 
-/** The last command matching `target`, or null when none did. */
-export function lastCommand(events: readonly SessionEvent[], target: RegExp): string | null {
-  return commandsOf(events).filter((cmd) => target.test(cmd)).at(-1) ?? null;
+const OPERATORS = new Set([";", "&&", "||", "|", "&"]);
+
+/** A command's simple commands, split at `;`, `&&`, `||`, `|` and `&`, each without leading `VAR=value` assignments. */
+export function simpleCommands(command: string): string[] {
+  const out: string[][] = [[]];
+  for (const word of words(command)) {
+    if (OPERATORS.has(word)) out.push([]);
+    else if (out.at(-1)!.length > 0 || !/^[A-Za-z_]\w*=/.test(word)) out.at(-1)!.push(word);
+  }
+  return out.filter((c) => c.length > 0).map((c) => c.join(" "));
+}
+
+/**
+ * The simple commands, in order, that `target` matches from their start: what the session ran,
+ * as opposed to a command that only mentions it, such as `cat tools/bump`.
+ */
+export function invocations(events: readonly SessionEvent[], target: RegExp): string[] {
+  return commandsOf(events).flatMap(simpleCommands).filter((cmd) => target.test(cmd));
 }
 
 const FILE_TOOLS = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit", "file_change", "apply_patch"]);

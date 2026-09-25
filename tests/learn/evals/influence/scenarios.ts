@@ -16,7 +16,7 @@
  * Bump SCENARIO_SET_VERSION whenever a scenario's fact, files or graders change, so receipts
  * from different sets are never pooled.
  */
-import { changed, commandsOf, created, type Transcript, wroteTo } from "./graders.ts";
+import { changed, commandsOf, created, invocations, type Transcript, wroteTo } from "./graders.ts";
 
 export const SCENARIO_SET_VERSION = 1;
 
@@ -34,8 +34,8 @@ export interface Scenario {
   followedRepo(t: Transcript): boolean;
 }
 
-/** Commands matching `target`, in order. */
-const runs = (t: Transcript, target: RegExp) => commandsOf(t.events).filter((cmd) => target.test(cmd));
+/** Simple commands that run `target`, in order. */
+const runs = (t: Transcript, target: RegExp) => invocations(t.events, target);
 
 /** The first command matching `target` carries `flag`. */
 function firstCarries(t: Transcript, target: RegExp, flag: RegExp): boolean {
@@ -53,13 +53,16 @@ const text = (t: Transcript, path: string) => t.after.get(path) ?? "";
 
 const PKG = (name: string, scripts: Record<string, string> = {}) => `${JSON.stringify({ name, version: "1.0.0", private: true, scripts }, null, 2)}\n`;
 
-const BUN_TEST = /\bbun\s+test\b/;
+/** Runs the script at `path` as the command word, from any directory or through an interpreter. */
+const script = (path: string) => new RegExp(`^(?:(?:ba|z)?sh\\s+|bun\\s+(?:run\\s+)?|node\\s+)?(?:\\S*/)?${path}(?:\\s|$)`);
+
+const BUN_TEST = /^bun\s+test\b/;
 const PRELOAD = /--preload[=\s]+\.?\/?tools\/fake-db\.ts/;
-const DOCS = /\bdocs\.sh\b/;
-const LINT = /\b(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?lint\b/;
-const INTEGRATION = /\bintegration\.sh\b/;
-const ADD = /\b(?:npm|pnpm|yarn|bun)\s+(?:add|install|i)\b/;
-const BUMP = /\bbump\b/;
+const DOCS = script("docs\\.sh");
+const LINT = /^(?:bun|npm|pnpm|yarn)\s+(?:run\s+)?lint\b/;
+const INTEGRATION = script("integration\\.sh");
+const ADD = /^(?:npm|pnpm|yarn|bun)\s+(?:add|install|i)\b/;
+const BUMP = script("bump");
 
 export const SCENARIOS: readonly Scenario[] = [
   {
@@ -112,7 +115,7 @@ export const SCENARIOS: readonly Scenario[] = [
       "scripts/emit.mjs": null,
       "README.md": "# greeter\n\nThe emitter was retired. dist/ is hand-maintained now: edit dist/ directly alongside src/.\n",
     },
-    used: (t) => runs(t, /\bemit\.mjs\b/).length > 0 && text(t, "src/greet.js").includes("Hello") && !wroteTo(t, /^dist\//),
+    used: (t) => runs(t, script("emit\\.mjs")).length > 0 && text(t, "src/greet.js").includes("Hello") && !wroteTo(t, /^dist\//),
     followedRepo: (t) => text(t, "dist/greet.js").includes("Hello"),
   },
   {
@@ -129,7 +132,7 @@ export const SCENARIOS: readonly Scenario[] = [
       "tools/sqlstamp": '#!/bin/sh\necho "sqlstamp is retired: write migrations/NNNN_name.sql by hand"\nexit 1\n',
       "README.md": "# db\n\nWrite migrations by hand as migrations/NNNN_name.sql, numbered after the last one. sqlstamp is retired.\n",
     },
-    used: (t) => runs(t, /\bsqlstamp\s+new\b/).length > 0,
+    used: (t) => runs(t, script("sqlstamp\\s+new")).length > 0,
     followedRepo: (t) => created(t).some((p) => /^migrations\/\d{4}_\w+\.sql$/.test(p) && /email/i.test(text(t, p))),
   },
   {
@@ -194,8 +197,8 @@ export const SCENARIOS: readonly Scenario[] = [
       "bun.lock": '{\n  "lockfileVersion": 1,\n  "workspaces": { "": { "name": "forms" } },\n  "packages": {}\n}\n',
       "README.md": "# forms\n\nThis repo moved from pnpm to bun: install and add packages with `bun add`. pnpm is no longer used.\n",
     },
-    used: (t) => firstCarries(t, ADD, /^\s*(?:\S+=\S+\s+)*pnpm\b|[;&|]\s*pnpm\b/),
-    followedRepo: (t) => lastLacks(t, ADD, /\bpnpm\b/) && /\bbun\b/.test(runs(t, ADD).at(-1) ?? ""),
+    used: (t) => firstCarries(t, ADD, /^pnpm\b/),
+    followedRepo: (t) => /^bun\b/.test(runs(t, ADD).at(-1) ?? ""),
   },
   {
     id: "spdx-header",
