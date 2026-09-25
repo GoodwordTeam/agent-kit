@@ -284,6 +284,62 @@ describe("ak validate", () => {
     expect(parsed.ok).toBe(true);
     expect(parsed.skipped).toContain("donor paths at pin");
   });
+
+  test("--skill-style narrows the printed findings but the skipped clause still names the real skip", () => {
+    // The clause reports on the whole run, not on the lines `--skill-style` chose
+    // to print: a display filter that quietly zeroed it would say "0 checks
+    // skipped" while one genuinely had nothing to judge, the same false-clean
+    // reading the clause exists to rule out (see the tests above).
+    const io = capture();
+    runCli(["validate", "--skill-style"], { cwd: builtTree(SKIPPING_TREE), io: io.io });
+    const summary = io.out.at(-1) ?? "";
+    expect(summary).toMatch(/\d+ checks? skipped: /);
+    expect(summary).toContain("donor paths at pin");
+  });
+});
+
+describe("ak validate --skill-style", () => {
+  test("the default summary names a skill-style warning count", () => {
+    const io = capture();
+    runCli(["validate"], { cwd: cleanTree(), io: io.io });
+    expect(io.stdout()).toMatch(/\d+ skill-style warnings?/);
+  });
+
+  test("the count is positive on a tree the style linter actually has something to say about", () => {
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
+    const io = capture();
+    runCli(["validate"], { cwd: root, io: io.io });
+    const summary = io.out.at(-1) ?? "";
+    expect(summary).not.toMatch(/\b0 skill-style warnings\b/);
+  });
+
+  test("--skill-style prints only the skill-style findings, not other issues", () => {
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
+    const io = capture();
+    const code = runCli(["validate", "--skill-style"], { cwd: root, io: io.io });
+    expect(io.stdout()).not.toContain("catalog.directory-without-entry");
+    expect(io.stdout()).toContain("skill-style.");
+    // The flag narrows what is printed, not what the exit code answers for: a
+    // real error sitting outside the skill-style findings still fails the run.
+    expect(code).not.toBe(0);
+    // And the summary line, the run's receipt, does not read "0 errors" beside that exit 1.
+    expect(io.out.at(-1) ?? "").not.toMatch(/\b0 errors\b/);
+  });
+
+  test("--skill-style --json carries only the skill-style issues in the issues array", () => {
+    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, "skills/stray/SKILL.md": SKILL });
+    const io = capture();
+    runCli(["validate", "--skill-style", "--json"], { cwd: root, io: io.io });
+    const parsed = JSON.parse(io.stdout()) as { ok: boolean; issues: Array<{ rule: string }> };
+    expect(parsed.ok).toBe(false);
+    expect(parsed.issues.length).toBeGreaterThan(0);
+    expect(parsed.issues.every((i) => i.rule.startsWith("skill-style."))).toBe(true);
+  });
+
+  test("a tree with nothing but skill-style findings still exits 0 under --skill-style", () => {
+    const io = capture();
+    expect(runCli(["validate", "--skill-style"], { cwd: cleanTree(), io: io.io })).toBe(0);
+  });
 });
 
 describe("ak build", () => {

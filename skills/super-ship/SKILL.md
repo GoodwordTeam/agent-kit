@@ -57,6 +57,11 @@ for explicit invocation rather than reproducing the delegated effect through a s
 `entrypoint-phase-operation-split`). A lesson candidate may be drafted inside the run; publishing it
 needs explicit authority or a charter grant.
 
+Under a Firstmate binding, Firstmate is the delegated controller and the host validates the grant with
+`ak firstmate grant --binding <path> --operation ship.prepare`. Exit 0 is the grant: cite the record it
+prints in the ship record. A refusal means stop and report `needs-decision` to Firstmate. The grant
+covers the binding's delivery action and nothing more; merge is never on it (ADR-0004).
+
 ## Inputs
 
 The head being shipped, named. Verification receipts that bind to that head
@@ -81,7 +86,14 @@ The project's own release checks, discovered rather than assumed.
 1. Resolve the mode. `dry-run` and `publish` follow the same steps up to the first remote call;
    `dry-run` stops there.
 2. Confirm the preconditions: receipts bind to the head, the review verdict binds to that head's
-   artifact hash. A verdict of `blocked` or `unavailable` stops the run.
+   artifact hash. A verdict of `blocked` or `unavailable` stops the run. Start with
+   `node <this skill's directory>/../../bin/ak-gate.mjs check` (the bundle's `bin/`, two directories above this skill): it
+   needs a current record from super-build, super-verify, super-review full (or a delta at this head)
+   and super-review readiness. A `refused: gate <g> has no current evidence` line stops the run with
+   `needs-input` naming that phase; go back and run it. Once every precondition holds, record
+   `node <this skill's directory>/../../bin/ak-gate.mjs record --gate ship-preflight`.
+   Run it from the project checkout; the run defaults to the branch and the records to the
+   repository's git directory, and a binding's brief supplies `--run` and `--dir` when it has them.
 3. Run the sensitive-data scan over what would be committed. A candidate secret stops the run; where
    one was already committed, report it for rotation rather than only removing it from the payload.
 4. Run the dependency-audit triage and the project's own release checks, and record each outcome
@@ -97,6 +109,10 @@ The project's own release checks, discovered rather than assumed.
 9. In `publish`, derive an idempotency key for each remote effect from the run id, the operation id,
    the target identity and the input artifact hash — never from a timestamp, a random value, an
    attempt counter or a session id. Read the target back before the effect and again after it.
+   Where the project ships through no-mistakes, the push and the pull request go through it with
+   review, document and rebase skipped, and a parked gate returns to the lifecycle rather than being
+   answered in the pipeline (ruling `no-mistakes-as-ship-transport`). The mechanics are in
+   `./references/transport-no-mistakes.md`.
 10. Draft the lesson candidate through the knowledgebase adapter's draft operation. It stays a draft:
     publishing it is a separate authority this run does not hold.
 11. Hand the open pull request to the watch lane, and report the ship as prepared rather than
@@ -169,6 +185,10 @@ A lesson candidate, drafted through the knowledgebase adapter and left unpublish
 `remote-push` and `pr-open` are remote effects and occur only in `publish`. Each carries an
 idempotency key derived per `adapters/runner-contract/CONTRACT.md` §5 and is read back before and
 after, so a resumed run returns the existing branch or pull request rather than creating a second.
+
+Through the no-mistakes transport these are still this skill's effects, with the same keys: the
+transport performs them, and super-ship remains the single creator of the pull request. No merge is
+among them (ruling `no-mistakes-as-ship-transport`).
 
 `kb-draft` writes a draft and nothing else; `kb-publish` is not in this skill's envelope.
 

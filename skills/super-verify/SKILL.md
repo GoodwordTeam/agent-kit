@@ -74,7 +74,8 @@ credentials by default.
 
 Optionally, receipts from an earlier run. They are history: a receipt is evidence for the revision it
 names and for no other, and one taken before the code moved is read as invalidated rather than as a
-head start.
+head start. The code moved when either the revision or the working-tree diff hash differs from the
+receipt's (`common#/$defs/revision_ref`); an uncommitted edit on the same revision is a move.
 
 ## Workflow
 
@@ -102,6 +103,11 @@ head start.
 10. Claim exactly what the receipts support, and publish the matrix and the receipts through the
     knowledgebase adapter's `publishArtifact` operation with a run-artifact placement. Return the
     verdict per criterion, not a summary sentence over them.
+11. When every criterion is confirmed, record the gate: `node <this skill's directory>/../../bin/ak-gate.mjs record --gate verify`
+    (the bundle's `bin/`, two directories above this skill). The record names this revision and diff
+    hash, so any later edit makes it stale and super-ship sends you back here.
+    Run it from the project checkout; the run defaults to the branch and the records to the
+    repository's git directory, and a binding's brief supplies `--run` and `--dir` when it has them.
 
 ## Hard gates
 

@@ -112,12 +112,17 @@
       }
     },
     "revision_ref": {
+      "description": "A source snapshot: the repository, the committed revision, and optionally the digest of the working-tree diff over that revision. A revision alone names the committed tree; a worker that verifies or reviews before committing is describing that revision plus a diff, and binding only the revision would let an uncommitted edit inherit the receipt. Where 'diff_hash' is present, evidence bound to this snapshot is stale when either the revision or the diff hash changes (ruling `closure-requires-independent-verification`). Absent, the snapshot claims a clean tree at 'revision'.",
       "type": "object",
       "additionalProperties": false,
       "required": ["repo", "revision"],
       "properties": {
         "repo": { "$ref": "#/$defs/nonempty_string" },
-        "revision": { "$ref": "#/$defs/revision" }
+        "revision": { "$ref": "#/$defs/revision" },
+        "diff_hash": {
+          "description": "sha256 over the binary `git diff --no-ext-diff --binary <revision>` output of the tracked working tree, untracked files included as intent-to-add. The digest of an empty diff is a valid value and means the tree is clean.",
+          "$ref": "#/$defs/hash"
+        }
       }
     },
     "artifact_ref": {
@@ -266,7 +271,8 @@
         "event-delivery",
         "human-channel",
         "runner-grants",
-        "artifact-write"
+        "artifact-write",
+        "firstmate-supervision"
       ]
     },
     "skill_section": {
@@ -378,6 +384,45 @@
     "operation_status": {
       "description": "Closed result set for every phase operation. 'complete' ends the operation, not the run.",
       "enum": ["complete", "needs-input", "cap-reached", "failed", "cancelled"]
+    },
+    "child": {
+      "description": "A task-local child: a helper a worker starts inside its own task, under its own ownership, as opposed to a fleet task a supervisor dispatches (ruling `task-local-child-not-fleet-task`). It is depth 1 by construction: a child starts no child. Its scope is a subset of the parent's, it writes only to its artifact destination, and what it spends is counted against the parent's persistent budget rather than a fresh one. It never spawns fleet work, merges, pushes or contacts a human. These are declarations; which of them a host enforces is stated per host in adapters/firstmate/CONTRACT.md §5.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parent_run_id", "child_id", "role", "scope", "permissions", "artifact_destination", "budget", "depth"],
+      "properties": {
+        "parent_run_id": { "$ref": "#/$defs/artifact_id" },
+        "child_id": { "$ref": "#/$defs/artifact_id" },
+        "role": { "$ref": "#/$defs/role_id" },
+        "scope": {
+          "description": "The paths the child may read and, for a writing role, change. Must be a subset of the parent's bound scope; the parent checks that before it starts the child.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/glob" }
+        },
+        "permissions": {
+          "description": "The side effects the child may perform. Remote effects, merges and fleet dispatch are not expressible here, because a child may never hold them.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["workspace-write", "artifact-write", "process-exec", "scratch-write"] }
+        },
+        "artifact_destination": {
+          "description": "The one location the child writes its output to. Everything else it produces is discarded with its context.",
+          "$ref": "#/$defs/repo_path"
+        },
+        "budget": {
+          "description": "The share of the parent's persistent budget this child may draw. Its spend is charged to the parent; a child never receives a budget of its own.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["charged_to"],
+          "properties": {
+            "charged_to": { "$ref": "#/$defs/artifact_id" },
+            "max_turns": { "type": "integer", "minimum": 1 },
+            "max_wall_seconds": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "depth": { "type": "integer", "minimum": 1, "maximum": 1 }
+      }
     },
     "option": {
       "type": "object",

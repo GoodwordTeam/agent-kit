@@ -23,6 +23,11 @@ Non-negotiable. Written once, here, and enforced by `ak validate`'s invocation-g
 > - A user-invoked skill may **not** call another user-invoked skill. […]
 > - Domain packs auto-attach by artifact type. They never start a phase.
 
+**How "only a human starts these" is held** changed in `docs/decisions/0003-model-invocation.md`. The packager no
+longer emits `disable-model-invocation`, so the model can load any skill. A U skill keeps its class:
+its description carries the non-trigger clause, its first workflow step is the authority check, and
+started without an explicit request or a validated grant it stops and says so.
+
 Source: `G:L1672–1676`. The elision in the fourth bullet drops a model-routing illustration that the
 content denylist forbids in this file; the unedited text is at
 `research/sources/grok-transcript.md:1675`. The *rule* is reproduced exactly.
@@ -106,7 +111,7 @@ as authoritative. Every row below is a claim about the tree, checkable against i
 | `packs/`, `protocols/`, `roles/`, `references/` | Attachable constraints, shared phase logic, role prompts, reference packs | yes |
 | `schemas/` | JSON Schemas; `common` holds the shared `$defs` | yes |
 | `policies/`, `profiles/` | Machine-readable rulings and install profiles. Profiles never name models | yes |
-| `adapters/` | Host contracts: claude-code, codex, runner, knowledgebase, tracker | yes |
+| `adapters/` | Host contracts: claude-code, codex, runner, knowledgebase, firstmate, tracker | yes |
 | `provenance/` | `upstream.lock.yaml`, `adaptations.yaml`, `conversation-map.yaml`, licenses | yes |
 | `research/` | Design sources and the donor dossiers. **Denylist-exempt** | yes |
 | `src/`, `tests/` | The `ak` CLI and its tests | yes |
@@ -123,8 +128,10 @@ The full contract is `AUTHORING.md`. The parts that get violated most:
 
 1. **Canonical `SKILL.md` frontmatter carries only Agent Skills spec keys** — `name`, `description`,
    optionally `license` and `metadata`. `name` must equal the directory name.
-   Host keys (`disable-model-invocation`, `argument-hint`, `allowed-tools`) are **generated** by the
-   packager from `skill.yaml`. Hand-writing them into a canonical file is a validation failure.
+   Host keys (`argument-hint`, `allowed-tools`) are **generated** by the packager from `skill.yaml`.
+   Hand-writing them, or `disable-model-invocation`, into a canonical file is a validation failure.
+   No bundle carries `disable-model-invocation`: every skill is loadable by the model, and a U
+   skill's gate is its own authority step (`docs/decisions/0003-model-invocation.md`).
 2. **≤150 lines, hard cap 300.** Longer material goes behind `references/`. Progressive disclosure is
    the mechanism — not a full-body shim that depends on another plugin's hooks.
 3. **Every adapted file needs a provenance row** in `provenance/adaptations.yaml` of the form

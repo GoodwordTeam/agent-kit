@@ -316,7 +316,7 @@
   },
   "allOf": [
     {
-      "description": "A user-invoked skill packages disable-model-invocation: true; a model-invoked skill never does (catalog.yaml field notes, AGENTS.md).",
+      "description": "A user-invoked skill declares disable-model-invocation: true as the record of its class; a model-invoked skill never does (catalog.yaml field notes, AGENTS.md). The declaration is not emitted on any host (docs/decisions/0003-model-invocation.md).",
       "if": { "properties": { "invocation": { "const": "U" } }, "required": ["invocation"] },
       "then": {
         "properties": {

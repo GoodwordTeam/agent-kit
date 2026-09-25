@@ -238,49 +238,6 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
     }
   }
 
-  issues.push(...checkGeneratedInvocationKey(ctx));
   return issues;
 }
 
-/**
- * The packager must emit disable-model-invocation: true for every U skill, on
- * the host that defines the key.
- *
- * That host is claude-code and the check says so, rather than asking the
- * question host-free and reading the answer as universal. codex defines no
- * equivalent (`adapters/codex/CONTRACT.md` §3), so asking it there would
- * report a missing key for every U skill in the catalog and describe a host
- * difference as a defect in the skill.
- *
- * What this check therefore does *not* cover is the codex half of the
- * invocation law, which §3.1 places in the generated description's non-trigger
- * clause and the skill's own authority step. Neither is checked here, and a
- * green run on this rule is not evidence about that host.
- */
-function checkGeneratedInvocationKey(ctx: CheckContext): Issue[] {
-  const issues: Issue[] = [];
-  for (const entry of ctx.catalog.bySection("skills")) {
-    if (entry.invocation !== "U") continue;
-    const bodyPath = entryBodyPath("skills", entry.id);
-    const body = readTextIfPresent(join(ctx.root, bodyPath));
-    if (body === null) continue;
-    const generated = generateHostFrontmatter(
-      entry,
-      parseFrontmatter(body),
-      loadSkillManifest(ctx.root, entry.id),
-      "manual",
-      [],
-      "claude-code",
-    );
-    if (generated.keys["disable-model-invocation"] !== true) {
-      issues.push(
-        error(
-          "invocation.missing-disable-model-invocation",
-          bodyPath,
-          `The packager would not emit disable-model-invocation: true for user-invoked skill '${entry.id}'.`,
-        ),
-      );
-    }
-  }
-  return issues;
-}

@@ -4,8 +4,9 @@
 # Nothing is installable, packageable or referenceable unless it is declared here.
 #
 # Field notes
-#   invocation        U = user-invoked, only a human starts it (packager emits
-#                     disable-model-invocation: true). M = model-invoked.
+#   invocation        U = user-invoked, only a human starts it (held by the skill's
+#                     authority step; no host flag, see docs/decisions/0003-model-invocation.md).
+#                     M = model-invoked.
 #                     See AGENTS.md, "The invocation law".
 #   profiles          Which install profiles include it. Never model names.
 #   batch             Authoring batch (Phase 4). Order is deliberate; git is the resume point.
@@ -767,7 +768,7 @@ references:
       linear-linearis setup and guarded invocation, shipped inside the plugin.
 
 # ---------------------------------------------------------------------------
-# Schemas — 18. `common` holds shared $defs and validates no document itself.
+# Schemas — 19. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -850,6 +851,13 @@ schemas:
     summary: >-
       The local, uncommitted ak.install.yaml: which adapters one install attaches. Absent, every
       adapter that supplies a capability and fails closed on it is attached.
+  - id: firstmate-binding
+    batch: 5
+    status: authored
+    summary: >-
+      What ak firstmate bind writes outside the worker's reach: task and run ids, the source
+      snapshot, the pinned skill bundle, the charter, required gates, child budget, evidence store
+      and the delivery the worker may perform. Never merge.
   - id: tracker-binding
     batch: 5
     status: authored
@@ -910,7 +918,7 @@ profiles:
     summary: Adds catalog and codebase maintenance skills.
 
 # ---------------------------------------------------------------------------
-# Adapters — 5. Host contracts.
+# Adapters — 6. Host contracts.
 # Arch 4 also sketched issue-tracker and repository-events directories. repository-events is
 # folded into runner-contract, which owns the event-delivery capability
 # (schemas/common.schema.json#/$defs/capability); splitting it out would create an adapter with no
@@ -941,6 +949,13 @@ adapters:
     summary: >-
       readContext, recordDecision, publishArtifact, linkCodeEvidence, requestImpactAnalysis,
       linkPullRequests, proposeLesson. Contract only; no implementation lives here.
+  - id: firstmate
+    batch: 5
+    status: authored
+    summary: >-
+      Firstmate supervises, agent-kit judges inside the worker, no-mistakes delivers. The
+      ownership boundary, the task-local child contract, the upstream patch it needs and the
+      status lines it may write.
   - id: tracker
     batch: 1
     status: authored

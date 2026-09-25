@@ -315,7 +315,7 @@
         },
         "state": { "enum": ["covered", "skipped", "unavailable"] },
         "reason": {
-          "description": "Why the lane was skipped, or what made it unavailable. Mandatory for both states: an unexplained gap is indistinguishable from an error (plan 6.1).",
+          "description": "Why the lane was skipped, or what made it unavailable. Mandatory for both states: an unexplained gap is indistinguishable from an error (plan 6.1). On a covered lane it is optional and keeps the seat's own result where the seat returned `empty`, because its axis did not apply (skills/super-review/references/panel.md).",
           "$ref": "common.schema.json#/$defs/nonempty_string"
         },
         "seat": { "$ref": "#/$defs/seat" },
@@ -323,6 +323,10 @@
         "findings": {
           "type": "array",
           "items": { "$ref": "common.schema.json#/$defs/artifact_ref" }
+        },
+        "raw_output": {
+          "description": "The seat's own output exactly as it returned, stored as a run artifact and referenced by hash before synthesis reads it. Synthesis deduplicates and never rewrites a severity, and this is what lets anyone check that it did: a finding the synthesized review carries is traceable to the raw output it came from, and one it dropped is visible there with its reason. Required on a covered lane, because a covered lane with no preserved output is a claim of coverage nobody can re-read.",
+          "$ref": "common.schema.json#/$defs/artifact_ref"
         },
         "standards_cited": {
           "description": "The project standards rules this lane cited, rule by rule. An empty list from a lane with no configured standards is a valid, honest result; an invented preference is not (plan 6.1).",
@@ -336,9 +340,9 @@
       },
       "allOf": [
         {
-          "description": "A covered lane has a seat and a verdict; that is what distinguishes it from an unavailable one.",
+          "description": "A covered lane has a seat, a verdict and its preserved raw output; the first two distinguish it from an unavailable one, and the third makes the coverage re-readable.",
           "if": { "properties": { "state": { "const": "covered" } }, "required": ["state"] },
-          "then": { "required": ["seat", "verdict"] }
+          "then": { "required": ["seat", "verdict", "raw_output"] }
         },
         {
           "description": "A skipped or unavailable lane states why, and cannot carry a verdict that would read as coverage (plan 6.1, release scenario 4).",

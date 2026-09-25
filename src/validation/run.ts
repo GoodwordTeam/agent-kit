@@ -32,6 +32,7 @@ import { checkRestatements } from "./restatement.ts";
 import { checkRulings } from "./rulings.ts";
 import { checkSchemas } from "./schemas.ts";
 import { checkSideEffects } from "./sideeffects.ts";
+import { checkSkillStyle } from "./skill-style.ts";
 import { error, hasBlockingSkips, hasErrors, sortIssues, type Issue } from "./types.ts";
 
 export interface Check {
@@ -64,6 +65,9 @@ export const CHECKS: readonly Check[] = [
   { name: "schema-rule-coverage", run: checkSchemaRuleCoverage },
   { name: "frontmatter", run: checkFrontmatter },
   { name: "budget", run: checkBudget },
+  // Style guidance, not contract: warning/note only, never error or blocking.
+  // See src/validation/skill-style.ts for why it cannot fail this run.
+  { name: "skill-style", run: checkSkillStyle },
   { name: "invocation", run: checkInvocation },
   { name: "policies", run: checkPolicies },
   { name: "invocation-partition", run: checkInvocationPartition },

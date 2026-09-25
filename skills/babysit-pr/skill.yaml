@@ -241,8 +241,11 @@ packaging:
     disable-model-invocation: true
   hosts:
     - adapter: claude-code
-      mode: guided
+      mode: manual
       unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
         - >-
           event delivery is not provided by the host. Where no events arrive, the watch stops with
           needs-input rather than substituting a polling loop.
