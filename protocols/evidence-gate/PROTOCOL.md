@@ -49,9 +49,13 @@ was called with (ruling `entrypoint-phase-operation-split`; protocol `phase-oper
    claim it carries. A new pattern citing no event, or any hash outside the input, is refused whole.
    A memory bullet with no surviving id is dropped. A lesson with no surviving evidence is dropped.
    For the working memory, an observation the reflector flagged in `security_notes` is then
-   quarantined: every bullet citing it is dropped, as is any bullet carrying a token that only a
-   flagged observation holds, and the runtime writes one fixed `## Unresolved` bullet per flag from
-   the id, its session and the kind. These drops are counted apart from the id check's.
+   quarantined, as is a shown observation that a bullet describing an attack cites; that wording is
+   a backstop, never the primary signal. Every bullet citing a quarantined observation is dropped,
+   and so is any bullet, in any section and under any citation, carrying text that only a
+   quarantined observation holds, matched after case, punctuation, spacing and Unicode are
+   normalized and across bullet boundaries. The runtime writes one fixed `## Unresolved` bullet
+   covering every quarantined observation, from the ids, their sessions and the kinds. These drops
+   are counted apart from the id check's.
 3. **Count in the runtime.** Pattern counts, sources, pull requests and reviewers are recomputed
    from the events the gate kept, never read from the reply. An event counted once against a page
    is not counted again on replay.
@@ -71,12 +75,16 @@ was called with (ruling `entrypoint-phase-operation-split`; protocol `phase-oper
    - A lesson is `confirmed` when its surviving evidence spans at least two sessions, and
      `hypothesis` otherwise.
    - `retired` is sticky: only a human, through `compound-refresh`, retires or revives.
-5. **Reject a degenerate working-memory rewrite whole** when any one of these holds:
-   - it exceeds 1.3 times the token cap;
+5. **Reject a degenerate working-memory rewrite whole** when any one of these holds. Each is
+   checked on the judge's text after step 2, before the runtime's security bullet is added, so that
+   bullet can neither hide a gutted rewrite nor push a near-cap one over:
+   - it, plus room for the runtime's security bullet, exceeds 1.3 times the token cap;
    - any non-heading line appears three or more times;
    - it collapsed below 0.3 of the previous memory's length from under 5,000 input tokens;
    - any of the six required sections is missing;
-   - the id check dropped more than half its bullets. Security drops do not count toward this.
+   - the id check and the quarantine's text scan together dropped more than half of the bullets
+     the judge meant as memory. Bullets citing a quarantined observation are left out of both
+     counts, since the runtime's bullet replaces them.
    A rejected rewrite leaves the previous memory in place, does not advance the watermark, and is
    recorded with its reason.
 6. **Hand promotions on as drafts.** A promoted guardrail and a newly confirmed lesson go to the
@@ -106,7 +114,7 @@ Gate: a degenerate rewrite is rejected whole. A gutted memory is worse than a st
 ## Outputs
 
 Only what passed: pattern pages with runtime-computed counts and status, a working memory whose
-every bullet cites a shown id and repeats nothing a flagged observation alone said, lesson pages whose evidence is a subset of the input, and a run-log
+every bullet cites a shown id and repeats nothing a quarantined observation alone said, lesson pages whose evidence is a subset of the input, and a run-log
 line (`schemas/memory-run.schema.json`) naming what was dropped or why the reply was rejected.
 Promotions leave as candidate drafts through the knowledgebase adapter's `proposeLesson`. Nothing
 is written inside a project repository.
