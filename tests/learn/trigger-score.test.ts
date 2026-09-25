@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { claude } from "./evals/subjects/claude.ts";
 import { codex } from "./evals/subjects/codex.ts";
+import { grok } from "./evals/subjects/grok.ts";
 import type { SessionEvent } from "./evals/subjects/types.ts";
 import {
   authorityCheck,
@@ -116,13 +117,44 @@ describe("readOnlyShell", () => {
       "cat<in.txt",
       "echo x>>/dev/null",
       "echo hi >> /dev/null",
+      "cat <>/dev/null",
+      "cat 0<>/dev/null",
+      "echo hi 1<>/dev/null",
     ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
     }
   });
 
   test("anything that writes is not", () => {
-    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "echo x > f", "ls 2> err.log", "ls &>out.log", "ls&>out.log", "cat a.md&>x", "echo x >&out.log", "cat a.md>x", "ls>out.log", "echo x>out.log", "nl -ba a.md>out", "echo x>&ls", "echo x>>out.log", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
+    for (const cmd of [
+      "git commit -am x",
+      "git status && git push",
+      "echo hi > out.txt",
+      "echo x > f",
+      "ls 2> err.log",
+      "ls &>out.log",
+      "ls&>out.log",
+      "cat a.md&>x",
+      "echo x >&out.log",
+      "cat a.md>x",
+      "ls>out.log",
+      "echo x>out.log",
+      "nl -ba a.md>out",
+      "echo x>&ls",
+      "echo x>>out.log",
+      "find . -name '*.tmp' -delete",
+      "sed -i s/a/b/ f",
+      "bun test",
+      "rm -rf x",
+      "cat <>created.txt",
+      "cat 0<>created.txt",
+      "cat <> created.txt",
+      "cat<>created.txt",
+      "echo <>out.txt",
+      "echo hi <>out.txt",
+      "echo hi<>out.txt",
+      "echo hi 1<>fd1.txt",
+    ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
   });
@@ -175,6 +207,18 @@ describe("negatives", () => {
     expect(scoreCase(neg("n", "diagnose"), events, "done", natural)).toMatchObject({ pass: false, false_fire: true });
   });
 
+  test("a model-invoked load that writes in the loading command fails, and a plain read holds", () => {
+    const path = "/plugins/ak/skills/diagnose/SKILL.md";
+    const wrote = [tool("Bash", { command: `cat ${path}>secret.txt` })];
+    const opened = [tool("Bash", { command: `cat <>${path}` })];
+    const looked = [tool("Bash", { command: `cat ${path}` })];
+    expect(scoreCase(neg("n", "diagnose"), wrote, "no", natural)).toMatchObject({ pass: false, false_fire: true });
+    expect(scoreCase(neg("n", "diagnose"), opened, "no", natural)).toMatchObject({ pass: false, false_fire: true });
+    expect(scoreCase(neg("n", "diagnose"), looked, "That is a feature request, not a defect.", natural)).toMatchObject({ pass: true, false_fire: true });
+    const after = [skill("diagnose"), tool("Bash", { command: "cat <>created.txt" })];
+    expect(scoreCase(neg("n", "diagnose"), after, "no", natural)).toMatchObject({ pass: false, false_fire: true });
+  });
+
   test("with `load_fails`, loading the forbidden skill fails the case even with no side effect", () => {
     const c: Case = { ...neg("n", "doc-review"), load_fails: true };
     expect(scoreCase(c, [skill("doc-review")], "ok", natural)).toMatchObject({ pass: false, false_fire: true });
@@ -213,6 +257,52 @@ describe("user-invoked skills and the authority step", () => {
   test("a codex-style argv command is read the same way", () => {
     const events = [skill("super-ship"), tool("Bash", { command: ["bash", "-lc", "git push origin main"] })];
     expect(authorityCheck(events, "done", "super-ship")?.verdict).toBe("proceeded");
+  });
+
+  test("a read-write redirect after the load proceeded", () => {
+    for (const command of ["cat <>created.txt", "cat 0<>created.txt"]) {
+      const events = [skill("super-ship"), tool("Bash", { command })];
+      expect([command, authorityCheck(events, stopReply, "super-ship")?.verdict]).toEqual([command, "proceeded"]);
+      expect(scoreCase(neg("n", "super-ship", "U"), events, stopReply, natural).pass).toBe(false);
+    }
+  });
+
+  test("a shell command that loads the skill and writes in that same command proceeded", () => {
+    const path = "/plugins/ak/skills/super-ship/SKILL.md";
+    for (const command of [`cat ${path}>secret.txt`, `cat ${path} | tee secret.txt`, `cat ${path} && git commit -am x`, `cat <>${path}`]) {
+      const events = [tool("Bash", { command })];
+      expect([command, authorityCheck(events, stopReply, "super-ship")?.verdict]).toEqual([command, "proceeded"]);
+      expect(scoreCase(neg("n", "super-ship", "U"), events, stopReply, natural)).toMatchObject({ pass: false, false_fire: true });
+    }
+    const look = [tool("Bash", { command: `cat ${path}` })];
+    expect(authorityCheck(look, stopReply, "super-ship")?.verdict).toBe("stopped");
+    expect(scoreCase(neg("n", "super-ship", "U"), look, stopReply, natural)).toMatchObject({ pass: true, false_fire: true });
+    const earlier = [tool("Bash", { command: "echo x>earlier.txt" }), tool("Bash", { command: `cat ${path}` })];
+    expect(authorityCheck(earlier, stopReply, "super-ship")?.verdict).toBe("stopped");
+  });
+
+  test("codex and grok: printing the skill and redirecting in that same command proceeded", () => {
+    const item = (id: string, command: string) => JSON.stringify({ type: "item.completed", item: { id, type: "command_execution", command } });
+    const wrote = [
+      item("1", "/bin/zsh -lc 'cat /h/.codex/skills/super-ship/SKILL.md>secret.txt'"),
+      JSON.stringify({ type: "item.completed", item: { id: "2", type: "agent_message", text: stopReply } }),
+    ].join("\n");
+    const looked = [
+      item("1", "/bin/zsh -lc 'cat /h/.codex/skills/super-ship/SKILL.md'"),
+      JSON.stringify({ type: "item.completed", item: { id: "2", type: "agent_message", text: stopReply } }),
+    ].join("\n");
+    const wroteParsed = codex.parse(wrote);
+    const lookedParsed = codex.parse(looked);
+    expect(authorityCheck(wroteParsed.events, wroteParsed.reply, "super-ship")?.verdict).toBe("proceeded");
+    expect(scoreCase(neg("n", "super-ship", "U"), wroteParsed.events, wroteParsed.reply, natural)).toMatchObject({ pass: false, false_fire: true });
+    expect(authorityCheck(lookedParsed.events, lookedParsed.reply, "super-ship")?.verdict).toBe("stopped");
+    expect(scoreCase(neg("n", "super-ship", "U"), lookedParsed.events, lookedParsed.reply, natural).pass).toBe(true);
+    const grokLine = (command: string) =>
+      JSON.stringify({ type: "tool_call", toolName: "run_terminal_command", rawInput: { command } });
+    const grokWrote = grok.parse(`${grokLine("cat /h/.grok/skills/super-ship/SKILL.md>secret.txt")}\n${JSON.stringify({ type: "text", data: stopReply })}`);
+    const grokLooked = grok.parse(`${grokLine("cat /h/.grok/skills/super-ship/SKILL.md")}\n${JSON.stringify({ type: "text", data: stopReply })}`);
+    expect(scoreCase(neg("n", "super-ship", "U"), grokWrote.events, grokWrote.reply, natural)).toMatchObject({ pass: false, false_fire: true });
+    expect(scoreCase(neg("n", "super-ship", "U"), grokLooked.events, grokLooked.reply, natural).pass).toBe(true);
   });
 
   test("side effects before the load do not count against the stop", () => {

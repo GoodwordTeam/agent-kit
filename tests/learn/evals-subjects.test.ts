@@ -142,7 +142,14 @@ describe("shell reads", () => {
     expect(words("echo x>>out.log")).toEqual(["echo", "x", ">>out.log"]);
     expect(words("echo hi >> /dev/null")).toEqual(["echo", "hi", ">>", "/dev/null"]);
     expect(words("cat<in.txt")).toEqual(["cat", "<in.txt"]);
+    expect(words("cat <>created.txt")).toEqual(["cat", "<>created.txt"]);
+    expect(words("cat 0<>created.txt")).toEqual(["cat", "0<>created.txt"]);
+    expect(words("cat<>created.txt")).toEqual(["cat", "<>created.txt"]);
+    expect(words("cat <> created.txt")).toEqual(["cat", "<>", "created.txt"]);
+    expect(words("echo hi 1<>fd1.txt")).toEqual(["echo", "hi", "1<>fd1.txt"]);
     expect(readsOf("cat SKILL.md | head -5")).toEqual(["SKILL.md"]);
+    expect(readsOf("cat <>in.txt")).toEqual(["in.txt"]);
+    expect(readsOf("cat 0<>in.txt >out.txt")).toEqual(["in.txt"]);
     expect(readsOf("cat<in.txt >out.txt")).toEqual(["in.txt"]);
     expect(readsOf("sed -n '1,20p' x/SKILL.md; tail -n 3 log.txt 2>/dev/null")).toEqual(["x/SKILL.md", "log.txt"]);
     expect(readsOf("sed -e s/a/b/ in.txt")).toEqual(["in.txt"]);

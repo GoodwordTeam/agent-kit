@@ -38,8 +38,10 @@ export function words(command: string): string[] {
       push();
     } else if (ch === ">" || ch === "<") {
       // A redirect is its own word (`a.md>x`, `status>&1`). It stays attached to an fd (`2>`),
-      // to `&` (`&>file`), or while `>>` is still growing (`>>`, `2>>`, `&>>`).
-      const stays = /^\d+$/.test(word) || word === "&" || (ch === ">" && /^(?:\d+|&)?>$/.test(word));
+      // to `&` (`&>file`), while `>>` is still growing (`>>`, `2>>`, `&>>`), or while `<>`
+      // is still growing (`<>file`, `0<>file`). That open creates the file.
+      const rwOpen = ch === ">" && /^(?:\d+)?<$/.test(word);
+      const stays = /^\d+$/.test(word) || word === "&" || (ch === ">" && /^(?:\d+|&)?>$/.test(word)) || rwOpen;
       if (word !== "" && !stays) push();
       word += ch;
       started = true;
@@ -97,10 +99,11 @@ export function readsOf(command: string): string[] {
     let scriptGiven = false;
     for (let i = 0; i < args.length; i++) {
       const arg = args[i]!;
-      const redirect = /^(\d*|&)(<|>>?)(&?)(.*)$/.exec(arg);
+      const redirect = /^(\d*|&)(<>|>>?|<)(&?)(.*)$/.exec(arg);
       if (redirect !== null) {
         const target = redirect[4] !== "" ? redirect[4]! : args[++i];
-        if (redirect[2] === "<" && target !== undefined) operands.push(target);
+        // `<` reads the target. `<>` opens it read-write, which reads it and creates it when missing.
+        if ((redirect[2] === "<" || redirect[2] === "<>") && target !== undefined) operands.push(target);
         continue;
       }
       if (arg.startsWith("-") && arg !== "-") {
