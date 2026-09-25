@@ -140,7 +140,11 @@ record in the binding's evidence store, for this run, current for the head the l
 record names. `build-checks` and `review-full` may sit on an earlier head in that head's history; a
 `review-full` on an earlier head also needs a `review-delta` at this one. That history stops at the
 fork point: a record whose snapshot is already on the default branch (`origin/HEAD`, else `main`, else
-`master`) does not count, unless it is at the head's own revision. Then every grant the run
+`master`) does not count, unless it is at the head's own revision; work on the default branch itself
+is bounded by ancestry alone. Known limit: after a squash or rebase merge, a branch reused by merging
+the default branch back in keeps the old run's records in its history and they count, so use one
+branch per task or pass `--run` for a fresh run id. A binding's run id is unique per run, so a
+Firstmate worker does not meet this. Then every grant the run
 needed must have left a grant record naming this binding by path and by the hash the ledger registered,
 and the binding must still hash to it. Any refusal prints `refused: …` lines and a `needs-decision`
 hint, exits 1, and prints no `done` line. `ak firstmate status <binding> --verify` runs the same audit

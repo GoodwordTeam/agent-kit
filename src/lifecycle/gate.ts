@@ -2,6 +2,11 @@
  * Lifecycle fidelity: each phase leaves a gate record bound to the snapshot it judged, and super-ship
  * refuses to start until every phase before it has one for the head it would ship.
  *
+ * Known limit: a standalone run is named after its branch, and earlier records are bounded by the fork
+ * point from the default branch. After a squash or rebase merge, a branch reused by merging the default
+ * branch back in keeps the old run's `build-checks` and `review-full` records in its history, and they
+ * count. Use one branch per task, or pass `--run` for a fresh run id.
+ *
  * This is core. It needs no Firstmate: a standalone session keeps its records under the repository's
  * git common directory, and a Firstmate worker passes the binding's evidence store and run id instead.
  *
@@ -245,12 +250,16 @@ const EMPTY_DIFF = `sha256:${createHash("sha256").digest("hex")}`;
 
 /**
  * Where this branch left the default branch (origin/HEAD, else main, else master): the merge-base of
- * the head with it. Undefined when none of them resolves.
+ * the head with it. Undefined when none of them resolves, and when the default branch itself is checked
+ * out, which has no fork point to bound by.
  */
 function forkPoint(project: string, head: string): { branch: string; base: string } | undefined {
+  const current = git(project, ["symbolic-ref", "--quiet", "--short", "HEAD"]).text;
   for (const branch of ["refs/remotes/origin/HEAD", "main", "master"]) {
     const ref = git(project, ["rev-parse", "--verify", "--quiet", `${branch}^{commit}`]);
     if (ref.code !== 0) continue;
+    const name = branch === "main" || branch === "master" ? branch : git(project, ["symbolic-ref", "--quiet", "--short", branch]).text.replace(/^origin\//, "");
+    if (current !== "" && current === name) return undefined;
     const base = git(project, ["merge-base", head, ref.text]);
     return base.code === 0 ? { branch, base: base.text } : undefined;
   }

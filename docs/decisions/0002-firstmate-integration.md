@@ -254,7 +254,11 @@ The first follow-up above is closed this way:
   the fork point: an earlier record counts only if its snapshot is not already on the default branch
   (`origin/HEAD`, else `main`, else `master`; ancestor-only when none resolves). A record at the head's
   own revision always counts. A standalone run is named after its branch, so without this a branch
-  reused after a merge would inherit the old run's `build-checks`. The pre-ship default checks
+  reused after a merge would inherit the old run's `build-checks`. Work with the default branch itself
+  checked out has no fork point, and stays ancestor-only. Known limit:
+  after a squash or rebase merge, a branch reused by merging the default branch back in keeps the old
+  run's commits in its history, so its `build-checks` and `review-full` records still count. Use one
+  branch per task (Orca's default), or pass `--run` for a fresh run id. The pre-ship default checks
   `build-checks, verify, review-full, review-readiness`, since `ship-preflight` does not exist yet
   when super-ship checks.
 - `bind` adds `build-checks` to `required_gates`. `ak firstmate status complete` audits before it

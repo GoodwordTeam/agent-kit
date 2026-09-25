@@ -122,6 +122,17 @@ describe("ak lifecycle check, standalone", () => {
     expect(r.err).toContain("refused: gate review-full has no current evidence");
   });
 
+  test("work on the default branch itself keeps build-checks recorded before its commit", () => {
+    const dir = repo();
+    git(dir, "checkout", "-q", "main");
+    record(dir, "build-checks");
+    git(dir, "commit", "-qam", "build");
+    record(dir, "verify", "review-full", "review-readiness");
+    const r = ak(dir, "check");
+    expect(r.err).toBe("");
+    expect(r.code).toBe(0);
+  });
+
   test("records live under the git common directory, so a linked worktree's run is found from any worktree", () => {
     const dir = repo();
     git(dir, "commit", "-qam", "work");
