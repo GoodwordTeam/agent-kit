@@ -70,7 +70,7 @@
 
   {"id": "ho-doc-review-p1", "skill": "doc-review", "polarity": "positive", "invocation": "M", "expected": ["doc-review"],
    "prompt": "Is this requirements doc coherent enough to plan from? Point out ambiguity."},
-  {"id": "ho-doc-review-n1", "skill": "doc-review", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["doc-review"],
+  {"id": "ho-doc-review-n1", "skill": "doc-review", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["doc-review"], "load_fails": true,
    "prompt": "Look through the diff in src/api for bugs."},
 
   {"id": "ho-diagnose-p1", "skill": "diagnose", "polarity": "positive", "invocation": "M", "expected": ["diagnose"],

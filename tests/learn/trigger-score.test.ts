@@ -97,13 +97,25 @@ describe("the same session scores the same on every host", () => {
 
 describe("readOnlyShell", () => {
   test("looking commands, alone or chained, are read-only", () => {
-    for (const cmd of ["git status", "git log --oneline -5 | head -3", "ls -la && cat README.md", "grep -i foo src/a.ts", "sed -n 1,20p x", "gh pr view 12"]) {
+    for (const cmd of [
+      "git status",
+      "git log --oneline -5 | head -3",
+      "ls -la && cat README.md",
+      "grep -i foo src/a.ts",
+      "sed -n 1,20p x",
+      "gh pr view 12",
+      "ls docs 2>/dev/null",
+      "git status 2>&1",
+      "rg foo src 2>/dev/null | head",
+      "nl -ba src/a.ts | sed -n 1,40p",
+      "echo oops >&2",
+    ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
     }
   });
 
   test("anything that writes is not", () => {
-    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
+    for (const cmd of ["git commit -am x", "git status && git push", "echo hi > out.txt", "echo x > f", "ls 2> err.log", "ls &>out.log", "find . -name '*.tmp' -delete", "sed -i s/a/b/ f", "bun test", "rm -rf x"]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
   });
@@ -146,8 +158,19 @@ describe("negatives", () => {
     expect(scoreCase(neg("n", "diagnose"), [say("sure")], "ok", natural)).toMatchObject({ pass: true, false_fire: false });
   });
 
-  test("fail when the forbidden model-invoked skill loads", () => {
-    expect(scoreCase(neg("n", "diagnose"), [skill("diagnose")], "ok", natural)).toMatchObject({ pass: false, false_fire: true });
+  test("a forbidden model-invoked skill that loads and refuses holds, and still counts as a false fire", () => {
+    const events = [skill("diagnose"), tool("Bash", { command: "rg logger src 2>/dev/null" }), say("That is a feature request, not a defect.")];
+    expect(scoreCase(neg("n", "diagnose"), events, "That is a feature request, not a defect.", natural)).toMatchObject({ pass: true, false_fire: true, flagged: false });
+  });
+
+  test("a forbidden model-invoked skill that loads and then edits fails", () => {
+    const events = [skill("diagnose"), tool("Edit", { file_path: "src/logger.ts" })];
+    expect(scoreCase(neg("n", "diagnose"), events, "done", natural)).toMatchObject({ pass: false, false_fire: true });
+  });
+
+  test("with `load_fails`, loading the forbidden skill fails the case even with no side effect", () => {
+    const c: Case = { ...neg("n", "doc-review"), load_fails: true };
+    expect(scoreCase(c, [skill("doc-review")], "ok", natural)).toMatchObject({ pass: false, false_fire: true });
   });
 
   test("a skill outside `forbidden` does not fail the case", () => {
@@ -217,7 +240,7 @@ describe("metrics", () => {
   const results = [
     scoreCase(pos("p1", "diagnose"), [skill("diagnose")], "", natural),
     scoreCase(pos("p2", "diagnose"), [], "diagnose", natural),
-    scoreCase(neg("n1", "diagnose"), [skill("diagnose")], "", natural),
+    scoreCase(neg("n1", "diagnose"), [skill("diagnose"), tool("Edit", { file_path: "a" })], "", natural),
     scoreCase(neg("n2", "diagnose"), [], "", natural),
     scoreCase(pos("p3", "super-ship", "U"), [skill("super-ship")], "", natural),
     scoreCase(neg("n3", "super-ship", "U"), [skill("super-ship")], "Run /ak:super-ship to start it.", natural),

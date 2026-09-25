@@ -22,12 +22,17 @@ export function adapterFor(host: HostKind): SubjectAdapter {
   return adapter;
 }
 
+/** The `CLAUDE_CODE_*` variables that carry auth or provider routing; `scripts/eval-local.sh` passes the same ones. */
+const AUTH = new Set(["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX"]);
+
 /**
  * The launching session's own variables (`CLAUDE_CODE_*`, `EVAL_*`) reach a child that inherits
- * them; the host-eval isolation probe planted canaries that arrived this way. Auth variables stay.
+ * them; the host-eval isolation probe planted canaries that arrived this way. The `AUTH` ones stay.
  */
 export function withoutParentSession(env: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(Object.entries(env).filter(([key]) => !key.startsWith("CLAUDE_CODE_") && !key.startsWith("EVAL_") && key !== "CLAUDECODE"));
+  return Object.fromEntries(
+    Object.entries(env).filter(([key]) => AUTH.has(key) || (!key.startsWith("CLAUDE_CODE_") && !key.startsWith("EVAL_") && key !== "CLAUDECODE")),
+  );
 }
 
 /** Run one session for `subjectId` under the adapter's isolation. `model` is the matrix binding, passed through opaquely. */

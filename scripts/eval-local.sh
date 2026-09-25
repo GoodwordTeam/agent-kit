@@ -53,6 +53,8 @@ while [[ $# -gt 0 ]]; do
     --eval-dir=*) eval_dir="${1#*=}"; args+=("$1"); shift ;;
     --max-cost-usd) budget="$2"; shift 2 ;;
     --max-cost-usd=*) budget="${1#*=}"; shift ;;
+    --tag=*) tags+=("${1#*=}"); args+=(--tag "${1#*=}"); shift ;;
+    --allow-tools=*) user_tools+=("${1#*=}"); shift ;;
     --tag | --allow-tools)
       flag="$1"; shift
       while [[ $# -gt 0 && "$1" != -* ]]; do

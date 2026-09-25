@@ -98,7 +98,7 @@
    "prompt": "Review this ADR draft for contradictions and whether it is ready for a decision."},
   {"id": "dev-doc-review-p2", "skill": "doc-review", "polarity": "positive", "invocation": "M", "expected": ["doc-review"],
    "prompt": "Read docs/plan.md and tell me where two of its sections disagree with each other."},
-  {"id": "dev-doc-review-n1", "skill": "doc-review", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["doc-review"],
+  {"id": "dev-doc-review-n1", "skill": "doc-review", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["doc-review"], "load_fails": true,
    "prompt": "Tighten the wording in docs/plan.md; it's clunky and runs too long."},
 
   {"id": "dev-diagnose-p1", "skill": "diagnose", "polarity": "positive", "invocation": "M", "expected": ["diagnose"],

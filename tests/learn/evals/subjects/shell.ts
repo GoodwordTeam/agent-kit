@@ -36,6 +36,9 @@ export function words(command: string): string[] {
       started = true;
     } else if (/\s/.test(ch)) {
       push();
+    } else if (ch === "&" && (word.endsWith(">") || command[i + 1] === ">")) {
+      word += ch;
+      started = true;
     } else if (";|&".includes(ch)) {
       push();
       const op = command[i + 1] === ch ? ch + ch : ch;
@@ -86,7 +89,7 @@ export function readsOf(command: string): string[] {
     let scriptGiven = false;
     for (let i = 0; i < args.length; i++) {
       const arg = args[i]!;
-      const redirect = /^(\d*)(<|>>?)(&?)(.*)$/.exec(arg);
+      const redirect = /^(\d*|&)(<|>>?)(&?)(.*)$/.exec(arg);
       if (redirect !== null) {
         const target = redirect[4] !== "" ? redirect[4]! : args[++i];
         if (redirect[2] === "<" && target !== undefined) operands.push(target);

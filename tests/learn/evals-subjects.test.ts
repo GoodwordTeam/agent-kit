@@ -73,6 +73,14 @@ describe("codex", () => {
     expect(tools(parsed.events).at(-1)!.input.command).toBe("bun test");
   });
 
+  test("a deleted file, or a change of a kind not listed, is a mutating tool", () => {
+    const stdout = JSON.stringify({ type: "item.completed", item: { id: "1", type: "file_change", changes: [{ path: "a.md", kind: "delete" }, { path: "b.md", kind: "rename" }] } });
+    expect(tools(codex.parse(stdout).events).map((e) => [e.name, e.input.file_path])).toEqual([
+      ["Delete", "a.md"],
+      ["Edit", "b.md"],
+    ]);
+  });
+
   test("argv: appended context is a developer_instructions TOML string; no turn cap flag exists", () => {
     const argv = codex.command({ ...req, maxTurns: 4, appendSystemPrompt: 'line "one"\nline two' }, "bound-b");
     expect(argv.slice(0, 2)).toEqual(["codex", "exec"]);
@@ -121,6 +129,7 @@ describe("shell reads", () => {
     expect(unwrap("/bin/zsh -lc 'cat a b'")).toBe("cat a b");
     expect(unwrap("bash -lc \"head -n 5 x\"")).toBe("head -n 5 x");
     expect(words(`cat "a b" 'c' d\\ e && ls`)).toEqual(["cat", "a b", "c", "d e", "&&", "ls"]);
+    expect(words("git status 2>&1 >&2 &>/dev/null & ls")).toEqual(["git", "status", "2>&1", ">&2", "&>/dev/null", "&", "ls"]);
     expect(readsOf("cat SKILL.md | head -5")).toEqual(["SKILL.md"]);
     expect(readsOf("sed -n '1,20p' x/SKILL.md; tail -n 3 log.txt 2>/dev/null")).toEqual(["x/SKILL.md", "log.txt"]);
     expect(readsOf("sed -e s/a/b/ in.txt")).toEqual(["in.txt"]);
@@ -152,6 +161,8 @@ describe("isolation", () => {
 
     expect(claude.isolate!(scratch, req).env).toEqual({ CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1", CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" });
     expect(withoutParentSession({ CLAUDE_CODE_ENTRYPOINT: "cli", EVAL_X: "1", CLAUDECODE: "1", ANTHROPIC_API_KEY: "k", PATH: "/bin" })).toEqual({ ANTHROPIC_API_KEY: "k", PATH: "/bin" });
+    const auth = { CLAUDE_CODE_OAUTH_TOKEN: "t", CLAUDE_CODE_USE_BEDROCK: "1", CLAUDE_CODE_USE_VERTEX: "1" };
+    expect(withoutParentSession({ ...auth, CLAUDE_CODE_SSE_PORT: "1" })).toEqual(auth);
     expect(BUNDLE_FOR).toEqual({ claude: "claude-code", codex: "codex", grok: "claude-code" });
   });
 

@@ -39,7 +39,7 @@ interface Line {
   item?: Item;
 }
 
-const CHANGE_TOOL: Record<string, string> = { add: "Write", update: "Edit" };
+const CHANGE_TOOL: Record<string, string> = { add: "Write", update: "Edit", delete: "Delete" };
 
 function itemEvents(item: Item): SessionEvent[] {
   switch (item.type) {
@@ -51,7 +51,7 @@ function itemEvents(item: Item): SessionEvent[] {
       return [bash, ...readsOf(command).map((file_path): SessionEvent => ({ kind: "tool", name: "Read", raw: "command_execution", input: { file_path, via: "shell" } }))];
     }
     case "file_change":
-      return (item.changes ?? []).map((c) => ({ kind: "tool", name: CHANGE_TOOL[c.kind ?? ""] ?? "file_change", raw: "file_change", input: { file_path: c.path, change: c.kind } }));
+      return (item.changes ?? []).map((c) => ({ kind: "tool", name: CHANGE_TOOL[c.kind ?? ""] ?? "Edit", raw: "file_change", input: { file_path: c.path, change: c.kind } }));
     case "mcp_tool_call":
       return [{ kind: "tool", name: `mcp__${item.server}__${item.tool}`, raw: "mcp_tool_call", input: { arguments: item.arguments } }];
     case "web_search":
