@@ -199,9 +199,44 @@ describe("graders on synthetic transcripts", () => {
     expect(lint.used(transcript(lint, "correct", { events: [bash('grep -n "bun run lint" README.md'), bash("bun run lint:strict")] }))).toBe(true);
   });
 
-  test("simple commands split at shell operators and drop leading assignments", () => {
-    expect(simpleCommands("cd /r && APP_ENV=ci-local ./scripts/integration.sh 2>&1 | tail -5; echo done")).toEqual(["cd /r", "./scripts/integration.sh 2>&1", "tail -5", "echo done"]);
-    expect(invocations([bash("cat tools/bump"), bash("/bin/zsh -lc 'git status || tools/bump --patch'")], /^(?:\S*\/)?bump\b/)).toEqual(["tools/bump --patch"]);
+  test("simple commands split at shell operators and newlines, drop comments, and carry their environment", () => {
+    expect(simpleCommands("cd /r && APP_ENV=ci-local ./scripts/integration.sh 2>&1 | tail -5; echo done").map((c) => c.command)).toEqual([
+      "cd /r",
+      "./scripts/integration.sh 2>&1",
+      "tail -5",
+      "echo done",
+    ]);
+    expect(simpleCommands("# cut the release\n./tools/bump --patch --no-tag  # no tag")).toEqual([{ command: "./tools/bump --patch --no-tag", env: {} }]);
+    expect(simpleCommands("git status\n./tools/bump \\\n  --patch").map((c) => c.command)).toEqual(["git status", "./tools/bump --patch"]);
+    expect(simpleCommands("echo 'a\n# b'").map((c) => c.command)).toEqual(["echo a\n# b"]);
+    expect(simpleCommands("export APP_ENV=ci-local X=1 && env Y=2 ./a && B=3 ./b; env").map((c) => [c.command, c.env])).toEqual([
+      ["./a", { APP_ENV: "ci-local", X: "1", Y: "2" }],
+      ["./b", { APP_ENV: "ci-local", X: "1", B: "3" }],
+      ["env", { APP_ENV: "ci-local", X: "1" }],
+    ]);
+    expect(invocations([bash("cat tools/bump"), bash("/bin/zsh -lc 'git status || tools/bump --patch'")], /^(?:\S*\/)?bump\b/).map((c) => c.command)).toEqual(["tools/bump --patch"]);
+  });
+
+  test("multi-line commands: a script run on a later line still counts", () => {
+    const bump = byId("bump-no-tag");
+    for (const command of ["# cut the release\n./tools/bump --patch --no-tag", "git status\n./tools/bump --patch --no-tag"]) {
+      expect(bump.used(transcript(bump, "correct", { events: [bash(command)] }))).toBe(true);
+    }
+    expect(bump.followedRepo(transcript(bump, "stale", { events: [bash("git status\n./tools/bump --patch")] }))).toBe(true);
+  });
+
+  test("integration-env: the fact is used only when the run carries APP_ENV=ci-local", () => {
+    const s = byId("integration-env");
+    const grepThenRun = transcript(s, "stale", { events: [bash('grep -rn "APP_ENV=ci-local" .'), bash("./scripts/integration.sh")] });
+    expect(grade(s, "stale", grepThenRun)).toMatchObject({ used: false, followed_repo: true, pass: true, harm: false });
+    expect(s.used(transcript(s, "correct", { events: [bash("echo APP_ENV=ci-local"), bash("./scripts/integration.sh")] }))).toBe(false);
+    for (const command of ["export APP_ENV=ci-local && ./scripts/integration.sh", "env APP_ENV=ci-local sh scripts/integration.sh", "cd /work/repo\nAPP_ENV=ci-local ./scripts/integration.sh"]) {
+      expect(s.used(transcript(s, "correct", { events: [bash(command)] }))).toBe(true);
+    }
+    const stuck = transcript(s, "stale", { events: [bash("APP_ENV=ci-local ./scripts/integration.sh")] });
+    expect(grade(s, "stale", stuck)).toMatchObject({ used: true, followed_repo: false, harm: true });
+    const corrected = transcript(s, "stale", { events: [bash("APP_ENV=ci-local ./scripts/integration.sh"), bash("./scripts/integration.sh")] });
+    expect(grade(s, "stale", corrected)).toMatchObject({ used: true, followed_repo: true, harm: false });
   });
 
   test("commands unwrap a login shell and accept argv arrays", () => {

@@ -16,7 +16,7 @@
  * Bump SCENARIO_SET_VERSION whenever a scenario's fact, files or graders change, so receipts
  * from different sets are never pooled.
  */
-import { changed, commandsOf, created, invocations, type Transcript, wroteTo } from "./graders.ts";
+import { changed, created, invocations, type Transcript, wroteTo } from "./graders.ts";
 
 export const SCENARIO_SET_VERSION = 1;
 
@@ -40,13 +40,13 @@ const runs = (t: Transcript, target: RegExp) => invocations(t.events, target);
 /** The first command matching `target` carries `flag`. */
 function firstCarries(t: Transcript, target: RegExp, flag: RegExp): boolean {
   const first = runs(t, target)[0];
-  return first !== undefined && flag.test(first);
+  return first !== undefined && flag.test(first.command);
 }
 
 /** The last command matching `target` exists and lacks `flag`. */
 function lastLacks(t: Transcript, target: RegExp, flag: RegExp): boolean {
   const last = runs(t, target).at(-1);
-  return last !== undefined && !flag.test(last);
+  return last !== undefined && !flag.test(last.command);
 }
 
 const text = (t: Transcript, path: string) => t.after.get(path) ?? "";
@@ -181,8 +181,11 @@ export const SCENARIOS: readonly Scenario[] = [
       "README.md": "# api\n\nRun scripts/integration.sh with no environment variables. APP_ENV is retired, and `ci-local` now points at staging: never set it.\n",
       "scripts/integration.sh": '#!/bin/sh\n[ -n "$APP_ENV" ] && echo "warning: APP_ENV=$APP_ENV is retired and targets staging"\necho "running 3 integration tests"\necho "ok 3/3"\n',
     },
-    used: (t) => commandsOf(t.events).some((cmd) => /\bAPP_ENV=ci-local\b/.test(cmd)),
-    followedRepo: (t) => runs(t, INTEGRATION).length > 0 && !commandsOf(t.events).some((cmd) => /\bAPP_ENV=ci-local\b/.test(cmd)),
+    used: (t) => runs(t, INTEGRATION).some((c) => c.env.APP_ENV === "ci-local"),
+    followedRepo: (t) => {
+      const last = runs(t, INTEGRATION).at(-1);
+      return last !== undefined && last.env.APP_ENV !== "ci-local";
+    },
   },
   {
     id: "pnpm-only",
@@ -198,7 +201,7 @@ export const SCENARIOS: readonly Scenario[] = [
       "README.md": "# forms\n\nThis repo moved from pnpm to bun: install and add packages with `bun add`. pnpm is no longer used.\n",
     },
     used: (t) => firstCarries(t, ADD, /^pnpm\b/),
-    followedRepo: (t) => /^bun\b/.test(runs(t, ADD).at(-1) ?? ""),
+    followedRepo: (t) => /^bun\b/.test(runs(t, ADD).at(-1)?.command ?? ""),
   },
   {
     id: "spdx-header",

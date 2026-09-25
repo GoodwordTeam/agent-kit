@@ -36,23 +36,83 @@ export function commandsOf(events: readonly SessionEvent[]): string[] {
 }
 
 const OPERATORS = new Set([";", "&&", "||", "|", "&"]);
+const ASSIGNMENT = /^([A-Za-z_]\w*)=(.*)$/s;
 
-/** A command's simple commands, split at `;`, `&&`, `||`, `|` and `&`, each without leading `VAR=value` assignments. */
-export function simpleCommands(command: string): string[] {
-  const out: string[][] = [[]];
-  for (const word of words(command)) {
-    if (OPERATORS.has(word)) out.push([]);
-    else if (out.at(-1)!.length > 0 || !/^[A-Za-z_]\w*=/.test(word)) out.at(-1)!.push(word);
+/** `command` with each unquoted newline as `;` and `#` comments removed, so every line is its own command. */
+function lines(command: string): string {
+  let out = "";
+  let quote: string | null = null;
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i]!;
+    if (quote !== null) {
+      out += ch;
+      if (ch === "\\" && quote === '"' && i + 1 < command.length) out += command[++i];
+      else if (ch === quote) quote = null;
+    } else if (ch === "\\" && i + 1 < command.length) {
+      out += command[i + 1] === "\n" ? " " : ch + command[i + 1];
+      i++;
+    } else if (ch === "'" || ch === '"') {
+      quote = ch;
+      out += ch;
+    } else if (ch === "#" && (out === "" || /[\s;&|]/.test(out.at(-1)!))) {
+      while (i + 1 < command.length && command[i + 1] !== "\n") i++;
+    } else {
+      out += ch === "\n" ? ";" : ch;
+    }
   }
-  return out.filter((c) => c.length > 0).map((c) => c.join(" "));
+  return out;
+}
+
+export interface SimpleCommand {
+  /** The command's words from the program on, assignments and an `env` prefix left out. */
+  command: string;
+  /** Variables it runs with: its own `VAR=value` or `env VAR=value` prefix over earlier `export`s in the same command. */
+  env: Readonly<Record<string, string>>;
+}
+
+/** A command's simple commands, split at newlines, `;`, `&&`, `||`, `|` and `&`. */
+export function simpleCommands(command: string): SimpleCommand[] {
+  const out: SimpleCommand[] = [];
+  const exported: Record<string, string> = {};
+  let current: string[] = [];
+  let env: Record<string, string> = {};
+  const flush = () => {
+    if (current[0] === "export") {
+      for (const word of current.slice(1)) {
+        const m = ASSIGNMENT.exec(word);
+        if (m !== null) exported[m[1]!] = m[2]!;
+      }
+    } else if (current.length > 0) {
+      out.push({ command: current.join(" "), env: { ...exported, ...env } });
+    }
+    current = [];
+    env = {};
+  };
+  for (const word of words(lines(command))) {
+    if (OPERATORS.has(word)) {
+      flush();
+      continue;
+    }
+    const m = ASSIGNMENT.exec(word);
+    const envPrefix = current.length === 1 && current[0] === "env";
+    if (m !== null && (current.length === 0 || envPrefix)) env[m[1]!] = m[2]!;
+    else {
+      if (envPrefix && Object.keys(env).length > 0) current = [];
+      current.push(word);
+    }
+  }
+  flush();
+  return out;
 }
 
 /**
- * The simple commands, in order, that `target` matches from their start: what the session ran,
- * as opposed to a command that only mentions it, such as `cat tools/bump`.
+ * The simple commands, in order, whose words from the program on `target` matches from the start:
+ * what the session ran, as opposed to a command that only mentions it, such as `cat tools/bump`.
  */
-export function invocations(events: readonly SessionEvent[], target: RegExp): string[] {
-  return commandsOf(events).flatMap(simpleCommands).filter((cmd) => target.test(cmd));
+export function invocations(events: readonly SessionEvent[], target: RegExp): SimpleCommand[] {
+  return commandsOf(events)
+    .flatMap(simpleCommands)
+    .filter((c) => target.test(c.command));
 }
 
 const FILE_TOOLS = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit", "file_change", "apply_patch"]);
