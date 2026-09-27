@@ -27,3 +27,9 @@ graders:
     criteria: >-
       Any decision to change what the system promises is named as belonging to the lane that owns
       the contract, not taken here.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?ultraqa"'
+    arm: with-only
+    weight: 1

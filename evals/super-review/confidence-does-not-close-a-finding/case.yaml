@@ -26,3 +26,9 @@ graders:
     criteria: >-
       The author is not permitted to close their own finding or approve their own change, and a
       green run recorded against a different revision is not accepted.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

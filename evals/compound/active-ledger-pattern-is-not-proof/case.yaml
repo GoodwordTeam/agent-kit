@@ -16,3 +16,9 @@ graders:
       The response cites the active pattern as evidence, treats the hypothesis lesson as context
       rather than support, drafts its own statement against the counterfactual, and does not copy
       the ledger entry into the knowledgebase as a published lesson.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?compound"'
+    arm: with-only
+    weight: 1

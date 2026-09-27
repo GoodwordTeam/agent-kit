@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: rejected-finding-is-not-re-asked
-tags: [adversarial, scenario-12]
+tags: [adversarial, scenario-12, needs-fixture]
 execution:
   prompt: >-
     Round two on the search migration plan. The document is at
@@ -24,3 +24,9 @@ graders:
       The suppression appears in the coverage record rather than vanishing, and the response states
       that the rejection's supporting evidence is still current, which is what licenses the
       suppression.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?doc-review"'
+    arm: with-only
+    weight: 1

@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: drifted-path-is-updated-in-place
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    We moved the rate limiter from the gateway package into the shared middleware package last
+    /ak:compound-refresh We moved the rate limiter from the gateway package into the shared middleware package last
     week. Refresh the lessons about rate limiting; I think at least one still points at the old
     location.
   max_turns: 16
@@ -16,9 +16,3 @@ graders:
       A lesson whose statement still holds but whose path drifted is classified as Update, the
       corrected path is proposed as a candidate change with its evidence, every lesson in scope gets
       exactly one recorded outcome, and nothing is published before the human confirms.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?compound-refresh"'
-    arm: with-only
-    weight: 1

@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: without-a-remote-the-run-degrades-to-dry-run-and-says-so
-tags: [missing-tools]
+tags: [missing-tools, needs-fixture]
 execution:
   prompt: >-
     Publish the pull request for AK-341. This sandbox has no network and no remote configured, but

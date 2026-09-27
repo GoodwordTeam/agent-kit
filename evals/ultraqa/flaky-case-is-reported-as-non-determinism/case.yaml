@@ -20,3 +20,9 @@ graders:
     criteria: >-
       The observed failure frequency and the conditions are recorded, and the non-determinism itself
       is reported as the finding.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?ultraqa"'
+    arm: with-only
+    weight: 1

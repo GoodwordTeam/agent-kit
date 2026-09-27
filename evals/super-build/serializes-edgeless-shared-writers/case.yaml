@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-serializes-two-edgeless-tickets-that-share-a-write-surface
-tags: [adversarial, scenario-13]
+tags: [adversarial, scenario-13, needs-fixture]
 execution:
   prompt: >-
     Tickets AK-410 and AK-411 are both approved and there is no dependency edge between them in the
@@ -25,3 +25,9 @@ graders:
       The two tickets are run one after the other, or otherwise isolated, rather than dispatched
       together. Any other ticket in the layer that shares nothing with them is still dispatched in
       parallel; the whole layer is not serialized because one pair contends.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    arm: with-only
+    weight: 1

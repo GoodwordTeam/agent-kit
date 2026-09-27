@@ -28,3 +28,9 @@ graders:
     criteria: >-
       Any decision to change the threshold is named as a separate recorded decision for someone with
       the authority to take it, not something this repair performs.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?babysit-pr"'
+    arm: with-only
+    weight: 1

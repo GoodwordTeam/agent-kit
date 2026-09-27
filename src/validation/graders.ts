@@ -83,29 +83,157 @@ export function unaimedClaims(caseDoc: unknown): UnaimedClaim[] {
   return out;
 }
 
-export function checkGraderSurfaces(ctx: CheckContext): Issue[] {
-  const issues: Issue[] = [];
-  const evals = join(ctx.root, EVALS_DIR);
+/** One parsed `case.yaml` under `evals/`, with the skill directory it sits in. */
+export interface ParsedCase {
+  readonly skill: string;
+  readonly casePath: string;
+  readonly doc: unknown;
+}
+
+/** Every parseable case in the corpus. An unparseable one is the schema check's. */
+export function readCases(root: string): ParsedCase[] {
+  const out: ParsedCase[] = [];
+  const evals = join(root, EVALS_DIR);
   for (const skill of listDirs(evals)) {
     for (const caseId of listDirs(join(evals, skill))) {
       const casePath = `${EVALS_DIR}/${skill}/${caseId}/${CASE_FILE}`;
-      const text = readTextIfPresent(join(ctx.root, casePath));
+      const text = readTextIfPresent(join(root, casePath));
       if (text === null) continue;
-      let doc: unknown;
       try {
-        doc = parseYaml(text);
+        out.push({ skill, casePath, doc: parseYaml(text) });
       } catch {
-        continue; // the schema check owns an unparseable case.
+        continue;
       }
-      for (const claim of unaimedClaims(doc)) {
-        issues.push(
-          error(
-            "evals.llm-file-claim-without-focus",
-            casePath,
-            `llm grader \`${claim.grader}\` makes a claim about files — "${claim.sentence}" — and has no \`focus\`, so the host scores it against the run's last message: a run that wrote the file and did not mention it passes. Write the deterministic form where one exists (\`file_exists\` with \`exists: false\`, \`tool_used\` with \`max: 0\`, \`regex\` with \`target: files\`), or set \`focus\` to the surface the claim is about (\`trace\`, \`files\`, \`{source: file, path}\`). AUTHORING.md §9.`,
-          ),
-        );
-      }
+    }
+  }
+  return out;
+}
+
+export function checkGraderSurfaces(ctx: CheckContext): Issue[] {
+  const issues: Issue[] = [];
+  for (const { casePath, doc } of readCases(ctx.root)) {
+    for (const claim of unaimedClaims(doc)) {
+      issues.push(
+        error(
+          "evals.llm-file-claim-without-focus",
+          casePath,
+          `llm grader \`${claim.grader}\` makes a claim about files — "${claim.sentence}" — and has no \`focus\`, so the host scores it against the run's last message: a run that wrote the file and did not mention it passes. Write the deterministic form where one exists (\`file_exists\` with \`exists: false\`, \`tool_used\` with \`max: 0\`, \`regex\` with \`target: files\`), or set \`focus\` to the surface the claim is about (\`trace\`, \`files\`, \`{source: file, path}\`). AUTHORING.md §9.`,
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+/**
+ * The skill-fired indicator (AUTHORING.md §9): a positive or adversarial case
+ * says whether the skill under test loaded at all.
+ *
+ * Without one, a case's score cannot tell a run where the skill fired and
+ * behaved from a run where the host's own defaults happened to satisfy the
+ * graders. The first live run of the corpus showed that shape: positives
+ * scoring the same with and without the plugin, and nothing in the case to
+ * say which runs had loaded the skill. The indicator is a `tool_used` grader
+ * on `Skill` with `arm: with-only`, so it reports on the plugin arm and stays
+ * out of the score.
+ *
+ * Kinds are read from `tags`, which is what the host filters on. A negative
+ * is not asked for one: a Skill grader there is `max: 0`, and only for a
+ * model-invoked skill.
+ */
+export const FIRED_KINDS: ReadonlyArray<string> = ["positive", "adversarial"];
+
+/** Whether one grader is a fired indicator for `skill`. */
+export function isFiredIndicator(grader: Record<string, unknown>, skill: string): boolean {
+  if (grader["type"] !== "tool_used" || grader["tool"] !== "Skill" || grader["arm"] !== "with-only") return false;
+  if (grader["max"] === 0) return false; // a must-not-load assertion, not an indicator.
+  const match = grader["input_match"];
+  if (typeof match !== "string") return true;
+  // Tested the way the host tests it, against a serialized Skill call, so that
+  // `compound` does not pass as the indicator for `compound-refresh`.
+  try {
+    return new RegExp(match).test(JSON.stringify({ skill: `ak:${skill}` }));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether the case's prompt is a typed slash invocation of its own skill.
+ *
+ * Checked live on claude 2.1.282 (2026-09-25, a direct `claude -p` session): a
+ * prompt beginning with `/ak:<id>` expands on the client. The model follows the
+ * skill, and the run makes no Skill tool call and writes no user stream line
+ * for it. A `tool_used: Skill` indicator on such a case therefore always fails,
+ * so the typed command stands as the invocation and the workflow graders show
+ * that the skill ran. This is how a user-invoked skill's positive is written
+ * (AUTHORING.md §9).
+ */
+export function isSlashInvocation(caseDoc: unknown, skill: string): boolean {
+  const execution = ((caseDoc ?? {}) as Record<string, unknown>)["execution"];
+  const prompt = (execution ?? {}) as Record<string, unknown>;
+  const text = prompt["prompt"];
+  return typeof text === "string" && new RegExp(`^/ak:${skill}(?:\\s|$)`).test(text.trimStart());
+}
+
+/** The kinds a case claims that require an indicator it does not carry, or none. */
+export function missingFiredIndicator(caseDoc: unknown, skill: string): string[] {
+  const doc = (caseDoc ?? {}) as Record<string, unknown>;
+  if (isSlashInvocation(doc, skill)) return [];
+  const tags = Array.isArray(doc["tags"]) ? doc["tags"] : [];
+  const kinds = FIRED_KINDS.filter((k) => tags.includes(k));
+  if (kinds.length === 0) return [];
+  const graders = Array.isArray(doc["graders"]) ? doc["graders"] : [];
+  const fired = graders.some(
+    (g) => typeof g === "object" && g !== null && isFiredIndicator(g as Record<string, unknown>, skill),
+  );
+  return fired ? [] : kinds;
+}
+
+export function checkFiredIndicators(ctx: CheckContext): Issue[] {
+  const issues: Issue[] = [];
+  for (const { skill, casePath, doc } of readCases(ctx.root)) {
+    const kinds = missingFiredIndicator(doc, skill);
+    if (kinds.length === 0) continue;
+    issues.push(
+      error(
+        "evals.no-fired-indicator",
+        casePath,
+        `a ${kinds.join(" and ")} case with no skill-fired indicator: no \`tool_used\` grader on \`Skill\` with \`arm: with-only\` whose \`input_match\` names \`${skill}\`. Without it the run cannot say whether the skill loaded, so a score from the host's defaults reads the same as a score from the skill. Add the grader AUTHORING.md §9 shows, with \`input_match: '"skill"\\s*:\\s*"(?:[^"]*:)?${skill}"'\`.`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/**
+ * Case names are unique across the corpus.
+ *
+ * The host reports, filters (`--case`) and publishes results by `name`, not by
+ * directory. Five skills once carried a case named
+ * `interrupted-publish-resumes-on-the-idempotency-key`, so a report row under
+ * that name was one of five cases and nothing in it said which. The directory
+ * is the join to `tests[].id` and stays as it is; the name is what needs to
+ * identify one case.
+ */
+export function checkCaseNames(ctx: CheckContext): Issue[] {
+  const byName = new Map<string, string[]>();
+  for (const { casePath, doc } of readCases(ctx.root)) {
+    const name = (doc as Record<string, unknown> | null)?.["name"];
+    if (typeof name !== "string") continue; // the schema check owns a missing name.
+    byName.set(name, [...(byName.get(name) ?? []), casePath]);
+  }
+  const issues: Issue[] = [];
+  for (const [name, paths] of [...byName].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    if (paths.length < 2) continue;
+    for (const casePath of paths) {
+      issues.push(
+        error(
+          "evals.duplicate-case-name",
+          casePath,
+          `case name \`${name}\` is also used by ${paths.filter((p) => p !== casePath).join(", ")}. The host reports, filters and publishes results by name, so a row under this name cannot say which case it measured. Rename the case; the directory is the join to tests[].id and can stay.`,
+        ),
+      );
     }
   }
   return issues;

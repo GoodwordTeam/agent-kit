@@ -1241,6 +1241,38 @@ run with the plugin loaded and is not part of the score. Write the skill-fired g
 `tool_used` on `Skill` with the `input_match` above and `arm: with-only`. A grader that must hold
 whether or not the plugin is loaded, such as a must-not-call, is `arm: both`.
 
+Every `positive` and `adversarial` case carries that skill-fired grader, and
+`evals.no-fired-indicator` (`checkFiredIndicators` in `src/validation/graders.ts`) fails a case
+tagged either way without one. Without it, a score earned by the host's defaults reads the same as a
+score earned by the skill.
+
+A negative does not prove itself by the absence of a Skill call. Both arms pass that grader, and so
+do they pass an `llm` grader that accepts "no Skill call, or stopped at the authority step". Write
+the negative's decisive grader as `llm` with `focus: trace`: *the session does not carry out the
+`<skill>` workflow*, followed by that workflow's concrete side effects (the files it writes, the
+commands it runs, the records it publishes). Loading the skill and then stopping at its authority
+step, with `needs-input` or with a refusal, passes. When the workflow exists only with the plugin
+loaded, set that grader to `arm: with-only`, because the bare arm passes it by construction. Keep the
+deterministic no-side-effect graders beside it (`tool_used … max: 0` on the granted Write, Edit or
+Bash pattern). A Skill `max: 0` grader stays only on a model-invoked skill's negative.
+
+**A user-invoked skill's positive is a slash invocation.** Only `/ak:<id>` starts a user-invoked
+skill (AGENTS.md, "The invocation law"). A request that names the skill in prose does not. So a
+user-invoked skill's `positive` prompt begins with `/ak:<id> ` followed by the request, and it is
+graded on doing the workflow: the invocation is explicit, so the authority step passes. A prompt
+that names a user-invoked skill in prose belongs in a negative. There, the session passes if it
+recommends the exact `/ak:<id>` command, or loads the skill and stops at its authority step, and it
+fails if it carries out the workflow. A live check on 2026-09-25, with a direct `claude -p` session
+on claude 2.1.282, showed that a typed `/ak:<id>` expands on the client: the model follows the
+skill, and the run makes no Skill tool call and writes no user stream line for it. So a case whose
+prompt begins with `/ak:<its skill id>` carries no skill-fired grader, because that grader would
+always fail. The typed command is the invocation, and the workflow graders show that the skill ran.
+`evals.no-fired-indicator` exempts such a case. Whether `claude plugin eval` behaves the same way
+has not been checked separately; it drives the same host.
+
+A must-not-push grader matches `git\s+push|gh\s+pr\s+(create|merge)`, not `gh\s+pr`, which also
+fails the read-only `gh pr view` and `gh pr list` a correct run makes.
+
 **The scoring surface.** An `llm` grader reads its `focus` and a `regex` grader its `target`. Both
 accept `last_message`, `trace`, `files`, `mock_calls`, or `{source: file, path}`:
 
@@ -1305,6 +1337,23 @@ case corpus must cover **all 24** release scenarios in the plan's "Evaluation an
 `ak validate` reports uncovered scenario numbers. A writer covers the scenarios its dossier assigns
 to its batch and reports any it cannot exercise, rather than tagging a case that does not actually
 test the scenario.
+
+Case `name` values are unique across the corpus, since the host reports, filters (`--case`) and
+publishes results by name. `evals.duplicate-case-name` fails on a repeat. Where the same behavior
+repeats across skills, prefix the skill id to the name and leave the directory as it is, because the
+directory is the join to `tests[].id`.
+
+**`needs-fixture`: a premise the sandbox cannot supply.** A case starts in an empty repository. When
+its prompt presumes state the sandbox lacks (a repository with the named code, a pull request, a
+prior review, a knowledgebase record, a run interrupted part-way) and it has no scaffold that builds
+that state, tag it `needs-fixture`. Every `resumability` case carries the tag. So does any case whose
+pass needs the skill to work on the presumed state, rather than refuse or stop regardless of it. Such
+a run stops at `needs-input`, as it should, and its graders fail it, so its score is evidence about
+the missing fixture, not about the skill. `unscaffolded`, which older positives carry, says only that
+the case has no scaffold. `needs-fixture` is the tag to exclude on. `claude plugin eval` has
+`--tag` to include cases and no option to exclude them (checked at `claude 2.1.282`), so a run that
+leaves these cases out selects the other cases by name with `--case`, or filters its results by tag
+afterwards. A case loses the tag when its scaffold lands.
 
 **The eval sandbox blocks git.** Every git binary is denied inside a case run, so a case cannot commit,
 and a grader that checks a commit, a branch or `git log` scores a run that did the work as a failure.

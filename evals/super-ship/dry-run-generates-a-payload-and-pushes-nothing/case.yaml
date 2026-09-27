@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: dry-run-produces-the-payload-and-sends-nothing
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    AK-341 is verified and reviewed at the current head. Generate the pull request for it in
+    /ak:super-ship AK-341 is verified and reviewed at the current head. Generate the pull request for it in
     dry-run — I want to read the description before anything leaves this machine.
   max_turns: 16
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
@@ -27,9 +27,3 @@ graders:
     criteria: >-
       The sensitive-data scan, dependency-audit triage and project release checks are recorded with
       their outcome against this head, and a reason wherever one did not run.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-ship"'
-    arm: with-only
-    weight: 1

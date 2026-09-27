@@ -35,3 +35,9 @@ graders:
       The investigation proceeds from the connection timeout and the non-zero exit, building a
       feedback loop for the intermittent failure rather than accepting the log's account of what is
       wrong.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?diagnose"'
+    arm: with-only
+    weight: 1

@@ -30,3 +30,9 @@ graders:
       A new baseline is deliberately established with its own pass 1, recording what changed
       materially and the new comparison base. The remaining delta cycle is not spent continuing the
       old loop, and the reset is reported as a complete result rather than as a cap being hit.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

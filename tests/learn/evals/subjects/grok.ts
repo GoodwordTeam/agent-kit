@@ -40,6 +40,7 @@ interface Line {
   rawInput?: Record<string, unknown>;
   total_cost_usd?: number;
   num_turns?: number;
+  modelUsage?: Record<string, unknown>;
 }
 
 const COMPAT_OFF = ["CLAUDE", "CURSOR"].flatMap((vendor) =>
@@ -68,6 +69,7 @@ export const grok: SubjectAdapter = {
     let text = "";
     let costUsd: number | undefined;
     let turns: number | undefined;
+    let model: string | undefined;
     const flush = () => {
       if (text.trim() !== "") events.push({ kind: "message", text });
       text = "";
@@ -93,12 +95,15 @@ export const grok: SubjectAdapter = {
       } else if (line.type === "end") {
         costUsd = line.total_cost_usd;
         turns = line.num_turns;
+        // Usage is keyed by the models that served the session; more than one is kept as a list.
+        const served = Object.keys(line.modelUsage ?? {}).sort();
+        if (served.length > 0) model = served.join(",");
       }
     }
     flush();
     const last = events.at(-1);
     const reply = last?.kind === "message" ? last.text.trim() : "";
-    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }) };
+    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }), ...(model === undefined ? {} : { model }) };
   },
   isolate(scratch: string, req: SessionRequest): Isolation {
     const callerHome = req.env.GROK_HOME ?? join(req.env.HOME ?? homedir(), ".grok");

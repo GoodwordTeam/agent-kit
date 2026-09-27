@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: interrupted-ticket-write-resumes-on-the-idempotency-key
-tags: [resumability, scenario-20]
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     Resuming the charting run. The decision ticket about the analytics readers was sent to the

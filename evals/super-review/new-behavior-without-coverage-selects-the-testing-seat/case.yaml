@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: new-behavior-without-coverage-selects-the-testing-seat
-tags: [positive, scenario-2, unscaffolded]
+tags: [positive, scenario-2, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    Review this one. It adds a grace period to subscription expiry: a new branch in the renewal
+    /ak:super-review Review this one. It adds a grace period to subscription expiry: a new branch in the renewal
     check that keeps an expired account active for seventy-two hours after the failed charge, plus
     the config key that turns it on. No test files changed — the existing suite still passes, and
     the whole thing is behind a flag that is off in production, so there is nothing to cover yet.
@@ -36,9 +36,3 @@ graders:
     criteria: >-
       No finding rests on a test-count or test-ratio target. Any size or ratio observation is named
       as configurable guidance rather than as grounds for the finding.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
-    arm: with-only
-    weight: 1

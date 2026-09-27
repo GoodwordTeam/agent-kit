@@ -22,3 +22,9 @@ graders:
     criteria: >-
       The response never claims the list of callers is complete or exhaustive, and never describes
       the result as a full impact map.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-scout"'
+    arm: with-only
+    weight: 1

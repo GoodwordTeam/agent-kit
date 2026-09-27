@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: diagnose-resumes-from-the-loop-it-already-built
-tags: [resumability]
+tags: [resumability, needs-fixture]
 execution:
   prompt: >-
     Resume the diagnosis of the duplicate-webhook bug. The previous run recorded a command that goes

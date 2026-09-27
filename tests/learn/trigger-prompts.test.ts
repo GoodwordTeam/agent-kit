@@ -7,14 +7,15 @@
  * Jaccard cut: prompts run 10 to 40 words, so one shared 4-gram is already a lifted phrase, and a
  * ratio over sets that small moves more with prompt length than with copying. Shorter n-grams
  * are too strict to hold: "the pull request" or "a human" are ordinary English, and a user asking
- * for a skill's work will use its nouns.
+ * for a skill's work will use its nouns. The typed `/ak:<id>` token is exempt: a prompt that
+ * invokes a skill by its command has to name it, and the guard is about lifted prose.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { loadCatalog } from "../../src/catalog/load.ts";
 import { frontmatter, oneLine } from "../../src/learn/skills/roster.ts";
-import { type Case, parsePromptSet } from "./evals/trigger-eval.ts";
+import { type Case, expectsOf, parsePromptSet, startsWithSlash } from "./evals/trigger-eval.ts";
 
 const REPO = resolve(import.meta.dir, "..", "..");
 const PROMPTS = join(import.meta.dir, "evals", "prompts");
@@ -29,6 +30,9 @@ const entries = new Map((catalog?.bySection("skills") ?? []).map((e) => [e.id, e
 function words(text: string): string[] {
   return text.toLowerCase().match(/[a-z0-9]+(?:'[a-z]+)?/g) ?? [];
 }
+
+/** The typed command a prompt may carry, removed before the overlap check. */
+const withoutCommands = (text: string) => text.replace(/\/ak:[\w-]+/g, " ");
 
 function ngrams(text: string, n = 4): Set<string> {
   const w = words(text);
@@ -49,18 +53,29 @@ function skillTexts(id: string): string[] {
 }
 
 describe("trigger prompt sets", () => {
+  const skillsOf = (cls: "U" | "M") => [...new Set(all.filter((c) => c.invocation === cls).map((c) => c.skill))];
+  const tally = (cases: Case[], skill: string) => {
+    const mine = cases.filter((c) => c.skill === skill);
+    return {
+      load: mine.filter((c) => c.polarity === "positive" && c.expects === "load").length,
+      recommend: mine.filter((c) => c.polarity === "positive" && c.expects === "recommend").length,
+      proceed: mine.filter((c) => c.polarity === "positive" && c.expects === "proceed").length,
+      negative: mine.filter((c) => c.polarity === "negative").length,
+    };
+  };
+
   test("both sets are versioned and carry an id", () => {
     for (const set of [dev, holdout]) {
-      expect(set.version).toBeGreaterThanOrEqual(2);
+      expect(set.version).toBeGreaterThanOrEqual(3);
       expect(set.id).toMatch(/^trigger-/);
       expect(set.sha256).toMatch(/^[0-9a-f]{64}$/);
     }
   });
 
-  test("75 prompts, 45 dev and 30 holdout", () => {
-    expect(dev.cases).toHaveLength(45);
-    expect(holdout.cases).toHaveLength(30);
-    expect(all).toHaveLength(75);
+  test("100 prompts, 60 dev and 40 holdout", () => {
+    expect(dev.cases).toHaveLength(60);
+    expect(holdout.cases).toHaveLength(40);
+    expect(all).toHaveLength(100);
   });
 
   test("ids and prompts are unique across both sets", () => {
@@ -68,14 +83,23 @@ describe("trigger prompt sets", () => {
     expect(new Set(all.map((c) => c.prompt.toLowerCase())).size).toBe(all.length);
   });
 
-  test("15 skills, each 3 positive and 2 negative, split 2+1 dev and 1+1 holdout", () => {
-    const skills = [...new Set(all.map((c) => c.skill))];
-    expect(skills).toHaveLength(15);
-    for (const skill of skills) {
-      const count = (cases: Case[], polarity: string) => cases.filter((c) => c.skill === skill && c.polarity === polarity).length;
-      expect([skill, count(dev.cases, "positive"), count(dev.cases, "negative")]).toEqual([skill, 2, 1]);
-      expect([skill, count(holdout.cases, "positive"), count(holdout.cases, "negative")]).toEqual([skill, 1, 1]);
+  test("M skills: 2 load + 1 negative in dev, 1 + 1 in holdout", () => {
+    expect(skillsOf("M")).toHaveLength(5);
+    for (const skill of skillsOf("M")) {
+      expect([skill, tally(dev.cases, skill)]).toEqual([skill, { load: 2, recommend: 0, proceed: 0, negative: 1 }]);
+      expect([skill, tally(holdout.cases, skill)]).toEqual([skill, { load: 1, recommend: 0, proceed: 0, negative: 1 }]);
     }
+  });
+
+  test("U skills: 3 recommend + 1 hard negative in dev (five also typed), 2 + 1 in holdout", () => {
+    expect(skillsOf("U")).toHaveLength(10);
+    for (const skill of skillsOf("U")) {
+      const d = tally(dev.cases, skill);
+      expect([skill, d.recommend, d.negative, d.load]).toEqual([skill, 3, 1, 0]);
+      expect([skill, d.proceed <= 1]).toEqual([skill, true]);
+      expect([skill, tally(holdout.cases, skill)]).toEqual([skill, { load: 0, recommend: 2, proceed: 0, negative: 1 }]);
+    }
+    expect(dev.cases.filter((c) => c.expects === "proceed")).toHaveLength(5);
   });
 
   test("every skill is an authored catalog skill, with its class recorded correctly", () => {
@@ -90,28 +114,26 @@ describe("trigger prompt sets", () => {
     expect([...classes].sort()).toEqual(["M", "U"]);
   });
 
-  test("positives expect their own skill; negatives expect nothing and forbid only known skills", () => {
-    for (const c of all) {
-      if (c.polarity === "positive") {
-        expect([c.id, c.expected]).toEqual([c.id, [c.skill]]);
-        expect(c.forbidden).toBeUndefined();
-      } else {
-        expect([c.id, c.expected]).toEqual([c.id, []]);
-        for (const f of c.forbidden ?? []) expect(entries.has(f)).toBe(true);
-      }
+  test("every positive states `expects`, and it agrees with the class and the prompt", () => {
+    for (const c of all.filter((x) => x.polarity === "positive")) {
+      expect([c.id, c.expected]).toEqual([c.id, [c.skill]]);
+      expect([c.id, c.forbidden]).toEqual([c.id, undefined]);
+      expect([c.id, c.expects]).toEqual([c.id, expectsOf({ ...c, expects: undefined })]);
+      expect([c.id, c.expects === "proceed"]).toEqual([c.id, startsWithSlash(c.prompt, c.skill)]);
     }
   });
 
-  test("a user-invoked negative never names its skill; a user-invoked positive does", () => {
-    for (const c of all.filter((x) => x.invocation === "U")) {
-      const named = new RegExp(`\\b${c.skill}\\b`).test(c.prompt);
-      expect([c.id, named]).toEqual([c.id, c.polarity === "positive"]);
+  test("every negative carries a `forbidden` list with its own skill, all catalog skills", () => {
+    for (const c of all.filter((x) => x.polarity === "negative")) {
+      expect([c.id, c.expected, c.expects]).toEqual([c.id, [], undefined]);
+      expect([c.id, c.forbidden?.includes(c.skill)]).toEqual([c.id, true]);
+      for (const f of c.forbidden!) expect([c.id, entries.has(f)]).toEqual([c.id, true]);
     }
   });
 
-  test("a model-invoked prompt never names any skill", () => {
-    for (const c of all.filter((x) => x.invocation === "M")) {
-      for (const id of entries.keys()) expect([c.id, new RegExp(`\\b${id}\\b`).test(c.prompt)]).toEqual([c.id, false]);
+  test("no negative and no model-invoked prompt names any catalog skill", () => {
+    for (const c of all.filter((x) => x.polarity === "negative" || x.invocation === "M")) {
+      for (const id of entries.keys()) expect([c.id, id, new RegExp(`\\b${id}\\b`).test(c.prompt)]).toEqual([c.id, id, false]);
     }
   });
 
@@ -119,7 +141,7 @@ describe("trigger prompt sets", () => {
     const leaks: string[] = [];
     for (const c of all) {
       for (const text of skillTexts(c.skill)) {
-        const hit = shared(c.prompt, text);
+        const hit = shared(withoutCommands(c.prompt), text);
         if (hit.length > 0) leaks.push(`${c.id}: ${hit.join(" | ")}`);
       }
     }
@@ -132,10 +154,17 @@ describe("trigger prompt sets", () => {
     expect(shared(lifted, description!).length).toBeGreaterThan(0);
   });
 
-  test("the candidate set still loads, every case with its draft", () => {
+  test("the guard does not count the typed command, and still counts prose around it", () => {
+    const [description] = skillTexts("diagnose");
+    expect(shared(withoutCommands("/ak:super-align /ak:super-bound /ak:super-ship /ak:super-review"), "super align super bound super ship")).toEqual([]);
+    const lifted = `/ak:diagnose ${words(description!).slice(10, 16).join(" ")}`;
+    expect(shared(withoutCommands(lifted), description!).length).toBeGreaterThan(0);
+  });
+
+  test("the candidate set still loads, every case with its draft and `expects: load`", () => {
     const candidate = load("candidate");
     expect(candidate.cases.length).toBeGreaterThan(0);
-    for (const c of candidate.cases) expect(c.draft?.name).toBe(c.skill);
+    for (const c of candidate.cases) expect([c.id, c.draft?.name, c.expects]).toEqual([c.id, c.skill, "load"]);
   });
 
   test("a legacy bare-array file still parses", () => {

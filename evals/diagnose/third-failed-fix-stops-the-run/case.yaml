@@ -30,3 +30,9 @@ graders:
       What the three failures have in common is stated as an architecture question — each fix moving
       the failure rather than removing it — and the diagnosis is handed on as a packet for the seat
       that owns that question.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?diagnose"'
+    arm: with-only
+    weight: 1

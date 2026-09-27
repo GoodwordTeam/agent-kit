@@ -17,8 +17,10 @@ import { gitRepo, scratch, testContext, type TestContext } from "./helpers.ts";
 
 const CLI = join(import.meta.dir, "..", "..", "src", "cli.ts");
 
+/** `bun test` renders in UTC without setting TZ, so the subprocess is handed this process's zone: "next nightly" is a local date. */
 function hook(ctx: TestContext, cwd: string, stdin: string): { code: number; stdout: string } {
-  const result = run([process.execPath, CLI, "learn", "hook", "session-start"], { cwd, input: stdin, env: ctx.env, timeoutMs: 60_000 });
+  const env = { ...ctx.env, TZ: Intl.DateTimeFormat().resolvedOptions().timeZone };
+  const result = run([process.execPath, CLI, "learn", "hook", "session-start"], { cwd, input: stdin, env, timeoutMs: 60_000 });
   return { code: result.code, stdout: result.stdout };
 }
 

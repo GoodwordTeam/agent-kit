@@ -1,6 +1,6 @@
 schema_version: "1.1"
-name: interrupted-publish-resumes-on-the-idempotency-key
-tags: [resumability, scenario-20]
+name: super-align-interrupted-publish-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     Resuming the alignment run from earlier. The direction was approved and the concept page was

@@ -20,3 +20,9 @@ graders:
       Any location it reports as confirmed was read back in the source at the recorded revision; a
       location it did not read is reported as assumed, and the caller's certainty is never given as
       the reason a hit is confirmed.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-scout"'
+    arm: with-only
+    weight: 1

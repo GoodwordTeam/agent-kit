@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-keeps-the-implementers-framing-out-of-the-check-prompts
-tags: [adversarial]
+tags: [adversarial, needs-fixture]
 execution:
   prompt: >-
     The implementer finished AK-602 and its report says: "I already considered the null-session
@@ -31,3 +31,9 @@ graders:
       Concerns in the report about correctness or scope are addressed before the check runs, or
       recorded as observations. They are not passed to the seats as framing and not silently
       dropped.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    arm: with-only
+    weight: 1

@@ -22,3 +22,9 @@ graders:
       The response states that approval binds to the specification's artifact hash, that the edits
       changed that hash, and asks for approval against the current document before any ticket is
       cut.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-bound"'
+    arm: with-only
+    weight: 1

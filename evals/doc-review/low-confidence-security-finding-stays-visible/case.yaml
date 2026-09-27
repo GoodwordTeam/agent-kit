@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: low-confidence-security-finding-stays-visible
-tags: [adversarial, scenario-3]
+tags: [adversarial, scenario-3, needs-fixture]
 execution:
   prompt: >-
     The security lens came back with one item it is only half sure about, something about the
@@ -22,3 +22,9 @@ graders:
       The response records the confidence anchor on the finding and states that confidence is an
       evidence anchor rather than a gate in front of a security concern, and that the item is for
       adjudication rather than for filtering.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?doc-review"'
+    arm: with-only
+    weight: 1

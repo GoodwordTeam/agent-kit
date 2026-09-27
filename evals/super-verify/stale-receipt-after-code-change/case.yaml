@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-verify-refuses-to-reuse-a-receipt-the-code-moved-past
-tags: [adversarial, scenario-10]
+tags: [adversarial, scenario-10, needs-fixture]
 execution:
   prompt: >-
     AC-3 was verified green last Tuesday and the receipt is on file. Since then one commit landed
@@ -30,3 +30,9 @@ graders:
     criteria: >-
       The check is re-run at the current revision and a new receipt recorded. The old receipt is
       marked invalidated with what changed, rather than deleted, rewritten or silently replaced.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-verify"'
+    arm: with-only
+    weight: 1

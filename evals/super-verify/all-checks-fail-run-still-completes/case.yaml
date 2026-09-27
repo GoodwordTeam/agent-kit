@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-verify-reports-a-fully-failing-run-as-its-result
-tags: [positive, unscaffolded]
+tags: [positive, unscaffolded, needs-fixture]
 execution:
   prompt: >-
     Verify AC-1, AC-2 and AC-3 on ticket AK-341 at the current head. The implementer thinks they are

@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: a-redelivered-event-does-not-duplicate-the-action
-tags: [resumability, scenario-20]
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     The webhook fired twice for the same failed check run — same delivery id both times — and the

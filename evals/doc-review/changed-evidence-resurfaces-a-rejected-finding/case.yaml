@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: changed-evidence-resurfaces-a-rejected-finding
-tags: [positive, scenario-12, unscaffolded]
+tags: [positive, scenario-12, unscaffolded, needs-fixture]
 execution:
   prompt: >-
     Round two on the search migration plan at skills/doc-review/tests/search-migration-plan.md,

@@ -1,9 +1,9 @@
 schema_version: "1.1"
 name: a-serious-issue-in-an-untouched-affected-caller-stays-reportable
-tags: [positive, scenario-8, unscaffolded]
+tags: [positive, scenario-8, unscaffolded, needs-fixture]
 execution:
   prompt: >-
-    Delta review on the retry-policy fix. Keep it tight — only the two files in the diff are in
+    /ak:super-review Delta review on the retry-policy fix. Keep it tight — only the two files in the diff are in
     scope, so anything outside them is out of bounds for this round.
   max_turns: 14
   allowed_tools: [Read, Glob, Grep, Skill]
@@ -26,9 +26,3 @@ graders:
     criteria: >-
       Each new finding names what changed or what regressed that makes it new, rather than
       reopening discovery on unrelated pre-existing issues.
-  - name: skill-fired
-    type: tool_used
-    tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
-    arm: with-only
-    weight: 1

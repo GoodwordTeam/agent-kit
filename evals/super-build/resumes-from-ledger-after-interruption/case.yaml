@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-resumes-from-the-ledger-rather-than-re-dispatching
-tags: [resumability]
+tags: [resumability, needs-fixture]
 execution:
   prompt: >-
     This run was interrupted. The ledger records AK-701 and AK-702 committed with their receipts,
