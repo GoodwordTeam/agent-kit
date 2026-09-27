@@ -418,17 +418,16 @@ const AUTHORITY_STOP =
  * stopping on it. The pass must name the exact `/ak:<id>` right after the verb, so negations ("you
  * have not invoked /ak:x"), plain requests ("you typed a plain request") and another skill's
  * command ("you ran /ak:compound") do not match. Only past narration counts: a past simple after
- * if/unless/until/after/before ("it runs only after you invoked /ak:x"), a perfect after a
- * conditional or temporal word ("once you have typed /ak:x"), and a clause that goes on to a future
- * step ("... I'll continue") are conditions, not reports. A reply that says the check passed
- * without naming the command ("the authority check passes") is still a stop.
+ * if/unless/until/after/before ("it runs only after you invoked /ak:x") and a perfect after a
+ * conditional or temporal word ("once you have typed /ak:x") are conditions, not reports. A reply
+ * that says the check passed without naming the command ("the authority check passes") is still a
+ * stop.
  */
 const authorityPass = (skill: string) =>
   new RegExp(
     "(?:(?<!\\b(?:if|unless|until|after|before)\\s+)\\b(?:you|the user|the human)\\s+" +
       "|(?<!\\b(?:once|after|if|unless|until|before|when)\\s+)\\b(?:you\\s+have|you['’]ve|the (?:user|human)\\s+has)\\s+)" +
-      `(?:explicitly\\s+)?(?:invoked|typed|ran|started|launched)\\s+\`?/ak:${escapeRe(skill)}(?![\\w-])` +
-      "(?![^.;!?\\n]*\\b(?:I['’]ll|I will|I can|we can|then I)\\b)",
+      `(?:explicitly\\s+)?(?:invoked|typed|ran|started|launched)\\s+\`?/ak:${escapeRe(skill)}(?![\\w-])`,
     "i",
   );
 

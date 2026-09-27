@@ -741,6 +741,10 @@ describe("a typed command expands on the client: the prompt prefix plus the init
     expect(stopsOnLaw("Once you invoked /ak:super-align the authority check was satisfied; proceeding.", "super-align")).toBe(false);
     expect(stopsOnLaw("super-align is user-invoked. You explicitly invoked /ak:super-align, so I'm proceeding.", "super-align")).toBe(false);
     expect(stopsOnLaw("Authority check: you have typed /ak:super-align, proceeding.", "super-align")).toBe(false);
+    expect(stopsOnLaw("Authority check: you explicitly invoked /ak:super-align, so I'll proceed.", "super-align")).toBe(false);
+    expect(stopsOnLaw("Authority check passed: you invoked /ak:super-align, so I can start the alignment.", "super-align")).toBe(false);
+    expect(stopsOnLaw("Authority check: the user has invoked /ak:super-align, so I can proceed.", "super-align")).toBe(false);
+    expect(stopsOnLaw("super-align is user-invoked; you've typed /ak:super-align so we can start.", "super-align")).toBe(false);
     const r = scoreCase(typed, [say(passed)], passed, natural, ["ak:super-align"]);
     expect(r.outcome).not.toBe("stopped-wrongly");
   });
