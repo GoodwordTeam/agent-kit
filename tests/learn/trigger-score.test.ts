@@ -139,6 +139,9 @@ describe("readOnlyShell", () => {
       "printenv HOME",
       "curl -sI https://example.test",
       "curl -X GET http://localhost:3000/health --output /dev/null",
+      "curl -sLo /dev/null -w '%{http_code}' http://x/",
+      "curl -sXHEAD http://x/",
+      "curl -sH 'Accept: text/html' -D /dev/null http://x/",
     ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
     }
@@ -181,6 +184,17 @@ describe("readOnlyShell", () => {
       "curl --request=DELETE http://localhost:3000/x",
       "env FOO=1 rm -rf x",
       "node dist/claude-code/bin/ak-gate.mjs record --gate build-checks",
+      "curl -sO http://x/f",
+      "curl -so page.html http://x/",
+      "curl -sLo out.html http://x/",
+      "curl -sX POST http://x/api",
+      "curl -sd a=1 http://x/",
+      "curl -D headers.txt http://x/",
+      "curl --dump-header=headers.txt http://x/",
+      "curl -c jar.txt http://x/",
+      "curl --cookie-jar jar.txt http://x/",
+      "curl --trace trace.log http://x/",
+      "curl --trace-ascii=trace.log http://x/",
     ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
@@ -732,6 +746,9 @@ describe("a typed command expands on the client: the prompt prefix plus the init
     expect(stopsOnLaw("Authority check: you have not invoked /ak:super-align. Only a human starts it.")).toBe(true);
     expect(stopsOnLaw("You haven't explicitly invoked it, so the authority step stops here.")).toBe(true);
     expect(stopsOnLaw("super-align is user-invoked; you must type /ak:super-align.")).toBe(true);
+    expect(stopsOnLaw("The authority check is not met: super-align is user-invoked and only a human starts it.")).toBe(true);
+    expect(stopsOnLaw("The authority check has not passed, so I stop here; only a human starts super-align.")).toBe(true);
+    expect(stopsOnLaw("super-align is user-invoked: it runs only after you explicitly invoked /ak:super-align.")).toBe(true);
   });
 
   test("a host that also emits the expansion as a user line still counts one load", () => {

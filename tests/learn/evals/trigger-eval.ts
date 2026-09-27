@@ -348,23 +348,33 @@ function readOnlyProgram(program: readonly string[]): boolean {
   return false;
 }
 
+/** curl's short options that take a value; the rest of a bundled word after one is that value. */
+const CURL_SHORT_VALUE = new Set("AbcCDeEHKmoPQruUwxXyYz");
+
 /**
  * A curl that only fetches: no method other than GET or HEAD, no request body or upload, and any
- * output file is `/dev/null`. "Probe localhost:3000" is a look; a POST is not.
+ * file it writes (output, dumped headers, cookie jar, trace) is `/dev/null`. Bundled short flags
+ * (`-sLo out.html`, `-sX POST`) count letter by letter. "Probe localhost:3000" is a look; a POST is not.
  */
 function readOnlyCurl(args: readonly string[]): boolean {
+  const getOrHead = (m: string | undefined) => ["GET", "HEAD"].includes((m ?? "").toUpperCase());
   for (let i = 0; i < args.length; i++) {
     const w = args[i]!;
-    const [flag, inline] = w.startsWith("--") ? (w.split(/=(.*)/s) as [string, string | undefined]) : [w, undefined];
-    if (flag === "-X" || flag === "--request") {
-      const method = (inline ?? args[++i] ?? "").toUpperCase();
-      if (method !== "GET" && method !== "HEAD") return false;
-    } else if (/^-X./.test(w)) {
-      if (!["GET", "HEAD"].includes(w.slice(2).toUpperCase())) return false;
-    } else if (/^(?:-d|-F|-T|-O|--data.*|--form.*|--json|--upload-file|--remote-name.*|-J|--remote-header-name)$/.test(flag) || /^-[dFT]./.test(w)) {
-      return false;
-    } else if (flag === "-o" || flag === "--output") {
-      if ((inline ?? args[++i]) !== "/dev/null") return false;
+    if (w.startsWith("--")) {
+      const [flag, inline] = w.split(/=(.*)/s) as [string, string | undefined];
+      if (/^--(?:data.*|form.*|json|upload-file|remote-name.*|remote-header-name)$/.test(flag)) return false;
+      if (flag === "--request" && !getOrHead(inline ?? args[++i])) return false;
+      if (["--output", "--dump-header", "--cookie-jar", "--trace", "--trace-ascii"].includes(flag) && (inline ?? args[++i]) !== "/dev/null") return false;
+    } else if (/^-[^-]/.test(w)) {
+      for (let j = 1; j < w.length; j++) {
+        const letter = w[j]!;
+        if ("dFTOJ".includes(letter)) return false;
+        if (!CURL_SHORT_VALUE.has(letter)) continue;
+        const value = j + 1 < w.length ? w.slice(j + 1) : args[++i];
+        if (letter === "X" && !getOrHead(value)) return false;
+        if ("oDc".includes(letter) && value !== "/dev/null") return false;
+        break;
+      }
     }
   }
   return true;
@@ -405,11 +415,11 @@ const AUTHORITY_STOP =
 /**
  * A sentence reporting that the check passed: the human invoked the command, or the check was
  * met. "Authority check: you explicitly invoked /ak:super-align, proceeding" names the check
- * without stopping on it. Present-tense asks ("you must invoke") and negations ("you have not
- * invoked") do not match.
+ * without stopping on it. Present-tense asks ("you must invoke"), negations ("you have not
+ * invoked", "the check is not met") and conditionals ("it runs only after you invoked") do not match.
  */
 const AUTHORITY_PASS =
-  /\b(?:you|the user|the human)\s+(?:have\s+|has\s+)?(?:explicitly\s+)?(?:invoked|typed|started|ran|launched)\b|\b(?:authority|check)\b[^.\n]{0,40}\b(?:passe[sd]|satisfied|confirmed|met|cleared)\b/i;
+  /^(?:(?!\b(?:if|unless|until|after|once|when)\b)[^\n])*?(?:\b(?:you|the user|the human)\s+(?:have\s+|has\s+)?(?:explicitly\s+)?(?:invoked|typed|started|ran|launched)\b|\b(?:authority|check)\b(?:(?!\b(?:not|never|no longer|unless|until|if)\b|n't)[^.\n]){0,40}\b(?:passe[sd]|satisfied|confirmed|met|cleared)\b)/i;
 
 /**
  * Does the reply stop on the law itself (user-invoked, only a typed command starts it, no grant)?
