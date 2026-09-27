@@ -21,7 +21,8 @@
  * only through the roster, so the candidate set with the roster off measures a floor, not routing.
  *
  * Bundle (`--bundle`, default on): whether the host gets the package's packaged skills
- * (`dist/<bundle>`, from `ak build`) for the session. With the bundle off nothing is installed,
+ * (`dist/<bundle>`, from `ak build --profile all`) for the session. The bundle must install every
+ * skill the prompt set targets, or the run refuses to start (`bundleMissing`). With the bundle off nothing is installed,
  * so the roster names skills whose bodies the session cannot load through the host.
  *
  * The comparison that reproduces roster.ts's 5/14 to 12/14 is the roster alone, with the skills
@@ -878,6 +879,18 @@ export function noopBaseline(cases: readonly Case[], options: ScoreOptions) {
   return { balanced_accuracy: s.balanced_accuracy, fire: s.fire, negative_pass: s.negative_pass, user_prose_pass: s.user_prose.pass };
 }
 
+/**
+ * Skills the prompt set targets that the bundle does not install. A prompt aimed at a skill the
+ * host cannot load scores the bundle, not routing, and the roster would name a command nobody
+ * has. The core profile leaves out three U skills the dev set targets, so the eval installs
+ * `ak build --profile all`. Candidate drafts reach a session only through the roster and are
+ * never in a bundle.
+ */
+export function bundleMissing(bundleDir: string, cases: readonly Case[], drafts: ReadonlySet<string>): string[] {
+  const wanted = new Set(cases.flatMap((c) => [c.skill, ...c.expected]).filter((name) => !drafts.has(name)));
+  return [...wanted].filter((name) => !existsSync(join(bundleDir, "skills", name, "SKILL.md"))).sort();
+}
+
 // ---------------------------------------------------------------------------
 // Running.
 // ---------------------------------------------------------------------------
@@ -980,7 +993,12 @@ async function main(argv: string[]): Promise<number> {
     // The package's skills reach the host only through its packaged bundle; `ak build` writes it.
     const bundleDir = bundleOn ? join(PACKAGE_ROOT, "dist", BUNDLE_FOR[subject.host]) : undefined;
     if (bundleDir !== undefined && !existsSync(bundleDir) && !dryRun) {
-      console.error(`trigger-eval: ${bundleDir} is missing; run \`bun run ak build\` first, or pass --bundle off`);
+      console.error(`trigger-eval: ${bundleDir} is missing; run \`bun run ak build --profile all\` first, or pass --bundle off`);
+      return 2;
+    }
+    const missing = bundleDir === undefined || dryRun ? [] : bundleMissing(bundleDir, cases, new Set(drafts.values()));
+    if (missing.length > 0) {
+      console.error(`trigger-eval: ${bundleDir} does not install ${missing.join(", ")}; run \`bun run ak build --profile all\` first`);
       return 2;
     }
     const request = (c: Case): SessionRequest => ({

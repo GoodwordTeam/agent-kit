@@ -38,7 +38,7 @@ const USAGE = [
   "",
   "  ak validate [--profile <id>] [--json]      check the tree against catalog.yaml",
   "  ak validate --skill-style                  print only the skill-authoring style warnings",
-  "  ak build [--check] [--profile <id>]        emit dist/claude-code and dist/codex",
+  "  ak build [--check] [--profile <id>|all]    emit dist/claude-code and dist/codex",
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
   "  ak lifecycle record|check …                the gate records super-ship checks before it ships",
   "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home (optional)",

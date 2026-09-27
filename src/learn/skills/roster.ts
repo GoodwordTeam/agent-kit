@@ -196,8 +196,13 @@ export function rosterSection(ctx: LearnContext, root: string | null, options: R
     for (const skill of model) lines.push(`- ${skill.name}: ${clip(skill.description, width)}`);
   }
   if (human.length > 0) {
-    const slash = human.map((skill) => (skill.label === "catalog" ? `/ak:${skill.name}` : `/${skill.name}`));
-    lines.push(`Human-only commands (suggest one when it fits; never start it yourself): ${slash.join(", ")}`);
+    // One line each, with what the command is for: a bare list of names gave a prompt that
+    // described the problem without naming a command nothing to match it to.
+    lines.push("Human-only commands (suggest the one whose description fits; never start it yourself):");
+    for (const skill of human) {
+      const slash = skill.label === "catalog" ? `/ak:${skill.name}` : `/${skill.name}`;
+      lines.push(skill.description === "" ? `- ${slash}` : `- ${slash}: ${clip(skill.description, width)}`);
+    }
   }
   if (root !== null) {
     const candidates = pendingCandidates(loopDir(ctx.config, root, "skills"));

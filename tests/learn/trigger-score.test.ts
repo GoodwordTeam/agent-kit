@@ -4,7 +4,8 @@
  * `expects` outcomes, invalid sessions and the no-op floor. No session runs here.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { claude } from "./evals/subjects/claude.ts";
 import { codex } from "./evals/subjects/codex.ts";
@@ -14,6 +15,7 @@ import {
   asksForInvocation,
   authorityCheck,
   bodyFingerprint,
+  bundleMissing,
   type Case,
   confusion,
   expectsOf,
@@ -707,5 +709,26 @@ describe("a typed command expands on the client: the prompt prefix plus the init
     const events: SessionEvent[] = [{ kind: "user", text: "<command-name>/ak:super-align</command-name>" }, tool("Bash", { command: "git status" })];
     expect(skillLoads(events, undefined, undefined, "super-align")).toEqual([{ skill: "super-align", index: -1, via: "slash-command" }]);
     expect(skillLoads(events).map((l) => l.via)).toEqual(["expansion"]);
+  });
+});
+
+describe("bundleMissing", () => {
+  const bundle = () => {
+    const dir = mkdtempSync(join(tmpdir(), "bundle-"));
+    for (const id of ["super-align", "diagnose"]) {
+      mkdirSync(join(dir, "skills", id), { recursive: true });
+      writeFileSync(join(dir, "skills", id, "SKILL.md"), `---\nname: ${id}\n---\n`);
+    }
+    return dir;
+  };
+  const c = (id: string, skill: string, expected: string[]): Case => ({ id, skill, polarity: expected.length > 0 ? "positive" : "negative", invocation: "U", prompt: "p", expected });
+
+  test("names every targeted skill the bundle does not install, negatives included", () => {
+    const cases = [c("a", "super-align", ["super-align"]), c("b", "ultraqa", ["ultraqa"]), c("c", "babysit-pr", [])];
+    expect(bundleMissing(bundle(), cases, new Set())).toEqual(["babysit-pr", "ultraqa"]);
+  });
+
+  test("a candidate draft is reached through the roster, never the bundle", () => {
+    expect(bundleMissing(bundle(), [c("d", "rerun-bot-review", ["rerun-bot-review"])], new Set(["rerun-bot-review"]))).toEqual([]);
   });
 });

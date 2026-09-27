@@ -109,7 +109,7 @@ describe("catalog skills", () => {
 });
 
 describe("rosterSection", () => {
-  test("model-invoked skills get lines, user-invoked ones only a slash command, installed dedupe against the catalog", () => {
+  test("model-invoked skills get lines, user-invoked ones a slash command with its purpose, installed dedupe against the catalog", () => {
     const ctx = testContext();
     const repo = gitRepo(join(scratch(), "repo"));
     const global = join(ctx.config.configDir, "skills");
@@ -126,7 +126,9 @@ describe("rosterSection", () => {
         "- beta: Model-started helper that finds the caus",
         "- kill-slop: Stop coding agents from shipping sloppy",
         "- repo-thing: Only in this repository.",
-        "Human-only commands (suggest one when it fits; never start it yourself): /ak:alpha, /ship-it",
+        "Human-only commands (suggest the one whose description fits; never start it yourself):",
+        "- /ak:alpha: Human-started lifecycle phase.",
+        "- /ship-it: Ship.",
         "",
       ].join("\n"),
     );
