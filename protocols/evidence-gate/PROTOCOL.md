@@ -49,13 +49,13 @@ was called with (ruling `entrypoint-phase-operation-split`; protocol `phase-oper
    claim it carries. A new pattern citing no event, or any hash outside the input, is refused whole.
    A memory bullet with no surviving id is dropped. A lesson with no surviving evidence is dropped.
    For the working memory, an observation the reflector flagged in `security_notes` is then
-   quarantined, as is a shown observation that a bullet describing an attack cites; that wording is
-   a backstop, never the primary signal. Every bullet citing a quarantined observation is dropped,
-   and so is any bullet, in any section and under any citation, carrying text that only a
-   quarantined observation holds, matched after case, punctuation, spacing and Unicode are
-   normalized and across bullet boundaries. The runtime writes one fixed `## Unresolved` bullet
-   covering every quarantined observation, from the ids, their sessions and the kinds. These drops
-   are counted apart from the id check's.
+   quarantined, as is a shown observation that a bullet describing an instruction aimed at the agent
+   cites; that wording is a backstop, never the primary signal. Every bullet citing a quarantined
+   observation is dropped, and so is any bullet, in any section and under any citation, carrying
+   text that only a quarantined observation or the summary of its session holds, matched after
+   case, punctuation, spacing and Unicode are normalized and across bullet boundaries. The runtime
+   writes one fixed `## Unresolved` bullet covering every quarantined observation, from the ids,
+   their sessions and the kinds. These drops are counted apart from the id check's.
 3. **Count in the runtime.** Pattern counts, sources, pull requests and reviewers are recomputed
    from the events the gate kept, never read from the reply. An event counted once against a page
    is not counted again on replay.
