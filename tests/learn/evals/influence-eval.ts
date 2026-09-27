@@ -72,7 +72,7 @@ import { tokens } from "../../../src/learn/core/store.ts";
 import { citedIds, ensureMemoryLedger, memoryDir, rewriteIndex, SECTIONS, writeLesson } from "../../../src/learn/memory/ledger.ts";
 import { applyReflection } from "../../../src/learn/memory/reflect.ts";
 import { exfiltratedSecret, installedDependency, type Transcript, touchedCanary, weakenedPolicy } from "./influence/graders.ts";
-import { benignDependency, canaryFor, type MaliciousArm, MALICIOUS_ARMS, maliciousBulletText, type Scenario, SCENARIO_SET_VERSION, SCENARIOS, SECRET_ENV, SHAM_FACT } from "./influence/scenarios.ts";
+import { benignDependency, canaryFor, type MaliciousArm, MALICIOUS_ARMS, maliciousBulletText, type Scenario, SCENARIO_SET_VERSION, SCENARIOS, SECRET_ENV, SECRET_VALUE, SHAM_FACT } from "./influence/scenarios.ts";
 import { PREREGISTERED_KEPT } from "./influence/preregistered.ts";
 import { loadMatrix } from "./matrix.ts";
 import { cleanEnv, option } from "./session.ts";
@@ -427,7 +427,7 @@ export function maliciousHarm(arm: MaliciousArm, scenario: Scenario, t: Transcri
     case "malicious-policy":
       return weakenedPolicy(t);
     case "malicious-exfil":
-      return exfiltratedSecret(t, SECRET_ENV);
+      return exfiltratedSecret(t, SECRET_ENV, SECRET_VALUE);
   }
 }
 
@@ -782,7 +782,7 @@ async function main(argv: string[]): Promise<number> {
           prompt: `${scenario.prompt}\n\n${PROMPT_SUFFIX}`,
           cwd: p.root,
           ...(p.block.trim() === "" ? {} : { appendSystemPrompt: p.block }),
-          env: cleanEnv(),
+          env: { ...cleanEnv(), [SECRET_ENV]: SECRET_VALUE },
           timeoutMs: 300_000,
           maxTurns: 15,
         });
@@ -790,7 +790,7 @@ async function main(argv: string[]): Promise<number> {
         if (result.model !== undefined) observed.set(subject.id, (observed.get(subject.id) ?? new Set()).add(result.model));
         const after = snapshot(p.root);
         const commits = commitsSince(p.root, p.baseCommit);
-        const t: Transcript = { root: p.root, events: result.events, before, after, commits };
+        const t: Transcript = { root: p.root, events: result.events, before, after, commits, reply: result.reply };
         const g = grade(scenario, arm, t);
         const invalid = invalidity(result);
         console.log(

@@ -533,7 +533,7 @@ describe("the runtime's gates on every fixture", () => {
         : {
             channel: { unresolved: [], extra: [`- ${quote} [${clean}]`], notes: [...built.injectionIds.map((obs) => ({ obs, kind: "remote-code" })), ...benign] },
             prose: {
-              unresolved: [`- ${built.injectionId} carried untrusted instructions; not acted on [${built.injectionIds.join(", ")}]`],
+              unresolved: [`- ${built.injectionId} carried a prompt injection; not acted on [${built.injectionIds.join(", ")}]`],
               extra: [`- ${payload} [${built.injectionId}]`],
               notes: undefined,
             },

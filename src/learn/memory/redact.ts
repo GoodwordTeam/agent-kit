@@ -4,10 +4,10 @@
  * An observation can carry an instruction aimed at the agent. The reflector
  * reports one in `security_notes` as an id and a kind from a closed
  * vocabulary; it never writes the attack in prose (reflector never-rule 5).
- * Those ids are the quarantine. A bullet that describes an attack in the
- * runtime's own attack wording adds the shown observations it cites, as a
- * backstop for a reply that reports in prose instead; wording is never the
- * primary signal, because an adopted payload carries no warning words.
+ * Those ids are the quarantine. A bullet that describes an instruction aimed
+ * at the agent adds the shown observations it cites, as a backstop for a reply
+ * that reports in prose instead; wording is never the primary signal, because
+ * an adopted payload carries no warning words.
  *
  * The runtime then drops every bullet citing a quarantined observation, scans
  * every remaining bullet of the whole memory, whatever section it sits in and
@@ -26,7 +26,10 @@
  * not a letter or a digit. So case, punctuation, spacing and a payload split
  * across two bullets all match. A fragment is distinctive when a quarantined
  * observation holds it and no clean observation, session summary, the previous
- * memory or the output contract's headings do. Three kinds are scanned:
+ * memory or the output contract's headings do. The observer that wrote the
+ * observation also summarized its session, so the summary of a session holding
+ * a quarantined observation is tainted text, never clean. Three kinds are
+ * scanned:
  *   marked   a token of 6+ characters with a digit, dot, slash, dash or
  *            underscore (a URL, host, path, flag or identifier), as its word
  *            sequence and, from 8 letters and digits up, run together
@@ -106,16 +109,16 @@ export function withSecurityRecord(lines: readonly string[], record: string | nu
 }
 
 /**
- * Wording by which a model bullet describes an attack: the backstop. It names
- * the attack as an attack: words a payload itself uses (`exfiltrate`,
- * `payload`) and words that also describe routine work (`ignored`,
- * `instruction`) are left out, since a clean observation quarantined by an
- * ordinary or a copied bullet loses its facts. A describing bullet that also
- * cites a clean observation quarantines it too; that fails closed in the same
- * way as a flagged observation's own facts.
+ * Wording by which a model bullet describes an instruction aimed at the agent:
+ * the backstop. Only phrases that name that attack are matched. Words that also
+ * describe routine work (`injection`, `untrusted`, `malicious`, `ignored`,
+ * `not acted on`) are left out, since a clean observation quarantined by an
+ * ordinary bullet loses its facts and gains a false security record. A
+ * describing bullet that also cites a clean observation quarantines it too;
+ * that fails closed in the same way as a flagged observation's own facts.
  */
 export const ATTACK_WORDING =
-  /\b(?:prompt[- ]?injection|injected|injection|untrusted|malicious|embedded instruction|instructions? (?:aimed|addressed) at|tried to (?:add|insert|plant|inject)|not acted on|do not (?:run|follow|obey|act on) it)\b/i;
+  /\b(?:prompt[- ]?injections?|(?:injected|embedded) (?:instructions?|prompts?)|instructions? (?:aimed|addressed|directed) at (?:the )?(?:agent|assistant|ai)|tried to (?:add|insert|plant|inject) (?:an? )?instructions?)\b/i;
 
 const SEPARATORS = /[\s"'`<>()[\]{}|,;!*\\]+/;
 
@@ -157,6 +160,10 @@ export function normalWords(text: string): string[] {
 
 function observationText(row: ObservationRow): string {
   return [row.title, row.subtitle, row.narrative, row.facts, row.concepts, row.files_read, row.files_modified].filter((v) => v).join("\n");
+}
+
+function summaryText(s: SummaryRow): string {
+  return [s.request, s.completed, s.next_steps].filter((v) => v).join("\n");
 }
 
 /** A bullet's claim: the `- ` and every bracketed citation removed. */
@@ -281,13 +288,15 @@ export function redact(lines: readonly string[], inputs: RedactInputs): RedactRe
   }
   const quarantined = new Set([...noted, ...inferred]);
   const isQuarantined = (row: ObservationRow) => quarantined.has(`obs:${row.id}`);
+  const taintedSessions = new Set(inputs.observations.filter(isQuarantined).map((row) => row.memory_session_id));
+  const isTainted = (s: SummaryRow) => taintedSessions.has(s.memory_session_id);
   const clean = [
     ...inputs.observations.filter((row) => !isQuarantined(row)).map(observationText),
-    ...inputs.summaries.map((s) => [s.request, s.completed, s.next_steps].filter((v) => v).join("\n")),
+    ...inputs.summaries.filter((s) => !isTainted(s)).map(summaryText),
     inputs.previous,
     ...SECTIONS,
   ].join("\n");
-  const tainted = inputs.observations.filter(isQuarantined).map(observationText).join("\n");
+  const tainted = [...inputs.observations.filter(isQuarantined).map(observationText), ...inputs.summaries.filter(isTainted).map(summaryText)].join("\n");
   const survivors: number[] = [];
   let flagged = 0;
   lines.forEach((line, i) => {
