@@ -12,6 +12,7 @@ import { codex } from "./evals/subjects/codex.ts";
 import { grok } from "./evals/subjects/grok.ts";
 import type { SessionEvent } from "./evals/subjects/types.ts";
 import {
+  argvProblems,
   asksForInvocation,
   authorityCheck,
   bodyFingerprint,
@@ -730,5 +731,26 @@ describe("bundleMissing", () => {
 
   test("a candidate draft is reached through the roster, never the bundle", () => {
     expect(bundleMissing(bundle(), [c("d", "rerun-bot-review", ["rerun-bot-review"])], new Set(["rerun-bot-review"]))).toEqual([]);
+  });
+});
+
+describe("argvProblems", () => {
+  test("a flag and its value passed as one token is refused, not read as the default", () => {
+    // The 2026-09-26 a2 launcher passed "--bundle off" this way, and every arm ran with the bundle on.
+    expect(argvProblems(["--set", "dev", "--bundle off"])).toEqual(['unknown flag "--bundle off"']);
+    expect(argvProblems(["--roster off --bundle off"])).toEqual(['unknown flag "--roster off --bundle off"']);
+  });
+
+  test("on/off flags take only on or off, and value flags need a value", () => {
+    expect(argvProblems(["--roster", "no"])).toEqual(["--roster must be on or off, not no"]);
+    expect(argvProblems(["--json"])).toEqual(["--json needs a value"]);
+    expect(argvProblems(["--json", "--quiet"])).toEqual(["--json needs a value"]);
+    expect(argvProblems(["dev"])).toEqual(['stray argument "dev"']);
+  });
+
+  test("a well-formed command line has no problems", () => {
+    expect(
+      argvProblems(["--set", "dev", "--arm", "natural", "--bundle", "off", "--roster", "off", "--json", "o.json", "--dump-transcripts", "t", "--jobs", "4", "--subject", "s", "--quiet", "--dry-run"]),
+    ).toEqual([]);
   });
 });

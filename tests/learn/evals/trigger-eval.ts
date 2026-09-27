@@ -954,7 +954,50 @@ function revision(): string {
   return result.code === 0 ? result.stdout.trim() : "unknown";
 }
 
+const VALUE_FLAGS: Record<string, readonly string[] | null> = {
+  "--set": null,
+  "--arm": null,
+  "--roster": ["on", "off"],
+  "--bundle": ["on", "off"],
+  "--subject": null,
+  "--jobs": null,
+  "--json": null,
+  "--dump-transcripts": null,
+};
+const SWITCHES = new Set(["--dry-run", "--quiet"]);
+
+/**
+ * What is wrong with the command line, or [] when nothing is. A flag the parser does not know,
+ * a value flag with no value, or an on/off flag with any other value would otherwise fall back
+ * to its default without a word: `"--bundle off"` passed as one token ran with the bundle on.
+ */
+export function argvProblems(argv: readonly string[]): string[] {
+  const problems: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i]!;
+    if (SWITCHES.has(token)) continue;
+    if (!(token in VALUE_FLAGS)) {
+      problems.push(token.startsWith("--") ? `unknown flag ${JSON.stringify(token)}` : `stray argument ${JSON.stringify(token)}`);
+      continue;
+    }
+    const value = argv[i + 1];
+    const allowed = VALUE_FLAGS[token];
+    if (value === undefined || value.startsWith("--")) {
+      problems.push(`${token} needs a value`);
+      continue;
+    }
+    if (allowed && !allowed.includes(value)) problems.push(`${token} must be ${allowed.join(" or ")}, not ${value}`);
+    i++;
+  }
+  return problems;
+}
+
 async function main(argv: string[]): Promise<number> {
+  const problems = argvProblems(argv);
+  if (problems.length > 0) {
+    for (const problem of problems) console.error(`trigger-eval: ${problem}`);
+    return 2;
+  }
   const armFlag = option(argv, "--arm") ?? "natural";
   if (!["natural", "nudged", "catalog", "candidate"].includes(armFlag)) {
     console.error(`trigger-eval: --arm must be natural or nudged, not ${armFlag}`);
