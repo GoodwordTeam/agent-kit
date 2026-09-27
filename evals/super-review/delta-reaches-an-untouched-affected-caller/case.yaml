@@ -1,12 +1,14 @@
 schema_version: "1.1"
 name: a-serious-issue-in-an-untouched-affected-caller-stays-reportable
-tags: [positive, scenario-8, unscaffolded, needs-fixture]
+tags: [positive, scenario-8]
 execution:
   prompt: >-
     /ak:super-review Delta review on the retry-policy fix. Keep it tight — only the two files in the diff are in
     scope, so anything outside them is out of bounds for this round.
   max_turns: 14
   allowed_tools: [Read, Glob, Grep, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: scope-is-affected-behavior
     type: llm

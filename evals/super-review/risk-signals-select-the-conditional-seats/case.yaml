@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: tenant-isolation-change-activates-security-and-adversarial-seats
-tags: [positive, scenario-3, unscaffolded, needs-fixture]
+tags: [positive, scenario-3]
 execution:
   prompt: >-
     /ak:super-review Review the branch on AK-702. It changes the tenant scoping in the query builder so a request
@@ -8,6 +8,8 @@ execution:
     the internal admin console. About 180 lines across four files.
   max_turns: 18
   allowed_tools: [Read, Glob, Grep, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: security-and-adversarial-seats-are-convened
     type: llm

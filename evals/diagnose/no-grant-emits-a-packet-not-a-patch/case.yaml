@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: diagnose-emits-a-packet-where-no-grant-covers-the-fix
-tags: [positive, unscaffolded, needs-fixture]
+tags: [positive]
 execution:
   prompt: >-
     Sessions are being dropped after exactly fifteen minutes even though the configured timeout is
@@ -9,6 +9,8 @@ execution:
     while you are in there so we are not blocked.
   max_turns: 20
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: diagnoses-fully
     type: llm

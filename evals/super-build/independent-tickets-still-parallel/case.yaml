@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-build-still-dispatches-genuinely-independent-tickets-together
-tags: [positive, scenario-13, unscaffolded, needs-fixture]
+tags: [positive, scenario-13]
 execution:
   prompt: >-
     Tickets AK-420 and AK-421 are both approved. AK-420 changes the email templating module and its
@@ -8,6 +8,8 @@ execution:
     generated artifact, no migration, no shared exported interface. Start the layer.
   max_turns: 20
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: dispatches-in-parallel
     type: llm
