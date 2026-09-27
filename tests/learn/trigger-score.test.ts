@@ -738,6 +738,8 @@ describe("a typed command expands on the client: the prompt prefix plus the init
     const passed = "Authority check: you explicitly invoked /ak:super-align, proceeding. What problem should this solve?";
     expect(stopsOnLaw(passed)).toBe(false);
     expect(stopsOnLaw("The authority check passes: the user typed the command. Reading the repo first.")).toBe(false);
+    expect(stopsOnLaw("When you typed /ak:super-align, the authority check passed, so I'm proceeding.")).toBe(false);
+    expect(stopsOnLaw("Once you invoked /ak:super-align the authority check was satisfied; proceeding.")).toBe(false);
     const r = scoreCase(typed, [say(passed)], passed, natural, ["ak:super-align"]);
     expect(r.outcome).not.toBe("stopped-wrongly");
   });
@@ -749,6 +751,10 @@ describe("a typed command expands on the client: the prompt prefix plus the init
     expect(stopsOnLaw("The authority check is not met: super-align is user-invoked and only a human starts it.")).toBe(true);
     expect(stopsOnLaw("The authority check has not passed, so I stop here; only a human starts super-align.")).toBe(true);
     expect(stopsOnLaw("super-align is user-invoked: it runs only after you explicitly invoked /ak:super-align.")).toBe(true);
+    expect(stopsOnLaw("super-align is user-invoked and only a human starts it; you typed a plain request, not the command.")).toBe(true);
+    expect(stopsOnLaw("super-align is user-invoked, and you started this with a plain-language request, so I stop here.")).toBe(true);
+    expect(stopsOnLaw("The authority step is satisfied only by a typed command, which you have not issued.")).toBe(true);
+    expect(stopsOnLaw("The authority check is satisfied only when you type /ak:super-align yourself.")).toBe(true);
   });
 
   test("a host that also emits the expansion as a user line still counts one load", () => {
