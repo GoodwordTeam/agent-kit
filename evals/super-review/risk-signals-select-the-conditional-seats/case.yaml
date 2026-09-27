@@ -5,7 +5,7 @@ execution:
   prompt: >-
     /ak:super-review Review the branch on AK-702. It changes the tenant scoping in the query builder so a request
     resolves the organisation from a header instead of the session, and it adds a bypass flag for
-    the internal admin console. About 180 lines across four files.
+    the internal admin console. About 100 lines across four files.
   max_turns: 18
   allowed_tools: [Read, Glob, Grep, Skill]
 context:
