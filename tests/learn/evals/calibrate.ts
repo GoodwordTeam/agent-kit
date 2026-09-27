@@ -32,8 +32,9 @@
  *          its seats against the file's criteria, writing votes into the file after each item.
  *          By default it spends nothing: it prints the seats, the unavailable ones with their
  *          reasons, and how many judge calls a run would make. `--spend` runs them, stopping
- *          before `--max-calls` would be exceeded. `--subject` names the matrix subject that
- *          produced the transcripts; without it each item's recorded subject is used. A subject
+ *          before `--max-calls` would be exceeded; `--max-calls` without `--spend` is refused.
+ *          `--subject` names the matrix subject that produced the transcripts; without it each
+ *          item's recorded subject is used. A subject
  *          not in the matrix is taken to run its host's default binding, which refuses every
  *          reviewer on that host. A recorded `invalid` vote (an empty or unreadable reply, as a
  *          timed-out judge session leaves) counts as graded, so it is never paid for twice. With
