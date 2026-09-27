@@ -289,6 +289,43 @@ describe("gradeLabels", () => {
     const again = await gradeLabels(file, { matrix, spend: false });
     expect(again.plan.pending).toEqual({ "subject-a": [after.items[2]!.id] });
   });
+
+  test("an invalid vote counts as graded unless --retry-invalid, which regrades only that seat, within max-calls", async () => {
+    const graded = { graded_as: "subject-a", panel_verdict: "needs-human" as const, reasons: { "reviewer-b": "no reply", "reviewer-c": "ok" } };
+    const file = join(scratch, "retry", "labels.json");
+    writeLabels(
+      file,
+      fileOf([
+        item("1", { ...graded, label: "PASS", votes: { "reviewer-b": "invalid", "reviewer-c": "PASS" } }),
+        item("2", { ...graded, votes: { "reviewer-b": "invalid", "reviewer-c": "invalid" } }),
+        item("3", { ...graded, votes: { "reviewer-b": "PASS", "reviewer-c": "PASS" } }),
+      ]),
+    );
+    const queue = join(scratch, "retry", "q.jsonl");
+
+    const plain = counting();
+    const without = await gradeLabels(file, { matrix, spend: true, judge: plain.judge, queue });
+    expect(plain.calls).toEqual([]);
+    expect(without).toMatchObject({ calls: 0, graded: 0, plan: { calls: 0, pending: { "subject-a": [] } } });
+
+    const dry = await gradeLabels(file, { matrix, spend: false, retryInvalid: true });
+    expect(dry.plan).toMatchObject({ calls: 3, pending: { "subject-a": ["1", "2"] } });
+
+    const retrying = counting();
+    const run = await gradeLabels(file, { matrix, spend: true, retryInvalid: true, maxCalls: 2, judge: retrying.judge, queue });
+    expect(retrying.calls).toEqual(["reviewer-b"]);
+    expect(run).toMatchObject({ calls: 1, graded: 1, deferred: 1 });
+    const after = readLabels(file);
+    expect(after.items[0]).toMatchObject({
+      label: "PASS",
+      votes: { "reviewer-b": "PASS", "reviewer-c": "PASS" },
+      reasons: { "reviewer-b": "stubbed", "reviewer-c": "ok" },
+      panel_verdict: "PASS",
+    });
+    expect(after.items[1]!.votes).toEqual({ "reviewer-b": "invalid", "reviewer-c": "invalid" });
+    const again = await gradeLabels(file, { matrix, spend: false, retryInvalid: true });
+    expect(again.plan).toMatchObject({ calls: 2, pending: { "subject-a": ["2"] } });
+  });
 });
 
 describe("parseArgs", () => {
@@ -301,6 +338,7 @@ describe("parseArgs", () => {
   });
 
   test("an unknown flag, a missing value, a bad number or a missing source is an error", () => {
+    expect(parseArgs(["grade", "--spend", "--retry-invalid"])).toMatchObject({ switches: new Set(["--spend", "--retry-invalid"]) });
     expect(parseArgs(["grade", "--spnd"])).toEqual({ problems: ["grade does not take --spnd"] });
     expect(parseArgs(["sample", "--from"])).toEqual({ problems: ["--from needs a value", "sample needs at least one --from"] });
     expect(parseArgs(["sample", "--from", "a", "--n", "eighty"])).toEqual({ problems: ["--n must be a whole number, not eighty"] });

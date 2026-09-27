@@ -6,7 +6,7 @@
  * item. Not part of `bun test`.
  *
  *   bun tests/learn/evals/calibrate.ts sample --from PATH [--from PATH ...] [--n 80] [--seed 1] [--out FILE]
- *   bun tests/learn/evals/calibrate.ts grade [--file FILE] [--subject ID] [--matrix FILE] [--spend] [--max-calls N]
+ *   bun tests/learn/evals/calibrate.ts grade [--file FILE] [--subject ID] [--matrix FILE] [--spend] [--max-calls N] [--retry-invalid]
  *   bun tests/learn/evals/calibrate.ts kappa [--file FILE]
  *
  * FILE defaults to `.work/calibration/labels.json`, the matrix to `.work/eval-matrix.yaml`.
@@ -35,7 +35,10 @@
  *          before `--max-calls` would be exceeded. `--subject` names the matrix subject that
  *          produced the transcripts; without it each item's recorded subject is used. A subject
  *          not in the matrix is taken to run its host's default binding, which refuses every
- *          reviewer on that host.
+ *          reviewer on that host. A recorded `invalid` vote (an empty or unreadable reply, as a
+ *          timed-out judge session leaves) counts as graded, so it is never paid for twice. With
+ *          `--retry-invalid` the seats holding one are graded again, only those seats; each retry
+ *          replaces its invalid vote and counts against `--max-calls` like any other call.
  * kappa    Cohen's κ (./stats.ts `kappaTable`) for each reviewer against the human, each reviewer
  *          pair, and the scorer's suggested verdict against the human, each with its n. `invalid`
  *          votes and items the scorer abstains on are left out of their rows.
@@ -52,7 +55,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { loadCatalog } from "../../../src/catalog/load.ts";
 import { run } from "../../../src/learn/core/proc.ts";
 import { PACKAGE_ROOT } from "../../../src/learn/core/roles.ts";
-import { loadMatrix, MATRIX_FILE, type Matrix, type Subject } from "./matrix.ts";
+import { loadMatrix, MATRIX_FILE, type Matrix, type Seat, type Subject } from "./matrix.ts";
 import { buildPanel, grade, type Grade, type Judge, type Panel, type Vote } from "./panel.ts";
 import { type KappaRow, kappaTable, rng } from "./stats.ts";
 import type { HostKind, SessionEvent } from "./subjects/types.ts";
@@ -478,8 +481,18 @@ function subjectFor(matrix: Matrix, id: string, host: HostKind | null): { subjec
   return { subject: { id, host, model: undefined }, resolved: "host default" };
 }
 
+/**
+ * The seats that still owe `item` a vote under `panel`: every member unless each has voted as this
+ * subject, else none, or with `retryInvalid` the members whose recorded vote is `invalid`.
+ */
+function seatsToGrade(item: LabelItem, panel: Panel, retryInvalid: boolean): Seat[] {
+  const done = item.graded_as === panel.subject.id && panel.members.every((m) => item.votes?.[m.id] !== undefined);
+  if (!done) return panel.members;
+  return retryInvalid ? panel.members.filter((m) => item.votes?.[m.id] === "invalid") : [];
+}
+
 /** Seat a panel per subject and count the judge calls grading the ungraded items would make. Spends nothing. */
-export function planGrade(labels: LabelFile, matrix: Matrix, onlySubject?: string): GradePlan {
+export function planGrade(labels: LabelFile, matrix: Matrix, onlySubject?: string, retryInvalid = false): GradePlan {
   const panels = new Map<string, Panel>();
   const resolved: GradePlan["resolved"] = {};
   const pending: Record<string, string[]> = {};
@@ -495,12 +508,19 @@ export function planGrade(labels: LabelFile, matrix: Matrix, onlySubject?: strin
     }
     const panel = panels.get(id)!;
     if (panel.status === "unavailable") continue;
-    const done = item.graded_as === id && panel.members.every((m) => item.votes?.[m.id] !== undefined);
-    if (done) continue;
+    const seats = seatsToGrade(item, panel, retryInvalid);
+    if (seats.length === 0) continue;
     pending[id]!.push(item.id);
-    calls += panel.members.length;
+    calls += seats.length;
   }
   return { panels: [...panels.values()], resolved, pending, calls };
+}
+
+/** A panel's verdict over its members' votes, as ./panel.ts `grade` decides it: unanimous PASS or FAIL, else needs-human. */
+function panelVerdict(panel: Panel, votes: Record<string, Vote>): Grade["verdict"] {
+  const distinct = new Set(panel.members.map((m) => votes[m.id]));
+  const only = distinct.size === 1 ? [...distinct][0] : undefined;
+  return only === "PASS" || only === "FAIL" ? only : "needs-human";
 }
 
 export interface GradeRun {
@@ -519,10 +539,11 @@ export interface GradeRun {
  */
 export async function gradeLabels(
   file: string,
-  options: { matrix: Matrix; subject?: string; spend: boolean; maxCalls?: number; judge?: Judge; queue?: string },
+  options: { matrix: Matrix; subject?: string; spend: boolean; maxCalls?: number; retryInvalid?: boolean; judge?: Judge; queue?: string },
 ): Promise<GradeRun> {
   const labels = readLabels(file);
-  const plan = planGrade(labels, options.matrix, options.subject);
+  const retryInvalid = options.retryInvalid ?? false;
+  const plan = planGrade(labels, options.matrix, options.subject, retryInvalid);
   if (!options.spend) return { plan, spent: false, calls: 0, graded: 0, deferred: 0 };
   const queue = options.queue ?? join(dirname(file), "panel-queue.jsonl");
   const byItem = new Map(labels.items.map((i) => [i.id, i]));
@@ -531,20 +552,22 @@ export async function gradeLabels(
   let deferred = 0;
   for (const panel of plan.panels) {
     for (const id of plan.pending[panel.subject.id] ?? []) {
-      if (options.maxCalls !== undefined && calls + panel.members.length > options.maxCalls) {
+      const item = byItem.get(id)!;
+      const seats = seatsToGrade(item, panel, retryInvalid);
+      if (options.maxCalls !== undefined && calls + seats.length > options.maxCalls) {
         deferred++;
         continue;
       }
-      const item = byItem.get(id)!;
-      const result = await grade(panel, item.transcript, labels.criteria, { item: id, queue, ...(options.judge === undefined ? {} : { judge: options.judge }) });
-      calls += panel.members.length;
+      const retry = seats.length < panel.members.length;
+      const result = await grade({ ...panel, members: seats }, item.transcript, labels.criteria, { item: id, queue, ...(options.judge === undefined ? {} : { judge: options.judge }) });
+      calls += seats.length;
       graded++;
       const fresh = readLabels(file);
       const target = fresh.items.find((i) => i.id === id);
       if (target !== undefined) {
-        target.votes = result.votes;
-        target.reasons = result.reasons;
-        target.panel_verdict = result.verdict;
+        target.votes = retry ? { ...target.votes, ...result.votes } : result.votes;
+        target.reasons = retry ? { ...target.reasons, ...result.reasons } : result.reasons;
+        target.panel_verdict = retry ? panelVerdict(panel, target.votes) : result.verdict;
         target.graded_as = panel.subject.id;
         writeLabels(file, fresh);
       }
@@ -604,7 +627,7 @@ export function kappaReport(labels: LabelFile): KappaReport {
 
 const FLAGS: Record<string, { values: ReadonlySet<string>; switches: ReadonlySet<string>; repeat: ReadonlySet<string> }> = {
   sample: { values: new Set(["--from", "--n", "--seed", "--out"]), switches: new Set(), repeat: new Set(["--from"]) },
-  grade: { values: new Set(["--file", "--subject", "--matrix", "--max-calls"]), switches: new Set(["--spend"]), repeat: new Set() },
+  grade: { values: new Set(["--file", "--subject", "--matrix", "--max-calls"]), switches: new Set(["--spend", "--retry-invalid"]), repeat: new Set() },
   kappa: { values: new Set(["--file"]), switches: new Set(), repeat: new Set() },
 };
 
@@ -688,7 +711,7 @@ async function main(argv: string[]): Promise<number> {
       console.error(`calibrate: no subject ${subject} in ${matrixFile}`);
       return 2;
     }
-    const result = await gradeLabels(file, { matrix, spend, ...(subject === undefined ? {} : { subject }), ...(maxCalls === undefined ? {} : { maxCalls: Number(maxCalls) }) });
+    const result = await gradeLabels(file, { matrix, spend, retryInvalid: args.switches.has("--retry-invalid"), ...(subject === undefined ? {} : { subject }), ...(maxCalls === undefined ? {} : { maxCalls: Number(maxCalls) }) });
     console.log(`matrix: ${existsSync(matrixFile) ? matrixFile : "absent, default matrix"}`);
     printPlan(result.plan);
     if (!spend) {
