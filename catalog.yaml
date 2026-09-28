@@ -138,7 +138,7 @@ skills:
     profiles: [autonomy]
     batch: 10
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       A human-started supervisor pair exercising explicitly delegated checkpoint authority over
       the same lifecycle skills. Immutable charter; supervisors never implement. Agreement is not

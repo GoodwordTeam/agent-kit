@@ -323,6 +323,30 @@ adaptations:
   - path: schemas/review-event.schema.json
     source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
     rationale: The correction record's shape (message, sentiment, timestamp) is adapted into the correction kind of review event, which shares one schema with review findings and resolutions. The donor's confidence score is kept as an optional field and never read as a gate.
+  - path: skills/autopilot/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/lfg/SKILL.md
+    rationale: "Carried: nothing is implemented without a work source verified this run, a stop names why, and a stop leaves nothing pushed that was not already pushed. Not carried: proceeding without waiting on reversible work, or a single driver pipeline beside the lifecycle."
+  - path: skills/autopilot/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/autopilot/SKILL.md
+    rationale: The donor verifies an immutable descriptor's hash on resume and stop and refuses a mismatch without reloading configuration; that becomes the charter hash recheck, which refuses rather than adopting a changed charter. Its always-available cancellation with progress preserved for resume becomes the cancellation gate and the restart record. The donor's phases, state files and command names are not carried.
+  - path: skills/autopilot/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/autopilot/SKILL.md
+    rationale: "The rule that authority-decreasing operations stay recoverable even when state is damaged is carried as the always-available cancellation gate. The donor's automatic continuation through stage transitions is not carried: every checkpoint is a ledgered card and anything outside the charter stops."
+  - path: skills/autopilot/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: The ledger line, a ruling with its reason and what it costs if wrong, becomes the ruling format in each decision record. The rule that a running plan decides rather than stalls is narrowed to in-charter checkpoints; everything else escalates once.
+  - path: skills/autopilot/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/lfg/SKILL.md
+    rationale: The work-source input and prerequisite, and the stop conditions that name their reason, condense the donor's verified-work-source rule and its stop list.
+  - path: skills/autopilot/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/autopilot/SKILL.md
+    rationale: The charter-may-change-mid-run and cancellation-may-be-blocked constraints, the restart-record input and the resumability test condense the donor's descriptor hash check and its cancel-and-resume rule.
+  - path: skills/autopilot/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/autopilot/SKILL.md
+    rationale: The cancellation-may-be-blocked constraint and the cancelled failure outcome condense the donor's rule that authority-decreasing operations are always recoverable.
+  - path: skills/autopilot/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: The ledger output's ruling record condenses the donor's ruling line format.
   - path: skills/babysit-pr/SKILL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/references/watch-loop.md
     rationale: The donor's wake-reason taxonomy, claim-act-confirm idempotency rule, settle window, non-convergence protocol with its anti-cry-wolf line, and CI fix-round budget are carried as the classification, deduplication, settle, parking and repair-cap steps.

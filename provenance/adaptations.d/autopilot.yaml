@@ -1,0 +1,83 @@
+# Provenance fragment for the "autopilot" batch: one skill body with its manifest —
+# autopilot.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a file
+# derives from is recorded with a machine-checkable donor@commit:path.
+#
+# Both the body and its manifest carry rows. A skill.yaml is an adapted file in its own
+# right: its triggers, non-triggers, hard gates and limits are condensations of the same
+# donor text the body adapts, not metadata about it.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation.
+#
+# skills/autopilot/references/checkpoints.md carries no row. It adapts no donor file: its
+# phase-to-operation table restates policies/invocation.yaml and
+# policies/authority-defaults.yaml, and its escalation list and wire format come from the
+# design brief, whose rows live in provenance/conversation-map.yaml.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below is cited in research/dossiers/autopilot.md and was read at its pin with
+# `git show` in the pinned clone before it was written here; none was re-derived from
+# memory or from a document's description of a donor.
+
+adaptations:
+
+  # --- autopilot -----------------------------------------------------------------
+
+  - path: skills/autopilot/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/autopilot/SKILL.md
+    rationale: >-
+      The donor verifies an immutable descriptor's hash on resume and stop and refuses a mismatch
+      without reloading configuration; that becomes the charter hash recheck, which refuses rather
+      than adopting a changed charter. Its always-available cancellation with progress preserved
+      for resume becomes the cancellation gate and the restart record. The donor's phases, state
+      files and command names are not carried.
+
+  - path: skills/autopilot/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/autopilot/SKILL.md
+    rationale: >-
+      The rule that authority-decreasing operations stay recoverable even when state is damaged is
+      carried as the always-available cancellation gate. The donor's automatic continuation
+      through stage transitions is not carried: every checkpoint is a ledgered card and anything
+      outside the charter stops.
+
+  - path: skills/autopilot/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/lfg/SKILL.md
+    rationale: >-
+      Carried: nothing is implemented without a work source verified this run, a stop names why,
+      and a stop leaves nothing pushed that was not already pushed. Not carried: proceeding
+      without waiting on reversible work, or a single driver pipeline beside the lifecycle.
+
+  - path: skills/autopilot/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: >-
+      The ledger line, a ruling with its reason and what it costs if wrong, becomes the ruling
+      format in each decision record. The rule that a running plan decides rather than stalls is
+      narrowed to in-charter checkpoints; everything else escalates once.
+
+  - path: skills/autopilot/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/autopilot/SKILL.md
+    rationale: >-
+      The charter-may-change-mid-run and cancellation-may-be-blocked constraints, the restart-record
+      input and the resumability test condense the donor's descriptor hash check and its
+      cancel-and-resume rule.
+
+  - path: skills/autopilot/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/autopilot/SKILL.md
+    rationale: >-
+      The cancellation-may-be-blocked constraint and the cancelled failure outcome condense the
+      donor's rule that authority-decreasing operations are always recoverable.
+
+  - path: skills/autopilot/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/lfg/SKILL.md
+    rationale: >-
+      The work-source input and prerequisite, and the stop conditions that name their reason,
+      condense the donor's verified-work-source rule and its stop list.
+
+  - path: skills/autopilot/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
+    rationale: >-
+      The ledger output's ruling record condenses the donor's ruling line format.
