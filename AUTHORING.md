@@ -428,7 +428,8 @@ checked by anything.
 writes it from the full-depth clones the lock names. The script also prunes snapshots that no row
 cites, and with `--check` it reports drift without writing. `tests/donor-snapshots.test.ts`
 fails `bun test` on a cited file that has no snapshot. When `.donors/` is present, the same test also
-fails on a snapshot whose bytes differ from the pin. A new row is therefore not finished until the
+fails on a snapshot whose bytes differ from the pin, and on one whose donor clone exists but cannot
+resolve the pin, such as a shallow clone. A new row is therefore not finished until the
 script has been run and its output committed with the fragment.
 
 **A row may not point at anything outside the merge.** Keys *beside* `adaptations:` in a fragment are

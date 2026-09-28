@@ -17,8 +17,8 @@ import { compileSchemas } from "../src/validation/schemas.ts";
  * synthetic stand-in, so a rejection names the branch and not the fixture.
  *
  * The last block holds the lists that must name the same ids: the enum, the
- * publishArtifact contract, the catalog and the schema files themselves. That
- * disagreement is how the defect stayed invisible.
+ * catalog and the schema files themselves. That disagreement is how the defect
+ * stayed invisible.
  */
 
 const REPO = resolve(import.meta.dir, "..");
