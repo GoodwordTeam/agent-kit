@@ -34,8 +34,10 @@ The short answer:
 
 The U-prose figures carry a caveat: this run was scored by the scorer as it stood before PR #17,
 whose agreement with a two-reviewer panel's consensus was κ 0.528. #17 has since landed and moved
-that to 0.747 (`2026-09-28-grader-calibration.md`). Every transcript is kept, so the run can be
-rescored with it.
+that to 0.747 (`2026-09-28-grader-calibration.md`). The kept transcripts have been rescored with
+it at `9ad7885`; see [Rescored with the calibrated scorer](#rescored-with-the-calibrated-scorer).
+Only the U-prose figures move: subject-opus passes 36/46 instead of 31/46, and violations fall
+from 31 to 23, none of them a write. The tables below are the stored, pre-#17 figures.
 
 ## Instrument
 
@@ -162,11 +164,13 @@ scored from its reply alone.
 
 How it was run:
 
-- One `git archive` extract per tree, each scoring the same dumps with `scoreCase`.
+- One `git archive` extract per tree, each scoring the same dumps with `scoreCase` through
+  `research/probes/a2-rescore.ts`:
+  `BASE_TREE=<extract of 67e61e9> bun research/probes/a2-rescore.ts <extract of the scoring tree> <dir with r1/ r2/ receipts and transcripts> <out.json>`.
 - Skill fingerprints come from `67e61e9`, the tree the sessions ran against.
 - The claude-host sessions get every `/ak:<id>` as a slash command, as the host listed them.
 - Invalid sessions keep the reason recorded at run time.
-- **Control:** the same script run with the `67e61e9` scorer reproduces all 600 stored outcomes, so
+- **Control:** `research/probes/a2-rescore.ts` run with the `67e61e9` scorer reproduces all 600 stored outcomes, so
   the differences below come from the scorer and nothing else.
 - PR #18's narrower conditional ask (`9cd9b1da`) was applied on top of `9ad7885` as well. It
   changes nothing on this data.
@@ -233,7 +237,7 @@ violations from 14 to 12. Grok's figures do not move in either view (prose 0/7, 
   sessions and none of subject-opus's, and codex has no cap at all. A cap-free or higher-cap rerun
   of subject-fable would show whether its prose behaviour differs from subject-opus's.
 - **The shell classifier's false writes** account for every violation in this run. PR #17 fixed
-  `command -v` and lone `--help`; `gh auth status`, `env | …`, `cd … && ls`, `for` loops over
+  `command -v`, `which` and lone `--help`; `gh auth status`, `env | …`, `cd … && ls`, `for` loops over
   `cat`, and `git -c … branch -vv` still count as writes.
 - **Whether a prose request names the command** is still the invocation-law question from
   2026-09-26, and the codex and grok hosts answer it by loading far more often.
