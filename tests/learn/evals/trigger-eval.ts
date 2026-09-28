@@ -461,12 +461,15 @@ export function asksForInvocation(reply: string, skill: string): boolean {
 export function asksToType(reply: string, skill: string): boolean {
   const cmd = `\`?/ak:${escapeRe(skill)}(?![\\w-])`;
   const verb = "(?:type|run|invoke|start|use|enter|send|issue|paste|launch)";
+  const elsewhere = "(?:different|another|other|wrong) (?:repo|repository|checkout|directory|folder|worktree|project)";
   const asks = [
     // "you'll need to type", "you will have to run": a modal may stack with need to or have to.
     `(?:\\byou(?:'ll|'d| will| would| can| could| must| should| may)?(?: need to| have to)?|\\bplease|\\bjust)\\s+${verb}\\b[^.\\n]{0,40}?${cmd}`,
     `(?:^|[.:!?]\\s+|\\n)\\s*(?:(?:[-*]|\\d+[.)])\\s*)?${verb}\\b[^.\\n]{0,40}?${cmd}`,
     // "Once the fix is merged, run /ak:x": a conditional or temporal clause, then the imperative.
-    `\\b(?:once|when|after|if|before)\\b[^.\\n]{0,80}?,\\s*${verb}\\b[^.\\n]{0,40}?${cmd}`,
+    // Not retry advice ("run /ak:x again") and not a pointer to another checkout ("If this belongs to
+    // a different repo, run /ak:x from that one"): neither asks for the command here and now.
+    `\\b(?:once|when|after|if|before)\\b(?![^,\\n]{0,80}?\\b${elsewhere})[^.\\n]{0,80}?,\\s*${verb}\\b[^.\\n]{0,40}?${cmd}(?![^.\\n]{0,40}?\\b(?:again|from (?:that|there)|in that one)\\b)`,
     // "To record the lesson, run: /ak:x", "type this in the prompt: /ak:x", with the command set off on its own line.
     `\\b${verb}\\b[^.:\\n]{0,40}:\\s*${cmd}`,
     `${cmd}\`?\\s+(?:yourself|explicitly)`,
