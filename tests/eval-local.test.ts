@@ -4,11 +4,15 @@
  * an empty result and exits 1), and writes canned results. The assertions are on the result, the
  * receipt and the exit status; the script's source is not read.
  */
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+
+// Each test runs the whole script (a bun subprocess, a bundle copy per group, the stub host), which
+// takes 2-3s warm and has passed the 5s default on a cold first run.
+setDefaultTimeout(30_000);
 
 const REPO = resolve(import.meta.dir, "..");
 const SCRIPT = join(REPO, "scripts", "eval-local.sh");
