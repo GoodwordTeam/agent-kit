@@ -173,7 +173,7 @@ skills:
     profiles: [product]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Generate options, then critique them. No implicit commitment or scope expansion.
 
   - id: pov
@@ -182,7 +182,7 @@ skills:
     profiles: [product]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Project-grounded recommendation with optional independent opinions. Read-only; a
       recommendation is not authorization. Dissent and insufficient-evidence results survive.
@@ -193,7 +193,7 @@ skills:
     profiles: [maintainer]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Competing bounded experiments in separate workspaces against criteria fixed first. Emits an
       evaluation artifact, not automatic production adoption.
@@ -248,7 +248,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Independently challenge a consequential claim before it becomes an assumption:
       claim, evidence extraction, doubt, reconciliation. Not another generic code review.
@@ -270,7 +270,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Gather cited external primary-source evidence. Distinct from repo-local scout; reports
       source versions and uncertainty.
@@ -281,7 +281,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Verify framework or library usage against authoritative sources for the version actually in
       use. Never code from an unverified remembered API.
@@ -358,7 +358,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       A bounded throwaway artifact answering a question discussion cannot settle. The evaluator is
       named in advance; human-experience questions stay blocked without a human.

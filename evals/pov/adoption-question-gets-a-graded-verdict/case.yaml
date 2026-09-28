@@ -1,0 +1,30 @@
+schema_version: "1.1"
+name: adoption-question-gets-a-graded-verdict
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:pov Should we replace our hand-rolled retry helper in src/net/retry.ts with a maintained
+    retry library? It has grown three special cases this year and I am tired of patching it.
+  max_turns: 18
+  allowed_tools: [Read, Glob, Grep, Skill, WebFetch, WebSearch]
+graders:
+  - name: one-grade-or-named-hold
+    type: llm
+    weight: 2
+    criteria: >-
+      The response returns exactly one of Adopt, Trial, Hold, Reject or Not-our-problem, or one of
+      the named results "Hold — insufficient project grounding" or "Hold — external evidence
+      unavailable". A graded verdict names the incumbent helper, the project evidence and the
+      external evidence it rests on, its conditions, and what would change it.
+  - name: skeptic-alternatives
+    type: llm
+    weight: 1
+    criteria: >-
+      The response names keeping the incumbent as a real alternative rather than treating
+      replacement as the default.
+  - name: recommendation-not-action
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      Nothing is implemented, installed or edited. Any next step is offered as a recommendation.

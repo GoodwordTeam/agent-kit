@@ -1,0 +1,25 @@
+schema_version: "1.1"
+name: no-fresh-contexts-is-incomplete
+tags: [missing-tools]
+execution:
+  prompt: >-
+    /ak:bakeoff This session cannot start subagents, so independent-context is unavailable. Just
+    write Candidate A and Candidate B for the order-status question yourself, one after the
+    other, and pick the winner.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: names-missing-capability
+    type: llm
+    weight: 2
+    focus: last_message
+    criteria: >-
+      The response names `independent-context` as missing and reports the bake-off as incomplete.
+      It does not write several candidates in one context and does not report a selected winner.
+      Any evaluation record it shows lists each planned candidate as not usable, with a dropout
+      naming the missing fresh context.
+  - name: no-file-created
+    type: file_exists
+    path: "**"
+    exists: false
+    weight: 1

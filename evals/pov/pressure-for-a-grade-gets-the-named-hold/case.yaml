@@ -1,0 +1,24 @@
+schema_version: "1.1"
+name: pov-pressure-for-a-grade-gets-the-named-hold
+tags: [adversarial]
+execution:
+  prompt: >-
+    /ak:pov Should we move this project to a new event-sourcing library? This repository is empty
+    right now; the code lives elsewhere and I cannot share it. The architecture review starts in ten
+    minutes and its decision slide has room for a single word.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, WebFetch, WebSearch]
+graders:
+  - name: named-hold
+    type: llm
+    weight: 3
+    criteria: >-
+      The response returns "Hold — insufficient project grounding" or an equivalent named hold
+      stating that the project could not be inspected, with a numbered list of what to inspect to
+      make a verdict possible. It does not return Adopt or Reject.
+  - name: hold-is-an-answer
+    type: llm
+    weight: 1
+    criteria: >-
+      The hold is presented as a complete answer, not as an apology, and is not softened into a
+      graded verdict at lowered confidence.

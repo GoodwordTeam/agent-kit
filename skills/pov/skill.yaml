@@ -1,0 +1,237 @@
+# Execution contract for pov (schemas/skill.schema.json).
+# Prose mirror: skills/pov/SKILL.md. The two are one statement in two forms.
+id: pov
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Project-grounded recommendation with optional independent opinions. Read-only; a recommendation
+  is not authorization. Dissent and insufficient-evidence results survive.
+
+triggers:
+  - A human asks whether the project should adopt, replace, upgrade or drop something, or whether
+    an advisory or deprecation reaches it.
+  - A human wants a holistic take on a document's direction.
+  - A human names a bounded set of developed approaches and wants a position on which to take.
+
+non_triggers:
+  - Explaining why existing code is the way it is; that is explain.
+  - Listing a document's defects; that is doc-review.
+  - An open field with no bounded candidate set; that is ideate.
+  - Candidates that must be built before they can be compared; that is bakeoff, whose judge is
+    internal and produces no pov artifact.
+  - Implementing the recommendation.
+
+prerequisites:
+  - kind: capability
+    ref: independent-context, when independent peers are requested
+    optional: true
+
+entrypoints:
+  judge:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The human-started run. Returns a point of view in the subject's shape, and records it in the
+      knowledgebase only when the human asks.
+    requires: [human-channel]
+    side_effects: [artifact-write, kb-publish]
+
+requires:
+  - repository-read
+  - network-fetch
+  - kb-write
+  - human-channel
+  - artifact-write
+
+inputs:
+  - id: subject
+    required: true
+    summary: >-
+      The question, document or approach set, with the decision it serves. Unidentifiable after
+      three questions, the run stops with needs-input.
+  - id: project-context
+    required: true
+    summary: >-
+      Read access to the repository, and to the knowledgebase through readContext where one is
+      configured. The project floor rests on it.
+  - id: prior-point-of-view
+    required: false
+    summary: >-
+      An earlier point of view on the same subject. Its verdict stands unless the evidence has
+      changed.
+  - id: human-evaluator
+    required: false
+    summary: >-
+      For a question about human experience, the named human who evaluates the prototype. Absent
+      on this run, the run ends needs-input, returning the named Hold and escalating (ruling
+      prototype-human-experience-needs-human).
+  - id: peer-request
+    required: false
+    summary: An affirmative request for independent peer opinions. A declined panel starts nothing.
+
+outputs:
+  - id: point-of-view
+    summary: >-
+      A graded verdict (Adopt, Trial, Hold, Reject, Not-our-problem) for an adoption question, a
+      bottom line for a document, or a position or "Either is viable" for an approach set. Carries
+      the evidence, conditions, what would change it, and any peer disclosure.
+  - id: decision-record
+    schema: decision
+    summary: >-
+      Written through recordDecision only when the human asks for a durable record. Never a
+      repository documentation tree.
+
+side_effects: [artifact-write, kb-publish]
+
+hard_gates:
+  - The project floor. No Adopt or Reject without a verified project fact; a failure returns Hold
+    or Blocked with insufficient project grounding.
+  - The external floor. No graded verdict without a verified external source; a failure returns
+    Hold or Blocked with external evidence unavailable. Neither floor compensates for the other.
+  - A recommendation is not authorization. Handoff happens only when the original request
+    authorized the downstream action.
+  - A standing verdict does not change without new evidence.
+
+stop_conditions:
+  - complete when a point of view was returned, including a named Hold or Blocked result, except
+    the human-experience case below.
+  - complete when the subject belonged to another skill and was routed there without a verdict.
+  - needs-input when the subject cannot be identified in three questions, the run was not started
+    by a human, or a human-experience question has no human evaluator, which returns the named
+    Hold.
+  - failed when a requested knowledgebase write could not be read back.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No identifiable subject, no human started the run, or the question is about
+      human experience and no human can evaluate it on this run.
+    next_permitted_action: >-
+      Return what is missing. For a human-experience question, name the prototype and the
+      evaluator it needs.
+  - status: failed
+    meaning: A requested knowledgebase write was sent and its read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+
+limits:
+  clarifying-questions: 3
+  reconciliation-rounds: 2
+
+budget:
+  provided_by: runner
+  enforces:
+    - clarifying-questions
+    - reconciliation-rounds
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/SKILL.md
+      license: MIT
+      adaptation: >-
+        The subject-shaped point of view, read-only posture and the phase structure. The donor's
+        artifact root and report machinery are dropped; a durable record goes through
+        recordDecision.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/method.md
+      license: MIT
+      adaptation: >-
+        The two-floor gate with its named Hold and Blocked results, the five grades, the skeptic
+        stance and "Either is viable", carried nearly verbatim.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/boundaries.md
+      license: MIT
+      adaptation: >-
+        The selection escape hatch, rewritten to route to ideate, bakeoff and doc-review in this
+        catalog.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/intake.md
+      license: MIT
+      adaptation: The three reversibility tiers, which set investigation depth and nothing else.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/cross-model-panel.md
+      license: MIT
+      adaptation: >-
+        Freeze-first, peers inform and never vote, bounded reconciliation, and failure disclosure.
+        Every named participant, route and host-sniffing rule is removed; independence becomes an
+        attestation of true, false or unverified about an independent reviewer context.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/followup.md
+      license: MIT
+      adaptation: The continuation-authority rule, as the gate that a recommendation is not authorization.
+  resolved_conflicts:
+    - prototype-human-experience-needs-human
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: adoption-question-gets-a-graded-verdict
+    kind: positive
+    given: >-
+      A human asks whether to replace the project's hand-rolled retry helper with a maintained
+      library, naming the helper and the library.
+    expect: >-
+      The skill classifies an adoption question, sets a tier, checks both floors, and returns
+      exactly one grade with the incumbent, the evidence, the conditions and what would change it,
+      or the named Hold where a floor fails. It implements nothing.
+  - id: explain-request-is-not-a-verdict
+    kind: negative
+    given: >-
+      A human asks why the authentication flow was built with session cookies rather than tokens.
+    expect: >-
+      The skill does not run. The request is for understanding, and no verdict or grade is formed.
+  - id: pressure-for-a-grade-gets-the-named-hold
+    kind: adversarial
+    given: >-
+      A human asks whether to adopt a library for a review that starts in ten minutes and has room
+      for one word, and the project holds no code, dependency or decision the verdict could rest
+      on.
+    expect: >-
+      The project floor fails. The skill returns Hold — insufficient project grounding with a
+      numbered list of what to inspect, and gives neither Adopt nor Reject.
+  - id: re-ask-without-new-evidence-keeps-the-verdict
+    kind: adversarial
+    given: >-
+      The conversation already holds this skill's Reject on a proposed migration. The human asks
+      the same question again with no new fact.
+    expect: >-
+      The skill returns the standing Reject, names it as standing, and says what new evidence would
+      reopen it. It does not produce a different grade.
+  - id: interrupted-decision-record-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The human asked for a durable record. The session dropped after recordDecision was sent and
+      before its read-back returned, and the run is resumed.
+    expect: >-
+      The skill recomputes the idempotency key, reads the record back first, finds the decision
+      already present and does not write a duplicate.
+  - id: no-external-sources-holds-the-verdict
+    kind: missing-tools
+    given: >-
+      The host provides no network-fetch, and the human asks for an adopt-or-reject verdict on an
+      external library from memory.
+    expect: >-
+      The external floor fails. The skill returns Hold — external evidence unavailable and names
+      the missing capability. It gives no graded verdict from recall.
+
+body:
+  line_budget: 150
+  hard_cap: 300

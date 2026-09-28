@@ -1,0 +1,39 @@
+schema_version: "1.1"
+name: onboarding-drop-off-gets-critiqued-survivors
+tags: [positive, unscaffolded]
+execution:
+  prompt: >-
+    /ak:ideate Give us ideas for reducing drop-off in our onboarding flow. About a third of new
+    sign-ups never finish the workspace setup step, and we have not decided what to try yet.
+  max_turns: 24
+  allowed_tools: [Read, Glob, Grep, Skill, Agent]
+graders:
+  - name: generate-before-critique
+    type: llm
+    weight: 2
+    focus: trace
+    criteria: >-
+      The full candidate list is produced before any candidate is critiqued, and every candidate
+      is critiqued, preferably in a separate context that does not see the generation history.
+      Where no separate context is used, the critique is labelled degraded.
+  - name: bounded-grounded-survivors
+    type: llm
+    weight: 2
+    criteria: >-
+      The response returns at most eight survivors, each with a stated basis marked as direct,
+      external or reasoned, and each rejected idea carries one reason such as too vague, not
+      actionable, duplicates a stronger idea, unjustified or scope overrun. It includes a Not Doing
+      list.
+  - name: no-commitment
+    type: llm
+    weight: 1
+    criteria: >-
+      No survivor is chosen on the human's behalf or built. The next step is recommended as
+      alignment on a chosen idea, marked as a recommendation, and never as going straight to
+      building or planning.
+  - name: ideate-positive-no-edit
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    weight: 1

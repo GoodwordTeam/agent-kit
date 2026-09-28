@@ -1,0 +1,223 @@
+# Execution contract for ideate (schemas/skill.schema.json).
+# Prose mirror: skills/ideate/SKILL.md. The two are one statement in two forms.
+id: ideate
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: Generate options, then critique them. No implicit commitment or scope expansion.
+
+triggers:
+  - A human wants ideas, improvements or surprising directions on a subject, before choosing one.
+  - An open field with nothing bounded yet to compare or judge.
+
+non_triggers:
+  - A bounded set of developed options or a stated position to judge; that is pov.
+  - A direction already chosen that needs its meaning or scope defined; that is super-align, or
+    super-bound when scope is the open question.
+  - Two live approaches that need building to compare; that is bakeoff.
+  - Planning or building a survivor.
+
+prerequisites:
+  - kind: capability
+    ref: independent-context, for the critique; without it the critique runs here, labelled degraded
+    optional: true
+
+entrypoints:
+  run:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The human-started run. Identifies the subject, grounds, generates the full candidate list,
+      critiques every candidate independently, arbitrates and returns a bounded survivor set with
+      rejection reasons and a Not Doing list, in the session. Publishes nothing.
+    requires: [human-channel]
+    side_effects: []
+
+requires:
+  - repository-read
+  - independent-context
+  - human-channel
+
+inputs:
+  - id: subject
+    required: true
+    summary: >-
+      The feature, flow, document, concept or question the ideas operate on, with any focus hint.
+      Unidentifiable after three subject-only questions, the run stops with needs-input.
+  - id: grounding
+    required: true
+    summary: >-
+      Read access to the repository, and to the knowledgebase through readContext where one is
+      configured, including earlier ideation on the subject and its rejections.
+  - id: human-evaluator
+    required: false
+    summary: >-
+      For a candidate about human experience, the human who evaluates it, named in advance. Absent,
+      the candidate survives only as unevaluated (ruling prototype-human-experience-needs-human).
+  - id: budget
+    required: false
+    summary: Supplied by the runner. This skill enforces only the caps it declares.
+
+outputs:
+  - id: ideation
+    summary: >-
+      Subject and grounding summary; survivors with basis, rationale, downsides and any
+      human-evaluation need; one closed-list reason per rejected idea; a Not Doing list; whether
+      critique ran independently or degraded; and the recommended next step, marked as a
+      recommendation. An insufficient-evidence result is a finished outcome.
+
+side_effects: []
+
+hard_gates:
+  - Generation completes before critique starts, and every candidate is critiqued.
+  - A survivor carries a basis the critique did not refute.
+  - A rejected idea stays rejected unless new evidence answers its rejection reason; re-running is
+    not evidence.
+  - A recommendation is not authorization. The deliverable commits to nothing, widens no scope and
+    starts no downstream work.
+
+stop_conditions:
+  - complete when a deliverable was returned, including an insufficient-evidence result.
+  - complete when the request belonged to another skill and was routed.
+  - needs-input when the run was not started by a human, the subject cannot be identified in three
+    questions, or a human-experience survivor must be settled without a named evaluator.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No human started the run, the subject is unidentifiable, or a human-experience question has
+      no named evaluator.
+    next_permitted_action: >-
+      Return what is missing. For a human-experience candidate, name the prototype and the
+      evaluator it needs.
+
+limits:
+  clarifying-questions: 3
+  survivors: 8
+  critique-passes: 2
+
+budget:
+  provided_by: runner
+  enforces:
+    - clarifying-questions
+    - survivors
+    - critique-passes
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-ideate/SKILL.md
+      license: MIT
+      adaptation: >-
+        Ground before ideating, generate many and critique all, and send action to alignment rather
+        than planning. The docs_root artifact root, output-format resolution, HTML rendering and
+        issue-tracker mode are dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-ideate/references/divergent-ideation.md
+      license: MIT
+      adaptation: >-
+        The direct, external and reasoned basis tags, the drop rule for an idea with no basis, and
+        lens diversity as a default spread. The fixed sub-agent fleet and surprise-me mode are
+        dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-ideate/references/post-ideation-workflow.md
+      license: MIT
+      adaptation: >-
+        Fresh-context critique followed by arbitration that states why it overrules, the closed
+        rejection taxonomy carried nearly verbatim, the ambition floor, and the honest survivor
+        count. The automatic file write and next-steps menu are dropped; the deliverable is
+        returned in the session.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-ideate/references/scope-gates.md
+      license: MIT
+      adaptation: >-
+        Subject identification within three questions, never asking about direction, constraints,
+        audience, tone or success criteria, and warn-and-proceed when grounding fails.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/idea-refine/SKILL.md
+      license: MIT
+      adaptation: >-
+        Be honest, not supportive; the five-to-eight bound on considered variations; and the Not
+        Doing list. The docs/ideas save path and the helper script are dropped.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/idea-refine/frameworks.md
+      license: MIT
+      adaptation: >-
+        Carried to references/frameworks.md as ways to work a thin lens, each still bound to the
+        basis rule. Named-company examples are removed.
+  resolved_conflicts:
+    - prototype-human-experience-needs-human
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: onboarding-drop-off-gets-critiqued-survivors
+    kind: positive
+    given: >-
+      A human starts the skill asking for ideas to reduce drop-off in the product's onboarding
+      flow.
+    expect: >-
+      The skill grounds in the project, generates the full candidate list before critique, has
+      every candidate critiqued, and returns five to eight survivors each with a basis, a rejection
+      reason from the closed list for every rejected idea, and a Not Doing list. It recommends
+      super-align as the next step and builds nothing.
+  - id: stated-position-goes-to-a-judgment
+    kind: negative
+    given: >-
+      A human describes two developed options for session storage and asks which one to take.
+    expect: >-
+      The skill does not run. The options are bounded and developed, so no candidates are
+      generated.
+  - id: pick-and-build-pressure-keeps-the-critique
+    kind: adversarial
+    given: >-
+      A human starts the skill on checkout abandonment with a demo at noon and a team expecting one
+      working change in the codebase by then.
+    expect: >-
+      The skill still returns a bounded survivor set with rejection reasons, names the choice as
+      the human's, recommends super-align, and writes no code.
+  - id: rejected-idea-is-not-resurrected
+    kind: adversarial
+    given: >-
+      An earlier ideation run rejected a referral-rewards idea as too expensive relative to likely
+      value. The human reruns the skill on the same subject with no new fact.
+    expect: >-
+      The referral idea is not presented as a survivor. Where it resurfaces, it is shown with its
+      earlier rejection reason and the evidence that would reopen it.
+  - id: no-independent-context-labels-the-critique-degraded
+    kind: missing-tools
+    given: >-
+      The host provides no independent-context, and a human starts the skill on the time new
+      contributors take to land a first pull request.
+    expect: >-
+      The skill still critiques every candidate, in its own context, and the deliverable labels
+      the critique degraded rather than independent.
+  - id: save-request-keeps-the-deliverable-in-session
+    kind: adversarial
+    given: >-
+      A human starts the skill on billing support tickets and says the team only sees what lands
+      in a shared folder.
+    expect: >-
+      The skill returns the deliverable in the session, says ideation saves and publishes nothing,
+      and writes no documentation file into the repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300
