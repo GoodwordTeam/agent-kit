@@ -5,9 +5,12 @@
  *
  *   bun tests/learn/evals/trigger-eval.ts [--set dev|holdout|candidate] [--arm natural|nudged]
  *     [--roster on|off] [--bundle on|off] [--subject ID] [--jobs 6] [--json OUT]
- *     [--dump-transcripts DIR] [--dry-run] [--quiet]
+ *     [--cases ID,ID,...] [--dump-transcripts DIR] [--dry-run] [--quiet]
  *
  * `--dry-run` prints each subject's command for the first case and runs nothing.
+ * `--cases` runs only the named cases of the set, in the set's order; an id the set does not hold
+ * is refused before any session starts. The roster and the bundle check still cover the whole set,
+ * so a filtered run sees what a full run sees. The receipt records the filter.
  *
  * Arms (how the prompt is sent):
  *   natural   the prompt as a user would type it. The headline number.
@@ -776,10 +779,15 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
   };
 }
 
-/** Why a session is not a trial: it timed out, the host exited non-zero, or it left no reply. Null when it counts. */
-export function invalidSession(session: Pick<SessionResult, "exitCode" | "timedOut" | "reply">): string | null {
+/**
+ * Why a session is not a trial: it timed out, the host exited non-zero, the host cancelled the turn
+ * on a refused call (grok's `stopReason: cancelled`), or it left no reply. Null when it counts. The
+ * scored outcome is kept beside the reason, so a cancelled session's loads can still be read.
+ */
+export function invalidSession(session: Pick<SessionResult, "exitCode" | "timedOut" | "reply" | "stopReason">): string | null {
   if (session.timedOut) return "timeout";
   if (session.exitCode !== 0) return `exit ${session.exitCode}`;
+  if (session.stopReason === "cancelled") return "host cancelled a refused call";
   if (session.reply.trim() === "") return "empty reply";
   return null;
 }
@@ -1035,6 +1043,7 @@ const VALUE_FLAGS: Record<string, readonly string[] | null> = {
   "--jobs": null,
   "--json": null,
   "--dump-transcripts": null,
+  "--cases": null,
 };
 const SWITCHES = new Set(["--dry-run", "--quiet"]);
 
@@ -1064,6 +1073,20 @@ export function argvProblems(argv: readonly string[]): string[] {
   return problems;
 }
 
+/**
+ * The cases `spec` (`--cases`, comma-separated ids) names, in prompt-set order, and what is wrong
+ * with it. No spec keeps every case. An id the set does not hold, or a spec that names nothing, is a
+ * problem, so a typo refuses the run instead of quietly shrinking it.
+ */
+export function selectCases(cases: readonly Case[], spec: string | undefined): { cases: Case[]; problems: string[] } {
+  if (spec === undefined) return { cases: [...cases], problems: [] };
+  const ids = new Set(spec.split(",").map((id) => id.trim()).filter((id) => id !== ""));
+  if (ids.size === 0) return { cases: [], problems: ["--cases names no case"] };
+  const held = new Set(cases.map((c) => c.id));
+  const problems = [...ids].filter((id) => !held.has(id)).map((id) => `no case ${JSON.stringify(id)} in the prompt set`);
+  return { cases: cases.filter((c) => ids.has(c.id)), problems };
+}
+
 async function main(argv: string[]): Promise<number> {
   const problems = argvProblems(argv);
   if (problems.length > 0) {
@@ -1088,8 +1111,14 @@ async function main(argv: string[]): Promise<number> {
 
   const file = join(import.meta.dir, "prompts", `${set}.json`);
   const promptSet = parsePromptSet(readFileSync(file, "utf8"), `trigger-${set}`);
-  const cases = promptSet.cases;
-  const { roster, cwd, drafts } = scratchRoster(cases);
+  const caseFilter = option(argv, "--cases");
+  const selected = selectCases(promptSet.cases, caseFilter);
+  if (selected.problems.length > 0) {
+    for (const problem of selected.problems) console.error(`trigger-eval: ${problem}`);
+    return 2;
+  }
+  const cases = selected.cases;
+  const { roster, cwd, drafts } = scratchRoster(promptSet.cases);
   const injected = rosterOn ? roster : "";
   const { userInvoked, known, fingerprints } = userInvokedSkills();
   for (const name of drafts.values()) known.add(name);
@@ -1111,7 +1140,7 @@ async function main(argv: string[]): Promise<number> {
       console.error(`trigger-eval: ${bundleDir} is missing; run \`bun run ak build --profile all\` first, or pass --bundle off`);
       return 2;
     }
-    const missing = bundleDir === undefined || dryRun ? [] : bundleMissing(bundleDir, cases, new Set(drafts.values()));
+    const missing = bundleDir === undefined || dryRun ? [] : bundleMissing(bundleDir, promptSet.cases, new Set(drafts.values()));
     if (missing.length > 0) {
       console.error(`trigger-eval: ${bundleDir} does not install ${missing.join(", ")}; run \`bun run ak build --profile all\` first`);
       return 2;
@@ -1183,6 +1212,7 @@ async function main(argv: string[]): Promise<number> {
     prompt_set: promptSet.id,
     prompt_set_version: promptSet.version,
     prompt_set_sha256: promptSet.sha256,
+    cases: caseFilter === undefined ? "all" : cases.map((c) => c.id),
     arm,
     roster: rosterOn ? "on" : "off",
     bundle: bundleOn ? "on" : "off",

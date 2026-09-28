@@ -52,6 +52,8 @@ export interface SessionResult {
   model?: string;
   /** The slash commands the host listed for the session (Claude Code's init line); absent when the host does not say. */
   slashCommands?: string[];
+  /** Why the host ended the turn, as it named it (grok's `end.stopReason`); absent when the host does not say. */
+  stopReason?: string;
   durationMs: number;
   /** What the host's isolation did not cover for this session (from `Isolation.leaks`). */
   leaks?: string[];
@@ -76,7 +78,7 @@ export interface SubjectAdapter {
   /** The argv this adapter would run, for the receipt. `model` is the matrix binding, passed through opaquely. */
   command(req: SessionRequest, model: string | undefined): string[];
   /** Parse the host's stdout into the shared event shape. Pure, so it is tested on stored transcripts. */
-  parse(stdout: string): { events: SessionEvent[]; reply: string; costUsd?: number; turns?: number; model?: string; slashCommands?: string[] };
+  parse(stdout: string): { events: SessionEvent[]; reply: string; costUsd?: number; turns?: number; model?: string; slashCommands?: string[]; stopReason?: string };
   /**
    * Set up a private host home under `scratch` (credentials, the bundle's skills, compatibility
    * scans off) and return the environment overrides that point the host at it, plus `release`,

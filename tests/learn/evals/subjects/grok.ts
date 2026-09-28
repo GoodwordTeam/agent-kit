@@ -5,8 +5,14 @@
  *     --permission-mode dontAsk [--rules TEXT]
  *
  * `--rules` appends to the system prompt. `dontAsk` refuses any call that would need approval
- * instead of waiting for one; a refused write ends the turn with `stopReason: cancelled`, so the
- * attempt is still in the stream. Isolation is a private GROK_HOME and HOME with the Claude and
+ * instead of waiting for one; a refused call ends the turn with `stopReason: cancelled` and no
+ * reply, so the attempt is still in the stream but the session is cut short. The refused call need
+ * not be a write: a shell `ls` of a directory outside the working tree is refused the same way.
+ * Measured on 1.0.41 (2026-09-28): `default`, `plan` and `auto` cancel the turn on a refused call
+ * too, and `--sandbox read-only`, which would make always-approve safe, refuses to start on a
+ * machine whose `/var/run/docker.sock` is a symlink. So grok has no mode here that refuses a call
+ * and lets the session go on; the parse reports `stopReason`, and the eval lists such a session as
+ * invalid with that reason. Isolation is a private GROK_HOME and HOME with the Claude and
  * Cursor compatibility scans and cross-session memory off: by default grok also reads
  * `~/.claude` skills, rules, plugins and hooks, and `~/.agents/skills`. The bundle's skills are
  * copied into the private `skills/`.
@@ -38,6 +44,7 @@ interface Line {
   data?: string;
   toolName?: string;
   rawInput?: Record<string, unknown>;
+  stopReason?: string;
   total_cost_usd?: number;
   num_turns?: number;
   modelUsage?: Record<string, unknown>;
@@ -70,6 +77,7 @@ export const grok: SubjectAdapter = {
     let costUsd: number | undefined;
     let turns: number | undefined;
     let model: string | undefined;
+    let stopReason: string | undefined;
     const flush = () => {
       if (text.trim() !== "") events.push({ kind: "message", text });
       text = "";
@@ -95,6 +103,7 @@ export const grok: SubjectAdapter = {
       } else if (line.type === "end") {
         costUsd = line.total_cost_usd;
         turns = line.num_turns;
+        stopReason = line.stopReason;
         // Usage is keyed by the models that served the session; more than one is kept as a list.
         const served = Object.keys(line.modelUsage ?? {}).sort();
         if (served.length > 0) model = served.join(",");
@@ -103,7 +112,7 @@ export const grok: SubjectAdapter = {
     flush();
     const last = events.at(-1);
     const reply = last?.kind === "message" ? last.text.trim() : "";
-    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }), ...(model === undefined ? {} : { model }) };
+    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }), ...(model === undefined ? {} : { model }), ...(stopReason === undefined ? {} : { stopReason }) };
   },
   isolate(scratch: string, req: SessionRequest): Isolation {
     const callerHome = req.env.GROK_HOME ?? join(req.env.HOME ?? homedir(), ".grok");
