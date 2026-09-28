@@ -70,6 +70,12 @@ operations:
     side_effects: [artifact-write, scratch-write]
 `;
 
+/** No operation exposes `bound`: the shape of a skill with nothing to grant. */
+const NO_OPERATIONS = `schema_version: 1
+policy: invocation
+operations: []
+`;
+
 interface SkillSpec {
   readonly skillEffects?: ReadonlyArray<string>;
   readonly entrypoints?: Readonly<Record<string, { effects?: ReadonlyArray<string>; operation?: string }>>;
@@ -195,6 +201,47 @@ describe("the prose section and the manifest are one statement in two forms", ()
     );
     expect(issues.map((i) => i.rule)).toEqual(["sideeffects.prose-no-list"]);
     expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("a skill that declares no side effects opens the section with None.", () => {
+    const issues = checkSideEffects(
+      ctxFor(
+        clean({
+          "policies/invocation.yaml": NO_OPERATIONS,
+          "skills/bound/SKILL.md": skillMd("None. The answer is returned in the session and nothing is written."),
+          "skills/bound/skill.yaml": skillYaml("bound", { skillEffects: [] }),
+        }),
+      ),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  test("None. against a manifest that declares effects is still prose, not a list", () => {
+    const issues = checkSideEffects(
+      ctxFor(
+        clean({
+          "skills/bound/SKILL.md": skillMd("None. It writes nothing."),
+          "skills/bound/skill.yaml": skillYaml("bound", {
+            skillEffects: ["artifact-write", "scratch-write"],
+            entrypoints: { run: { effects: ["artifact-write", "scratch-write"], operation: "bound.run" } },
+          }),
+        }),
+      ),
+    );
+    expect(issues.map((i) => i.rule)).toEqual(["sideeffects.prose-no-list"]);
+  });
+
+  test("an empty manifest does not excuse other prose where the declaration belongs", () => {
+    const issues = checkSideEffects(
+      ctxFor(
+        clean({
+          "policies/invocation.yaml": NO_OPERATIONS,
+          "skills/bound/SKILL.md": skillMd("Nothing is written by this skill."),
+          "skills/bound/skill.yaml": skillYaml("bound", { skillEffects: [] }),
+        }),
+      ),
+    );
+    expect(issues.map((i) => i.rule)).toEqual(["sideeffects.prose-no-list"]);
   });
 
   test("commentary after the list is not read as part of it", () => {

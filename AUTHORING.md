@@ -196,7 +196,9 @@ authority").
 
 Only values from `common#/$defs/side_effect`, as a list. Anything in
 `common#/$defs/remote_side_effect` additionally names its idempotency key source and its read-back,
-per `adapters/runner-contract/CONTRACT.md`.
+per `adapters/runner-contract/CONTRACT.md`. A skill whose `side_effects` is empty opens the section
+with the sentence `None.` and nothing else before the first sentence end; what it returns instead
+follows in the next sentence. `None.` is accepted only against an empty manifest list.
 
 > `artifact-write`, `kb-draft`. No `workspace-write`: reviewers cannot edit source.
 

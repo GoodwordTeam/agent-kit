@@ -204,11 +204,14 @@ function checkProse(file: string, manifestFile: string, prose: Prose, declared: 
   const issues: Issue[] = [];
 
   if (prose.named.size === 0) {
+    // A skill with no effects declares that with the one sentence §3 gives it.
+    // Anything else is prose standing where the list belongs.
+    if (declared.size === 0 && prose.opening === "None.") return [];
     return [
       error(
         "sideeffects.prose-no-list",
         file,
-        `## Side effects opens with prose rather than the list AUTHORING.md §5 requires. Read as the declaration: ${JSON.stringify(prose.opening)}. Name the values from common.schema.json#/$defs/side_effect, as a list, in the section's first sentence.`,
+        `## Side effects opens with prose rather than the list AUTHORING.md §3 requires. Read as the declaration: ${JSON.stringify(prose.opening)}. Name the values from common.schema.json#/$defs/side_effect, as a list, in the section's first sentence, or open with exactly \"None.\" when ${manifestFile} declares no side effects.`,
         prose.line,
       ),
     ];
