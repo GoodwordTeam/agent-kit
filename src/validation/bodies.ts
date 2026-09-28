@@ -1,5 +1,5 @@
 /**
- * Protocol and role body shapes (AUTHORING.md §12).
+ * Protocol, role and domain-pack body shapes (AUTHORING.md §12).
  *
  * §1-§11 describe a `SKILL.md`. Two further body shapes exist, and they are not
  * skills: a protocol is shared phase logic a skill delegates to, a role is a
@@ -7,6 +7,11 @@
  * carries host frontmatter and neither has an execution contract of its own —
  * the catalog entry plus the prose is the contract, which is why a
  * `protocol.yaml` or `role.yaml` on disk is an error rather than an extra.
+ *
+ * A domain pack (§12.6) is a third shape checked here. It is attached to a
+ * running phase and never invoked, so it carries no host frontmatter either --
+ * but unlike the other two it does have a manifest, `pack.yaml`, which is
+ * required rather than forbidden.
  *
  * The section lists are the enforceable half of §12. A missing heading is a
  * missing decision; a forbidden heading means the writer described the wrong
@@ -62,6 +67,20 @@ export const ROLE_SECTIONS: ReadonlyArray<string> = [
 ];
 
 /**
+ * §12.6's set, in order. Each of the first six states one member
+ * `schemas/pack.schema.json` requires of every pack; the table comes last.
+ */
+export const PACK_SECTIONS: ReadonlyArray<string> = [
+  "## What this pack adds",
+  "## Attaches when",
+  "## Does not attach when",
+  "## Constraints",
+  "## Reviewer guidance",
+  "## Project facts",
+  "## Rationalizations this pack counters",
+];
+
+/**
  * Empty, and deliberately so: §3 and §7 forbid a skill body no heading by name.
  *
  * §3 fixes the ten and says extra `##` sections may follow `## Limits`, which
@@ -95,6 +114,16 @@ export const ROLE_FORBIDDEN: Readonly<Record<string, string>> = {
   "## Side effects":
     "A role has none — it judges and returns. Declaring one means work that belongs in a skill or a protocol has been put in a seat.",
   "## Limits": "Folded into `## Never`.",
+};
+
+/** §12.6 rejects three headings by name, each because it describes something a pack is not. */
+export const PACK_FORBIDDEN: Readonly<Record<string, string>> = {
+  "## When to use":
+    "A pack has no trigger of its own; it is selected by its activation rules. Write `## Attaches when`, keyed to the `activation.rules` ids in pack.yaml.",
+  "## Authority":
+    "A pack holds no authority and attaching it authorizes nothing. An authorization its work needs is a constraint of kind `authorization-required` under `## Constraints`.",
+  "## Workflow":
+    "A pack never starts a phase and has no procedure of its own (policies/invocation.yaml, statement packs-never-start-a-phase). Procedure belongs to the phase it attaches to.",
 };
 
 export const ROLE_FORBIDDEN_SECTIONS: ReadonlyArray<string> = Object.keys(ROLE_FORBIDDEN);
@@ -226,6 +255,19 @@ const BACKTICKED_ID = /`([a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*
 const FORBIDDEN_SIDECAR: Readonly<Record<string, string>> = {
   protocols: "protocol.yaml",
   roles: "role.yaml",
+};
+
+/** The manifest a domain pack must have (§12.6); the inverse of a forbidden sidecar. */
+export const PACK_MANIFEST = "pack.yaml";
+
+/** Why a body of this section carries no frontmatter, for `body.frontmatter-forbidden`. */
+const NO_FRONTMATTER: Readonly<Record<string, string>> = {
+  protocols:
+    "a protocol carries no frontmatter: it is not an entrypoint, and the packager emits none (policies/invocation.yaml, statement protocols-and-roles-are-not-entrypoints).",
+  roles:
+    "a role carries no frontmatter: it is not an entrypoint, and the packager emits none (policies/invocation.yaml, statement protocols-and-roles-are-not-entrypoints).",
+  packs:
+    "a domain pack carries no frontmatter: it is attached, never invoked, and the packager emits none (policies/invocation.yaml, statement packs-never-start-a-phase). What it declares belongs in pack.yaml.",
 };
 
 interface Section {
@@ -721,6 +763,16 @@ function checkOneBody(
     );
   }
 
+  if (section === "packs" && !exists(join(ctx.root, dir, PACK_MANIFEST))) {
+    issues.push(
+      error(
+        "body.pack-manifest-missing",
+        `${dir}/${PACK_MANIFEST}`,
+        `a domain pack's activation rules, constraints, reviewer guidance and tests live in ${PACK_MANIFEST}, validated by schemas/pack.schema.json, and without it nothing about this pack is checked (AUTHORING.md §12.6). Write ${PACK_MANIFEST}; a manifest.yaml does not stand in for it.`,
+      ),
+    );
+  }
+
   if (section === "roles" && id.split("/").length > 2) {
     issues.push(
       error(
@@ -738,17 +790,11 @@ function checkOneBody(
   const front = parseFrontmatter(text);
   // A skill is the one shape that must carry frontmatter: §4 gives a `SKILL.md`
   // the Agent Skills spec keys, and the host loader reads them. Its absence is
-  // `frontmatter.missing`, owned by the frontmatter check; only the other two
+  // `frontmatter.missing`, owned by the frontmatter check; only the other
   // shapes are wrong for having it at all.
-  if (front.present && section !== "skills") {
-    issues.push(
-      error(
-        "body.frontmatter-forbidden",
-        file,
-        `neither a protocol nor a role carries frontmatter: it is not an entrypoint, and the packager emits none (policies/invocation.yaml, statement protocols-and-roles-are-not-entrypoints).`,
-        1,
-      ),
-    );
+  const noFrontmatter = NO_FRONTMATTER[section];
+  if (front.present && noFrontmatter !== undefined) {
+    issues.push(error("body.frontmatter-forbidden", file, noFrontmatter, 1));
   }
 
   const sections = splitSections(front.present ? front.body : text);
@@ -769,6 +815,24 @@ function checkOneBody(
           file,
           `## Hard gates carries no anti-rationalization table. §3.1 requires the three columns ${ANTI_RATIONALIZATION_HEADER} with no prose around them.`,
           gates.line,
+        ),
+      );
+    }
+    return issues;
+  }
+
+  // §12.6: seven headings in order, the insertion law as for a protocol, and
+  // §3.1's table under the last one, as a role carries it.
+  if (section === "packs") {
+    issues.push(...checkSections(file, sections, PACK_SECTIONS, PACK_FORBIDDEN, true));
+    const rationalizations = sections.find((s) => s.heading === "## Rationalizations this pack counters");
+    if (rationalizations !== undefined && !hasAntiRationalizationTable(rationalizations.text)) {
+      issues.push(
+        error(
+          "body.missing-anti-rationalization-table",
+          file,
+          `## Rationalizations this pack counters carries no table. §12.6 requires §3.1's three columns ${ANTI_RATIONALIZATION_HEADER} unchanged.`,
+          rationalizations.line,
         ),
       );
     }
@@ -1175,10 +1239,10 @@ export function checkBodyShapes(ctx: CheckContext): Issue[] {
   const mandated = mandatedRows(ctx.root);
   const population: RowPopulation = { bodies: 0, universal: 0, plain: 0, converse: 0, standards: 0 };
 
-  // Skills join the loop, and `checkOneBody` returns before `population.bodies`
-  // for them: that counter is §12.2's role-row census and a skill carries no
-  // `## Never` row to compare. Counting them would report seats this never read.
-  for (const section of ["skills", "protocols", "roles"] as const) {
+  // Skills and packs join the loop, and `checkOneBody` returns before
+  // `population.bodies` for both: that counter is §12.2's role-row census and a skill carries no
+  // `## Never` row to compare, nor does a pack. Counting them would report seats this never read.
+  for (const section of ["skills", "packs", "protocols", "roles"] as const) {
     for (const entry of ctx.catalog.bySection(section)) {
       issues.push(...checkOneBody(ctx, section, entry.id, standardsSeats, families, mandated, population));
     }

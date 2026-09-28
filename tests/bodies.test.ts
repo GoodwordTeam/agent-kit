@@ -7,6 +7,8 @@ import {
   ANTI_RATIONALIZATION_HEADER,
   AUTHORSHIP_CONVERSE_ROW,
   MANDATORY_NEVER_RULINGS,
+  PACK_FORBIDDEN,
+  PACK_SECTIONS,
   PRODUCING_SEATS,
   PROTOCOL_SECTIONS,
   ROLE_FORBIDDEN_SECTIONS,
@@ -38,7 +40,12 @@ const TABLE = [
 ].join("\n");
 
 function sectionBody(heading: string): string {
-  if (heading === "## Hard gates" || heading === "## Rationalizations this seat makes") return TABLE;
+  if (
+    heading === "## Hard gates" ||
+    heading === "## Rationalizations this seat makes" ||
+    heading === "## Rationalizations this pack counters"
+  )
+    return TABLE;
   // The two universal rows plus the plain authorship row: the shape §12.2 puts
   // in thirty-two of the thirty-four seats. Defined below, next to the other
   // governed rows, so the whole contract reads in one place.
@@ -64,6 +71,17 @@ function protocolTree(extra: Record<string, string> = {}, sections?: ReadonlyArr
   return ctxFor({
     "catalog.yaml": `${CATALOG_HEAD}protocols:\n  - id: alpha\n    status: authored\n`,
     "protocols/alpha/PROTOCOL.md": protocolBody(sections),
+    ...extra,
+  });
+}
+
+const packBody = (sections: ReadonlyArray<string> = PACK_SECTIONS): string => body("Pack alpha", sections);
+
+function packTree(extra: Record<string, string> = {}, sections?: ReadonlyArray<string>) {
+  return ctxFor({
+    "catalog.yaml": `${CATALOG_HEAD}packs:\n  - id: pack-alpha\n    status: authored\n`,
+    "packs/pack-alpha/PACK.md": packBody(sections),
+    "packs/pack-alpha/pack.yaml": "id: pack-alpha\n",
     ...extra,
   });
 }
@@ -403,19 +421,93 @@ describe("the body file is named by kind", () => {
     expect(checkCompleteness(ctx).filter((i) => i.rule === "catalog.unexpected-body-name")).toEqual([]);
   });
 
-  test("a wrongly named body file in packs/ stays a warning", () => {
-    // Deliberately left out of the promotion. §12.5 says domain packs are the
-    // fifth shape and the contract does not govern them yet: nothing states
-    // what a `PACK.md` contains, and inventing a shape for an artifact nobody
-    // has designed is the failure §10 exists to catch. Mandating a body
-    // filename for a body with no spec would be doing that from the
-    // validator's side, so `packs` waits for its section to be written.
+  test("a wrongly named body file in packs/ is an error", () => {
+    // Promoted once §12.6 gave a domain pack exactly one body file,
+    // `packs/<id>/PACK.md`, the criterion the other four sections meet. It
+    // was held at a warning while the contract said nothing about what a
+    // `PACK.md` contains, and promoted while all eight entries were still
+    // `status: contract`, so no authored pack was grandfathered.
     const ctx = ctxFor({
       "catalog.yaml": `${CATALOG_HEAD}packs:\n  - id: pack-test\n    status: authored\n`,
       "packs/pack-test/NOTES.md": "# Notes\n",
     });
     const issue = checkCompleteness(ctx).find((i) => i.rule === "catalog.unexpected-body-name");
-    expect(issue?.severity).toBe("warning");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.file).toBe("packs/pack-test/NOTES.md");
+    expect(issue?.message).toContain("PACK.md");
+  });
+
+  test("a correctly named pack body raises no body-name issue", () => {
+    const ctx = packTree();
+    expect(checkCompleteness(ctx).filter((i) => i.rule === "catalog.unexpected-body-name")).toEqual([]);
+  });
+});
+
+describe("domain pack body shape (AUTHORING 12.6)", () => {
+  test("a pack with every section in order, its table and its manifest validates clean", () => {
+    // The direction a gate test cannot establish on its own: that the right
+    // shape clears every rule the wrong ones trip.
+    expect(errors(checkBodyShapes(packTree()))).toEqual([]);
+  });
+
+  test("a missing required section is an error naming it", () => {
+    const ctx = packTree({}, PACK_SECTIONS.filter((h) => h !== "## Does not attach when"));
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
+    expect(issue?.file).toBe("packs/pack-alpha/PACK.md");
+    expect(issue?.message).toContain("## Does not attach when");
+  });
+
+  test("sections out of order are an error", () => {
+    const swapped = [...PACK_SECTIONS];
+    [swapped[1], swapped[2]] = [swapped[2] as string, swapped[1] as string];
+    const issue = errors(checkBodyShapes(packTree({}, swapped))).find((i) => i.rule === "body.sections-out-of-order");
+    expect(issue?.file).toBe("packs/pack-alpha/PACK.md");
+  });
+
+  test("a section inserted between required ones is an error; one after the table is not", () => {
+    const inserted = [...PACK_SECTIONS.slice(0, 2), "## Background", ...PACK_SECTIONS.slice(2)];
+    const issue = errors(checkBodyShapes(packTree({}, inserted))).find((i) => i.rule === "body.section-inserted");
+    expect(issue?.message).toContain("## Background");
+    expect(errors(checkBodyShapes(packTree({}, [...PACK_SECTIONS, "## Background"])))).toEqual([]);
+  });
+
+  test("each heading §12.6 rejects by name is an error carrying its reason", () => {
+    for (const heading of Object.keys(PACK_FORBIDDEN)) {
+      const issue = errors(checkBodyShapes(packTree({}, [...PACK_SECTIONS, heading]))).find(
+        (i) => i.rule === "body.forbidden-section",
+      );
+      expect(issue?.message).toContain(heading);
+    }
+    expect(Object.keys(PACK_FORBIDDEN).sort()).toEqual(["## Authority", "## When to use", "## Workflow"]);
+  });
+
+  test("a rationalizations section with no three-column table is an error", () => {
+    const withoutTable = packBody().replace(TABLE, "Prose instead of the table.\n");
+    const ctx = packTree({ "packs/pack-alpha/PACK.md": withoutTable });
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-anti-rationalization-table");
+    expect(issue?.message).toContain("## Rationalizations this pack counters");
+  });
+
+  test("frontmatter on a pack is an error citing the statement that names packs", () => {
+    const ctx = packTree({ "packs/pack-alpha/PACK.md": `---\nname: pack-alpha\n---\n${packBody()}` });
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.frontmatter-forbidden");
+    expect(issue?.file).toBe("packs/pack-alpha/PACK.md");
+    expect(issue?.message).toContain("packs-never-start-a-phase");
+  });
+
+  test("a pack directory with no pack.yaml is an error; a manifest.yaml does not stand in", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": `${CATALOG_HEAD}packs:\n  - id: pack-alpha\n    status: authored\n`,
+      "packs/pack-alpha/PACK.md": packBody(),
+      "packs/pack-alpha/manifest.yaml": "id: pack-alpha\n",
+    });
+    const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.pack-manifest-missing");
+    expect(issue?.file).toBe("packs/pack-alpha/pack.yaml");
+  });
+
+  test("an unauthored pack with no directory raises nothing here", () => {
+    const ctx = ctxFor({ "catalog.yaml": `${CATALOG_HEAD}packs:\n  - id: pack-alpha\n    status: contract\n` });
+    expect(checkBodyShapes(ctx)).toEqual([]);
   });
 });
 
