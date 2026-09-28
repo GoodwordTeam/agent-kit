@@ -101,7 +101,8 @@ absence is recorded (`policies/limits.yaml`).
    worktree.
 5. Work the ticket test first (`protocols/tdd/PROTOCOL.md`): a failing test that names the behaviour,
    then the change that passes it. Where the behaviour is genuinely not testable, record the
-   alternative verification plan in the ticket rather than proceeding with neither.
+   alternative verification plan in the ticket rather than proceeding with neither. Load
+   [the engineering-principles reference pack](../../references/engineering-principles/REFERENCE.md) for the standards the change is held to.
 6. Handle the implementer's report by what it says. Concerns about correctness or scope are addressed
    before any check runs; missing context is supplied and the same implementer re-dispatched; a
    blocker is assessed, not returned to the implementer as another attempt at the same wall.

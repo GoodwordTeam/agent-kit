@@ -1,0 +1,112 @@
+# Provenance fragment for the "packs" batch: the two reference packs engineering-principles
+# and prose-quality, and the eight domain packs under packs/.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a file
+# derives from is recorded with a machine-checkable donor@commit:path. That is what
+# NOTICE points a downstream consumer at, so an unverifiable row here would turn a
+# provenance record into a provenance claim.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation. The reference-pack rows and
+# the domain-pack rows are written by separate lanes; each lane appends its own group
+# under its own per-id header and leaves the other lane's rows alone.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below is cited in research/dossiers/packs.md and was verified to exist at its pin with
+# `git cat-file -e` in the pinned clone before it was written here; none was re-derived
+# from memory or from a document's description of a donor.
+
+adaptations:
+
+  # ---- references/engineering-principles ----------------------------------------
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/using-agent-skills/SKILL.md
+    rationale: >-
+      The core operating behaviors supply the four operating principles: surfacing assumptions and
+      managing confusion become evidence over assertion, enforcing simplicity becomes smallest
+      correct change, the scope-discipline list is carried nearly verbatim as explicit authority,
+      and verify-don't-assume anchors verification before claims. The failure-modes list supplies
+      several rebuttal rows. The donor's phase table, its slash commands and its
+      definition-of-done file are not carried. The phrase "evidence over assertion" is this
+      package's name for the synthesis and does not appear in the donor.
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/verification-before-completion/SKILL.md
+    rationale: >-
+      The iron law, the five-step gate function and the claim / requires / not-sufficient table
+      are adapted as the mechanism behind verification before claims, and the excuse table
+      supplies the verification rebuttal rows, recast into the three-column shape AUTHORING.md
+      gives an anti-rationalization table. The receipt contents and the rule that a changed patch
+      inherits no receipt come from ruling `closure-requires-independent-verification` rather than
+      from the donor, and the pack cites the ruling where it states them.
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/receiving-code-review/SKILL.md
+    rationale: >-
+      The YAGNI check (search for callers before implementing something "properly", propose removal
+      when nothing calls it) is adapted as the enforcement mechanism of smallest correct change. The
+      donor's framing around a named human partner is dropped.
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+    rationale: >-
+      Hyrum's Law and its design implications are adapted as the observable-behavior standard.
+      The one-version rule and the idempotency-key mechanism are not carried here; they are API
+      constraints, not shared principles.
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md
+    rationale: >-
+      Chesterton's Fence and its before-simplifying questions are adapted as the fence standard.
+      The donor's simplification process is not carried; that workflow belongs to the simplify
+      skill that loads this pack.
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      Code-is-a-liability is adapted as the liability standard, and the Hyrum-makes-removal-hard
+      section informs the consequence that removal takes migration rather than announcement. The
+      deprecation decision, the migration patterns and the schema expand-contract mechanics are
+      not carried; they are deletion and data constraints rather than shared principles.
+
+  - path: references/engineering-principles/REFERENCE.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+    rationale: >-
+      The Beyonce rule becomes the test-what-you-rely-on standard, and the pyramid with its
+      small / medium / large resource model becomes the level table. The donor's percentages are
+      stated only as the project record's configurable starting point, never as a target, per
+      ruling `numeric-heuristics-are-guidance`. The red-green-refactor workflow and the prove-it
+      pattern are not carried; they belong to the tdd protocol and the pack-test domain pack.
+
+  # ---- references/prose-quality -------------------------------------------------
+
+  - path: references/prose-quality/REFERENCE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-noslop/SKILL.md
+    rationale: >-
+      The done condition, the never-touch boundaries, the three modes with their default
+      selection, the three registers and the seven tests are adapted. The artifact register stays
+      the default, as in the donor, and is named as the one most of this package's output uses;
+      output delivered in-session to a person defers to the loading skill's contract. The donor's
+      frontmatter, its mode-token argument contract and its in-place file write are not carried:
+      a prose pass here returns text to the loading skill, which publishes project-derived
+      documents through its own knowledgebase operation (ruling `central-kb-owns-project-artifacts`).
+
+  - path: references/prose-quality/REFERENCE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-noslop/references/patterns.md
+    rationale: >-
+      The 41-rule pattern catalog, its false-positive floor and its stable-id convention are
+      imported structurally intact, with every rule keeping its number and its fix. Example lists
+      are shortened in several rules. Rule 10 is renamed stock vocabulary, rule 29 dash as a rhythm
+      crutch, rule 34 format that fights the content and rule 36 openers and closers, with the tell
+      and the fix unchanged. Rule 32 yields to a loading skill's fixed heading contract.
+
+  - path: references/prose-quality/REFERENCE.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-noslop/references/terminology.md
+    rationale: >-
+      The wording-cleanup rule is carried nearly verbatim as the pack's wording section: explain an
+      unfamiliar term when the reader needs it, and replace internal jargon with the action or
+      consequence it means unless the caller requires the exact wording. The donor's keep-exact-
+      identifiers clause is carried in the pack's never-touched list rather than in that section.

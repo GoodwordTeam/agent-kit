@@ -129,6 +129,9 @@ constraints:
   edgeless-tickets-may-be-assumed-independent: false
   unaccounted-workspace-change-may-be-discarded: false
 
+references:
+  - engineering-principles
+
 limits:
   fix-rounds: 5
   implementers-per-worktree: 1

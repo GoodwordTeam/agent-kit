@@ -793,7 +793,7 @@ references:
   - id: engineering-principles
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     loaded_by: [super-build, super-review, simplify]
     summary: >-
       Hyrum, fence, pyramid and liability constraints. The ~100-line PR target and the 80/15/5
@@ -801,7 +801,7 @@ references:
   - id: prose-quality
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     loaded_by: [doc-review, compound, explain, writing-skills]
     summary: >-
       Wording cleanup for document-producing skills, kept separate from substantive document

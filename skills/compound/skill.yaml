@@ -121,6 +121,9 @@ failure_outcomes:
     meaning: A knowledgebase write's read-back could not be performed.
     next_permitted_action: Report the error; a belief that the write landed is not a receipt.
 
+references:
+  - prose-quality
+
 limits:
   lessons-per-run: 1
 

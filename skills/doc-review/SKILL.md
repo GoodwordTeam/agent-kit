@@ -27,9 +27,9 @@ catalog differs from code review; meaning-changing forks cannot be silently sett
 
 - Reviewing code, a diff or a branch. That is `super-review`, whose persona catalog is a different
   set of seats reading a different kind of evidence.
-- Prose quality, voice or house style. That work belongs to the reference pack
-  `references/prose-quality`, which arrives in batch 6; this skill reads for what the document
-  decides, not for how it reads.
+- Prose quality, voice or house style. That work belongs to
+  [the prose-quality reference pack](../../references/prose-quality/REFERENCE.md); this skill reads
+  for what the document decides, not for how it reads.
 - Deciding what the document should say. A document whose direction is unsettled goes back to a
   human-started alignment run, not to a review panel.
 - A document that has not been drafted. There is nothing to review, and an outline is not a draft.
