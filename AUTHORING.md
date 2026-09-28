@@ -1351,9 +1351,9 @@ pass needs the skill to work on the presumed state, rather than refuse or stop r
 a run stops at `needs-input`, as it should, and its graders fail it, so its score is evidence about
 the missing fixture, not about the skill. `unscaffolded`, which older positives carry, says only that
 the case has no scaffold. `needs-fixture` is the tag to exclude on. `claude plugin eval` has
-`--tag` to include cases and no option to exclude them (checked at `claude 2.1.282`), so a run that
-leaves these cases out selects the other cases by name with `--case`, or filters its results by tag
-afterwards. A case loses the tag when its scaffold lands.
+`--tag` to include cases and no option to exclude them (checked at `claude 2.1.282`), and it keeps
+only the last `--case` it is given. So a run that leaves these cases out goes through
+`scripts/eval-local.sh --exclude-tag needs-fixture`, or filters its results by tag afterwards. A case loses the tag when its scaffold lands.
 
 **The eval sandbox blocks git.** Every git binary is denied inside a case run, so a case cannot commit,
 and a grader that checks a commit, a branch or `git log` scores a run that did the work as a failure.
@@ -1383,8 +1383,11 @@ key in `execution.env`: the host rejects that case's runs. Gated tools a case li
 host's `--allow-tools`, and that grant applies to every case in the invocation. So the script
 groups the selected cases (after `--case` and `--tag`) by their gated tools and runs each group
 separately, against a staged copy of the bundle that holds only that group's cases. That way every
-case gets exactly the tools it declares. `--max-cost-usd` is one budget across the groups. An
-explicit `--allow-tools` overrides the grouping and runs once with that grant.
+case gets exactly the tools it declares. The staging is also how `--case` and `--tag` select: the
+host keeps only the last `--case` it is given, so neither flag is passed to it. `--max-cost-usd` is
+one budget across the groups. The host checks it as runs start, so runs already in flight can end
+past it; the script warns when that happens. An explicit `--allow-tools` overrides the grouping and
+runs once with that grant.
 
 Each run writes `<result>.receipt.json` beside the JSON result. It records:
 
@@ -1396,7 +1399,11 @@ Each run writes `<result>.receipt.json` beside the JSON result. It records:
   came from the cases or the user;
 - per invocation: the grant, its cases, the staged bundle's sha256, the exact runner command, the
   exit status, the cost and whether it was partial, or `skipped` when the budget ran out first;
-- the exit status, cost, duration and `partial`;
+  `incomplete_cases` lists the group's cases that are missing from its result or short of runs, and
+  any such case makes the invocation partial. A group whose result holds no case also carries
+  `error: "nothing run"`, and the script exits 2;
+- the exit status, cost, duration and `partial`, plus `budget` (the `--max-cost-usd` value, or null)
+  and `over_budget`;
 - per case and arm: `n`, passes, rate and a 95% Wilson interval (the same formula as
   `tests/learn/evals/stats.ts`), plus the fired count.
 
