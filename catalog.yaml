@@ -775,7 +775,7 @@ roles:
       candidate for each. Repeated corrections become guardrails, not skills.
 
 # ---------------------------------------------------------------------------
-# References — 4. Loaded on demand. Never exposed as slash commands.
+# References — 5. Loaded on demand. Never exposed as slash commands.
 # ---------------------------------------------------------------------------
 references:
   - id: codebase-design
@@ -806,9 +806,17 @@ references:
     summary: >-
       Wording cleanup for document-producing skills, kept separate from substantive document
       decisions and from code simplification.
+  - id: tracker-of-record
+    batch: 5
+    provenance_origin: conversation
+    status: authored
+    loaded_by: [wayfind]
+    summary: >-
+      Which ticket system is the record, the rules every tracker binding obeys, and the
+      linear-linearis setup and guarded invocation, shipped inside the plugin.
 
 # ---------------------------------------------------------------------------
-# Schemas — 23. `common` holds shared $defs and validates no document itself.
+# Schemas — 24. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -898,6 +906,12 @@ schemas:
       What ak firstmate bind writes outside the worker's reach: task and run ids, the source
       snapshot, the pinned skill bundle, the charter, required gates, child budget, evidence store
       and the delivery the worker may perform. Never merge.
+  - id: tracker-binding
+    batch: 5
+    status: authored
+    summary: >-
+      A project folder's ak.tracker.yaml: which tracker binding this checkout uses, where its
+      gitignored secret is, and the backend defaults. Never the system-of-record decision.
   - id: review-event
     batch: 9
     status: authored
@@ -988,11 +1002,13 @@ profiles:
       compound-refresh read its ledgers. Never required: every skill works without it.
 
 # ---------------------------------------------------------------------------
-# Adapters — 7. Host and evidence-source contracts.
-# Arch 4 also sketched issue-tracker and repository-events directories; both are folded into
-# runner-contract, which already owns the tracker-access and event-delivery capabilities
-# (schemas/common.schema.json#/$defs/capability). Splitting them would create two adapters with
-# no independent contract.
+# Adapters — 8. Host and evidence-source contracts.
+# Arch 4 also sketched issue-tracker and repository-events directories. repository-events is
+# folded into runner-contract, which owns the event-delivery capability
+# (schemas/common.schema.json#/$defs/capability); splitting it out would create an adapter with no
+# independent contract. issue-tracker is the tracker adapter: the ticket operations and the
+# system-of-record chain are a contract of their own that must hold across trackers, which the
+# runner contract never stated (ruling tracker-of-record-falls-back-to-kb).
 # observation-source and review-source are not that split reopened. They deliver nothing to a run:
 # they are the read-only evidence the opt-in learning runtime consumes after the fact, and no skill
 # requires either (ruling `learning-runtime-is-host-adapter`).
@@ -1013,7 +1029,7 @@ adapters:
     status: authored
     summary: >-
       Grant validation, seat independence, budgets, idempotency keys, event delivery and tracker
-      access. Skills never issue their own grants.
+      credentials. Skills never issue their own grants.
   - id: knowledgebase
     batch: 1
     status: authored
@@ -1027,6 +1043,12 @@ adapters:
       Firstmate supervises, agent-kit judges inside the worker, no-mistakes delivers. The
       ownership boundary, the task-local child contract, the upstream patch it needs and the
       status lines it may write.
+  - id: tracker
+    batch: 1
+    status: authored
+    summary: >-
+      Backend-agnostic ticket operations over one system of record: a configured tracker, else the
+      knowledgebase's ticket records, else a refusal. Contract only; names no vendor.
   - id: observation-source
     batch: 9
     status: authored

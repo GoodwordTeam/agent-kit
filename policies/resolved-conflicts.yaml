@@ -5,9 +5,10 @@
 # and §6.4 (reviewer continuity). Rows 11-18 carry the same shape for tensions §11 states in
 # prose elsewhere in the plan. Row 19 is the first donor-versus-plan tension rather than an
 # internal one. Row 20 is the first raised by packaging rather than by the sources. Rows 21-23
-# are the first raised by running under an outer supervisor this package does not own.
-# Rows 24-26 bound the opt-in learning runtime: where it runs, who judges for it, and what
-# form its output takes.
+# are the first raised by running under an outer supervisor this package does not own. Row 24 is
+# the first raised by a user requirement: that the package work with any ticket tracker. Rows
+# 25-27 bound the opt-in learning runtime: where it runs, who judges for it, and what form its
+# output takes.
 #
 # Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
 # every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
@@ -189,7 +190,7 @@
 
 schema_version: 1
 policy: resolved-conflicts
-rows: 26
+rows: 27
 
 conflicts:
 
@@ -872,7 +873,7 @@ conflicts:
     discharged_in: [hard-gates]
     binds:
       schemas: [install]
-      adapters: [claude-code, codex, knowledgebase, runner-contract]
+      adapters: [claude-code, codex, knowledgebase, runner-contract, tracker]
     scenario: 21
     coverage: indirect
     note: >-
@@ -1003,6 +1004,60 @@ conflicts:
       implementer's side, so it may never stand in for an independent seat.
     source:
       plan: "§7.3"
+  - id: tracker-of-record-falls-back-to-kb
+    tension: >-
+      Plan §8 requires one ticket system of record with every other representation projected onto
+      it, and the package must work with whatever tracker a project uses. The first cut folded
+      tracker access into the runner contract, which stated the fallback to the knowledgebase's
+      ticket records but defined no ticket operation, so every tracker binding would have
+      invented its own. And the fallback reads as a degradation, which under
+      fail-closed-adapter-lifts-ceiling would cap every skill needing tracker access on every
+      install, including installs where the fallback is a real record.
+    ruling: >-
+      Ticket operations are one backend-agnostic interface in adapters/tracker: create, link a
+      record, add a blocking edge, claim, update status, read. Each uses the backend's native
+      feature where it has one and a ticket-body convention where it does not, never both. The
+      package names no vendor in any rule; the backend is a free-form id, and credentials are the
+      operator's. The system of record is chosen by configuration, not by reachability: the
+      project record names which system it is, and the project folder's committed, secret-free
+      ak.tracker.yaml binds how this checkout reaches it. A bound backend is the system of record
+      when the record names the system it reaches, and refuses when the record names another;
+      with no binding, the knowledgebase's ticket records are, unless the record names an
+      external system, which refuses; with no knowledgebase either, every operation refuses,
+      because kb-write refuses. It never ends in a file in the working repository, and an
+      unreachable bound backend fails rather than dropping to the knowledgebase. A binding is
+      scoped to its project folder: its tool is a pinned dependency of the project invoked from
+      the project's own dependency tree, its credential is a gitignored file in the folder passed
+      through the call's environment, and an absent or blank credential refuses before the tool
+      runs, so no call reaches an operator-global login. Because the chain ends in a record or a
+      refusal, tracker-access is a fail-closed supply, but with no backend its refusal is
+      borrowed from kb-write, so it lifts a mode ceiling only where kb-write is available too.
+    discharged_in: [inputs, stop-conditions]
+    binds:
+      skills: [wayfind]
+      schemas: [install, project, tracker-binding]
+      adapters: [claude-code, codex, runner-contract, tracker]
+    scenario: 21
+    coverage: indirect
+    note: >-
+      `inputs` because the system of record is something a skill consumes and has to name, and
+      `stop-conditions` because the third link of the chain ends the run at needs-input rather
+      than at a refusal the run could proceed past. Rejected `hard-gates`: no check in a skill
+      body changes, the refusal is kb-write's and is already discharged there by
+      fail-closed-adapter-lifts-ceiling. Rejected `side-effects`: tracker-write was already
+      declared and already keyed by runner-contract §5, which this row cites and does not
+      restate. wayfind is the one skill bound, being the only one that requires tracker-access;
+      its SKILL.md states the chain and cites this row in Inputs. knowledgebase is not bound:
+      the fallback uses its seven operations unchanged, and its contract would read the same had
+      this row been decided the other way. Scenario 21 is the neighbouring case again: no step of
+      the chain writes a scratch file into the working repository. The binding file is committed
+      rather than gitignored because the backend, team and status names are facts every checkout
+      must agree on; only the credential is per-operator, so only it is kept out, and the
+      binding schema admits no key that could carry it. The first binding is linear-linearis,
+      in adapters/tracker/backends/; it is additive, and nothing above names it.
+    source:
+      plan: "§8"
+
   - id: learning-runtime-is-host-adapter
     tension: >-
       The reference learning stack wires session hooks and a scheduler into the host so that

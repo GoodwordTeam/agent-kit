@@ -265,6 +265,64 @@ describe("a not-provided capability an attached adapter supplies", () => {
     expect(ceiling.mode).toBe("guided");
   });
 
+  describe("an attached supplier whose refusal is borrowed (ruling `tracker-of-record-falls-back-to-kb`)", () => {
+    const trackerTable = loadCapabilityTable(
+      makeTree(contractWith(`${ROWS}\n| \`tracker-access\` | \`not-provided\` | See the tracker adapter |`)),
+    );
+    const borrowing = (attached: string[], fallbacks = new Map([["tracker-access", new Map([["tracker", "kb-write"]])]])): Supply => ({
+      attached: new Set(attached),
+      suppliers: new Map([
+        ["kb-write", ["knowledgebase"]],
+        ["tracker-access", ["tracker"]],
+      ]),
+      fallbacks,
+    });
+
+    test("lifts where what it borrows is supplied by an attached adapter", () => {
+      expect(ceilingFor(["tracker-access"], trackerTable, borrowing(["tracker", "knowledgebase"])).mode).toBe("autonomous");
+    });
+
+    test("caps where what it borrows is not, and names what it borrows and who would supply it", () => {
+      const ceiling = ceilingFor(["tracker-access"], trackerTable, borrowing(["tracker"]));
+      expect(ceiling.mode).toBe("guided");
+      expect(ceiling.blocking).toEqual([]);
+      expect(ceiling.detached).toEqual([
+        { capability: "tracker-access", adapters: ["tracker"], fallsBackOn: { capability: "kb-write", adapters: ["knowledgebase"] } },
+      ]);
+    });
+
+    test("with no borrowing -- a backend configured -- the attached supplier lifts on its own", () => {
+      expect(ceilingFor(["tracker-access"], trackerTable, borrowing(["tracker"], new Map())).mode).toBe("autonomous");
+    });
+
+    test("lifts where the host itself provides what is borrowed", () => {
+      const hostHasKb = loadCapabilityTable(
+        makeTree(
+          contractWith(
+            `${ROWS.replace(/\| `kb-write` \| `not-provided` \|/, "| `kb-write` | `satisfied` |")}\n| \`tracker-access\` | \`not-provided\` | See the tracker adapter |`,
+          ),
+        ),
+      );
+      expect(hostHasKb.status.get("kb-write")).toBe("satisfied");
+      expect(ceilingFor(["tracker-access"], hostHasKb, borrowing(["tracker"])).mode).toBe("autonomous");
+    });
+
+    test("a cycle of borrowing lifts nothing", () => {
+      const cycle: Supply = {
+        attached: new Set(["a", "b"]),
+        suppliers: new Map([
+          ["kb-write", ["a"]],
+          ["tracker-access", ["b"]],
+        ]),
+        fallbacks: new Map([
+          ["kb-write", new Map([["a", "tracker-access"]])],
+          ["tracker-access", new Map([["b", "kb-write"]])],
+        ]),
+      };
+      expect(ceilingFor(["tracker-access"], trackerTable, cycle).mode).toBe("guided");
+    });
+  });
+
   test("the default supply is the host alone, which is today's reading of §3", () => {
     expect(ceilingFor(["kb-write"], table)).toEqual(ceilingFor(["kb-write"], table, HOST_ALONE));
     expect(ceilingFor(["kb-write"], table, HOST_ALONE).blocking).toEqual(["kb-write"]);

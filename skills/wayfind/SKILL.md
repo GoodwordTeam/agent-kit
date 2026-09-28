@@ -50,9 +50,20 @@ back rather than resolved here.
 - At charting: a loose statement of the effort, from the human. Absent: `needs-input`.
 - At working the map: the map's identity. Without one, this skill picks the next frontier ticket;
   the human is not asked to.
-- The system of record for tickets: an external tracker where the project has one, and the
-  knowledgebase otherwise. Read through the knowledgebase adapter's `readContext` when it is the
-  fallback. Neither available: `needs-input`, because a map nobody else can read is not a shared map.
+- The system of record for tickets, decided by configuration and never by reachability
+  (`adapters/tracker/CONTRACT.md` §2; ruling `tracker-of-record-falls-back-to-kb`):
+  - The project folder binds a tracker (`ak.tracker.yaml`) and the project record names the same
+    system, or there is no record: that tracker.
+  - A bound tracker whose system the project record does not name: `needs-input`. Obeying the
+    binding would make a second system of record.
+  - No binding, and the record names `knowledgebase` or there is no record: the knowledgebase,
+    read through its adapter's `readContext`.
+  - No binding while the record names an external tracker: `needs-input`. The knowledgebase does
+    not stand in for an unreachable tracker of record.
+  - Nothing available: `needs-input`, because a map nobody else can read is not a shared map. The
+    map is never kept in the session or written into the working repository instead.
+  The binding and its guarded invocation are in the
+  [tracker-of-record reference pack](../../references/tracker-of-record/REFERENCE.md).
 - At `wayfind.map` only: a `charter` (`schemas/charter.schema.json`) listing `ticket-approval`.
   Absent: `needs-input`.
 

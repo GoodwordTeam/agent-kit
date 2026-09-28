@@ -9,15 +9,16 @@ in this catalog therefore rests on a **runner**: an existing workflow runner tha
 isolation, credentials, scheduling and durable state (plan §1.2).
 
 This file is the contract that runner must satisfy. It owns five things — grant validation, seat
-independence, budgets, idempotency, and run state — plus two capabilities folded in from arch §4.
+independence, budgets, idempotency, and run state — plus one capability folded in from arch §4.
 
 **The fold.** Plan §4 sketched separate `issue-tracker` and `repository-events` adapter directories.
-Both are folded into this contract, because this contract already owns the `tracker-access` and
-`event-delivery` capabilities (`schemas/common.schema.json#/$defs/capability`) and neither fragment
-has an independent contract of its own: an event is only meaningful as an input to the run-state
-machine defined here, and a tracker write is only meaningful as a `remote_side_effect` governed by
-the idempotency rules defined here. Splitting them would produce two directories whose whole content
-is a pointer back to this one. This is recorded in `catalog.yaml`'s `adapters:` header comment.
+`repository-events` is folded into this contract, because it owns the `event-delivery` capability
+(`schemas/common.schema.json#/$defs/capability`) and has no independent contract: an event is only
+meaningful as an input to the run-state machine defined here. `issue-tracker` was folded here too at
+first, and is now its own adapter, `adapters/tracker/CONTRACT.md`: a tracker write is governed by
+§5, but what a ticket operation *is*, and which system holds the ticket, is a contract of its own
+that must hold across trackers (ruling `tracker-of-record-falls-back-to-kb`). This is recorded in
+`catalog.yaml`'s `adapters:` header comment.
 
 ---
 
@@ -30,7 +31,7 @@ is a pointer back to this one. This is recorded in `catalog.yaml`'s `adapters:` 
 | Seat assignment and the independence attestation | The structural constraints the assignment must satisfy |
 | Budgets and resource accounting | Enforcement of the cap it was handed, and nothing else |
 | Durable run state across restarts | The state machine, and the record that makes a restart safe |
-| Durable event delivery and tracker access | The event and ticket artifact shapes, and what may be done on receipt |
+| Durable event delivery; tracker credentials | The event and ticket artifact shapes, and what may be done on receipt |
 
 The package computes no prices, selects nothing, and schedules nothing.
 
@@ -46,12 +47,12 @@ when it is unconfigured rather than degrading, which is what lets an attached ad
 skill's mode ceiling on a host that does not provide the capability (ruling
 `fail-closed-adapter-lifts-ceiling`).
 
-Two capabilities this contract owns are deliberately **not** rows. `event-delivery` has no stated
+`event-delivery` is deliberately **not** a row, although this contract owns it. It has no stated
 behavior for an unconfigured runner (§6 says what may be done on receipt, not what happens when
-nothing is delivered), so nothing here says its absence refuses. `tracker-access` with no tracker
-configured falls back to the knowledgebase's `ticket` records (§6), which is a degradation and not
-a refusal. A skill requiring either stays capped at `guided` on a host that lacks it, attached
-runner or not, and `profiles/autonomy` still does not install against a host on its own.
+nothing is delivered), so nothing here says its absence refuses. A skill requiring it stays capped at
+`guided` on a host that lacks it, attached runner or not, and `profiles/autonomy` still does not
+install against a host on its own. `tracker-access` is not a row here because this contract does not
+supply it: `adapters/tracker/CONTRACT.md` §1 does, with the fallback it depends on stated beside it.
 
 ---
 
@@ -212,7 +213,7 @@ reject.
 
 ## 6. Event delivery and tracker access
 
-Both capabilities fold in here (see the header note).
+`event-delivery` folds in here (see the header note). `tracker-access` does not.
 
 ### `event-delivery`
 
@@ -231,14 +232,11 @@ idempotency key. The package's obligation on receipt:
 
 ### `tracker-access`
 
-One ticket system is the **system of record**; the other representation is projected onto it, never
-maintained as a second independent status (plan §8). The runner supplies tracker credentials and
-access; the package supplies the `ticket` artifact shape and stores the tracker id and URL as a link
-to the authoritative record (`common#/$defs/envelope.tracker`).
-
-A tracker write is a `remote_side_effect` and obeys §5 in full. With no tracker configured, the
-knowledgebase's own ticket records are the fallback system of record — never a scratch directory in
-the working repository (release scenario 21).
+Owned by `adapters/tracker/CONTRACT.md`: the ticket operations, the one-system-of-record rule
+(plan §8), and the fallback chain that ends in the knowledgebase's `ticket` records or a refusal
+(ruling `tracker-of-record-falls-back-to-kb`). What stays here is what the runner always supplied:
+the operator's tracker credentials, exclusive access where a claim needs it, and §5, which every
+tracker write obeys in full.
 
 ---
 

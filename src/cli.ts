@@ -6,7 +6,9 @@
  * the file and the rule that produced it.
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
+
 import { attach, formatAttachResult } from "./attach/index.ts";
 import { runFirstmate } from "./firstmate/cli.ts";
 import { main as runLifecycle } from "./lifecycle/gate.ts";
@@ -15,11 +17,12 @@ import { loadCatalog } from "./catalog/load.ts";
 import type { BuildOptions } from "./packaging/build.ts";
 import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.ts";
 import { describeInstall, loadInstallConfig } from "./packaging/install.ts";
+import { checkTrackerBinding, findProjectRoot } from "./tracker/binding.ts";
 import { ADAPTATIONS_FILE, checkAdaptationsSync } from "./validation/provenance.ts";
 import type { CheckContext } from "./validation/context.ts";
 import { runValidation } from "./validation/run.ts";
 import { isSkillStyleIssue } from "./validation/skill-style.ts";
-import { blockingSkips, formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
+import { blockingSkips, error, formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
 
 export interface CliIo {
   out: (line: string) => void;
@@ -42,6 +45,7 @@ const USAGE = [
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
   "  ak lifecycle record|check …                the gate records super-ship checks before it ships",
   "  ak firstmate <subcommand> …                bind agent-kit to a patched Firstmate home (optional)",
+  "  ak tracker check [<project-dir>]           check a project folder's tracker binding and secret",
   "  ak learn <area> <verb> ...                 the opt-in learning runtime (`ak learn` for help)",
   "",
   "Exit 0 when nothing failed, non-zero on any error.",
@@ -175,7 +179,7 @@ function validate(parsed: Parsed, options: CliOptions): number {
           ok: result.ok,
           skipped: skippedChecks(result.issues),
           unavailable: blockingSkips(result.issues),
-          install: install === undefined ? null : { file: install.file, attached: install.attached },
+          install: install === undefined ? null : { file: install.file, attached: install.attached, backends: Object.fromEntries(install.backends) },
           issues: shown,
         },
         null,
@@ -250,6 +254,29 @@ function attachCommand(parsed: Parsed, options: CliOptions): number {
   return hasErrors(result.issues) ? 1 : 0;
 }
 
+/**
+ * `ak tracker check`: a project folder's ak.tracker.yaml and the secret it names.
+ *
+ * The folder is the project's, not this tree, so the schema is read from this
+ * package's own root (the directory above src/), never from the folder being
+ * checked -- a folder cannot vouch for its own binding with a schema it ships.
+ */
+function trackerCommand(parsed: Parsed, options: CliOptions): number {
+  if (parsed.positional[0] !== "check") {
+    options.io.err("ak tracker: the only subcommand is check");
+    for (const line of USAGE) options.io.err(line);
+    return 2;
+  }
+  const dir = parsed.positional[1] ?? ".";
+  const start = isAbsolute(dir) ? dir : join(options.cwd, dir);
+  if (!existsSync(start) || !statSync(start).isDirectory()) {
+    return report(options.io, [error("tracker.project-missing", dir, "Not a directory, so there is no project folder to check.")], "ak tracker check");
+  }
+  // From a subdirectory, the binding that governs it is the nearest one above,
+  // up to the repository's top level (findProjectRoot).
+  return report(options.io, checkTrackerBinding(findProjectRoot(start), join(import.meta.dir, "..")), "ak tracker check");
+}
+
 export function runCli(argv: readonly string[], options: CliOptions): number {
   // Its own flags and its own parser: see src/firstmate/cli.ts.
   if (argv[0] === "lifecycle") return runLifecycle(argv.slice(1), options.io, options.cwd);
@@ -270,6 +297,8 @@ export function runCli(argv: readonly string[], options: CliOptions): number {
       return build(parsed, options);
     case "attach":
       return attachCommand(parsed, options);
+    case "tracker":
+      return trackerCommand(parsed, options);
     case undefined:
       for (const line of USAGE) options.io.err(line);
       return 2;

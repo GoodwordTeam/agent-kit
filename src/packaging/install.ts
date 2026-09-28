@@ -35,14 +35,35 @@ export const INSTALL_FILE = "ak.install.yaml";
  */
 const FAILS_CLOSED = "fails-closed";
 
-/** `| `capability` | `fails-closed` | detail |`, which is the only row shape the supply tables write. */
-const ROW = /^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|/gm;
+/** `| `capability` | `fails-closed` | ...rest |`, which is the only row shape the supply tables write. */
+const ROW = /^\|\s*`([^`]+)`\s*\|\s*`([^`]+)`\s*\|([^\n]*)$/gm;
+
+/**
+ * The optional third column, and the header that declares it.
+ *
+ * Read from the header rather than guessed from the cell, because the tables
+ * without the column put free prose there, and prose may open with a
+ * backticked word -- the runner's `runner-grants` row does.
+ */
+const FALLBACK_HEADER = /^\|\s*Capability\s*\|\s*Unconfigured\s*\|\s*Falls back on\s*\|/m;
+const FALLBACK_CELL = /^`([^`]+)`$/;
+const NO_FALLBACK = "none";
 
 export interface AdapterSupply {
   adapter: string;
   /** The contract the capabilities were read from. */
   file: string;
   capabilities: string[];
+  /**
+   * Capability -> the capability this adapter's no-backend path consumes.
+   *
+   * `adapters/tracker/CONTRACT.md` §1 is the case: with no backend configured
+   * its ticket operations are carried by the knowledgebase's records, so they
+   * fail closed only because `kb-write` does. The adapter's refusal is then
+   * borrowed, and the capability is lifted only where the one it borrows from
+   * is (ruling `tracker-of-record-falls-back-to-kb`).
+   */
+  fallsBackOn: Map<string, string>;
 }
 
 /**
@@ -73,6 +94,8 @@ export function loadAdapterSupplies(root: string, catalog: Catalog): { adapters:
     if (section === null) continue;
 
     const capabilities: string[] = [];
+    const fallsBackOn = new Map<string, string>();
+    const hasFallbackColumn = FALLBACK_HEADER.test(section);
     for (const match of section.matchAll(ROW)) {
       const capability = match[1] ?? "";
       const stated = match[2] ?? "";
@@ -86,9 +109,27 @@ export function loadAdapterSupplies(root: string, catalog: Catalog): { adapters:
         );
         continue;
       }
+      if (hasFallbackColumn) {
+        const cell = (match[3] ?? "").split("|")[0]?.trim() ?? "";
+        const named = FALLBACK_CELL.exec(cell)?.[1];
+        if (named === undefined && cell !== NO_FALLBACK) {
+          // Not counted, like a row with an unknown status: a dependency the
+          // parser cannot read would otherwise be read as no dependency, and
+          // the capability lifted on a refusal it only borrows.
+          issues.push(
+            error(
+              "packaging.malformed-fallback",
+              file,
+              `§1's supply row for '${capability}' states '${cell}' under 'Falls back on', which is neither one backticked capability nor '${NO_FALLBACK}'. The column names the capability this adapter's unconfigured path consumes, and the row lifts the ceiling only where that capability is itself available (ruling \`tracker-of-record-falls-back-to-kb\`), so an unreadable cell is not counted.`,
+            ),
+          );
+          continue;
+        }
+        if (named !== undefined) fallsBackOn.set(capability, named);
+      }
       if (!capabilities.includes(capability)) capabilities.push(capability);
     }
-    if (capabilities.length > 0) adapters.push({ adapter: entry.id, file, capabilities });
+    if (capabilities.length > 0) adapters.push({ adapter: entry.id, file, capabilities, fallsBackOn });
   }
 
   return { adapters, issues };
@@ -101,6 +142,18 @@ export interface InstallConfig {
   attached: string[];
   /** Every adapter that supplies anything, attached or not, in catalog order. */
   attachable: string[];
+  /**
+   * Adapter -> the backend this install configured behind it, for the adapters
+   * whose §1 names a fallback. Free-form ids: the file names which backend the
+   * operator's environment binds, and the package holds no list of vendors to
+   * check it against (`adapters/tracker/CONTRACT.md` §1).
+   */
+  backends: Map<string, string>;
+  /**
+   * Adapter -> the capabilities its no-backend path consumes, for every
+   * attachable adapter whose §1 names one. Read by `describeInstall`.
+   */
+  fallbacks: Map<string, string[]>;
   /** The input `ceilingFor` takes. */
   supply: Supply;
   issues: Issue[];
@@ -121,13 +174,29 @@ export function loadInstallConfig(root: string, catalog: Catalog): InstallConfig
   for (const { adapter, capabilities } of adapters) {
     for (const capability of capabilities) suppliers.set(capability, [...(suppliers.get(capability) ?? []), adapter]);
   }
-  const done = (file: string | null, attached: string[]): InstallConfig => ({
-    file,
-    attached,
-    attachable,
-    supply: { attached: new Set(attached), suppliers },
-    issues,
-  });
+  const fallbacks = new Map<string, string[]>();
+  for (const { adapter, fallsBackOn } of adapters) {
+    if (fallsBackOn.size > 0) fallbacks.set(adapter, [...new Set(fallsBackOn.values())]);
+  }
+  const done = (file: string | null, attached: string[], backends = new Map<string, string>()): InstallConfig => {
+    // A configured backend is the system of record, so its adapter's fallback
+    // is not what an operation reaches and borrows nothing
+    // (`adapters/tracker/CONTRACT.md` §2).
+    const borrowed = new Map<string, Map<string, string>>();
+    for (const { adapter, fallsBackOn } of adapters) {
+      if (backends.has(adapter)) continue;
+      for (const [capability, needs] of fallsBackOn) borrowed.set(capability, new Map([...(borrowed.get(capability) ?? []), [adapter, needs]]));
+    }
+    return {
+      file,
+      attached,
+      attachable,
+      backends,
+      fallbacks,
+      supply: { attached: new Set(attached), suppliers, fallbacks: borrowed },
+      issues,
+    };
+  };
 
   const text = readTextIfPresent(join(root, INSTALL_FILE));
   if (text === null) return done(null, attachable);
@@ -173,7 +242,33 @@ export function loadInstallConfig(root: string, catalog: Catalog): InstallConfig
   }
   // Catalog order rather than the file's, so two files listing the same set
   // produce the same build record.
-  return done(INSTALL_FILE, attachable.filter((id) => wanted.has(id)));
+  const attached = attachable.filter((id) => wanted.has(id));
+
+  // One key per adapter whose §1 names a fallback, spelled as the adapter's
+  // id: `tracker: { backend: <id> }`. The shape is the schema's to report; a
+  // key this reads and cannot use is left to it rather than reported twice.
+  const backends = new Map<string, string>();
+  for (const adapter of fallbacks.keys()) {
+    const section = (doc as Record<string, unknown>)[adapter];
+    const backend = section !== null && typeof section === "object" ? (section as Record<string, unknown>)["backend"] : undefined;
+    if (typeof backend !== "string" || backend.length === 0) continue;
+    if (!attached.includes(adapter)) {
+      // Not quietly honoured and not quietly dropped: the file says both that
+      // this install has a backend and that it does not attach the adapter
+      // that would reach it, and either reading overstates or understates
+      // what the install supplies.
+      issues.push(
+        error(
+          "packaging.install-backend-unattached",
+          INSTALL_FILE,
+          `${adapter}: names backend '${backend}', and attached: does not list '${adapter}', so nothing would reach that backend. Add '${adapter}' to attached:, or remove the ${adapter}: key (ruling \`tracker-of-record-falls-back-to-kb\`).`,
+        ),
+      );
+      continue;
+    }
+    backends.set(adapter, backend);
+  }
+  return done(INSTALL_FILE, attached, backends);
 }
 
 /**
@@ -185,8 +280,37 @@ export function loadInstallConfig(root: string, catalog: Catalog): InstallConfig
  */
 export function describeInstall(config: InstallConfig): string {
   const list = (ids: string[]) => (ids.length === 0 ? "none" : ids.join(", "));
-  if (config.file === null) return `no ${INSTALL_FILE}: default, all fail-closed adapters attached (${list(config.attached)})`;
-  return `${config.file}: attached ${list(config.attached)}`;
+  const base =
+    config.file === null
+      ? `no ${INSTALL_FILE}: default, all fail-closed adapters attached (${list(config.attached)})`
+      : `${config.file}: attached ${list(config.attached)}`;
+  return [base, ...backendStates(config)].join("; ");
+}
+
+/**
+ * One clause per attached adapter with a fallback, because the attached list
+ * alone no longer fixes the ceiling: the same list lifts `tracker-access` or
+ * caps it depending on whether a backend is configured and whether what the
+ * fallback consumes is attached. Stated in terms of attached adapters and not
+ * of the lift itself, which also depends on the host's own table, and this
+ * line is shared by every host the build packages.
+ */
+function backendStates(config: InstallConfig): string[] {
+  const states: string[] = [];
+  for (const [adapter, needs] of config.fallbacks) {
+    if (!config.attached.includes(adapter)) continue;
+    const backend = config.backends.get(adapter);
+    if (backend !== undefined) {
+      states.push(`${adapter}: backend ${backend}`);
+      continue;
+    }
+    const each = needs.map((capability) => {
+      const by = (config.supply.suppliers.get(capability) ?? []).filter((a) => config.supply.attached.has(a));
+      return by.length > 0 ? `${capability} fallback (${by.join(", ")})` : `${capability} fallback, which no attached adapter supplies`;
+    });
+    states.push(`${adapter}: no backend, ${each.join(", ")}`);
+  }
+  return states;
 }
 
 /**

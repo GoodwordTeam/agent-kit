@@ -1130,6 +1130,22 @@ capabilities:
       vocabulary established during the preceding align run rather than re-loading the reference —
       flagged here rather than settled silently.
 
+  - id: tracker-of-record
+    capability: Choosing the ticket system of record and reaching a project-local tracker binding without a global credential
+    disposition: reference
+    destination: references/tracker-of-record
+    locator: G:L1578-1578; plan §8
+    origin: conversation
+    acceptance_test: >-
+      Loaded on demand by `wayfind`; it has no invocation of its own. Packaged into the plugin's
+      references/shared/, so an installed plugin carries the fallback chain, the binding rules and
+      the guarded linearis call without adapters/tracker/, which does not ship.
+    note: >-
+      The transcript names the issue tracker as the shared memory for tickets and says nothing
+      about how a checkout reaches one. The chain and the binding rules are this package's
+      (adapters/tracker/CONTRACT.md §2 and §5, ruling tracker-of-record-falls-back-to-kb); this
+      pack condenses them so they survive packaging.
+
   - id: domain-modeling
     capability: Modelling the domain before modelling the storage
     disposition: reference

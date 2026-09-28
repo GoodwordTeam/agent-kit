@@ -94,6 +94,7 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
 
   // install.schema.json
   "install.attached-names-an-attachable-adapter": ["packaging.install-unknown-adapter"],
+  "install.backend-names-an-attached-adapter": ["packaging.install-backend-unattached"],
 
   // lesson.schema.json
   "lesson.duplicate-of-an-existing-lesson-is-refused": ["lesson.duplicate-of-an-existing-lesson-is-refused"],
@@ -125,6 +126,14 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
   "skill.host-frontmatter-generated-never-authored": ["frontmatter.host-key-in-canonical"],
   "skill.body-within-line-budget": ["budget.skill-over-target", "budget.skill-over-cap"],
   "skill.provenance-donor-path-exists-at-pin": ["provenance.source-not-at-pin", "provenance.unknown-donor", "provenance.commit-not-pinned", "provenance.malformed-source"],
+
+  // tracker-binding.schema.json
+  "tracker-binding.secret-is-ignored-untracked-and-never-committed": [
+    "tracker.secret-outside-project",
+    "tracker.secret-tracked",
+    "tracker.secret-not-ignored",
+    "tracker.secret-in-history",
+  ],
 
   // verification.schema.json
   "verification.receipt-stale-when-revision-differs-from-head": ["verification.receipt-stale-when-revision-differs-from-head"],

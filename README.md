@@ -3,7 +3,7 @@
 One engineering lifecycle, amalgamated from eight donors (seven MIT-licensed, one Apache-2.0) into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
-**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 4 reference packs · 18 schemas**,
+**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 5 reference packs · 24 schemas**,
 with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
 bundles.
 
@@ -87,10 +87,10 @@ Shared phase logic, invoked by skills rather than by humans:
 4 core (`supervisor`, `implementer`, `reviewer-spec`, `reviewer-standards`) · 15 code-review ·
 7 doc-review · 3 plan-review (`planner`, `architect`, `critic`).
 
-### References (4)
+### References (5)
 
-`codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality`. Loaded on demand,
-never exposed as slash commands.
+`codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality` ·
+`tracker-of-record`. Loaded on demand, never exposed as slash commands.
 
 ## What makes it self-checking
 
@@ -99,6 +99,7 @@ bun test                  # units + invalid-case fixtures that must fail
 bun run ak validate       # the gate every batch passes
 bun run ak build --check  # dist/ in sync with source
 bun run ak attach <path>  # show which packs attach, and why
+bun run ak tracker check <project-dir>  # a project's tracker binding, and that its secret stays out of git
 ```
 
 `ak validate` enforces catalog completeness, JSON Schema conformance, frontmatter rules, the

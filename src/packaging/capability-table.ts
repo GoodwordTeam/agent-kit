@@ -197,6 +197,18 @@ export interface Supply {
   attached: ReadonlySet<string>;
   /** Capability -> the adapters whose contract supplies it and fails closed, in catalog order. */
   suppliers: ReadonlyMap<string, readonly string[]>;
+  /**
+   * Capability -> adapter -> the capability that adapter's refusal is borrowed
+   * from, for the rows whose adapter has no backend configured in this install.
+   *
+   * An adapter listed here lifts the capability only where the one it borrows
+   * is itself available -- provided by the host, or supplied by an attached
+   * adapter whose own borrowing holds. Otherwise the refusal the row promises
+   * belongs to an adapter this install left out, and lifting on it would let
+   * the install route around its own decision to cap that capability (ruling
+   * `tracker-of-record-falls-back-to-kb`). Absent: nothing is borrowed.
+   */
+  fallbacks?: ReadonlyMap<string, ReadonlyMap<string, string>>;
 }
 
 /** No adapter attached and none supplying anything: the host alone, which is §3 read by itself. */
@@ -236,7 +248,17 @@ export interface Ceiling {
    * detached one means this install chose not to attach an adapter, which is
    * `ak.install.yaml`'s decision to make and not a defect in the tree.
    */
-  detached: Array<{ capability: string; adapters: string[] }>;
+  detached: Array<{
+    capability: string;
+    adapters: string[];
+    /**
+     * Set when a supplier is attached and still lifts nothing, because what its
+     * no-backend path borrows is unavailable here: the capability borrowed and
+     * the adapters that would supply it. Two fixes rather than one -- configure
+     * the backend, or attach one of these.
+     */
+    fallsBackOn?: { capability: string; adapters: string[] };
+  }>;
 }
 
 export function ceilingFor(requires: readonly string[], table: CapabilityTable, supply: Supply = HOST_ALONE): Ceiling {
@@ -244,7 +266,7 @@ export function ceilingFor(requires: readonly string[], table: CapabilityTable, 
 
   const blocking: string[] = [];
   const unknown: string[] = [];
-  const detached: Array<{ capability: string; adapters: string[] }> = [];
+  const detached: Ceiling["detached"] = [];
   for (const capability of requires) {
     const declared = table.status.get(capability);
     if (declared === undefined) {
@@ -256,11 +278,40 @@ export function ceilingFor(requires: readonly string[], table: CapabilityTable, 
     }
     if (!BLOCKING.has(declared)) continue;
     const suppliers = supply.suppliers.get(capability) ?? [];
-    if (suppliers.some((adapter) => supply.attached.has(adapter))) continue;
-    if (suppliers.length > 0) detached.push({ capability, adapters: [...suppliers] });
-    else blocking.push(capability);
+    const attached = suppliers.filter((adapter) => supply.attached.has(adapter));
+    if (attached.some((adapter) => borrowingHolds(capability, adapter, table, supply, new Set([capability])))) continue;
+    if (suppliers.length === 0) {
+      blocking.push(capability);
+      continue;
+    }
+    const borrowed = attached.map((adapter) => supply.fallbacks?.get(capability)?.get(adapter)).find((c) => c !== undefined);
+    detached.push({
+      capability,
+      adapters: [...suppliers],
+      ...(borrowed === undefined ? {} : { fallsBackOn: { capability: borrowed, adapters: [...(supply.suppliers.get(borrowed) ?? [])] } }),
+    });
   }
 
   const capped = blocking.length > 0 || unknown.length > 0 || detached.length > 0;
   return { mode: capped ? "guided" : "autonomous", blocking, unknown, detached };
+}
+
+/**
+ * Whether an attached adapter's supply of `capability` stands, given what its
+ * no-backend path borrows.
+ *
+ * A borrowed capability the host provides holds; one the host withholds holds
+ * only through an attached adapter whose own borrowing holds. `seen` stops a
+ * cycle, which lifts nothing: two adapters each borrowing the other's refusal
+ * have no refusal between them.
+ */
+function borrowingHolds(capability: string, adapter: string, table: CapabilityTable, supply: Supply, seen: ReadonlySet<string>): boolean {
+  const borrowed = supply.fallbacks?.get(capability)?.get(adapter);
+  if (borrowed === undefined) return true;
+  if (seen.has(borrowed)) return false;
+  const status = table.status.get(borrowed);
+  if (status === undefined) return false;
+  if (!BLOCKING.has(status)) return true;
+  const next = new Set([...seen, borrowed]);
+  return (supply.suppliers.get(borrowed) ?? []).some((a) => supply.attached.has(a) && borrowingHolds(borrowed, a, table, supply, next));
 }
