@@ -110,6 +110,11 @@ describe("codex", () => {
     expect(argv.at(-1)).toBe("Load the greet skill.");
     expect(codex.injection).toBe("developer-instructions");
   });
+
+  test("argv: the caller's connected apps are off, as plugins are", () => {
+    // On 2026-09-28 codex subjects searched the operator's connected GitHub, Vercel and Drive apps.
+    expect(codex.command(req, undefined).join(" ")).toContain("--disable plugins --disable remote_plugin --disable apps");
+  });
 });
 
 describe("grok", () => {

@@ -2,14 +2,16 @@
  * Codex in exec mode. Not a test file.
  *
  *   codex exec --json --ephemeral --skip-git-repo-check --ignore-rules --sandbox read-only
- *     --disable plugins --disable remote_plugin [-m M] [-c developer_instructions=TEXT] PROMPT
+ *     --disable plugins --disable remote_plugin --disable apps [-m M] [-c developer_instructions=TEXT] PROMPT
  *
  * Appended context goes in as `developer_instructions`, a developer message after the host's own
  * instructions; codex has no append-to-system-prompt flag. There is no turn cap flag, so
  * `maxTurns` is not passed. Isolation is a private CODEX_HOME and HOME: codex reads skills from
  * `$CODEX_HOME/skills` and `$HOME/.agents/skills`, AGENTS.md from `$CODEX_HOME`, and fetches
- * remote plugins into `$CODEX_HOME` unless the plugin features are off. The bundle's skills are
- * copied into the private `skills/`.
+ * remote plugins into `$CODEX_HOME` unless the plugin features are off. The login in the copied
+ * `auth.json` also carries the account's connected apps (GitHub, Vercel, Drive and the like) as
+ * `codex_apps` tools unless the `apps` feature is off; on 2026-09-28 subjects searched them. The
+ * bundle's skills are copied into the private `skills/`.
  *
  * Codex has no Skill or Read tool: a skill is loaded by printing its SKILL.md through the shell.
  * Every shell call becomes a Bash event, and each file it prints also becomes a Read event, so
@@ -78,6 +80,8 @@ export const codex: SubjectAdapter = {
       "plugins",
       "--disable",
       "remote_plugin",
+      "--disable",
+      "apps",
       ...(model === undefined ? [] : ["-m", model]),
       // A JSON string is a valid TOML basic string, which is how `-c` parses the value.
       ...(req.appendSystemPrompt === undefined ? [] : ["-c", `developer_instructions=${JSON.stringify(req.appendSystemPrompt)}`]),
