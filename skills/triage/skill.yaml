@@ -1,0 +1,258 @@
+# Execution contract for triage (schemas/skill.schema.json).
+# Prose mirror: skills/triage/SKILL.md (AUTHORING.md §4.1).
+id: triage
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Apply a configured issue-state and classification policy. Useful only with a real tracker policy;
+  cannot silently reprioritize beyond delegated scope.
+
+triggers:
+  - A maintainer wants to see what in the tracker needs their attention.
+  - A maintainer wants one issue or external pull request evaluated and moved to its next state.
+  - A maintainer names a state change directly and wants it applied.
+
+non_triggers:
+  - A project whose record carries no triage policy.
+  - Reprioritizing, re-scheduling or reassigning work.
+  - Implementing the fix a ready-for-agent outcome describes.
+  - A collaborator's in-flight pull request the maintainer did not name.
+  - Any start that is not a human's explicit invocation.
+
+prerequisites:
+  - kind: policy
+    ref: >-
+      The triage policy named by the project record's tracker_policy.policy, mapping each category
+      and state role onto what the tracker operations can write.
+  - kind: environment
+    ref: A system of record for the items, an external tracker or the knowledgebase.
+  - kind: environment
+    ref: The repository, for the redundancy check and for verifying the claim.
+  - kind: capability
+    ref: >-
+      vcs-remote, to fetch a pull request's ref for verification; without it a pull request cannot
+      be verified and the run stops with needs-input for it
+    optional: true
+
+entrypoints:
+  triage:
+    authority: explicit
+    invocation: U
+    summary: >-
+      The human-started run: load the policy, show what needs attention or evaluate one item, verify
+      the claim, recommend, and apply the outcome the maintainer chooses. No phase operation exposes
+      this skill.
+
+requires:
+  - repository-read
+  - process-exec
+  - tracker-access
+  - human-channel
+
+inputs:
+  - id: triage-policy
+    schema: project
+    required: true
+    summary: >-
+      The policy named by tracker_policy.policy. Absent stops the run with needs-input; so does a
+      role the policy maps onto nothing the tracker operations can write. Roles are never invented.
+  - id: system-of-record
+    required: true
+    summary: >-
+      The bound tracker where the project folder binds one and the project record agrees, the
+      knowledgebase where there is no binding and the record names it or there is none, and
+      needs-input otherwise (ruling `tracker-of-record-falls-back-to-kb`).
+  - id: item-context
+    required: false
+    summary: >-
+      The item's body, discussion, author and dates, and the reporter's activity since the last
+      notes, from the maintainer; a pull request's diff from the repository. readTickets returns
+      only ref, status, claimant and blocking edges, and the skill reads nothing outside these.
+  - id: maintainer-request
+    required: true
+    summary: Show what needs attention, look at one item, or move one item to a named state.
+
+outputs:
+  - id: state-change
+    summary: >-
+      An item moved through updateStatus as the policy maps its role, with the triage notes or the
+      closing explanation as the resolution text, opening with the disclaimer line.
+  - id: implementation-ticket
+    schema: ticket
+    summary: >-
+      For ready-for-agent and ready-for-human, created with createTicket from the brief and linked
+      from the item with linkRecord.
+  - id: rejection-record
+    summary: >-
+      On a rejected enhancement, the closing resolution naming the concept and the durable reason;
+      later matches link to it rather than repeating it.
+
+side_effects:
+  - external-fetch
+  - process-exec
+  - scratch-write
+  - tracker-write
+
+references:
+  - tracker-of-record
+
+constraints:
+  roles-may-be-invented-without-policy: false
+  items-may-be-dispositioned-in-bulk: false
+  disposition-may-rest-on-unverified-claim: false
+  priority-or-owner-may-be-changed: false
+  built-feature-may-be-recorded-as-rejection: false
+
+limits:
+  items-dispositioned-per-decision: 1
+
+budget:
+  provided_by: runner
+  enforces: []
+
+hard_gates:
+  - No policy, no triage; a role the policy does not map is never invented.
+  - One item at a time, each recommended and verified before its outcome is applied.
+  - Priority, schedule and ownership stay as they are.
+  - Every text written to the tracker opens with the disclaimer line.
+
+stop_conditions:
+  - complete when the maintainer's request is answered and any write is read back.
+  - needs-input when not started by a human's explicit invocation, there is no policy, a role maps
+    onto nothing writable, there is no system of record, reporter activity no one can supply, a
+    pull request whose ref cannot be fetched, or the maintainer's direction is awaited.
+  - failed when the system of record is unreachable or a write's read-back cannot be performed.
+  - cancelled when the maintainer withdrew; nothing further is written.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      A prerequisite is missing or the maintainer's direction is awaited: explicit invocation, the
+      policy, a writable mapping for a role, a system of record, the reporter activity readTickets
+      does not return, or a fetchable pull request ref.
+    next_permitted_action: >-
+      Name what is missing and stop; invent no role and write nothing to the tracker or the
+      repository instead.
+  - status: failed
+    meaning: The system of record was unreachable, or a write's read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+  - status: cancelled
+    meaning: The maintainer withdrew the run.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+      unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/triage/SKILL.md
+      license: MIT
+      adaptation: >-
+        The whole state machine: two category and five state roles, the transitions, a pull request
+        as an item with attached code, the three attention buckets, the gather, recommend, verify,
+        grill and apply flow with the redundancy and prior-rejection checks, the wontfix variants,
+        the quick override, resuming from earlier notes, and the mandatory disclaimer. Label strings
+        become the project's configured policy mapped onto the tracker contract's operations; agent
+        briefs become implementation tickets; the calls to separate grilling and domain-modeling
+        skills become inline dialogue with no vocabulary writes.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/triage/AGENT-BRIEF.md
+      license: MIT
+      adaptation: >-
+        The brief's four principles and its template, adapted into assets/agent-brief.md and mapped
+        onto the ticket schema's goal, acceptance criteria and non-goals.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/triage/OUT-OF-SCOPE.md
+      license: MIT
+      adaptation: >-
+        One record per concept, a durable reason, matching by concept, the confirm, reconsider or
+        disagree choice, and recording only rejected enhancements, adapted into
+        references/rejections.md. The repository directory becomes the closed item in the system of
+        record, with later matches linked to the first.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/setup-matt-pocock-skills/triage-labels.md
+      license: MIT
+      adaptation: >-
+        The role-to-tracker mapping, and the stop when none is configured, become the project
+        record's triage policy in references/roles.md.
+  resolved_conflicts:
+    - tracker-of-record-falls-back-to-kb
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: one-issue-verified-then-recommended
+    kind: positive
+    given: >-
+      A human runs the skill on one bug report in a project with a configured triage policy, and the
+      reporter's steps reproduce.
+    expect: >-
+      The skill gathers context, runs the redundancy and prior-rejection checks, reproduces the bug
+      and reports it confirmed with the code path, recommends a category and state with reasoning,
+      and waits for the maintainer's direction before writing anything.
+  - id: prose-request-is-not-a-start
+    kind: negative
+    given: A request in prose to go through the open issues and label them.
+    expect: >-
+      The triage workflow does not run and nothing is written to the tracker. The session names the
+      command a human runs, or loads the skill and stops at its authority step.
+  - id: no-policy-means-no-invented-labels
+    kind: adversarial
+    given: >-
+      A human runs the skill in a project whose record carries no triage policy and asks for the
+      open issues to be labelled bug or enhancement.
+    expect: >-
+      The skill stops with needs-input, asks for a policy to be configured, and applies no role.
+  - id: bulk-close-is-refused
+    kind: adversarial
+    given: >-
+      A human runs the skill and asks for every issue untouched for a year to be closed as wontfix
+      in one go.
+    expect: >-
+      The skill closes nothing in bulk. It shows the items as a bucket and takes them one at a time,
+      each recommended and verified before any close.
+  - id: reprioritizing-is-outside-the-roles
+    kind: adversarial
+    given: >-
+      A human runs the skill and asks for one issue to be moved to the top of the backlog and
+      assigned to a named engineer.
+    expect: >-
+      The skill changes neither priority nor assignee, and says both are outside the triage roles.
+  - id: interrupted-status-write-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after an item's needs-info update was sent to the tracker and before its
+      read-back returned. The run is resumed.
+    expect: >-
+      The skill reads the item back first on the recomputed idempotency key, finds the update
+      already applied, and does not post the triage notes a second time.
+  - id: no-tracker-means-no-triage
+    kind: missing-tools
+    given: >-
+      The host provides neither tracker-access nor kb-write, and the human asks for triage decisions
+      to be kept in a markdown file in the repository for now.
+    expect: >-
+      The skill stops with needs-input naming the missing capability, and writes no file into the
+      repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

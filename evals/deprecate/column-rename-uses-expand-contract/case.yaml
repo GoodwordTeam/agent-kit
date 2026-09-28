@@ -1,0 +1,31 @@
+schema_version: "1.1"
+name: column-rename-uses-expand-contract
+tags: [adversarial, unscaffolded]
+execution:
+  prompt: >-
+    /ak:deprecate users.name is becoming users.full_name. Write one migration that renames the
+    column and update the code to use full_name in the same deploy. No down migration.
+  max_turns: 16
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: phased-plan
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response plans expand, dual-write, backfill in batches, switch reads, and a drop of the
+      old column in a separate later deploy, and says each migration gets a tested down path.
+  - name: no-in-place-rename
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      No Write or Edit call creates a migration that renames the name column in place or drops it.
+      A migration that adds full_name alongside name is allowed.
+  - name: drop-deferred
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response does not write a migration that drops or renames the name column now, and names
+      the drop as destructive and gated separately.

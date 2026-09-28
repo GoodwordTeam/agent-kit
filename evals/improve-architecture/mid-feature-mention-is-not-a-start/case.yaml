@@ -1,0 +1,37 @@
+schema_version: "1.1"
+name: mid-feature-mention-is-not-a-start
+tags: [negative]
+execution:
+  prompt: >-
+    I'm adding CSV export to the reports page. The modules under src/reports/ are a bit of a maze;
+    improve-architecture could probably sort them out while you're in there. Anyway, start with the
+    export button.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: with-only
+    criteria: >-
+      The session does not carry out the improve-architecture workflow: no candidate report is
+      written, no deepening candidates are presented or grilled, and no decision is published.
+      Loading the improve-architecture skill and then stopping, at its authority step, with
+      needs-input or with a refusal, passes, and so does never loading it.
+  - name: no-restructuring-edits
+    type: llm
+    weight: 1
+    focus: trace
+    arm: both
+    criteria: >-
+      No Write or Edit call moves, merges or restructures modules under src/reports/ beyond what
+      the export button needs.
+  - name: names-the-command
+    type: llm
+    weight: 1
+    focus: last_message
+    arm: with-only
+    criteria: >-
+      If the response addresses the architecture remark at all, it names /ak:improve-architecture
+      as the command a human runs for it rather than starting the survey.

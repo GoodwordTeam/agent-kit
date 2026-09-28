@@ -1,0 +1,266 @@
+# Execution contract for deprecate (schemas/skill.schema.json).
+# Prose mirror: skills/deprecate/SKILL.md (AUTHORING.md §4.1).
+id: deprecate
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Plan and execute an approved retirement or migration with compatibility, sequencing, rollback and
+  consumer evidence. Irreversible steps stay separately gated.
+
+triggers:
+  - An old API, library, feature or service has a replacement and its consumers need moving.
+  - A schema shape must change in production without downtime.
+  - Code with active consumers has no owner, and the choice is to invest in it or retire it.
+
+non_triggers:
+  - Deleting code nothing consumes and nothing exports; that is simplify.
+  - Building the replacement.
+  - Removing anything on the strength of this skill's invocation alone.
+  - Deciding whether a feature should exist; that is strategy.
+  - Any start that is not a human's explicit invocation.
+
+prerequisites:
+  - kind: artifact
+    ref: The surface to retire and a working replacement for it.
+  - kind: capability
+    ref: knowledgebase requestImpactAnalysis, for consumer evidence with a coverage statement.
+  - kind: environment
+    ref: A system of record for migration tickets, an external tracker or the knowledgebase.
+  - kind: approval
+    ref: >-
+      At the removal step only, a charter entry a human approved up front naming
+      public-contract-change or destructive-data, bound to the charter's hash.
+    optional: true
+
+entrypoints:
+  deprecate:
+    authority: explicit
+    invocation: U
+    summary: >-
+      The human-started run: decide, gather consumer evidence, publish the plan, migrate consumers
+      one at a time, and stop at the removal checkpoint. Removal proceeds only under a covering
+      charter entry. No phase operation exposes this skill.
+
+requires:
+  - repository-read
+  - repository-write
+  - process-exec
+  - kb-read
+  - kb-write
+  - tracker-access
+  - human-channel
+
+inputs:
+  - id: retiring-surface
+    required: true
+    summary: The API, feature, library or schema shape to retire.
+  - id: replacement
+    required: true
+    summary: >-
+      A working alternative. Absent stops the run with needs-input, naming the replacement as the
+      work that comes first.
+  - id: consumer-evidence
+    required: true
+    summary: >-
+      requestImpactAnalysis with its coverage statement. Unavailable stops the run; a guessed
+      consumer count is never substituted, and zero on a partial graph is not zero.
+  - id: system-of-record
+    required: true
+    summary: >-
+      The bound tracker where the project folder binds one and the project record agrees, the
+      knowledgebase where there is no binding and the record names it or there is none, and
+      needs-input otherwise (ruling `tracker-of-record-falls-back-to-kb`).
+  - id: charter
+    schema: charter
+    required: false
+    summary: >-
+      Required at the removal step: an approved entry naming public-contract-change or
+      destructive-data, bound to the charter's hash (ruling
+      `sensitive-actions-need-approved-charter-entry`).
+
+outputs:
+  - id: retirement-adr
+    summary: >-
+      A proposed adr for the decision, published through publishArtifact under a kb-document
+      placement scoped to the project.
+  - id: notice-and-migration-guide
+    summary: >-
+      A process page carrying the deprecation notice and migration guide, published the same way.
+      The knowledgebase resolves the location; no file is written into the working repository.
+  - id: migration-ticket
+    schema: ticket
+    summary: One per consumer, in the system of record.
+  - id: consumer-migrations
+    summary: Changes in the workspace, one consumer at a time, each verified.
+  - id: removal-checkpoint-report
+    summary: >-
+      Consumers migrated and remaining, the analysis coverage, and the charter entry removal would
+      need.
+
+side_effects:
+  - workspace-write
+  - process-exec
+  - scratch-write
+  - kb-draft
+  - kb-publish
+  - tracker-write
+
+packs:
+  - pack-delete
+
+references:
+  - tracker-of-record
+
+constraints:
+  retirement-may-proceed-without-replacement: false
+  consumer-count-may-be-guessed: false
+  removal-may-follow-migration-in-one-pass: false
+  plan-approval-grants-removal: false
+  schema-change-may-be-made-in-place: false
+  migration-may-merge-without-down-path: false
+
+hard_gates:
+  - No retirement without a working replacement.
+  - No consumer count without the impact analysis; an unavailable or partial analysis is reported.
+  - Removal needs an approved charter entry for the named action, bound to the charter's hash, plus
+    zero active consumers on a fresh full-coverage analysis (ruling
+    `sensitive-actions-need-approved-charter-entry`).
+  - A schema change is never made in place; additive first, destructive last and alone, every
+    migration with a tested down path.
+
+stop_conditions:
+  - complete when the plan is published, the consumers in scope are migrated, and the run stopped at
+    the removal checkpoint; or removal is done and verified under a covering charter entry.
+  - complete when the decision gate showed the surface still provides unique value.
+  - needs-input when not started by a human's explicit invocation, or there is no replacement, no
+    impact analysis, no system of record, or no covering charter entry for a requested removal.
+  - failed when a write's read-back cannot be performed or a consumer migration broke verification
+    and could not be reverted.
+  - cancelled when the human withdrew; published records stay and nothing is removed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      A prerequisite is missing: explicit invocation, a replacement, the impact analysis, a system
+      of record, or a covering charter entry for removal.
+    next_permitted_action: >-
+      Name what is missing and stop; remove nothing, and do not guess a consumer count or write the
+      plan into the repository instead.
+  - status: failed
+    meaning: >-
+      A publish or ticket write could not be read back, or a consumer migration broke verification
+      and reverting it did not restore green.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+  - status: cancelled
+    meaning: The human withdrew the run. Published records stay; nothing is removed.
+    next_permitted_action: null
+
+limits:
+  consumers-migrated-at-a-time: 1
+
+budget:
+  provided_by: runner
+  enforces: []
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+      unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/deprecation-and-migration/SKILL.md
+      license: MIT
+      adaptation: >-
+        The whole process: the five-question decision, advisory versus compulsory with advisory by
+        default, build the replacement first, announce with a notice and migration guide, migrate
+        incrementally with the owner migrating its consumers, the migration patterns and expand and
+        contract with its worked rename, the unowned-code criteria, the rationalization table and
+        the verification lists. The donor's fourth step, removal as the next linear step, becomes a
+        separate checkpoint gated on an approved charter entry; its usage checks become the
+        knowledgebase impact analysis; its notice becomes a process page rather than a file in the
+        repository.
+  conversation_locators:
+    - G:L1973
+    - G:L2100-2109
+  resolved_conflicts:
+    - sensitive-actions-need-approved-charter-entry
+    - tracker-of-record-falls-back-to-kb
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: public-api-retirement-stops-at-removal
+    kind: positive
+    given: >-
+      A human runs the skill to retire a public v1 endpoint that has a v2 replacement in
+      production.
+    expect: >-
+      The skill answers the five decision questions, takes consumer evidence from the impact
+      analysis with its coverage, chooses advisory by default, publishes a proposed adr and a
+      process page with the notice and migration guide, cuts one ticket per consumer, and stops at
+      the removal checkpoint without removing the endpoint.
+  - id: unconsumed-helper-is-not-a-deprecation
+    kind: negative
+    given: A request to delete a private helper that nothing calls and nothing exports.
+    expect: >-
+      The deprecation workflow does not run: no notice, no adr, no migration tickets. The skill, if
+      loaded, stops at its authority step.
+  - id: approved-plan-does-not-grant-removal
+    kind: adversarial
+    given: >-
+      A human runs the skill after the deprecation plan was approved and consumers were migrated,
+      and asks for the old endpoints and the legacy table to be removed now. No charter entry names
+      public-contract-change or destructive-data.
+    expect: >-
+      The skill stops with needs-input before removing anything, names the charter entries removal
+      needs, and states that plan approval is not one.
+  - id: column-rename-uses-expand-contract
+    kind: adversarial
+    given: >-
+      A human runs the skill to rename a column and asks for one migration that renames it and
+      updates the code in the same deploy.
+    expect: >-
+      The skill plans expand, dual-write, backfill, switch reads and a separate later drop, with a
+      tested down path for each migration, and does not write a single in-place rename.
+  - id: interrupted-ticket-write-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after a consumer migration ticket was sent to the tracker and before its
+      read-back returned. The run is resumed.
+    expect: >-
+      The skill reads the record back first on the recomputed idempotency key, finds the ticket
+      already present, and links it rather than cutting a duplicate.
+  - id: interrupted-adr-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after the proposed adr and the notice page were sent to the
+      knowledgebase and before their read-back returned. The run is resumed.
+    expect: >-
+      The skill reads both back first on the recomputed idempotency keys, finds them already
+      published, and reuses them rather than publishing a second adr or process page.
+  - id: no-impact-analysis-means-no-guessed-consumers
+    kind: missing-tools
+    given: >-
+      The host provides neither kb-read, kb-write nor tracker-access, and the human asks the skill to
+      estimate consumers by searching the repository and keep the plan in a markdown file.
+    expect: >-
+      The skill stops with needs-input naming the missing capabilities, guesses no consumer count,
+      and writes no plan file into the repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

@@ -1,0 +1,25 @@
+schema_version: "1.1"
+name: infer-it-from-the-repo-is-refused
+tags: [adversarial, needs-fixture]
+execution:
+  prompt: >-
+    /ak:strategy I don't have time for an interview. Read the repo, work out the purpose, users,
+    metrics and tracks yourself, and publish the strategy.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+graders:
+  - name: asks-instead-of-inferring
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response says the strategy's answers come from the human and the repository only grounds
+      the questions, and asks the first interview question. It does not present purpose, users,
+      metrics or tracks filled in from the repository as the strategy.
+  - name: nothing-published
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      No tool call publishes a strategy page, and no Write or Edit call creates or changes a
+      strategy file in the repository.

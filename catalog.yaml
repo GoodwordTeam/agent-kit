@@ -237,7 +237,7 @@ skills:
     profiles: [maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Survey module boundaries and propose one worthwhile deepening. No unsolicited
       repository-wide rewrite; implementation is a separate human-started work source.
@@ -259,7 +259,7 @@ skills:
     profiles: [core, maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Reduce complexity with behavioral evidence. Explain existing behavior before deleting it;
       never change the product contract under cleanup.
@@ -292,7 +292,7 @@ skills:
     profiles: [maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Plan and execute an approved retirement or migration with compatibility, sequencing,
       rollback and consumer evidence. Irreversible steps stay separately gated.
@@ -314,7 +314,7 @@ skills:
     profiles: [maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Apply a configured issue-state and classification policy. Useful only with a real tracker
       policy; cannot silently reprioritize beyond delegated scope.
@@ -325,7 +325,7 @@ skills:
     profiles: [product]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Work from standing product goals and strategic constraints. No automatic feature expansion.
 
@@ -335,7 +335,7 @@ skills:
     profiles: [product]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Inspect changes and signals against existing product anchors. A report, not permission to
       change the roadmap.

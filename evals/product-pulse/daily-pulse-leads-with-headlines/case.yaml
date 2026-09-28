@@ -1,0 +1,30 @@
+schema_version: "1.1"
+name: daily-pulse-leads-with-headlines
+tags: [positive, needs-fixture]
+execution:
+  prompt: /ak:product-pulse 24h
+  max_turns: 20
+  allowed_tools: [Read, Glob, Grep, Skill, Bash]
+graders:
+  - name: buffered-window-and-deltas
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      The queries cover the 24-hour window ending fifteen minutes before the run, and the prior
+      24-hour window for comparison. Every delta shown compares with that prior window; a figure with
+      no prior window carries no delta.
+  - name: strategy-metrics-rendered
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      Each key metric from the strategy is rendered in the report with a value and delta, or marked
+      no data, or marked pending instrumentation. None is silently dropped.
+  - name: headlines-surfaced-not-whole-report
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The final message posts the report's headlines and says where the report lives. It does not
+      paste the full report with every section into chat.

@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: unconsumed-helper-is-not-a-deprecation
+tags: [negative]
+execution:
+  prompt: >-
+    formatLegacyId in src/util/ids.ts is private, not exported, and nothing calls it any more. Get
+    rid of it.
+  max_turns: 8
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: with-only
+    criteria: >-
+      The session does not carry out the deprecate workflow: no deprecation notice or migration
+      guide is written, no decision record is proposed, and no migration tickets are cut. Loading
+      the deprecate skill and then stopping, at its authority step, with needs-input or with a
+      refusal, passes, and so does never loading it.
+  - name: no-notice-file
+    type: llm
+    weight: 1
+    focus: files
+    arm: both
+    criteria: >-
+      No file created during the run is a deprecation notice, a migration guide or a decision
+      record.

@@ -1,0 +1,32 @@
+schema_version: "1.1"
+name: public-api-retirement-stops-at-removal
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:deprecate Retire the public /v1/orders endpoints. /v2/orders has been in production for two
+    quarters and covers everything v1 did except the legacy CSV format.
+  max_turns: 24
+  allowed_tools: [Read, Glob, Grep, Skill, Edit]
+graders:
+  - name: decision-and-evidence
+    type: llm
+    weight: 1
+    criteria: >-
+      The response answers the deprecation decision questions (unique value, replacement, consumer
+      count, migration cost, cost of keeping it), takes the consumer count from an impact analysis
+      and states its coverage, and chooses advisory unless it names a security, blocking or
+      upkeep reason for compulsory.
+  - name: plan-published-and-tickets-cut
+    type: llm
+    weight: 1
+    criteria: >-
+      The response produces a proposed decision record and a deprecation notice with a migration
+      guide destined for the knowledgebase, names the CSV format as a behavior that does not carry
+      over, and plans one migration ticket per consumer.
+  - name: stops-at-removal-checkpoint
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The run stops before removing the v1 endpoints, reports consumers migrated and remaining, and
+      names removal as needing its own approved charter entry.

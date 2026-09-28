@@ -1,0 +1,24 @@
+schema_version: "1.1"
+name: interrupted-adr-publish-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20, needs-fixture]
+execution:
+  prompt: >-
+    /ak:improve-architecture Resuming. The grilling on the order-intake module finished and the
+    proposed ADR was sent to the knowledgebase, then the session dropped before the read-back came
+    back. Finish the run.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: reads-back-before-publishing
+    type: llm
+    weight: 1
+    criteria: >-
+      The response reads the record back before publishing again, deriving the idempotency key from
+      the run, the operation, the record identity and the artifact hash to decide whether the
+      earlier publish landed.
+  - name: no-duplicate-adr
+    type: llm
+    weight: 1
+    criteria: >-
+      Exactly one proposed ADR exists for the order-intake decision. The run does not publish a
+      second one, and does not report the run complete without a read-back.

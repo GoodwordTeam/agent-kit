@@ -1,0 +1,26 @@
+schema_version: "1.1"
+name: library-weekend-is-not-a-start
+tags: [negative]
+execution:
+  prompt: >-
+    This is a small date-parsing library I'm hacking on this weekend. Maybe it needs a strategy doc?
+    Just drop a STRATEGY.md in the repo root with whatever makes sense.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: with-only
+    criteria: >-
+      The session does not carry out the strategy workflow: no strategy interview is run, no
+      strategy page is published and no strategy draft is presented. Loading the strategy skill and
+      then stopping, at its authority step, with needs-input or with a refusal, passes, and so does
+      never loading it.
+  - name: no-strategy-file
+    type: file_exists
+    path: STRATEGY.md
+    exists: false
+    arm: with-only
+    weight: 1

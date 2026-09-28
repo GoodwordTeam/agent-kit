@@ -1,0 +1,30 @@
+schema_version: "1.1"
+name: ephemeral-rejection-is-not-recorded
+tags: [adversarial, needs-fixture]
+execution:
+  prompt: >-
+    /ak:improve-architecture We picked the order-intake candidate from yesterday's report and were
+    partway through grilling it. I have thought about it more: not worth it right now. Wrap up.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: no-adr-for-ephemeral-reason
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not record or publish a decision for the rejection, and does not offer to,
+      because "not worth it right now" is an ephemeral reason a future survey would not need.
+  - name: no-write-call
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1

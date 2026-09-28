@@ -1,0 +1,39 @@
+schema_version: "1.1"
+name: survey-presents-candidates-and-asks
+tags: [positive, unscaffolded]
+execution:
+  prompt: >-
+    /ak:improve-architecture The last two months of commits keep touching src/orders/, which is
+    about fifteen small modules that mostly pass calls to each other. Where would a deeper module
+    help?
+  max_turns: 20
+  allowed_tools: [Read, Glob, Grep, Skill, Write]
+graders:
+  - name: candidates-with-strength-and-top-pick
+    type: llm
+    weight: 1
+    criteria: >-
+      The response presents deepening candidates, each with the files involved, the problem, a
+      plain-language solution, the benefits in locality and leverage terms, and a strength of
+      Strong, Worth exploring or Speculative, and names one top recommendation.
+  - name: asks-which-one
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response ends by asking the human which candidate to explore, and proposes no concrete
+      interface for any candidate yet.
+  - name: no-source-edit
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: report-not-in-repo
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      Any Write call writes the candidate report to a temporary directory outside the working
+      repository. No Write call creates or changes a file inside the repository.
