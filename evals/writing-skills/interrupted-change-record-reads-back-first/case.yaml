@@ -1,0 +1,23 @@
+schema_version: "1.1"
+name: writing-skills-interrupted-change-record-reads-back-first
+tags: [resumability, scenario-20, needs-fixture]
+execution:
+  prompt: >-
+    /ak:writing-skills Resume the handoff read-back hardening. The change record was sent to the
+    knowledgebase and then the session dropped before the read-back came back. Finish the run.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: reads-back-before-publishing
+    type: llm
+    weight: 1
+    criteria: >-
+      The response reuses the idempotency key the runner contract derives, with the input artifact
+      hash taken over the draft already persisted in scratch rather than a recomposed record, and
+      reads the record back from the knowledgebase before any second publish.
+  - name: no-duplicate-record
+    type: llm
+    weight: 1
+    criteria: >-
+      Exactly one published copy of the change record results, and the run does not report complete
+      without a read-back.

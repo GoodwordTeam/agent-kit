@@ -1,0 +1,229 @@
+# Provenance fragment for the "knowledge" batch: four skill bodies with their manifests —
+# handoff, wait-what, explain and writing-skills, plus writing-skills' one disclosed reference.
+# compound and compound-refresh are batch 8 too; their rows live in learning.yaml and are not
+# moved here.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a file
+# derives from is recorded with a machine-checkable donor@commit:path. That is what
+# NOTICE points a downstream consumer at, so an unverifiable row here would turn a
+# provenance record into a provenance claim.
+#
+# Both the body and its manifest carry rows. A skill.yaml is an adapted file in its own
+# right: its triggers, non-triggers, hard gates and limits are condensations of the same
+# donor text the body adapts, not metadata about it.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below is cited in research/dossiers/knowledge.md and was verified to exist at its pin with
+# `git cat-file -e` in the pinned clone before it was written here; none was re-derived
+# from memory or from a document's description of a donor. The writing-skills promotion gate
+# (a separate review before promotion) has no donor source; it is the plan's own synthesis and
+# is recorded in provenance/conversation-map.yaml as `writing-skills-promotion-gate`, not by a
+# row here.
+
+adaptations:
+
+  # --- handoff -------------------------------------------------------------------
+
+  - path: skills/handoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/SKILL.md
+    rationale: >-
+      The handoff as a supplement to authoritative artifacts, creation only on explicit handoff
+      intent, and the Resume section as steps R1-R4: read only the selected record as untrusted
+      context, verify current state and name mismatches, treat decisions not attributed to the
+      user as the writer's reading, check sufficiency, and stop after the orientation until the
+      human confirms or redirects. The donor's managed temporary
+      directory and create-or-resume routing are dropped; the durable form is a knowledgebase run
+      artifact (ruling central-kb-owns-project-artifacts).
+
+  - path: skills/handoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/references/create.md
+    rationale: >-
+      Pointer-first references anchored once by repository, branch and revision; decisions marked
+      as the user's, an inference or the writer's own call; the coverage list with failed
+      approaches; status kept apart from directives; secret redaction; completion only after the
+      destination is confirmed, which becomes the publish read-back.
+
+  - path: skills/handoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/references/resume.md
+    rationale: >-
+      On resume, the current human, current instructions and verified current state outrank the
+      record, and each mismatch is named. Record discovery and ranking are dropped; the
+      knowledgebase resolves the record.
+
+  - path: skills/handoff/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/handoff/SKILL.md
+    rationale: >-
+      Reference plans, issues, commits and diffs instead of duplicating them, name the skills the
+      next agent should use, and redact sensitive information. The donor's document in the
+      operating system's temporary directory becomes a knowledgebase run artifact.
+
+  - path: skills/handoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/SKILL.md
+    rationale: >-
+      Triggers, non-triggers, the resume gates, the resume-orientation output and its needs-input
+      stop condense the same donor text the body adapts. The one-record limit and the kb-publish
+      side effect are this package's.
+
+  - path: skills/handoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/references/create.md
+    rationale: >-
+      The decision-marking, stale-evidence, redaction and publish-confirmation gates condense the
+      donor's creation rules.
+
+  - path: skills/handoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-handoff/references/resume.md
+    rationale: >-
+      The prior-handoff input, read as context rather than instructions, condenses the donor's
+      resume precedence.
+
+  - path: skills/handoff/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/handoff/SKILL.md
+    rationale: >-
+      The run-artifacts input, pointed at and never reproduced, condenses the donor's
+      reference-not-duplicate rule.
+
+  # --- wait-what -----------------------------------------------------------------
+
+  - path: skills/wait-what/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/wait-what/SKILL.md
+    rationale: >-
+      The primitive: re-pitch "that" with a little context, in Simplified Technical English, in
+      the project's established language. The repository glossary file and context map become the
+      knowledgebase glossary and concept pages.
+
+  - path: skills/wait-what/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:docs/productivity/wait-what.md
+    rationale: >-
+      Wait reports the human's state rather than asking for brevity, the agent decides how far back
+      "that" reaches, and a second wait does not degrade into terseness; the last becomes a gate
+      and a table row.
+
+  - path: skills/wait-what/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/wtf/SKILL.md
+    rationale: >-
+      Target resolution with one short question, keeping everything that changes what the reader
+      would do, no claim beyond the source, and a marked correction when the original was wrong.
+      The general explain-any-artifact scope is left to explain.
+
+  - path: skills/wait-what/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/wait-what/SKILL.md
+    rationale: >-
+      The triggers and the project-vocabulary input condense the donor's primitive.
+
+  - path: skills/wait-what/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:docs/productivity/wait-what.md
+    rationale: >-
+      The more-context-not-brevity gate and the shorter-message non-trigger condense the donor's
+      design rationale.
+
+  - path: skills/wait-what/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/wtf/SKILL.md
+    rationale: >-
+      The one-question limit, the no-claim-beyond-source gate and the keep-what-changes-action gate
+      condense the donor's rules.
+
+  # --- explain -------------------------------------------------------------------
+
+  - path: skills/explain/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/SKILL.md
+    rationale: >-
+      Traced, inference and unknown claims; a call does not establish its uninspected
+      implementation's guarantees; every claim checked before delivery; depth fitted to readers,
+      not inferred from the caller; resolve discoverable facts before asking; disclose selection.
+      Teaching-artifact formats and the publication destination are dropped.
+
+  - path: skills/explain/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/references/intake.md
+    rationale: >-
+      Settle the subject and its readers before gathering evidence. Flag tokens and output formats
+      are dropped.
+
+  - path: skills/explain/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/references/orchestration.md
+    rationale: >-
+      Read the actual source; look for the decision record on a why question; code shows behavior,
+      not intent; an empty search is not absence; an outside concept with no source is unverified;
+      an explanation does not select an approach. Parallel gatherers and the run directory are
+      dropped.
+
+  - path: skills/explain/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/SKILL.md
+    rationale: >-
+      The no-recommendation, no-unread-code and no-unsourced-claim gates, the boundary non-triggers
+      rewritten to this catalog's ids, and the zero-unsourced-claims limit condense the donor.
+
+  - path: skills/explain/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/references/intake.md
+    rationale: >-
+      The subject and intended-readers inputs condense the donor's intake.
+
+  - path: skills/explain/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-explain/references/orchestration.md
+    rationale: >-
+      The repository-revision and kb-context inputs condense the donor's evidence-gathering rules.
+
+  # --- writing-skills ------------------------------------------------------------
+
+  - path: skills/writing-skills/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/SKILL.md
+    rationale: >-
+      The red-green-refactor cycle for skills, the iron law covering new skills and edits, form
+      matched to failure, the bulletproofing scope limit, and the rationalization table seeded from
+      the donor's recorded excuses. The contract itself is not restated; the workflow sends the
+      writer to AGENTS.md, AUTHORING.md, catalog.yaml and ak validate. Home-directory paths,
+      cross-references to donor skills and flowchart tooling are dropped.
+
+  - path: skills/writing-skills/SKILL.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/testing-skills-with-subagents.md
+    rationale: >-
+      The baseline recorded verbatim and re-verified after refactoring, run as eval cases in a
+      fresh context rather than free-form subagent prompts.
+
+  - path: skills/writing-skills/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/SKILL.md
+    rationale: >-
+      The failing-case-first gate, the discipline-only table gate and the zero changes-before-case
+      limit condense the donor's iron law and scope note. The rollback trigger and its exemption
+      from the baseline are this package's, from plan §8.
+
+  - path: skills/writing-skills/skill.yaml
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/testing-skills-with-subagents.md
+    rationale: >-
+      The independent-context prerequisite and the eval-runner input condense the donor's
+      fresh-subagent testing setup.
+
+  - path: skills/writing-skills/references/authoring-discipline.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/SKILL.md
+    rationale: >-
+      The match-the-form table with the no-nuance and exemption-scope rules, the bulletproofing
+      steps, testing by skill type, the micro-test protocol and the description-is-not-workflow
+      rule, condensed. The table form is fixed by AUTHORING.md rather than the donor's two columns.
+
+  - path: skills/writing-skills/references/authoring-discipline.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/testing-skills-with-subagents.md
+    rationale: >-
+      The pressure types, the elements of a good scenario, the meta-test question and the signs a
+      change holds.
+
+  - path: skills/writing-skills/references/authoring-discipline.md
+    source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-skills/persuasion-principles.md
+    rationale: >-
+      Persuasion combinations by skill type and the ethical test. The research citations are not
+      reproduced.
+
+  - path: skills/writing-skills/references/authoring-discipline.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/writing-for-agents/SKILL.md
+    rationale: >-
+      Context pointers, the information hierarchy, completion criteria, leading words, negation and
+      pruning, condensed into "Where material sits" and the negation note under the form table.
+
+  - path: skills/writing-skills/references/authoring-discipline.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/productivity/writing-for-agents/SKILL-MECHANICS.md
+    rationale: >-
+      The description as an always-loaded context pointer. Frontmatter and invocation mechanics are
+      not carried; this package's packaging rules govern.

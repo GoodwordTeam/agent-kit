@@ -1,0 +1,151 @@
+# Execution contract for wait-what (schemas/skill.schema.json).
+# Prose mirror: skills/wait-what/SKILL.md. The two are one statement in two forms.
+id: wait-what
+version: 0.1.0
+kind: primitive
+invocation: M
+summary: >-
+  Re-explain the present proposal in established project vocabulary. Does not restart alignment or
+  change the decision.
+
+triggers:
+  - The human says they do not follow where the agent has got to.
+  - A re-pitch did not land and the human asks again.
+
+non_triggers:
+  - A human who understood the proposal and disagrees with it.
+  - Restarting alignment or reopening a decision; that is super-align, started by the human.
+  - Explaining how existing code works, with evidence; that is explain.
+  - A request to make a message shorter.
+
+prerequisites:
+  - kind: run-state
+    ref: a proposal in the session that the human reports not following
+  - kind: capability
+    ref: >-
+      kb-read, for the knowledgebase glossary and concept pages. Optional: without it the terms
+      already established in the session and repository are used, and the re-pitch says so.
+    optional: true
+
+entrypoints:
+  wait-what:
+    invocation: M
+    authority: model
+    summary: >-
+      The only entrypoint. The agent starts it when the human's reply shows the proposal did not
+      land. No phase operation exposes this skill, so there is no delegated path to validate.
+
+requires:
+  - repository-read
+
+inputs:
+  - id: lost-proposal
+    required: true
+    summary: >-
+      What the human lost: the present proposal by default, or a passage or step the human names.
+      Unclear after reading the session, one short question is asked.
+  - id: project-vocabulary
+    required: false
+    summary: >-
+      The glossary and concept pages through readContext. Unavailable, the session's and
+      repository's established terms are used and the re-pitch says the glossary was not read.
+
+outputs:
+  - id: re-pitch
+    summary: >-
+      Context first, then the same proposal, in project vocabulary, returned in the session. Nothing
+      durable; no knowledgebase operation is called.
+
+side_effects: []
+
+hard_gates:
+  - The decision does not change; a re-pitch that alters, reopens or re-scores the proposal is
+    refused.
+  - No claim beyond the source.
+  - Nothing that changes what the human would do is dropped.
+  - A second request on the same proposal gets more context, not fewer words.
+
+stop_conditions:
+  - complete when the re-pitch is returned and the decision is unchanged.
+  - needs-input when the target is unclear after reading the session; one short question is asked.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: The passage the human lost cannot be identified from the session.
+    next_permitted_action: Ask one short question naming the candidates, then re-pitch the answer.
+
+limits:
+  clarifying-questions: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - clarifying-questions
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: autonomous
+    - adapter: codex
+      mode: autonomous
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/productivity/wait-what/SKILL.md
+      license: MIT
+      adaptation: >-
+        The primitive itself: re-pitch "that" with a little context, in Simplified Technical
+        English, using the project's established language. The donor's repository glossary file and
+        its context map become the central knowledgebase glossary and concept pages.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: docs/productivity/wait-what.md
+      license: MIT
+      adaptation: >-
+        The design rationale that wait reports the human's state rather than asking for brevity,
+        that the agent decides how far back "that" reaches, and the working test that a second
+        invocation does not degrade into terseness.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/wtf/SKILL.md
+      license: MIT
+      adaptation: >-
+        Target resolution (a named passage or step, else one short question), keeping everything
+        that changes what the reader would do, adding no claim beyond the source, and saying so when
+        re-reading shows the original was wrong. Its general explain-any-artifact scope is not
+        carried; that is the explain skill's.
+  resolved_conflicts: []
+
+tests:
+  - id: jargon-heavy-proposal-is-re-pitched
+    kind: positive
+    given: >-
+      The agent proposed a change in dense shorthand about idempotency keys, outbox rows and
+      at-least-once delivery, and the human replies that they do not follow.
+    expect: >-
+      The skill re-pitches the same proposal with the missing premise first, in plain sentences
+      using the project's terms, keeps its caveats, and changes nothing about what was proposed.
+  - id: disagreement-is-not-confusion
+    kind: negative
+    given: >-
+      The human says they understand the proposal to partition by tenant and think it is the wrong
+      call.
+    expect: >-
+      The skill does not re-pitch the proposal as if the human had not understood it; the
+      disagreement is engaged with or routed to the human's own alignment run.
+  - id: second-wait-adds-context-not-brevity
+    kind: adversarial
+    given: >-
+      A re-pitch was already given, and the human replies that they are still lost.
+    expect: >-
+      The second re-pitch goes further back and adds the premise still missing; it is not a shorter
+      copy of the first, it keeps the caveats, and the proposal is unchanged.
+
+body:
+  line_budget: 150
+  hard_cap: 300

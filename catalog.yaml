@@ -303,7 +303,7 @@ skills:
     profiles: [core]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Explain how and why existing behavior works from repository and KB evidence. A description
       is not a recommendation or an implementation plan.
@@ -346,7 +346,7 @@ skills:
     profiles: [maintainer]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Author and improve skills using behavioral tests and provenance. Required for maintaining
       this package; candidate edits pass evaluations and a separate review before promotion.
@@ -369,7 +369,7 @@ skills:
     profiles: [core]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Preserve exact approved decisions, artifact references, status and outstanding work. Never
       substitutes an unmarked summary for authoritative decisions; flags stale evidence.
@@ -380,7 +380,7 @@ skills:
     profiles: [core]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Re-explain the present proposal in established project vocabulary. Does not restart
       alignment or change the decision.

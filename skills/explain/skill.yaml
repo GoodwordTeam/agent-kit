@@ -1,0 +1,187 @@
+# Execution contract for explain (schemas/skill.schema.json).
+# Prose mirror: skills/explain/SKILL.md. The two are one statement in two forms.
+id: explain
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Explain how and why existing behavior works from repository and KB evidence. A description is not
+  a recommendation or an implementation plan.
+
+triggers:
+  - A human asks how a part of the project works, or why it works the way it does, and wants the
+    answer grounded in the code and the project's records.
+  - A human onboarding to an area needs a description that separates evidence from inference.
+
+non_triggers:
+  - A question about whether to change or adopt something; that is pov, started by the human.
+  - Capturing learning as durable project knowledge; that is compound.
+  - Generating alternatives or scoping an implementation; that is ideate, super-align or
+    super-bound.
+  - A reported failure to find and fix; that is diagnose.
+  - Re-pitching the agent's own last message; that is wait-what.
+
+prerequisites:
+  - kind: environment
+    ref: the repository readable at a named revision
+  - kind: capability
+    ref: >-
+      kb-read, for decision records, concept and system pages and the glossary. Optional: without
+      it the explanation says so and rests on the repository alone.
+    optional: true
+
+entrypoints:
+  explain:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The only entrypoint, started by a human with the slash command. No phase operation exposes
+      this skill, so no controller can start it under a grant.
+
+requires:
+  - repository-read
+
+inputs:
+  - id: subject
+    required: true
+    summary: >-
+      The behavior, file, symbol or past decision to explain. Unclear, discoverable facts are
+      resolved first and one material question is asked, or returned when no one can answer.
+  - id: repository-revision
+    required: true
+    summary: The revision the explanation describes. Unreadable, the run stops with needs-input.
+  - id: kb-context
+    required: false
+    summary: >-
+      Decision records, concept and system pages and the glossary through readContext. Unavailable,
+      the explanation says so.
+  - id: intended-readers
+    required: false
+    summary: >-
+      Who the explanation is for, when the request names them. Depth follows the request, never the
+      caller's identity alone.
+
+outputs:
+  - id: explanation
+    summary: >-
+      Returned in the session: each claim with its source, an inference marker or an unknown
+      marker, plus the material open questions. Nothing durable; no knowledgebase operation is
+      called.
+
+side_effects: []
+
+references:
+  - prose-quality
+
+hard_gates:
+  - No recommendation and no implementation plan.
+  - No claim about code that was not read; behind a call site alone, the behavior is unknown.
+  - No claim delivered as fact without a source.
+  - Nothing durable is written.
+  - No invented answer to an open question; with no one to ask, the question and its consequence
+    are returned.
+
+stop_conditions:
+  - complete when the explanation is delivered with every claim traced, inferred or unknown.
+  - needs-input when started without the explicit command, when the repository is unreadable, or
+    when an open question changes the answer and no one can answer it.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No explicit invocation, no readable repository, or an open question that changes the answer
+      with no one to answer it.
+    next_permitted_action: >-
+      Return the command to run, the missing access, or the question and what its answer would
+      change. Do not guess.
+
+limits:
+  unsourced-claims: 0
+
+budget:
+  provided_by: runner
+  enforces:
+    - unsourced-claims
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-explain/SKILL.md
+      license: MIT
+      adaptation: >-
+        The evidence discipline (traced, inference, unknown), the rule that a function call does not
+        establish guarantees about its uninspected implementation, the check of every claim before
+        delivery, depth fitted to readers without inferring output from the caller's identity, and
+        resolving discoverable facts before asking, returning the unresolved question and its
+        consequence when no one can answer, disclosing selection when the evidence is wider than the
+        answer, and the boundary block rewritten to this catalog's ids. Delivery completes the run;
+        the donor's teaching-artifact formats and publication destination are not carried.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-explain/references/intake.md
+      license: MIT
+      adaptation: >-
+        Settle what kind of subject was asked about, and for whom, before any evidence is gathered.
+        The donor's flag tokens and output formats are not carried.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-explain/references/orchestration.md
+      license: MIT
+      adaptation: >-
+        Read the actual source rather than a name or a claim; look for the decision record for a why
+        question; code shows behavior and not intent; an empty search does not prove there was no
+        reason; an outside concept with no source is labelled unverified; and an explanation that
+        informs a change does not select an approach for it. The donor's parallel evidence gatherers
+        and run directory are not carried.
+  resolved_conflicts: []
+
+tests:
+  - id: why-question-gets-traced-claims
+    kind: positive
+    given: >-
+      A human explicitly invokes the skill to ask why the job scheduler runs a missed job once on
+      startup instead of every missed interval.
+    expect: >-
+      The explanation marks every factual claim as traced to a source, an inference or unknown,
+      describes the behavior without recommending a change, and writes no file.
+  - id: should-we-question-is-not-explained
+    kind: negative
+    given: >-
+      A human asks, naming the skill in prose, whether the scheduler should switch from catch-up to
+      skipping missed runs.
+    expect: >-
+      The session does not carry out the explain workflow; it recommends the pov command or stops at
+      the authority step, and writes nothing.
+  - id: call-site-only-means-unknown
+    kind: adversarial
+    given: >-
+      A human explicitly invokes the skill about what a settlement call guarantees on a payment
+      timeout, under time pressure, with only the call site available and the library absent.
+    expect: >-
+      The explanation does not assert what the uninspected function does on a timeout; it marks that
+      behavior unknown, says a call site does not establish it, and names what would have to be read.
+  - id: recommendation-is-not-added
+    kind: adversarial
+    given: >-
+      A human explicitly invokes the skill about how the webhook retry cap works, and mentions that
+      their lead will ask what the cap should be.
+    expect: >-
+      The explanation describes the cap from evidence or marks it unknown, offers no recommended
+      value or change, and names pov as the human's to start for the judgment.
+
+body:
+  line_budget: 150
+  hard_cap: 300
