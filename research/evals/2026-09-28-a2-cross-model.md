@@ -32,14 +32,16 @@ The short answer:
   `gh auth status`, `env | grep`, `cd … && ls`) that the shell classifier counts as a side effect.
   No Write, Edit or patch followed a user-invoked load anywhere in the run.
 
-The U-prose figures carry a caveat: the scorer is being recalibrated in a parallel branch, where its
-agreement with a two-reviewer panel is κ 0.53. Every transcript is kept so the run can be rescored.
+The U-prose figures carry a caveat: this run was scored by the scorer as it stood before PR #17,
+whose agreement with a two-reviewer panel's consensus was κ 0.528. #17 has since landed and moved
+that to 0.747 (`2026-09-28-grader-calibration.md`). Every transcript is kept, so the run can be
+rescored with it.
 
 ## Instrument
 
 | Item | Value |
 |---|---|
-| Tree | `67e61e9c61f3` for both replicates and the smoke. `dist/` built from it with `bun run ak build --profile all` |
+| Tree | `67e61e9c61f3` for both replicates and the smoke, the receipts' `revision`. It is this branch's pre-rebase commit, the earlier copy of `2c60144`, and predates PR #17's scorer. `dist/` built from it with `bun run ak build --profile all`; receipts record the bundle by path, not by hash, so the revision is what identifies it. `git diff 67e61e9c61f3 2c60144` over `skills/ packs/ protocols/ roles/ references/ catalog.yaml` is empty: the measured bundle sources are the ones on this branch |
 | Install config | default (no `ak.install.yaml`) |
 | Hosts | `2.1.282 (Claude Code)`, `codex-cli 0.157.0`, `grok 1.0.41 (4220f3b224a6) [stable]`; macOS (Darwin 25.6.0) |
 | Subjects | subject-opus, subject-fable (claude host); subject-sol, subject-astra (codex host); subject-grok (grok host). Bindings in `.work/eval-matrix.yaml`. Receipts record `claude-opus-5-5`, `claude-fable-5-1` and `grok-4.7-build`; the codex host reports no model |
@@ -59,7 +61,7 @@ Isolation, per adapter, with the leaks the receipts list:
 **An unlisted leak on the codex host.** The copied login carried the operator's connected apps.
 In 16 of 240 codex sessions the subject searched them (`github.search_prs`, `vercel.list_projects`,
 `google_drive.search`), mostly on `receiving-review` prompts. All calls were reads. Commit
-`207621d` adds `--disable apps` to the codex adapter; a live rerun of the two prompts that reached
+`5975929` adds `--disable apps` to the codex adapter; a live rerun of the two prompts that reached
 GitHub made no app call. The figures below come from the run with the leak.
 
 Each replicate ran all five subjects at once, four sessions per subject at a time:
@@ -173,8 +175,9 @@ All 60 prose rows per subject, invalid included.
 - **The six-turn cap is not neutral across subjects.** It invalidates a third of subject-fable's
   sessions and none of subject-opus's, and codex has no cap at all. A cap-free or higher-cap rerun
   of subject-fable would show whether its prose behaviour differs from subject-opus's.
-- **The shell classifier's false writes** now account for every violation: `command -v`,
-  `gh auth status`, `env | …`, `cd … && ls`, `for` loops over `cat`, and `git -c … branch -vv`.
+- **The shell classifier's false writes** account for every violation in this run. PR #17 fixed
+  `command -v` and lone `--help`; `gh auth status`, `env | …`, `cd … && ls`, `for` loops over
+  `cat`, and `git -c … branch -vv` still count as writes.
 - **Whether a prose request names the command** is still the invocation-law question from
   2026-09-26, and the codex and grok hosts answer it by loading far more often.
-- **Rescore** the stored transcripts once the recalibrated scorer lands.
+- **Rescore** the stored transcripts with PR #17's scorer, which has landed.
