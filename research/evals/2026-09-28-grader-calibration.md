@@ -9,8 +9,8 @@ The short answer:
 
 - **The reviewers agree with each other at κ 0.706** (88.7%, n 80). The scorer agreed with them
   at 0.43 to 0.49 before this change.
-- **7 of the 13 disagreements were the scorer's fault.** Four missed a plain ask to type the
-  command, and three counted `ak --help` as a write. All seven are fixed, with tests.
+- **7 of the 13 disagreements were the scorer's fault.** Three missed a plain ask to type the
+  command, one missed a stop on the law, and three counted `ak --help` as a write. All seven are fixed, with tests.
 - **After the fix, the scorer agrees with the panel's consensus at κ 0.747** (n 71), up from
   0.528. Against each reviewer it is 0.671 and 0.603.
 - **The other 6 are not fixed.** Two are a real blind spot (a skill whose workflow is the

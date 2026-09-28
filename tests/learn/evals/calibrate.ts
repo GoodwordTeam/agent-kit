@@ -720,14 +720,14 @@ function printPlan(plan: GradePlan): void {
   console.log(`judge calls: ${plan.calls}`);
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[], labelsFile = LABELS_FILE): Promise<number> {
   const args = parseArgs(argv);
   if ("problems" in args) {
     for (const p of args.problems) console.error(`calibrate: ${p}`);
     return 2;
   }
   const one = (flag: string) => args.values[flag]?.[0];
-  const file = resolve(one("--file") ?? one("--out") ?? LABELS_FILE);
+  const file = resolve((args.command === "sample" ? one("--out") : one("--file")) ?? labelsFile);
 
   if (args.command === "rescore") {
     const labels = readLabels(file);

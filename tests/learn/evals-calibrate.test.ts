@@ -16,6 +16,7 @@ import {
   type LabelFile,
   type LabelItem,
   loadRuns,
+  main,
   parseArgs,
   readLabels,
   rescoreLabels,
@@ -272,6 +273,18 @@ describe("rescoreLabels", () => {
     expect(result.labels.items.find((i) => i.id === stale.id)!.votes).toEqual({ "reviewer-b": "PASS" });
     expect(result.labels.items.at(-1)).toEqual(orphan);
     expect(stale.suggested.outcome).toBe("missed");
+  });
+
+  test("the rescore command reads the default label file when given only --out, and writes nowhere else", async () => {
+    const run = storedRun();
+    const sources = [run.receipt];
+    const labelsFile = join(scratch, "rescore-cli", "labels.json");
+    writeLabels(labelsFile, buildLabels(loadRuns(sources, scoring), { n: 80, seed: 1, sources }));
+    const before = readFileSync(labelsFile, "utf8");
+    const out = join(scratch, "rescore-cli", "labels.fixed.json");
+    expect(await main(["rescore", "--out", out], labelsFile)).toBe(0);
+    expect(readLabels(out).items.map((i) => i.id)).toEqual(readLabels(labelsFile).items.map((i) => i.id));
+    expect(readFileSync(labelsFile, "utf8")).toBe(before);
   });
 });
 
