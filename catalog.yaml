@@ -816,7 +816,7 @@ references:
       linear-linearis setup and guarded invocation, shipped inside the plugin.
 
 # ---------------------------------------------------------------------------
-# Schemas — 24. `common` holds shared $defs and validates no document itself.
+# Schemas — 27. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -893,6 +893,24 @@ schemas:
     batch: 1
     status: authored
     summary: A captured lesson with supersession, tied to real evidence.
+  - id: handoff-record
+    batch: 8
+    status: authored
+    summary: >-
+      A continuity record: decisions with their source marked, references pointed at rather than
+      pasted, status per piece, and evidence not re-verified at the anchor marked stale.
+  - id: evaluation
+    batch: 8
+    status: authored
+    summary: >-
+      A bake-off's comparison and independent judgment, or a prototype's question, evaluator and
+      answer. A recommendation, never adoption; a human-experience question is settled by a human.
+  - id: map
+    batch: 8
+    status: authored
+    summary: >-
+      A wayfinding map: destination, notes, decisions so far, not yet specified, out of scope, and
+      the ticket set by id. An index, not a store.
   - id: install
     batch: 5
     status: authored

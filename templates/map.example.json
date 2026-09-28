@@ -1,0 +1,47 @@
+{
+  "schema": "map",
+  "schema_version": 1,
+  "id": "example-map-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "wayfind",
+    "entrypoint": "chart"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "open",
+  "destination": "A specification for moving session storage off the shared cache that the team can build against.",
+  "notes": [
+    "The shared cache is also used by rate limiting; that use stays."
+  ],
+  "decisions_so_far": [
+    {
+      "gist": "Sessions move to the primary database, not a second cache.",
+      "ticket": "map-sessions-store"
+    }
+  ],
+  "not_yet_specified": [
+    "How long-lived sessions are expired once they leave the cache."
+  ],
+  "out_of_scope": [
+    {
+      "gist": "Replacing the cache for rate limiting.",
+      "reason": "The destination is session storage; rate limiting keeps its cache.",
+      "ticket": "map-sessions-rate-limit"
+    }
+  ],
+  "tickets": [
+    "map-sessions-store",
+    "map-sessions-migration",
+    "map-sessions-rate-limit"
+  ]
+}

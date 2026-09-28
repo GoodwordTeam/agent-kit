@@ -133,10 +133,10 @@ human's side of a `grilling` or `prototype` ticket has broken the ticket, not re
 
 ## Outputs
 
-- Map — a run artifact holding the five sections, published through the knowledgebase adapter's
-  `publishArtifact` under a `run-artifact` placement, or written to the external tracker where the
-  project has one. This skill writes no documentation tree into the working repository and
-  hardcodes no knowledgebase path (ruling `central-kb-owns-project-artifacts`).
+- `map` (`schemas/map.schema.json`) — the five sections and the ticket set, published through the
+  knowledgebase adapter's `publishArtifact` under a `run-artifact` placement, or written to the
+  external tracker where the project has one. No documentation tree in the working repository and
+  no hardcoded knowledgebase path (ruling `central-kb-owns-project-artifacts`).
 - `ticket` (`schemas/ticket.schema.json`), `type: decision`, id shape `map-<effort>-<question>` —
   one per sharp open question, blocked by the tickets it waits on. Every ticket this skill cuts is
   a decision ticket, the `task` kind included: its manual work exists to unblock a decision. A map

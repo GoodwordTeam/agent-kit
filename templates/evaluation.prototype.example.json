@@ -1,0 +1,58 @@
+{
+  "schema": "evaluation",
+  "schema_version": 1,
+  "id": "example-evaluation-2",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "prototype"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "settled",
+  "kind": "prototype",
+  "question": "Which of three dashboard layouts lets an on-call engineer find the failing service fastest?",
+  "question_kind": "human-experience",
+  "evaluator": {
+    "kind": "human",
+    "human": "The on-call lead who asked the question."
+  },
+  "built": {
+    "what": "Three dashboard variants behind a switcher gated out of production builds.",
+    "where": "runner scratch, prototype-dashboard/index.html",
+    "branch": "ui"
+  },
+  "options": [
+    {
+      "id": "grid",
+      "summary": "Services in a status grid."
+    },
+    {
+      "id": "list",
+      "summary": "A list sorted by error rate."
+    },
+    {
+      "id": "map",
+      "summary": "A dependency map with failing nodes highlighted."
+    }
+  ],
+  "choice": {
+    "option": "list",
+    "adjustments": [
+      "Pin the last-changed service to the top."
+    ]
+  },
+  "answer": "A list sorted by error rate, with the last-changed service pinned.",
+  "settled_by": "human",
+  "open": [
+    "Whether the list scales past fifty services."
+  ]
+}
