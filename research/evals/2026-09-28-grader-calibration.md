@@ -124,7 +124,7 @@ was rerun; only the grading changed.
 | Invalid (session exited 1) | 2 | 2 | 1 | 2 | 7 |
 
 - **U prose passing goes from 63% to 81%.** The replicates range from 75% to 88%, where they
-  ranged from 47% to 70% before. The spread was 23 points and is now 13. The same reply shapes
+  ranged from 47% to 72% before. The spread was 25 points and is now 13. The same reply shapes
   come back in every replicate with slightly different wording, and the old detector caught
   some wordings and not others.
 - **Loaded-unclear is 47 (p1 32, p2 11, p3 4), and missed is 17 (p2 3, p3 14).** Before, they
