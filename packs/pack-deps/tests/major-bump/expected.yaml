@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [version-bump]
+why: An existing dependency moves from major version 4 to major version 5.

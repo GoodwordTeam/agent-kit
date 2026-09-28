@@ -427,25 +427,25 @@ packs:
   - id: pack-api
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Public interfaces, protocol/OpenAPI definitions, observable response shapes
     summary: Consumer compatibility, contract tests, change authorization.
   - id: pack-delete
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Removal, deprecation, replacement
     summary: Explain why the old behavior exists; inventory consumers; make deletion deliberate.
   - id: pack-test
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: New or changed behavior
     summary: Meaningful regression coverage and appropriate seams. No test-count theater.
   - id: pack-secure
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Authentication, authorization, tenancy, secrets, payments, trust boundaries
     summary: >-
       Security and adversarial review, restricted actions, explicit sensitive-change authority.
@@ -453,25 +453,25 @@ packs:
   - id: pack-frontend
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: UI components, styles, routes, user-visible strings
     summary: Accessibility, interaction behavior, internationalization, visual validation.
   - id: pack-data
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Schema, migrations, backfills, data transformations
     summary: Data integrity, rollback and recovery, irreversibility detection, separate execution authority.
   - id: pack-perf
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: A stated performance budget or a measured performance problem
     summary: Baseline and after-measurements before any improvement is claimed.
   - id: pack-deps
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Manifest and lockfile changes
     summary: Dependency scope, compatibility, supply-chain evidence, explicit authorization.
 

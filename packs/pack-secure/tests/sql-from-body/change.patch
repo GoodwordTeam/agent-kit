@@ -1,0 +1,14 @@
+diff --git a/src/api/routes/newsletter.ts b/src/api/routes/newsletter.ts
+index 0a1b2c3..4d5e6f7 100644
+--- a/src/api/routes/newsletter.ts
++++ b/src/api/routes/newsletter.ts
+@@ -3,2 +3,9 @@ import { db } from "../../db";
+ 
+ export const newsletter = Router();
++
++newsletter.post("/api/newsletter/unsubscribe", async (req, res) => {
++  await db.query(
++    `UPDATE subscribers SET active = false WHERE email = '${req.body.email}'`,
++  );
++  res.status(204).end();
++});

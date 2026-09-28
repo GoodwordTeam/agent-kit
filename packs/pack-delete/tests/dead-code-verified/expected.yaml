@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [removal]
+why: An exported, already-deprecated module is removed, and the commit records why it existed and links usage evidence of zero callers, so the pack attaches and the removal resolves at review.

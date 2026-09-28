@@ -1,0 +1,15 @@
+diff --git a/src/billing/invoice-lines.ts b/src/billing/invoice-lines.ts
+index 7a8b9c0..1d2e3f4 100644
+--- a/src/billing/invoice-lines.ts
++++ b/src/billing/invoice-lines.ts
+@@ -12,8 +12,8 @@ type Line = { quantity: number; unitMinorUnits: number };
+-function sumLines(lines: Line[]): number {
++function totalMinorUnits(lines: Line[]): number {
+   return lines.reduce((acc, line) => acc + line.quantity * line.unitMinorUnits, 0);
+ }
+ 
+ export function buildInvoiceTotals(lines: Line[]) {
+-  const subtotal = sumLines(lines);
++  const subtotal = totalMinorUnits(lines);
+   return { subtotal };
+ }

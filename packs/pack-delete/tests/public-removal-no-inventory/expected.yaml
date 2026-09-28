@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [removal]
+why: An exported function is removed with no deprecation notice, no consumer inventory and no account of why its different rounding existed.

@@ -1,0 +1,12 @@
+diff --git a/src/styles/buttons.css b/src/styles/buttons.css
+index 1f2e3d4..5c6b7a8 100644
+--- a/src/styles/buttons.css
++++ b/src/styles/buttons.css
+@@ -1,5 +1,5 @@
+ .button-primary {
+-  background: var(--color-blue-600);
+-  padding: var(--space-2) var(--space-4);
++  background: var(--color-blue-700);
++  padding: var(--space-3) var(--space-5);
+   border-radius: var(--radius-md);
+ }

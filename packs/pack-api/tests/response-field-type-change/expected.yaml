@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [public-boundary-shape]
+why: The serializer for a public endpoint changes the existing total field from a number to a string.

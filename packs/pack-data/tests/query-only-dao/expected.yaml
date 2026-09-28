@@ -1,0 +1,2 @@
+attaches: false
+why: A read query changes with no migration, schema dump or data-writing script in the change.

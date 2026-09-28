@@ -1,0 +1,25 @@
+From 9d1e3a5c7d9f1b3c5e7a9c1e3b5d7f9b1d3f5c7e Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 14:20:00 +0000
+Subject: [PATCH] Inline padLeft in the date formatter
+
+---
+ src/format/date.ts | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/src/format/date.ts b/src/format/date.ts
+index 0c1d2e3..4f5a6b7 100644
+--- a/src/format/date.ts
++++ b/src/format/date.ts
+@@ -1,9 +1,5 @@
+-function padLeft(value: number): string {
+-  return String(value).padStart(2, "0");
+-}
+-
+ export function isoDate(d: Date): string {
+-  const month = padLeft(d.getUTCMonth() + 1);
+-  const day = padLeft(d.getUTCDate());
++  const month = String(d.getUTCMonth() + 1).padStart(2, "0");
++  const day = String(d.getUTCDate()).padStart(2, "0");
+   return `${d.getUTCFullYear()}-${month}-${day}`;
+ }

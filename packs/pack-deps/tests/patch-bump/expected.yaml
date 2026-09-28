@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [version-bump]
+why: An existing dependency's patch version changes, which attaches with findings capped at gated_auto when the audit is clean.

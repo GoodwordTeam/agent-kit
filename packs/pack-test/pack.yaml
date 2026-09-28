@@ -1,0 +1,135 @@
+id: pack-test
+version: 0.1.0
+summary: >-
+  Constraints on the test evidence behind a behavior change: a test for each changed behavior,
+  a failing-first reproduction for every bug fix, no skipped or weakened tests to reach green, and
+  proof the suite actually ran. Pyramid and size targets stay advisory project guidance.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: behavior-change
+      artifact_kinds: [source, handler, domain-logic]
+      semantics:
+        - a new or changed branch, state mutation, API or control-flow behavior, or error handling
+      evidence_required:
+        - the changed behavior in the diff, not merely a changed production file
+    - id: bug-fix
+      artifact_kinds: [source, ticket]
+      semantics:
+        - the change fixes a reported defect
+      evidence_required:
+        - the fix and the report or ticket it answers
+    - id: test-change
+      artifact_kinds: [test, test-config, ci-config]
+      semantics:
+        - tests, fixtures, mocks or the harness change
+        - a test is skipped, an assertion removed or loosened, or a coverage threshold lowered
+      evidence_required:
+        - the changed test or setting
+  examples:
+    - artifact: A new error branch in a payment handler with no test changes.
+      attaches: true
+      rule: behavior-change
+      why: New error handling with no corresponding test work.
+    - artifact: A fix for a reported off-by-one with no test that fails on the old code.
+      attaches: true
+      rule: bug-fix
+      why: A bug fix without a failing-first reproduction.
+    - artifact: A pure rename of a module and its imports.
+      attaches: false
+      why: No behavior changes.
+    - artifact: An internal helper is extracted and the existing tests pass unmodified.
+      attaches: false
+      why: Declined with a recorded reason; observable behavior is unchanged and the green suite is the evidence.
+constraints:
+  - id: behavior-has-test
+    kind: evidence-required
+    requirement: >-
+      Every new or changed behavior has a test through its public interface whose name says what
+      it verifies. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+  - id: prove-it-for-fixes
+    kind: evidence-required
+    requirement: >-
+      A bug fix carries a reproduction test shown failing on the pre-fix code. Most permissive
+      autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+  - id: no-weakened-tests
+    kind: must-not
+    requirement: >-
+      No skipped or disabled test, weakened assertion, lowered threshold or removed coverage to
+      reach green without a separate recorded decision. Most permissive autofix_class manual.
+  - id: suite-actually-ran
+    kind: evidence-required
+    requirement: >-
+      The receipt shows the repository's own test command ran after the last change, not a default
+      command or a repeat of an earlier run on unchanged code. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+reviewer_guidance:
+  - lane: code-review/testing
+    guidance: >-
+      Check coverage of the changed behavior, failing-first evidence for a fix, weak or
+      implementation-coupled assertions, and any skip or loosened threshold.
+  - lane: code-review/correctness
+    guidance: >-
+      Check the tests assert the intended behavior, not merely the behavior the code now has.
+kb_rules:
+  - "The project record's guidance block for test pyramid and change size; advisory, never a gate."
+  - "The project's test command, frameworks and any coverage policy, read through readContext."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/test-driven-development/SKILL.md
+      license: MIT
+      adaptation: >-
+        The Beyonce Rule, the Prove-It Pattern, the red flags and the verification checklist became
+        constraints; the pyramid figures were left in the project record rather than stated; the
+        rationalization table gained a third column.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/persona-catalog.md
+      license: MIT
+      adaptation: >-
+        The testing persona's behavioral triggers and its production-file-presence non-trigger
+        became the behavior-change rule and the refactor non-trigger.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  resolved_conflicts:
+    - numeric-heuristics-are-guidance
+    - ci-repair-restricts-purpose-not-permission
+    - panel-composition-by-declared-risk
+    - safe-auto-restricted-per-seat
+    - central-kb-owns-project-artifacts
+tests:
+  - id: new-branch-no-test
+    kind: positive
+    given: A handler gains a new error branch and no test changes.
+    expect: Attaches on behavior-change.
+    fixture: packs/pack-test/tests/new-branch-no-test
+  - id: fix-without-repro
+    kind: positive
+    given: A fix for a reported defect with no reproduction test.
+    expect: Attaches on bug-fix and behavior-change.
+    fixture: packs/pack-test/tests/fix-without-repro
+  - id: rename-only
+    kind: negative
+    given: A function is renamed and its call sites updated, with no behavior change.
+    expect: Does not attach.
+    fixture: packs/pack-test/tests/rename-only
+  - id: refactor-tests-unchanged
+    kind: negative
+    given: An internal helper is extracted and the existing tests stay unchanged.
+    expect: Declines, recording that behavior is unchanged and the green suite is the evidence.
+    fixture: packs/pack-test/tests/refactor-tests-unchanged
+  - id: spike-skip-claim
+    kind: adversarial
+    given: The ticket says just a spike, skip tests, while the change adds branching behavior and skips an existing test.
+    expect: Attaches on behavior-change and test-change; the claim does not suppress it.
+    fixture: packs/pack-test/tests/spike-skip-claim

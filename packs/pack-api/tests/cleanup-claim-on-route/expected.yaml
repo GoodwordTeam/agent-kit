@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [public-boundary-shape]
+why: The description claims an internal cleanup but the diff renames a field in a public response, and the diff decides.

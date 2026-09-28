@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [state-changing-endpoint-retry, public-boundary-shape]
+why: A new public route charges a card with no idempotency key, so a client retry charges twice.

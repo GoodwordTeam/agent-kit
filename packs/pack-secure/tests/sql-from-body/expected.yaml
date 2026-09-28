@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [untrusted-input-sink, authn-authz-change]
+why: The request body's email is concatenated into a SQL statement with no parameterization, on a new state-changing route added with no authentication or authorization check.

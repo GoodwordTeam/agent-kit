@@ -1,0 +1,15 @@
+diff --git a/src/components/TaskRow.tsx b/src/components/TaskRow.tsx
+index 1a2b3c4..5d6e7f8 100644
+--- a/src/components/TaskRow.tsx
++++ b/src/components/TaskRow.tsx
+@@ -8,7 +8,9 @@ export function TaskRow({ task, onOpen }: TaskRowProps) {
+   return (
+     <li className="task-row">
+       <span className="task-title">{task.title}</span>
+-      <button onClick={() => onOpen(task.id)}>{t("tasks.open")}</button>
++      <div className="task-open" onClick={() => onOpen(task.id)}>
++        <ChevronIcon />
++      </div>
+     </li>
+   );
+ }

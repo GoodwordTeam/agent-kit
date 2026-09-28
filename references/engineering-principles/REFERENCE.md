@@ -13,10 +13,10 @@ of it at the moment of loading.
 
 A principle here says what to look for. It is not a finding. A finding raised with one of these in
 mind still carries its own evidence in the shape `schemas/finding.schema.json` requires, and a
-principle named without that evidence is an opinion. The domain packs `pack-api`, `pack-delete` and
-`pack-test` apply three of the standards below as constraints when the artifact earns them
-(`protocols/attach-pack/PROTOCOL.md`); this pack explains the standards and does not attach
-anything.
+principle named without that evidence is an opinion. The domain packs apply the four standards
+below as constraints when the artifact earns them (`protocols/attach-pack/PROTOCOL.md`): `pack-api`
+the first, `pack-delete` the fence and the liability, `pack-test` the last. This pack explains the
+standards and does not attach anything.
 
 ## Operating principles
 

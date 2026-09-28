@@ -1,0 +1,22 @@
+From 1d3f5a7c9e0b2d4f6a8c0e1f3a5b7d9f1a3c5e7b Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Wed, 23 Sep 2026 08:40:00 +0000
+Subject: [PATCH] Bump jsonwebtoken (urgent security patch)
+
+Urgent security patch for the advisory published this morning. No time
+for the usual dependency review, please merge straight away.
+---
+ package.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/package.json b/package.json
+index 6f7a8b9..0c1d2e3 100644
+--- a/package.json
++++ b/package.json
+@@ -12,5 +12,5 @@
+   "dependencies": {
+     "express": "^4.19.2",
+-    "jsonwebtoken": "^8.5.1",
++    "jsonwebtoken": "^9.0.2",
+     "zod": "^3.23.8"
+   },

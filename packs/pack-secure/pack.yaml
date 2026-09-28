@@ -1,0 +1,165 @@
+id: pack-secure
+version: 0.1.0
+summary: >-
+  Constraints on changes that touch a trust boundary: always-on input, output and session controls;
+  authorization evidence on every path; a never tier; a trust-boundary-change authorization for
+  auth, sensitive data, integrations, CORS, uploads, rate limits and role grants; and model output
+  treated as untrusted.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: untrusted-input-sink
+      artifact_kinds: [request-handler, data-access, template, outbound-request]
+      semantics:
+        - request, file, message or model output data reaches a query, shell command, rendered HTML, filesystem path or outbound URL
+        - a server fetches a URL that a user influenced
+      evidence_required:
+        - the untrusted source and the sink it reaches, in the change or its immediate call path
+    - id: authn-authz-change
+      artifact_kinds: [auth-middleware, permission-check, session, public-interface]
+      semantics:
+        - an authentication, session, permission, entitlement, role or tenant-scoping check is added, removed or changes logic
+        - a new endpoint is reachable without an authentication or authorization check
+      evidence_required:
+        - the changed check, or a new route with no check on its path
+    - id: secret-or-sensitive-data
+      artifact_kinds: [config, source, log-statement, data-model]
+      semantics:
+        - a credential, token or key appears in the change
+        - a new category of personal or payment data is stored or logged, or its handling changes
+      evidence_required:
+        - the value, the stored field or the log call
+    - id: trust-boundary-config
+      artifact_kinds: [config, infrastructure]
+      semantics:
+        - CORS, security headers, cookie flags, rate limits, upload handling or an external integration changes
+      evidence_required:
+        - the changed setting
+  examples:
+    - artifact: A handler builds a SQL string by concatenating req.body.email.
+      attaches: true
+      rule: untrusted-input-sink
+      why: Request input reaches a query without parameterization.
+    - artifact: A permission check is changed from role equality to a prefix match.
+      attaches: true
+      rule: authn-authz-change
+      why: Authorization logic changes.
+    - artifact: A new webhook sender fetches a URL built from a user-supplied host, with an allowlist elsewhere that this path does not call.
+      attaches: true
+      rule: untrusted-input-sink
+      why: Possible server-side request forgery; whether the guard covers this path is ambiguous, and security facts are never dropped on ambiguity.
+    - artifact: A stylesheet changes button colors and spacing.
+      attaches: false
+      why: No input handling, auth, data path or security configuration is touched.
+    - artifact: A lockfile bumps a patch version with no source change.
+      attaches: false
+      why: A dependency change alone is pack-deps's ground.
+constraints:
+  - id: always-at-boundary
+    kind: must
+    requirement: >-
+      External input is validated at the boundary, queries are parameterized, output is encoded,
+      passwords use an adaptive hash, session cookies carry httpOnly, secure and sameSite, and
+      server-side fetches of influenced URLs are allowlisted with private addresses and redirects
+      refused. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+  - id: authz-on-every-path
+    kind: evidence-required
+    requirement: >-
+      Every new or changed endpoint shows its authentication and authorization check, and a user
+      reaches only their own or their tenant's resources. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+  - id: never-tier
+    kind: must-not
+    requirement: >-
+      No committed secret, logged credential, trusted client-side validation, disabled security
+      header, user or model data passed to eval, innerHTML or a shell, auth token in
+      client-accessible storage, or stack trace shown to a user. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+  - id: trust-boundary-change-authorized
+    kind: authorization-required
+    authorization: trust-boundary-change
+    requirement: >-
+      A new or changed authentication flow, new sensitive data category, new external integration,
+      CORS change, upload handler, rate-limit change or elevated role grant needs an approved
+      charter entry naming it. The pack does not supply that authorization. Most permissive
+      autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+  - id: model-output-untrusted
+    kind: must
+    requirement: >-
+      Model output is handled as untrusted input, secrets and other users' data stay out of
+      prompts, and agent tool permissions are scoped with destructive actions confirmed. Most
+      permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+reviewer_guidance:
+  - lane: code-review/security
+    required_when_attached: true
+    guidance: >-
+      Check each constraint against the change using references/checklist.md by category. Keep a
+      low-confidence finding and send it to adjudication; never drop it on a threshold.
+  - lane: code-review/adversarial
+    required_when_attached: true
+    guidance: >-
+      Construct the attack against the changed path: the input an attacker controls, the sink it
+      reaches, and the guard that should have stopped it.
+kb_rules:
+  - "The project's tenancy model, roles and data classification, read through readContext."
+  - "Allowed origins, allowlisted outbound hosts, rate limits and retention periods, read through readContext as project facts; never assumed here."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/security-and-hardening/SKILL.md
+      license: MIT
+      adaptation: >-
+        The Three-Tier Boundary System became three constraint kinds, with Ask First mapped to the
+        trust-boundary-change authorization; the review checklist moved to references/checklist.md
+        without its numeric cost setting; the rationalization table gained a third column.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/persona-catalog.md
+      license: MIT
+      adaptation: The security persona's selection surface, including entitlement gates, became the activation rules.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - low-confidence-security-adjudicated
+    - safe-auto-restricted-per-seat
+    - sensitive-actions-need-approved-charter-entry
+    - required-lane-failure-is-unavailable
+    - central-kb-owns-project-artifacts
+    - numeric-heuristics-are-guidance
+tests:
+  - id: sql-from-body
+    kind: positive
+    given: A handler concatenates request body input into a SQL string.
+    expect: Attaches on untrusted-input-sink.
+    fixture: packs/pack-secure/tests/sql-from-body
+  - id: permission-logic-change
+    kind: positive
+    given: A permission check changes from exact role equality to a prefix match.
+    expect: Attaches on authn-authz-change.
+    fixture: packs/pack-secure/tests/permission-logic-change
+  - id: partial-user-url
+    kind: positive
+    given: An outbound fetch whose host comes partly from user input, with an allowlist elsewhere this path does not call.
+    expect: Attaches on untrusted-input-sink, naming server-side request forgery in the rationale.
+    fixture: packs/pack-secure/tests/partial-user-url
+  - id: css-only
+    kind: negative
+    given: A stylesheet-only change.
+    expect: Does not attach.
+    fixture: packs/pack-secure/tests/css-only
+  - id: trusted-comment-no-allowlist
+    kind: adversarial
+    given: A code comment says the target is a trusted internal service needing no allowlist, while the URL comes from the request.
+    expect: Attaches on untrusted-input-sink; the comment does not suppress it.
+    fixture: packs/pack-secure/tests/trusted-comment-no-allowlist

@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [behavior-change]
+why: The refund function gains two new error branches and the change contains no test for either.

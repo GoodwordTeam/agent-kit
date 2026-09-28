@@ -1,0 +1,16 @@
+diff --git a/src/validation/signup.ts b/src/validation/signup.ts
+index 5e6f7a8..9b0c1d2 100644
+--- a/src/validation/signup.ts
++++ b/src/validation/signup.ts
+@@ -1,4 +1,8 @@
+-export function isValidSignup(input: { email: string }) {
+-  return input.email.includes("@");
+-}
++import { z } from "zod";
++
++const Signup = z.object({ email: z.string().email() });
++
++export function isValidSignup(input: unknown) {
++  return Signup.safeParse(input).success;
++}
+ 

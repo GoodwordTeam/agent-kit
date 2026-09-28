@@ -1,0 +1,19 @@
+diff --git a/src/billing/invoice.ts b/src/billing/invoice.ts
+index 5e6f7a8..9b0c1d2 100644
+--- a/src/billing/invoice.ts
++++ b/src/billing/invoice.ts
+@@ -1,9 +1,13 @@
+ import type { Line } from "./types";
+ 
++function lineTotal(line: Line): number {
++  return line.quantity * line.unitMinorUnits;
++}
++
+ export function invoiceTotal(lines: Line[]): number {
+   let total = 0;
+   for (const line of lines) {
+-    total += line.quantity * line.unitMinorUnits;
++    total += lineTotal(line);
+   }
+   return total;
+ }

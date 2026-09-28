@@ -1,0 +1,22 @@
+diff --git a/src/components/ConfirmDelete.tsx b/src/components/ConfirmDelete.tsx
+new file mode 100644
+index 0000000..2c3d4e5
+--- /dev/null
++++ b/src/components/ConfirmDelete.tsx
+@@ -0,0 +1,16 @@
++import { t } from "../i18n";
++
++export function ConfirmDelete({ open, onConfirm, onCancel }: ConfirmDeleteProps) {
++  if (!open) return null;
++  return (
++    <div className="modal-backdrop">
++      <div className="modal">
++        <p>{t("tasks.confirmDelete")}</p>
++        <div className="modal-actions">
++          <button onClick={onCancel}>{t("common.cancel")}</button>
++          <button onClick={onConfirm}>{t("common.delete")}</button>
++        </div>
++      </div>
++    </div>
++  );
++}

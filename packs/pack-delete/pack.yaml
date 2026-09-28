@@ -1,0 +1,154 @@
+id: pack-delete
+version: 0.1.0
+summary: >-
+  Constraints that make a removal deliberate: why the old behavior existed, an evidenced consumer
+  inventory, a replacement before removal, the owner migrates consumers, removal is complete, and a
+  separate destructive-data authorization when stored data goes.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: removal
+      artifact_kinds: [source, route, api-definition, config, migration]
+      semantics:
+        - a function, type, endpoint, file, feature flag, config key or stored column is removed
+        - a stored or public name is renamed away
+      evidence_required:
+        - the removed thing
+        - whether it was reachable outside its own file, by export, route, persistence or configuration
+    - id: deprecation-or-replacement
+      artifact_kinds: [source, change-description, ticket]
+      semantics:
+        - a deprecation marker is added
+        - a new implementation replaces an old one and callers are switched over
+      evidence_required:
+        - the marker or the replacement
+        - the old path it replaces
+  examples:
+    - artifact: An exported function is deleted with no deprecation notice or consumer inventory.
+      attaches: true
+      rule: removal
+      why: A public symbol is removed and nothing shows why it existed or who used it.
+    - artifact: A migration renames a stored column in place.
+      attaches: true
+      rule: removal
+      why: The old column name is removed; pack-data attaches for the schema step as well.
+    - artifact: A private helper, never exported and called only in its own file, is deleted.
+      attaches: false
+      why: No consumer outside the file can exist.
+    - artifact: A file is deleted and a file with similar contents is added under a new path.
+      attaches: false
+      why: Declined with a recorded reason; the selector cannot tell whether anything was removed.
+constraints:
+  - id: chesterton-answered
+    kind: evidence-required
+    requirement: >-
+      The change states why the removed behavior existed and why that reason no longer applies; a
+      removal with no answer is a finding for a human to decide. Most permissive autofix_class
+      manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md
+  - id: consumers-inventoried
+    kind: evidence-required
+    requirement: >-
+      Zero active consumers is shown from a usage search, metrics, logs or dependency analysis, not
+      asserted. Observable quirks count as consumers. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: replacement-before-removal
+    kind: must
+    requirement: >-
+      Something with consumers is not removed until a working replacement covers their critical use
+      cases, and the removal answers the deprecation questions. Most permissive autofix_class
+      advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: owner-migrates-consumers
+    kind: must
+    requirement: >-
+      The owner of the removed thing migrates its consumers or provides a backward-compatible path.
+      Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: removed-completely
+    kind: must
+    requirement: >-
+      Associated tests, documentation, configuration and deprecation notices go with the removal,
+      and no reference remains. Most permissive autofix_class gated_auto only where the inventory
+      and the Chesterton answer are recorded, manual otherwise.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: data-removal-authorized
+    kind: authorization-required
+    authorization: destructive-data
+    requirement: >-
+      Removing stored data needs an approved charter entry naming that step. Reviewer approval is
+      necessary and not sufficient, and the pack does not supply the authorization. Most
+      permissive autofix_class manual.
+reviewer_guidance:
+  - lane: code-review/project-standards
+    guidance: >-
+      Check the removal against the project's declared deprecation and removal rules, rule by rule;
+      return empty where the project declares none.
+  - lane: code-review/correctness
+    guidance: >-
+      Check the inventory: callers, routes, persisted names and configuration readers the change did
+      not update.
+  - lane: code-review/maintainability
+    guidance: >-
+      Check the removal is complete: orphaned tests, dead configuration, stale documentation and
+      zombie code left behind.
+kb_rules:
+  - "The project's deprecation policy, advisory or compulsory default, and deprecation window, read through readContext."
+  - "Where consumers are registered and which usage metrics exist, read through readContext as project facts; never assumed here."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/deprecation-and-migration/SKILL.md
+      license: MIT
+      adaptation: >-
+        Code-is-a-liability, Hyrum's Law, the five deprecation questions, the Churn Rule, the
+        zero-usage removal steps and zombie code became constraints; the expand, migrate and
+        contract material was left to pack-data; the idle-period figure was left to the project;
+        the rationalization table gained a third column.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/code-simplification/SKILL.md
+      license: MIT
+      adaptation: Chesterton's Fence, stated plainly, became the opening rule and the chesterton-answered constraint.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  conversation_locators:
+    - "G:L1775"
+  resolved_conflicts:
+    - sensitive-actions-need-approved-charter-entry
+    - safe-auto-restricted-per-seat
+    - central-kb-owns-project-artifacts
+    - numeric-heuristics-are-guidance
+tests:
+  - id: public-removal-no-inventory
+    kind: positive
+    given: An exported function is deleted with no deprecation notice, consumer inventory or reason.
+    expect: Attaches on removal; chesterton-answered is raised for a human.
+    fixture: packs/pack-delete/tests/public-removal-no-inventory
+  - id: dead-code-verified
+    kind: positive
+    given: Dead code is removed, and the commit links a usage search showing zero consumers and why it existed.
+    expect: Attaches on removal and resolves at review with no escalation.
+    fixture: packs/pack-delete/tests/dead-code-verified
+  - id: column-rename-in-place
+    kind: positive
+    given: A migration renames a stored column in place.
+    expect: Attaches on removal; pack-data attaches as well.
+    fixture: packs/pack-delete/tests/column-rename-in-place
+  - id: private-helper
+    kind: negative
+    given: A private helper called only within its own file is deleted.
+    expect: Does not attach.
+    fixture: packs/pack-delete/tests/private-helper
+  - id: nothing-depends-claim
+    kind: adversarial
+    given: The commit says cleanup, nothing depends on this, while deleting an exported module with no usage evidence.
+    expect: Attaches on removal; the claim is not an inventory.
+    fixture: packs/pack-delete/tests/nothing-depends-claim

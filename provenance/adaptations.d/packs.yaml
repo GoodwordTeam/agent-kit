@@ -110,3 +110,194 @@ adaptations:
       unfamiliar term when the reader needs it, and replace internal jargon with the action or
       consequence it means unless the caller requires the exact wording. The donor's keep-exact-
       identifiers clause is carried in the pack's never-touched list rather than in that section.
+
+  # ---- packs/pack-api -----------------------------------------------------------
+
+  - path: packs/pack-api/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+    rationale: >-
+      Hyrum's Law, the One-Version Rule, contract-first and boundary validation became checkable
+      constraints, and the tests-are-not-enough caveat became the limit on the contract-tested
+      constraint; the idempotency section moved to references/idempotency.md; the two-column
+      rationalization table gained a third column.
+
+  - path: packs/pack-api/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md
+    rationale: >-
+      The api-contract persona's selection condition, including the insufficiency of an exported
+      symbol inside one module, became the activation rules.
+
+  - path: packs/pack-api/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  - path: packs/pack-api/references/idempotency.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+    rationale: >-
+      The donor's idempotency guidance moved out of the pack body to keep it within the length
+      target: a key derived from the caller's intent, an atomic claim, each stored-outcome case
+      handled, and key retention. Retention windows and other figures are left to the project record
+      (ruling `numeric-heuristics-are-guidance`).
+
+  # ---- packs/pack-data ----------------------------------------------------------
+
+  - path: packs/pack-data/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      The expand/contract section, its rules, the schema red flags and the schema rationalization
+      rows became constraints and table rows; the deprecation half of the file went to pack-delete.
+
+  - path: packs/pack-data/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md
+    rationale: >-
+      The data-migration selection rule and its model-only or query-only non-trigger became the
+      activation rules and the first non-trigger.
+
+  - path: packs/pack-data/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  # ---- packs/pack-secure --------------------------------------------------------
+
+  - path: packs/pack-secure/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+    rationale: >-
+      The Three-Tier Boundary System became three constraint kinds, with Ask First mapped to the
+      trust-boundary-change authorization; the review checklist moved to references/checklist.md
+      without its numeric cost setting; the rationalization table gained a third column.
+
+  - path: packs/pack-secure/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md
+    rationale: >-
+      The security persona's selection surface, including entitlement gates, became the activation
+      rules.
+
+  - path: packs/pack-secure/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  - path: packs/pack-secure/references/checklist.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+    rationale: >-
+      The donor's category checklist moved out of the pack body to keep it within the length target.
+      The numeric hashing-cost figure is dropped; cost parameters are project facts (ruling
+      `numeric-heuristics-are-guidance`).
+
+  # ---- packs/pack-deps ----------------------------------------------------------
+
+  - path: packs/pack-deps/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
+    rationale: >-
+      The dependency audit triage, supply-chain hygiene and supply-chain checklist items became
+      constraints; the audit rationalization row gained a third column.
+
+  - path: packs/pack-deps/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  # ---- packs/pack-test ----------------------------------------------------------
+
+  - path: packs/pack-test/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/test-driven-development/SKILL.md
+    rationale: >-
+      The Beyonce Rule, the Prove-It Pattern, the red flags and the verification checklist became
+      constraints; the pyramid figures were left in the project record rather than stated; the
+      rationalization table gained a third column.
+
+  - path: packs/pack-test/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md
+    rationale: >-
+      The testing persona's behavioral triggers and its production-file-presence non-trigger became
+      the behavior-change rule and the refactor non-trigger.
+
+  - path: packs/pack-test/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  # ---- packs/pack-frontend ------------------------------------------------------
+
+  - path: packs/pack-frontend/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+    rationale: >-
+      The accessibility section, the design-system adherence section and the verification checklist
+      became constraints; breakpoint and contrast figures were left to the project record; the
+      rationalization table gained a third column. The internationalization constraint has no donor
+      source; it is conversation-origin, recorded in pack.yaml as G:L1778.
+
+  - path: packs/pack-frontend/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md
+    rationale: >-
+      The frontend-races persona's selection surface became the async-ui-state rule, routed to code-
+      review/frontend-races only when that rule fires.
+
+  - path: packs/pack-frontend/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  # ---- packs/pack-perf ----------------------------------------------------------
+
+  - path: packs/pack-perf/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+    rationale: >-
+      The five-step workflow, the keep-or-revert table, the attempt ledger and the red flags became
+      constraints, and its measure-first premise backs the measured-problem attachment rule; the
+      ledger moved from a repository file to the knowledgebase; budget figures and Web Vitals
+      thresholds were left to the project; the rationalization table gained a third column.
+
+  - path: packs/pack-perf/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/persona-catalog.md
+    rationale: >-
+      The performance persona's cache-alone and async-alone exclusions became non-triggers, and its
+      selection surface of queries, loops and fan-out became the no-known-anti-pattern constraint,
+      applied once the pack is attached. That surface is not an attachment rule: plan section 3
+      attaches the pack only on a stated budget or a measured problem, and the plan outranks the
+      persona.
+
+  - path: packs/pack-perf/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.
+
+  # ---- packs/pack-delete --------------------------------------------------------
+
+  - path: packs/pack-delete/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      Code-is-a-liability, Hyrum's Law, the five deprecation questions, the Churn Rule, the zero-
+      usage removal steps and zombie code became constraints; the expand, migrate and contract
+      material was left to pack-data; the idle-period figure was left to the project; the
+      rationalization table gained a third column. The review route to a human on a missing
+      Chesterton answer is conversation-origin, recorded in pack.yaml as G:L1775.
+
+  - path: packs/pack-delete/PACK.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md
+    rationale: >-
+      Chesterton's Fence, stated plainly, became the opening rule and the chesterton-answered
+      constraint.
+
+  - path: packs/pack-delete/PACK.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:docs/guides/packs.md
+    rationale: >-
+      The framing that pack text is evidence, quoted and never obeyed, applied to this pack's skip
+      claims. The donor's dynamic pack resolver is not carried; activation is the fixed rule set in
+      pack.yaml.

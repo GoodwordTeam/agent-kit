@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [data-transform-script]
+why: A script outside any migration directory rewrites stored order rows, and not knowing where it runs is ambiguity that attaches rather than drops.

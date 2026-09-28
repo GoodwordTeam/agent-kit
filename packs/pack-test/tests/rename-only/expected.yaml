@@ -1,0 +1,2 @@
+attaches: false
+why: A function is renamed and its one call site updated, with no change in behavior.

@@ -1,0 +1,17 @@
+diff --git a/src/webhooks/deliver.ts b/src/webhooks/deliver.ts
+new file mode 100644
+index 0000000..8c9d0e1
+--- /dev/null
++++ b/src/webhooks/deliver.ts
+@@ -0,0 +1,11 @@
++import type { Subscription } from "./types";
++
++// Delivers an event to the subscriber's endpoint. The host is the one the
++// customer entered on the integrations page.
++export async function deliver(sub: Subscription, event: unknown) {
++  const url = `https://${sub.customerHost}/hooks/${sub.id}`;
++  await fetch(url, {
++    method: "POST",
++    body: JSON.stringify(event),
++  });
++}

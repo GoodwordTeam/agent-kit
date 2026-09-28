@@ -1,0 +1,11 @@
+diff --git a/db/migrate/20260921101500_add_region_to_accounts.rb b/db/migrate/20260921101500_add_region_to_accounts.rb
+new file mode 100644
+index 0000000..3c4d5e6
+--- /dev/null
++++ b/db/migrate/20260921101500_add_region_to_accounts.rb
+@@ -0,0 +1,5 @@
++class AddRegionToAccounts < ActiveRecord::Migration[7.1]
++  def change
++    add_column :accounts, :region, :string, null: false
++  end
++end

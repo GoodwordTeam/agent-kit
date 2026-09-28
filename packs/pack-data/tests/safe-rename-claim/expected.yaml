@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [migration-artifact, destructive-schema-step]
+why: The commit calls it a safe rename, but the migration renames a column in place, which breaks whichever code version is still running during the rollout.

@@ -1,0 +1,16 @@
+diff --git a/src/api/routes/preview.ts b/src/api/routes/preview.ts
+index 6e7f8a9..0b1c2d3 100644
+--- a/src/api/routes/preview.ts
++++ b/src/api/routes/preview.ts
+@@ -4,5 +4,10 @@ import { requireUser } from "../middleware/auth";
+ export const preview = Router();
+ 
+ preview.get("/api/preview", requireUser, async (req, res) => {
+-  res.json(await renderPreview(req.query.slug as string));
++  // Trusted internal service: the render host is always one of ours,
++  // so no allowlist is needed here.
++  const host = (req.query.renderHost as string) ?? "render.internal";
++  const upstream = await fetch(`http://${host}/render?slug=${req.query.slug}`);
++  res.json(await upstream.json());
+ });
++

@@ -1,0 +1,22 @@
+diff --git a/src/api/routes/payments.ts b/src/api/routes/payments.ts
+index 1a2b3c4..5d6e7f8 100644
+--- a/src/api/routes/payments.ts
++++ b/src/api/routes/payments.ts
+@@ -1,8 +1,17 @@
+ import { Router } from "express";
+ import { requireUser } from "../middleware/auth";
++import { chargeCard } from "../../billing/gateway";
++import { orders } from "../../db/orders";
+ 
+ export const payments = Router();
+ 
+ payments.get("/api/payments/:id", requireUser, async (req, res) => {
+   res.json(await orders.payment(req.params.id));
+ });
++
++payments.post("/api/orders/:id/charge", requireUser, async (req, res) => {
++  const order = await orders.find(req.params.id);
++  const result = await chargeCard(order.cardToken, order.amountMinorUnits);
++  await orders.markPaid(order.id, result.chargeId);
++  res.status(201).json({ chargeId: result.chargeId });
++});

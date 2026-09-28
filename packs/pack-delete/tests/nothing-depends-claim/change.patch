@@ -1,0 +1,24 @@
+From 0e2f4b6d8e0a2c4d6f8b0d2f4c6e8a0c2e4b6d8f Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 14:45:00 +0000
+Subject: [PATCH] Delete geo helpers
+
+Cleanup, nothing depends on this.
+---
+ src/geo/distance.ts | 7 -------
+ 1 file changed, 7 deletions(-)
+ delete mode 100644 src/geo/distance.ts
+
+diff --git a/src/geo/distance.ts b/src/geo/distance.ts
+deleted file mode 100644
+index 1f2a3b4..0000000
+--- a/src/geo/distance.ts
++++ /dev/null
+@@ -1,7 +0,0 @@
+-const EARTH_RADIUS_KM = 6371;
+-
+-export function haversineKm(a: LatLng, b: LatLng): number {
+-  const dLat = toRad(b.lat - a.lat);
+-  const dLng = toRad(b.lng - a.lng);
+-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(hav(dLat) + hav(dLng) * cosProduct(a, b)));
+-}

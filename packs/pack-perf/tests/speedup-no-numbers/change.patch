@@ -1,0 +1,29 @@
+From 3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7a9b1d Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 11:05:00 +0000
+Subject: [PATCH] Speed up report aggregation
+
+Rewrites the grouping step with a Map instead of repeated filters.
+This gives a significant speedup on large reports.
+---
+ src/reports/aggregate.ts | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/src/reports/aggregate.ts b/src/reports/aggregate.ts
+index 4c5d6e7..8f9a0b1 100644
+--- a/src/reports/aggregate.ts
++++ b/src/reports/aggregate.ts
+@@ -3,7 +3,10 @@ import type { Row } from "./types";
+ export function totalsByRegion(rows: Row[]): Record<string, number> {
+-  const regions = [...new Set(rows.map((r) => r.region))];
+   const totals: Record<string, number> = {};
+-  for (const region of regions) {
+-    totals[region] = rows.filter((r) => r.region === region).reduce((s, r) => s + r.amount, 0);
++  const byRegion = new Map<string, number>();
++  for (const row of rows) {
++    byRegion.set(row.region, (byRegion.get(row.region) ?? 0) + row.amount);
++  }
++  for (const [region, amount] of byRegion) {
++    totals[region] = amount;
+   }
+   return totals;

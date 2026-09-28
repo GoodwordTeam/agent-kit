@@ -1,0 +1,10 @@
+diff --git a/app/serializers/account_serializer.rb b/app/serializers/account_serializer.rb
+index 2a3b4c5..6d7e8f9 100644
+--- a/app/serializers/account_serializer.rb
++++ b/app/serializers/account_serializer.rb
+@@ -1,4 +1,4 @@
+ class AccountSerializer < ActiveModel::Serializer
+-  attributes :id, :name, :created_at
++  attributes :id, :name, :region, :created_at
+ end
+ 

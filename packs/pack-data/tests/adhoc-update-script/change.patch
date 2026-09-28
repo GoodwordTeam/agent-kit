@@ -1,0 +1,10 @@
+diff --git a/scripts/fix_order_status.sql b/scripts/fix_order_status.sql
+new file mode 100644
+index 0000000..4e5f6a7
+--- /dev/null
++++ b/scripts/fix_order_status.sql
+@@ -0,0 +1,4 @@
++-- Orders stuck in 'processing' after the gateway outage.
++UPDATE orders
++SET status = 'failed'
++WHERE status = 'processing' AND updated_at < now() - interval '2 days';

@@ -1,0 +1,2 @@
+attaches: false
+why: Declined because an arithmetic expression is extracted into a private helper, the exported behavior is unchanged, and the existing invoice tests pass unmodified.

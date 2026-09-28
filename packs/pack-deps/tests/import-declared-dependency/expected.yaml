@@ -1,0 +1,2 @@
+attaches: false
+why: Source code starts importing a package the manifest already declares, and no manifest, lockfile or install policy changes.

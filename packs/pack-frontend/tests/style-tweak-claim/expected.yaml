@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [styles-and-layout, user-visible-strings]
+why: The PR calls it a style tweak and asks to skip the a11y pass, but the change removes the keyboard focus outline and hardcodes a label that previously went through the translation function.

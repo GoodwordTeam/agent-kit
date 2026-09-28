@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [migration-artifact, destructive-schema-step]
+why: A migration adds a NOT NULL column with no default to the existing accounts table.

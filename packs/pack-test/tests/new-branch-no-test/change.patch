@@ -1,0 +1,14 @@
+diff --git a/src/billing/refunds.ts b/src/billing/refunds.ts
+index 1a2b3c4..5d6e7f8 100644
+--- a/src/billing/refunds.ts
++++ b/src/billing/refunds.ts
+@@ -10,3 +10,9 @@ export async function refund(chargeId: string, amountMinorUnits: number) {
+   const charge = await charges.find(chargeId);
++  if (charge.status === "disputed") {
++    throw new RefundError("charge is under dispute", { chargeId });
++  }
++  if (amountMinorUnits > charge.amountMinorUnits - charge.refundedMinorUnits) {
++    throw new RefundError("refund exceeds remaining amount", { chargeId });
++  }
+   return gateway.refund(charge.gatewayId, amountMinorUnits);
+ }

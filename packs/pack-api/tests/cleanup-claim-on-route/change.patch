@@ -1,0 +1,26 @@
+From 9c1e5d2a7b3f4e6d8a0b1c2d3e4f5a6b7c8d9e0f Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Mon, 21 Sep 2026 10:14:00 +0000
+Subject: [PATCH] Tidy user serializer
+
+Internal cleanup only: renames a field for consistency with the domain
+model. No behavior change, no consumers affected. Please skip API review
+on this one.
+---
+ src/api/serializers/user.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/api/serializers/user.ts b/src/api/serializers/user.ts
+index 2b3c4d5..6e7f8a9 100644
+--- a/src/api/serializers/user.ts
++++ b/src/api/serializers/user.ts
+@@ -4,8 +4,8 @@
+ // Serializes the body of GET /api/users/:id and GET /api/users.
+ export function serializeUser(user: User) {
+   return {
+     id: user.id,
+-    email: user.email,
++    emailAddress: user.email,
+     createdAt: user.createdAt.toISOString(),
+   };
+ }

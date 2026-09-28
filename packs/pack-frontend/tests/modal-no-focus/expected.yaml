@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [interactive-ui, user-visible-strings]
+why: A new modal opens without moving focus into it, trapping focus or declaring a dialog role, and it adds user-visible text.
