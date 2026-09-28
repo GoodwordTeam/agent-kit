@@ -37,10 +37,12 @@ bundle="${AK_EVAL_BUNDLE:-$root/dist/claude-code}"
 command -v jq >/dev/null || { echo "eval-local: jq is required" >&2; exit 2; }
 
 # The script reads four of the host's options itself: --case and --tag (to know which cases run),
-# --eval-dir (where they live) and --max-cost-usd (one budget across every invocation). The first
-# three still go through to the host, as do --runs and --ablation, which it also notes to tell
-# which cases a cut-short invocation left short. --allow-tools is taken out and replaced by the case grants
-# unless the user passed it, in which case it goes through unchanged and overrides them.
+# --eval-dir (where they live) and --max-cost-usd (one budget across every invocation). --case and
+# --tag stop here: the host keeps only the last --case it is given, so the selection is made by
+# staging a copy of the bundle whose eval directory holds only the selected cases (see "Grants").
+# --eval-dir, --runs and --ablation go through to the host; the script also notes the last two to
+# tell which cases a cut-short invocation left short. --allow-tools is taken out and replaced by the
+# case grants unless the user passed it, in which case it goes through unchanged and overrides them.
 # --scaffold is added when the host offers it and the user passed neither it nor --no-scaffold; the
 # cases in this repository are ours, so their scaffold scripts are trusted. When scaffolds do not
 # run, each invocation lists the cases that declare one in `scaffoldSkipped`.
@@ -61,8 +63,8 @@ scaffold=auto
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --inherit-env) isolation=inherited-env; shift ;;
-    --case) case_globs+=("$2"); args+=("$1" "$2"); shift 2 ;;
-    --case=*) case_globs+=("${1#*=}"); args+=("$1"); shift ;;
+    --case) case_globs+=("$2"); shift 2 ;;
+    --case=*) case_globs+=("${1#*=}"); shift ;;
     --eval-dir) eval_dir="$2"; args+=("$1" "$2"); shift 2 ;;
     --eval-dir=*) eval_dir="${1#*=}"; args+=("$1"); shift ;;
     --runs) runs="$2"; args+=("$1" "$2"); shift 2 ;;
@@ -75,12 +77,12 @@ while [[ $# -gt 0 ]]; do
     --max-cost-usd=*) budget="${1#*=}"; shift ;;
     --exclude-tag) exclude_tags+=("$2"); shift 2 ;;
     --exclude-tag=*) exclude_tags+=("${1#*=}"); shift ;;
-    --tag=*) tags+=("${1#*=}"); args+=(--tag "${1#*=}"); shift ;;
+    --tag=*) tags+=("${1#*=}"); shift ;;
     --allow-tools=*) user_tools+=("${1#*=}"); shift ;;
     --tag | --allow-tools)
       flag="$1"; shift
       while [[ $# -gt 0 && "$1" != -* ]]; do
-        if [[ "$flag" == --tag ]]; then tags+=("$1"); args+=(--tag "$1"); else user_tools+=("$1"); fi
+        if [[ "$flag" == --tag ]]; then tags+=("$1"); else user_tools+=("$1"); fi
         shift
       done ;;
     *) args+=("$1"); shift ;;
@@ -166,7 +168,8 @@ receipt="${json%.json}.receipt.json"
 # that list the tool (research/evals/2026-09-25-isolation.md), so one union grant would widen every
 # case that lists fewer. The selected cases are grouped by the gated tools they declare, and each
 # group runs in its own invocation against a staged copy of the bundle whose eval directory holds
-# only that group's cases. One group with no excluded case runs against the bundle itself.
+# only that group's cases. The same staging applies the --case, --tag and --exclude-tag selection,
+# so the host is never asked to select. Only an unfiltered run of one group uses the bundle itself.
 [[ -n "$eval_dir" ]] || eval_dir="$(jq -r '.experimental.evals // "evals"' "$bundle/.claude-plugin/plugin.json" 2>/dev/null || echo evals)"
 # One line per case: run, skip (not selected) or exclude (selected, but carries an excluded tag).
 listing="$(cd "$root" && AK_EVALS_DIR="$bundle/$eval_dir" \
@@ -215,6 +218,8 @@ else
   while IFS= read -r key; do groups+=("$key"); done < <(awk -F'\t' '$1 == "run" { print $2 }' <<<"$listing" | sort -u)
 fi
 
+staged=false
+if [[ ${#groups[@]} -gt 1 || "$excluding" == true || ${#case_globs[@]} -gt 0 || ${#tags[@]} -gt 0 ]]; then staged=true; fi
 aggregate=0
 spent=0
 invocations="${json%.json}.invocations.jsonl"
@@ -227,7 +232,7 @@ for i in "${!groups[@]}"; do
   key="${groups[$i]}"
   target="$bundle"
   out="$json"
-  if [[ ${#groups[@]} -gt 1 || "$excluding" == true ]]; then
+  if [[ "$staged" == true ]]; then
     target="${json%.json}.groups/$i/$(basename "$bundle")"
     out="${json%.json}.group-$i.json"
     rm -rf "$target"
@@ -238,16 +243,12 @@ for i in "${!groups[@]}"; do
       if [[ "$dir" != . ]]; then rm -rf "${target:?}/$eval_dir/${dir:?}"; fi
     done < <(awk -F'\t' -v k="$key" -v src="$grant_source" '$1 != "run" || (src == "cases" && $2 != k) { print $3 }' <<<"$listing")
   fi
-  # The group's cases with their own run counts; null when the user's grant replaced the listing.
-  wanted=null
-  scaffold_skipped=null
-  if [[ "$grant_source" == cases ]]; then
-    wanted="$(awk -F'\t' -v k="$key" '$1 == "run" && $2 == k { print $4 "\t" $5 "\t" $6 }' <<<"$listing" \
-      | jq -Rsc 'split("\n") | map(select(. != "") | split("\t")
-                 | {name: .[0], runs: (.[1] | tonumber? // null), scaffold: (.[2] == "scaffold")})')"
-    scaffold_skipped="$(jq -nc --argjson wanted "$wanted" --arg mode "$scaffold" \
-      'if $mode == "on" then [] else [$wanted[] | select(.scaffold) | .name] end')"
-  fi
+  # The group's cases with their own run counts. Under the user's grant, every selected case.
+  wanted="$(awk -F'\t' -v k="$key" -v src="$grant_source" '$1 == "run" && (src == "user" || $2 == k) { print $4 "\t" $5 "\t" $6 }' <<<"$listing" \
+    | jq -Rsc 'split("\n") | map(select(. != "") | split("\t")
+               | {name: .[0], runs: (.[1] | tonumber? // null), scaffold: (.[2] == "scaffold")})')"
+  scaffold_skipped="$(jq -nc --argjson wanted "$wanted" --arg mode "$scaffold" \
+    'if $mode == "on" then [] else [$wanted[] | select(.scaffold) | .name] end')"
   grant=()
   [[ -z "$key" ]] || { IFS=, read -r -a tools_list <<<"$key"; grant=(--allow-tools "${tools_list[@]}"); }
   cap=()
@@ -256,8 +257,8 @@ for i in "${!groups[@]}"; do
     if jq -e -n --argjson l "$left" '$l <= 0' >/dev/null; then
       echo "eval-local: budget spent; group [${key:-no gated tools}] not run" >&2
       jq -nc --arg tools "$key" --argjson wanted "$wanted" \
-        '{grant: ($tools | split(",") | map(select(. != ""))), cases: ($wanted | if . == null then null else map(.name) end),
-          skipped: "budget", partial: true}' >>"$invocations"
+        '{grant: ($tools | split(",") | map(select(. != ""))), cases: ($wanted | map(.name)),
+          skipped: "budget", partial: true, incomplete_cases: ($wanted | map(.name) | unique)}' >>"$invocations"
       aggregate=2
       continue
     fi
@@ -293,24 +294,44 @@ for i in "${!groups[@]}"; do
   # Cases with fewer runs on an arm than were asked for (--runs, else the case's runs, else the
   # host's default of 3), or absent from the result. The without arm counts unless --ablation none.
   incomplete="$(jq -c --argjson wanted "$wanted" --arg runs "$runs" --arg ablation "$ablation" '
-    if $wanted == null then null else (.cases // []) as $got
+    (.cases // []) as $got
       | [$wanted | group_by(.name)[] | .[0].name as $n | [$got[] | select(.name == $n)] as $g
          | select(($g | length) < length or any(range(0; $g | length) as $i
              | (if $runs != "" then ($runs | tonumber) else (.[$i].runs // 3) end) as $r
              | (($g[$i].arms.with // []) | length) < $r
                or ($ablation != "none" and (($g[$i].arms.without // []) | length) < $r); .))
-         | $n] end' "$(if [[ -s "$out" ]]; then echo "$out"; else echo /dev/null; fi)")"
-  [[ -n "$incomplete" ]] || incomplete="$(jq -nc --argjson wanted "$wanted" 'if $wanted == null then null else $wanted | map(.name) | unique end')"
+         | $n]' "$(if [[ -s "$out" ]]; then echo "$out"; else echo /dev/null; fi)")"
+  [[ -n "$incomplete" ]] || incomplete="$(jq -nc --argjson wanted "$wanted" '$wanted | map(.name) | unique')"
+  # The host's own partial flag does not cover a case it never ran, so the comparison decides too.
+  # A group that ran none of its cases is an error: the host exits 1 for it, the script exits 2.
+  error=null
+  got="$(if [[ -s "$out" ]]; then jq '.cases // [] | length' "$out"; else echo 0; fi)"
+  if [[ "$got" == 0 ]]; then
+    error='"nothing run"'
+    echo "eval-local: group [${key:-no gated tools}] ran none of its $(jq length <<<"$wanted") case(s)" >&2
+    if (( aggregate < 2 )); then aggregate=2; fi
+  elif [[ "$incomplete" != "[]" ]]; then
+    echo "eval-local: group [${key:-no gated tools}] left case(s) short: $(jq -r 'join(", ")' <<<"$incomplete")" >&2
+  fi
+  [[ "$incomplete" == "[]" ]] || partial=true
   target_sha="$(cd "$target" && find . -type f ! -path "./$eval_dir/results/*" -print0 | LC_ALL=C sort -z \
     | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1)"
   jq -nc --arg tools "$key" --arg command "${cmdline% }" --argjson status "$status" --argjson cost "$cost" \
     --argjson partial "$partial" --arg bundle "$target" --arg sha "$target_sha" --arg out "$out" \
     --argjson wanted "$wanted" --argjson incomplete "$incomplete" --argjson scaffold_skipped "$scaffold_skipped" \
-    '{grant: ($tools | split(",") | map(select(. != ""))), cases: ($wanted | if . == null then null else map(.name) end),
+    --argjson error "$error" \
+    '{grant: ($tools | split(",") | map(select(. != ""))), cases: ($wanted | map(.name)),
       bundle: $bundle, bundleSha256: $sha, command: $command, exitStatus: $status, costUsd: $cost, partial: $partial,
-      incomplete_cases: $incomplete, scaffoldSkipped: $scaffold_skipped, result: $out}' >>"$invocations"
+      incomplete_cases: $incomplete, error: $error, scaffoldSkipped: $scaffold_skipped, result: $out}' >>"$invocations"
 done
 status=$aggregate
+# The host checks its cap as runs start, so runs already in flight can finish past it. Nothing is
+# stopped here; the overshoot is warned about and recorded.
+over_budget=false
+if [[ -n "$budget" ]] && jq -e -n --argjson b "$budget" --argjson s "$spent" '$s > $b' >/dev/null; then
+  over_budget=true
+  echo "eval-local: spent \$$(jq -n --argjson s "$spent" '$s * 10000 | round / 10000') against a cap of \$$budget; runs already in flight when the cap was reached finished past it" >&2
+fi
 
 [[ ${#parts[@]} -gt 0 ]] || { echo "eval-local: no result at $json" >&2; exit "$status"; }
 if [[ ${#groups[@]} -gt 1 ]]; then
@@ -320,7 +341,7 @@ if [[ ${#groups[@]} -gt 1 ]]; then
           aggregates: {overallScore: ([.[].cases[].aggregates.score | numbers] | if length > 0 then add / length else null end),
                        meanDelta: ([.[].cases[].aggregates.delta | numbers] | if length > 0 then add / length else null end)},
           merged: length}' "${parts[@]}" >"$json"
-elif [[ "$excluding" == true ]]; then
+elif [[ "$staged" == true ]]; then
   cp "${parts[0]}" "$json"
 fi
 
@@ -336,7 +357,7 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
    --argjson donors "$donors" --arg host "$host_version" --arg isolation "$isolation" \
    --argjson status "$status" --arg json "$json" --arg grant_source "$grant_source" \
    --slurpfile invocations "$invocations" --slurpfile traces "$traces" --arg scaffold "$scaffold" \
-   --argjson exclusions "$exclusions" \
+   --argjson exclusions "$exclusions" --argjson budget "${budget:-null}" --argjson over_budget "$over_budget" \
    --args '
   def wilson($k; $n): if $n == 0 then {lo: 0, hi: 1} else
       ($k / $n) as $p | 3.8416 as $z2
@@ -370,6 +391,7 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
               mergedFrom: (.merged // 1)},
     traces: $traces,
     costUsd: .costUsd, durationSeconds: .durationSeconds,
+    budget: $budget, over_budget: $over_budget,
     partial: (.partial or any($invocations[]; .partial))
   }' "${passed[@]+"${passed[@]}"}" <"$json" >"$receipt" \
   || echo "eval-local: could not write the receipt for $json" >&2
@@ -382,7 +404,7 @@ jq -r '
   (.cases[] | [.name[0:60], (.with | ci), (.without | ci), (.delta | n),
                (if .fired then "\(.fired.fired)/\(.fired.n)" else "-" end)] | @tsv),
   (["overall", (.overall.score | n), "-", (.overall.meanDelta | n), "-"] | @tsv),
-  "cost $\(.costUsd | n)  \(.durationSeconds | n)s  partial=\(.partial)",
+  "cost $\(.costUsd | n)  \(.durationSeconds | n)s  partial=\(.partial)\(if .over_budget then "  over budget (cap $\(.budget))" else "" end)",
   (if (.exclusions.cases | length) > 0
    then "excluded \(.exclusions.cases | length) case(s) tagged \(.exclusions.tags | join(", "))" else empty end)
 ' "$receipt" | column -t -s $'\t' || echo "eval-local: could not summarise $receipt" >&2
