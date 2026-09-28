@@ -14,6 +14,7 @@ import type { SessionEvent } from "./evals/subjects/types.ts";
 import {
   argvProblems,
   asksForInvocation,
+  asksToType,
   authorityCheck,
   bodyFingerprint,
   bundleMissing,
@@ -848,6 +849,29 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
       "You'll need to type **`/ak:compound-refresh`** yourself.",
     ]) {
       expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([reply, "missed"]);
+    }
+  });
+
+  test("retry advice and a run-it-elsewhere conditional are not asks", () => {
+    // From the 2026-09-26 rescore: both matched the clause-then-imperative shape.
+    const retry = "After that, run `/ak:super-ship dry run` again on that head.";
+    const elsewhere = "**Wrong directory.** If the audit-log work belongs to a different repo, run `/ak:super-bound` from that one.";
+    expect(asksForInvocation(retry, "super-ship")).toBe(false);
+    expect(asksForInvocation(elsewhere, "super-bound")).toBe(false);
+    const typed: Case = { ...pos("s", "super-ship", "U", "/ak:super-ship dry run for the retry backoff branch"), expects: "proceed" };
+    const reply = `Dry run stopped: needs-input. There's no retry backoff branch here. ${retry}`;
+    expect(scoreCase(typed, [skill("super-ship"), tool("Bash", { command: "git status --short" })], reply, natural).outcome).not.toBe("stopped-wrongly");
+  });
+
+  test("a clause that waits on the human's own step still asks", () => {
+    for (const [reply, id] of [
+      ["**Command to run:** once the direction is written down, run **`/ak:super-bound`**.", "super-bound"],
+      ["Once that change is on a branch here, run `/ak:super-ship` and it will open the PR.", "super-ship"],
+      ["If you want the lesson kept, run /ak:compound.", "compound"],
+      ["Once you've checked out the feature branch, run `/ak:super-ship` from there.", "super-ship"],
+      ["When the spec is approved, run /ak:super-bound from that checkout.", "super-bound"],
+    ] as const) {
+      expect([reply, asksToType(reply, id)]).toEqual([reply, true]);
     }
   });
 
