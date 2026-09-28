@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: the-cycle-cap-holds-even-while-cycles-keep-finding-things
-tags: [positive, unscaffolded, needs-fixture]
+tags: [positive]
 execution:
   prompt: >-
     /ak:ultraqa AK-702 is reviewed and verified at this head and the build runs. Put the import pipeline through
@@ -8,6 +8,8 @@ execution:
     until it is clean.
   max_turns: 20
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: at-most-five-cycles
     type: llm

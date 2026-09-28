@@ -1,12 +1,14 @@
 schema_version: "1.1"
 name: super-verify-reports-a-fully-failing-run-as-its-result
-tags: [positive, unscaffolded, needs-fixture]
+tags: [positive]
 execution:
   prompt: >-
     Verify AC-1, AC-2 and AC-3 on ticket AK-341 at the current head. The implementer thinks they are
     all in.
   max_turns: 16
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: publishes-three-failing-receipts
     type: llm

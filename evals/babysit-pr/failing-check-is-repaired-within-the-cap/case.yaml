@@ -1,12 +1,15 @@
 schema_version: "1.1"
 name: a-failing-required-check-gets-one-bounded-repair-attempt
-tags: [positive, unscaffolded, needs-fixture]
+tags: [positive]
 execution:
   prompt: >-
     /ak:babysit-pr Watch PR 812. The `lint` required check just reported red on the current head — a missing import
     in a file this branch added. The settle window has elapsed.
   max_turns: 18
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+context:
+  # gh is not available in the workspace; the scaffold supplies PR 812 as local files under pr-812/.
+  scaffold_script: scaffold.sh
 graders:
   - name: routes-to-diagnosis-first
     type: llm

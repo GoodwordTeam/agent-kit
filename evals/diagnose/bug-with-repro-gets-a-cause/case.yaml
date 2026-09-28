@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: diagnose-builds-a-loop-before-it-forms-a-theory
-tags: [positive, unscaffolded, needs-fixture]
+tags: [positive]
 execution:
   prompt: >-
     The CSV export drops the last row whenever the result set is an exact multiple of the page size.
@@ -8,6 +8,8 @@ execution:
     and its tests. Find out why and fix it.
   max_turns: 24
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: ran-a-command
     type: tool_used
