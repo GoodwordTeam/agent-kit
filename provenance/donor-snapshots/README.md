@@ -12,8 +12,8 @@ directory name alone resolves back to a lock entry and a `git show` in its clone
 
 - **Written by** `research/probes/snapshot-donors.sh`, which also prunes any file no
   row cites any more. `--check` reports drift without writing.
-- **Held by** `tests/donor-snapshots.test.ts`: a row with no snapshot fails, and
-  with `.donors/` present a snapshot that differs from its pin fails.
+- **Held by** `tests/donor-snapshots.test.ts`; what it fails on is stated once, in
+  `AUTHORING.md` §5 (Provenance law).
 - **Licensed** under each donor's own terms, in `provenance/licenses/`. The root
   `NOTICE` carries the attributions.
 - **Never shipped.** `provenance/` is source-only in the packager and exempt from
