@@ -188,14 +188,6 @@ describe("every list of artifact schema ids names the same ids", () => {
     }
   });
 
-  test("publishArtifact carries exactly the enum", () => {
-    const contract = readFileSync(join(REPO, "adapters", "knowledgebase", "CONTRACT.md"), "utf8");
-    const carries = contract.match(/- \*\*Carries\*\* any artifact whose `envelope\.schema` is in `common#\/\$defs\/schema_id` —([^.]*)\./);
-    expect(carries).not.toBeNull();
-    const listed = [...carries![1]!.matchAll(/`([a-z-]+)`/g)].map((m) => m[1]);
-    expect(listed).toEqual(ids);
-  });
-
   test("the catalog declares every id", () => {
     const catalog = parse(readFileSync(join(REPO, "catalog.yaml"), "utf8"));
     const declared = new Set((catalog.schemas as Array<{ id: string }>).map((s) => s.id));

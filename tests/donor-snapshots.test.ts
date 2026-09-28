@@ -31,12 +31,17 @@ describe("donor snapshots", () => {
   const donorsPresent = existsSync(join(ROOT, ".donors"));
   test.if(donorsPresent)("every snapshot is byte-identical to its pin", () => {
     const drifted: string[] = [];
+    const unresolved: string[] = [];
     for (const snap of expected) {
       const pinned = pinnedBytes(ROOT, snap);
-      if (pinned === null) continue;
+      if (pinned === null) {
+        if (snap.clone !== null && existsSync(join(ROOT, snap.clone))) unresolved.push(snap.file);
+        continue;
+      }
       const path = join(ROOT, snap.file);
       if (existsSync(path) && !readFileSync(path).equals(pinned)) drifted.push(snap.file);
     }
     expect(drifted).toEqual([]);
+    expect(unresolved).toEqual([]);
   });
 });
