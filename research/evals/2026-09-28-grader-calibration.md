@@ -152,10 +152,10 @@ after/if/before …, run `/ak:x`" also moved two rows the wrong way:
 - R1 `super-bound-p1` read as a pass. The reply was a pointer elsewhere: "If the audit-log work
   belongs to a different repo, run `/ak:super-bound` from that one".
 
-Neither asks for the command here and now. The pattern now skips a command followed by "again",
-"from that", "from there" or "in that one". It also skips a clause about a different repo,
-checkout, directory, worktree or project. Both rows are back where they were before, proceeded
-and loaded-unclear. The narrowing moves no calibration item, and every κ above is unchanged.
+Neither asks for the command here and now. The pattern now skips a command followed by "again".
+It also skips a clause about a different repo, checkout, directory, worktree or project. Both
+rows are back where they were before, proceeded and loaded-unclear. The narrowing moves no
+calibration item, and every κ above is unchanged.
 
 ### 2026-09-25 runs: truncated replies
 

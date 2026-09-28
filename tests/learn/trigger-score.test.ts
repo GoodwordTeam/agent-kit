@@ -868,6 +868,8 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
       ["**Command to run:** once the direction is written down, run **`/ak:super-bound`**.", "super-bound"],
       ["Once that change is on a branch here, run `/ak:super-ship` and it will open the PR.", "super-ship"],
       ["If you want the lesson kept, run /ak:compound.", "compound"],
+      ["Once you've checked out the feature branch, run `/ak:super-ship` from there.", "super-ship"],
+      ["When the spec is approved, run /ak:super-bound from that checkout.", "super-bound"],
     ] as const) {
       expect([reply, asksToType(reply, id)]).toEqual([reply, true]);
     }

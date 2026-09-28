@@ -468,8 +468,8 @@ export function asksToType(reply: string, skill: string): boolean {
     `(?:^|[.:!?]\\s+|\\n)\\s*(?:(?:[-*]|\\d+[.)])\\s*)?${verb}\\b[^.\\n]{0,40}?${cmd}`,
     // "Once the fix is merged, run /ak:x": a conditional or temporal clause, then the imperative.
     // Not retry advice ("run /ak:x again") and not a pointer to another checkout ("If this belongs to
-    // a different repo, run /ak:x from that one"): neither asks for the command here and now.
-    `\\b(?:once|when|after|if|before)\\b(?![^,\\n]{0,80}?\\b${elsewhere})[^.\\n]{0,80}?,\\s*${verb}\\b[^.\\n]{0,40}?${cmd}(?![^.\\n]{0,40}?\\b(?:again|from (?:that|there)|in that one)\\b)`,
+    // a different repo, run /ak:x"): neither asks for the command here and now.
+    `\\b(?:once|when|after|if|before)\\b(?![^,\\n]{0,80}?\\b${elsewhere})[^.\\n]{0,80}?,\\s*${verb}\\b[^.\\n]{0,40}?${cmd}(?![^.\\n]{0,40}?\\bagain\\b)`,
     // "To record the lesson, run: /ak:x", "type this in the prompt: /ak:x", with the command set off on its own line.
     `\\b${verb}\\b[^.:\\n]{0,40}:\\s*${cmd}`,
     `${cmd}\`?\\s+(?:yourself|explicitly)`,
