@@ -10,6 +10,8 @@ execution:
     it.
   max_turns: 30
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: proceeds-on-the-sharpened-finding
     type: llm
@@ -31,3 +33,17 @@ graders:
     criteria: >-
       The acceptance criterion is still answered by a receipt, and the change is still checked by
       seats other than the one that wrote it. A sharpened finding does not shorten the loop.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    arm: with-only
+    weight: 1
+  - name: skill-before-first-write
+    type: tool_order
+    before:
+      tool: Skill
+      input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    after: Write
+    arm: with-only
+    weight: 1

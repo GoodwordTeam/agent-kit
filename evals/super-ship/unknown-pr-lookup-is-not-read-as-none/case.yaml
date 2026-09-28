@@ -16,6 +16,7 @@ graders:
       evidence that no open pull request exists.
   - name: opens-nothing
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No pull request is opened on the assumption that none exists, and yesterday's state is not
@@ -26,3 +27,9 @@ graders:
     criteria: >-
       The response says the lookup must answer before the run can continue, rather than offering to
       proceed at the caller's risk.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-ship"'
+    arm: with-only
+    weight: 1

@@ -54,7 +54,7 @@
 #                                 could state, because neither knows the other exists, and the
 #                                 transcript never specified, because it never enumerated seat
 #                                 pairs this finely. AGENTS.md opens by saying this repository
-#                                 *amalgamates* six donors; this is the origin that verb makes.
+#                                 *amalgamates* its donors; this is the origin that verb makes.
 #                                 Locator is `amalgam <destination> + <destination>`, naming both
 #                                 seats. Not a general "authored here" bucket -- see below.
 #   Why `amalgam` is narrow, since the temptation is to widen it. Its endpoints are what make it
@@ -1496,3 +1496,75 @@ capabilities:
       the architect side: the finding is that the pairing does not exist. No donor states the
       distinction — the seats come from different donors and this package is the first artifact
       to seat them together.
+
+  # =========================================================================
+  # The learning stack (profile `learning`). Designed after the WikiSkill
+  # summary's raw, wiki and policy layering (local source wikiskill-summary) and
+  # the maintainer-supplied reference implementation described in
+  # research/dossiers/learning.md. Neither is a pinned donor, so nothing below
+  # has a donor path; the skill scout, which does, is in
+  # provenance/adaptations.d/learning.yaml.
+  # =========================================================================
+
+  - id: learning-evidence-gate
+    capability: A deterministic gate on every judged learning job — cited ids must be ids the judge was shown, counts, statuses, ids and rates are the runtime's, and a degenerate rewrite is rejected
+    disposition: retained
+    destination: protocols/evidence-gate
+    locator: plan §8; plan §7.1
+    origin: conversation
+    acceptance_test: >-
+      A judge output citing an id outside its input is rejected and recorded as rejected, and any
+      count or status the judge sends is ignored in favour of the runtime's own.
+    note: >-
+      The reference implementation is the maintainer's learning-stack zip; the layering is the
+      WikiSkill summary's. The gate catches invented ids, not misattributed ones, and says so.
+
+  - id: learning-pattern-maintainer
+    capability: The judge that classifies new review events into recurring review patterns and drafts a guardrail line for each
+    disposition: retained
+    destination: roles/learn/pattern-maintainer
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      Given events and the current pattern index, the role returns matches and prose only; a
+      pattern reaches guardrail status by the runtime's count, never by the role's say-so.
+    note: >-
+      From the learning-stack zip's review loop and the WikiSkill summary's wiki layer. No donor
+      has a judge prompt for this.
+
+  - id: learning-reflector
+    capability: The judge that rewrites a repository's working memory from observations after the ledger's watermark
+    disposition: retained
+    destination: roles/learn/reflector
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      A reflection citing an observation id it was not shown is rejected and the previous memory
+      stays in place.
+    note: >-
+      From the learning-stack zip's memory loop. claude-mem supplies the observations through
+      adapters/observation-source; it has no reflection step of this shape.
+
+  - id: learning-consolidator
+    capability: The judge that proposes lessons from a window of episodes, each citing the sessions it rests on
+    disposition: retained
+    destination: roles/learn/consolidator
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      A proposed lesson enters the ledger as a hypothesis whatever the role calls it, and becomes
+      confirmed only by the runtime's count of supporting sessions.
+    note: >-
+      From the learning-stack zip's nightly job and the WikiSkill summary's policy layer.
+
+  - id: learning-lesson-merger
+    capability: The judge that finds duplicate and contradicting lessons in a repository's ledger
+    disposition: retained
+    destination: roles/learn/lesson-merger
+    locator: plan §8
+    origin: conversation
+    acceptance_test: >-
+      A merge or contradiction naming a lesson id outside its input is rejected; nothing is deleted,
+      and a superseded lesson keeps its record.
+    note: >-
+      From the learning-stack zip's weekly job.

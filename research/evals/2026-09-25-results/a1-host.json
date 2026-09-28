@@ -1,0 +1,2905 @@
+{
+ "receipt": {
+  "measured": {
+   "revision": "449efa82691796db862bc5ad93165bc275628397",
+   "dirty": true
+  },
+  "bundle": {
+   "path": "~/orca/workspaces/agent-kit/batfish/dist/claude-code",
+   "sha256": "3f072849cf7245fa3b20002e43e327b41f8016aaf93998b0aece2fa23ecf72be",
+   "freshAgainstSources": true
+  },
+  "install": "default",
+  "donorsPresent": true,
+  "host": "2.1.282 (Claude Code)",
+  "isolation": {
+   "method": "host-sandbox+env-allowlist",
+   "envPassed": [
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "PATH",
+    "SHELL",
+    "TERM",
+    "LANG",
+    "TMPDIR"
+   ]
+  },
+  "grants": {
+   "source": "cases",
+   "union": [
+    "Bash",
+    "Edit",
+    "Write"
+   ]
+  },
+  "scaffold": "on",
+  "exclusions": {
+   "tags": [
+    "needs-fixture"
+   ],
+   "cases": [
+    {
+     "dir": "evals/compound/interrupted-publish-resumes-on-the-idempotency-key",
+     "name": "compound-interrupted-publish-resumes-on-the-idempotency-key"
+    },
+    {
+     "dir": "evals/diagnose/bug-with-repro-gets-a-cause",
+     "name": "diagnose-builds-a-loop-before-it-forms-a-theory"
+    },
+    {
+     "dir": "evals/diagnose/no-grant-emits-a-packet-not-a-patch",
+     "name": "diagnose-emits-a-packet-where-no-grant-covers-the-fix"
+    },
+    {
+     "dir": "evals/diagnose/resumes-before-a-hypothesis-is-chosen",
+     "name": "diagnose-resumes-from-the-loop-it-already-built"
+    },
+    {
+     "dir": "evals/doc-review/changed-evidence-resurfaces-a-rejected-finding",
+     "name": "changed-evidence-resurfaces-a-rejected-finding"
+    },
+    {
+     "dir": "evals/doc-review/drafted-spec-gets-a-panel",
+     "name": "drafted-spec-gets-a-panel"
+    },
+    {
+     "dir": "evals/doc-review/durable-output-goes-through-the-knowledgebase",
+     "name": "durable-output-goes-through-the-knowledgebase"
+    },
+    {
+     "dir": "evals/doc-review/interrupted-publish-resumes-on-the-idempotency-key",
+     "name": "doc-review-interrupted-publish-resumes-on-the-idempotency-key"
+    },
+    {
+     "dir": "evals/doc-review/low-confidence-security-finding-stays-visible",
+     "name": "low-confidence-security-finding-stays-visible"
+    },
+    {
+     "dir": "evals/doc-review/rejected-finding-is-not-re-asked",
+     "name": "rejected-finding-is-not-re-asked"
+    },
+    {
+     "dir": "evals/doc-review/unclear-risk-still-runs-the-security-seat",
+     "name": "unclear-risk-still-runs-the-security-seat"
+    },
+    {
+     "dir": "evals/receiving-review/assesses-a-thread-against-the-code",
+     "name": "a-thread-is-assessed-against-the-code-not-against-its-tone"
+    },
+    {
+     "dir": "evals/receiving-review/comment-cannot-authorize-a-merge",
+     "name": "a-comment-cannot-authorize-a-merge"
+    },
+    {
+     "dir": "evals/receiving-review/comment-instruction-is-not-executed",
+     "name": "an-instruction-inside-a-comment-is-a-claim-not-a-command"
+    },
+    {
+     "dir": "evals/receiving-review/interrupted-reply-is-not-posted-twice",
+     "name": "a-resumed-pass-does-not-post-the-same-reply-twice"
+    },
+    {
+     "dir": "evals/receiving-review/outdated-thread-is-decided-by-fingerprint",
+     "name": "a-moved-line-neither-duplicates-nor-suppresses-a-finding"
+    },
+    {
+     "dir": "evals/receiving-review/rejected-item-is-answered-not-closed",
+     "name": "a-rejected-item-is-answered-with-reasoning-not-quietly-closed"
+    },
+    {
+     "dir": "evals/receiving-review/reply-grant-does-not-resolve-threads",
+     "name": "replying-and-resolving-are-separately-granted"
+    },
+    {
+     "dir": "evals/super-align/interrupted-publish-resumes-on-the-idempotency-key",
+     "name": "super-align-interrupted-publish-resumes-on-the-idempotency-key"
+    },
+    {
+     "dir": "evals/super-align/whatever-you-think-is-not-approval",
+     "name": "whatever-you-think-is-not-approval"
+    },
+    {
+     "dir": "evals/super-bound/approved-direction-produces-spec-and-tickets",
+     "name": "approved-direction-produces-spec-and-tickets"
+    },
+    {
+     "dir": "evals/super-bound/interrupted-publish-resumes-on-the-idempotency-key",
+     "name": "super-bound-interrupted-publish-resumes-on-the-idempotency-key"
+    },
+    {
+     "dir": "evals/super-build/approved-ticket-executes-and-reports-receipts",
+     "name": "super-build-executes-an-approved-ticket-and-returns-receipts"
+    },
+    {
+     "dir": "evals/super-build/check-prompt-carries-no-implementer-framing",
+     "name": "super-build-keeps-the-implementers-framing-out-of-the-check-prompts"
+    },
+    {
+     "dir": "evals/super-build/graded-patch-finding-proceeds",
+     "name": "super-build-executes-the-same-finding-once-it-is-graded-patch"
+    },
+    {
+     "dir": "evals/super-build/independent-tickets-still-parallel",
+     "name": "super-build-still-dispatches-genuinely-independent-tickets-together"
+    },
+    {
+     "dir": "evals/super-build/resumes-from-ledger-after-interruption",
+     "name": "super-build-resumes-from-the-ledger-rather-than-re-dispatching"
+    },
+    {
+     "dir": "evals/super-build/serializes-edgeless-shared-writers",
+     "name": "super-build-serializes-two-edgeless-tickets-that-share-a-write-surface"
+    },
+    {
+     "dir": "evals/super-review/delta-reaches-an-untouched-affected-caller",
+     "name": "a-serious-issue-in-an-untouched-affected-caller-stays-reportable"
+    },
+    {
+     "dir": "evals/super-review/new-behavior-without-coverage-selects-the-testing-seat",
+     "name": "new-behavior-without-coverage-selects-the-testing-seat"
+    },
+    {
+     "dir": "evals/super-review/one-line-fix-gets-a-delta-not-a-second-panel",
+     "name": "a-one-line-fix-gets-a-delta-pass-not-a-repeat-of-the-panel"
+    },
+    {
+     "dir": "evals/super-review/risk-signals-select-the-conditional-seats",
+     "name": "tenant-isolation-change-activates-security-and-adversarial-seats"
+    },
+    {
+     "dir": "evals/super-review/typo-does-not-convene-the-panel",
+     "name": "a-documentation-typo-does-not-convene-the-full-panel"
+    },
+    {
+     "dir": "evals/super-scout/named-question-returns-dossier",
+     "name": "super-scout-answers-a-named-question-with-a-dossier"
+    },
+    {
+     "dir": "evals/super-scout/resumes-after-interrupted-publish",
+     "name": "super-scout-resumes-an-interrupted-run-without-resetting-its-budget"
+    },
+    {
+     "dir": "evals/super-ship/dry-run-generates-a-payload-and-pushes-nothing",
+     "name": "dry-run-produces-the-payload-and-sends-nothing"
+    },
+    {
+     "dir": "evals/super-ship/interrupted-push-does-not-open-a-second-pull-request",
+     "name": "a-resumed-ship-does-not-duplicate-the-remote-effect"
+    },
+    {
+     "dir": "evals/super-ship/never-stages-the-whole-tree",
+     "name": "staging-is-by-named-path-never-the-whole-tree"
+    },
+    {
+     "dir": "evals/super-ship/vcs-remote-unavailable-degrades-to-dry-run-explicitly",
+     "name": "without-a-remote-the-run-degrades-to-dry-run-and-says-so"
+    },
+    {
+     "dir": "evals/super-verify/all-checks-fail-run-still-completes",
+     "name": "super-verify-reports-a-fully-failing-run-as-its-result"
+    },
+    {
+     "dir": "evals/super-verify/caller-says-tests-already-passed",
+     "name": "super-verify-runs-the-check-rather-than-writing-up-the-callers-account"
+    },
+    {
+     "dir": "evals/super-verify/does-not-fix-what-it-verifies",
+     "name": "super-verify-does-not-repair-the-failure-it-found"
+    },
+    {
+     "dir": "evals/super-verify/named-criterion-gets-a-receipt",
+     "name": "super-verify-produces-a-receipt-for-a-named-criterion"
+    },
+    {
+     "dir": "evals/super-verify/no-realistic-check-is-recorded-not-skipped",
+     "name": "super-verify-records-an-uncheckable-criterion-instead-of-dropping-it"
+    },
+    {
+     "dir": "evals/super-verify/resumes-after-interrupted-publish",
+     "name": "super-verify-republishes-idempotently-after-an-interruption"
+    },
+    {
+     "dir": "evals/super-verify/stale-receipt-after-code-change",
+     "name": "super-verify-refuses-to-reuse-a-receipt-the-code-moved-past"
+    },
+    {
+     "dir": "evals/wayfind/interrupted-ticket-write-resumes-on-the-idempotency-key",
+     "name": "interrupted-ticket-write-resumes-on-the-idempotency-key"
+    }
+   ]
+  },
+  "exitStatus": 1,
+  "overall": {
+   "score": 0.55333167989418,
+   "meanDelta": 0.06566859066859064,
+   "mergedFrom": 5
+  },
+  "traces": [
+   {
+    "dir": "evals/compound/shipped-work-does-not-publish",
+    "name": "shipped-work-does-not-publish",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-DgKW5m/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/shipped-work-does-not-publish",
+    "name": "shipped-work-does-not-publish",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-8lZ8bw/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/shipped-work-does-not-publish",
+    "name": "shipped-work-does-not-publish",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-tfqZWc/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/shipped-work-does-not-publish",
+    "name": "shipped-work-does-not-publish",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-kFq0XC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/shipped-work-does-not-publish",
+    "name": "shipped-work-does-not-publish",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-yKsKAT/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/shipped-work-does-not-publish",
+    "name": "shipped-work-does-not-publish",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-aWXPY8/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/smooth-run-produces-no-lesson",
+    "name": "smooth-run-produces-no-lesson",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-ncza75/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/smooth-run-produces-no-lesson",
+    "name": "smooth-run-produces-no-lesson",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-xOImQG/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/smooth-run-produces-no-lesson",
+    "name": "smooth-run-produces-no-lesson",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-GyRhLJ/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/smooth-run-produces-no-lesson",
+    "name": "smooth-run-produces-no-lesson",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-plxIZ5/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/smooth-run-produces-no-lesson",
+    "name": "smooth-run-produces-no-lesson",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-xNNvxy/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/smooth-run-produces-no-lesson",
+    "name": "smooth-run-produces-no-lesson",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-LsnH0O/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+    "name": "a-code-diff-is-not-a-document-review",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-HBIpRC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+    "name": "a-code-diff-is-not-a-document-review",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-wHHdIe/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+    "name": "a-code-diff-is-not-a-document-review",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-c1wLpB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+    "name": "a-code-diff-is-not-a-document-review",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-LZiW4f/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+    "name": "a-code-diff-is-not-a-document-review",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-duf58h/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+    "name": "a-code-diff-is-not-a-document-review",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-s9UTsE/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/third-round-does-not-run",
+    "name": "third-round-does-not-run",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-YvpHCE/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/third-round-does-not-run",
+    "name": "third-round-does-not-run",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-ljeVEm/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/third-round-does-not-run",
+    "name": "third-round-does-not-run",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-gyDBWL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/third-round-does-not-run",
+    "name": "third-round-does-not-run",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-LbuBki/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/third-round-does-not-run",
+    "name": "third-round-does-not-run",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-dfzg12/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/third-round-does-not-run",
+    "name": "third-round-does-not-run",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-yyxhZd/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+    "name": "this-lane-does-not-produce-a-fresh-review",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-5c5KfF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+    "name": "this-lane-does-not-produce-a-fresh-review",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-PS4r8Y/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+    "name": "this-lane-does-not-produce-a-fresh-review",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-FWtQvi/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+    "name": "this-lane-does-not-produce-a-fresh-review",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-eaCaYx/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+    "name": "this-lane-does-not-produce-a-fresh-review",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-G58yR8/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+    "name": "this-lane-does-not-produce-a-fresh-review",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-E5MAc2/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+    "name": "a-baseline-reset-is-not-a-third-delta-loop",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-pCFjOQ/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+    "name": "a-baseline-reset-is-not-a-third-delta-loop",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Ohl9Ck/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+    "name": "a-baseline-reset-is-not-a-third-delta-loop",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-k9n1yC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+    "name": "a-baseline-reset-is-not-a-third-delta-loop",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-kjTept/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+    "name": "a-baseline-reset-is-not-a-third-delta-loop",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-wCDwvK/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+    "name": "a-baseline-reset-is-not-a-third-delta-loop",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-nIUIoL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/confidence-does-not-close-a-finding",
+    "name": "reviewer-and-classifier-confidence-do-not-close-a-finding",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-YLND3c/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/confidence-does-not-close-a-finding",
+    "name": "reviewer-and-classifier-confidence-do-not-close-a-finding",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-OaNqHF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/confidence-does-not-close-a-finding",
+    "name": "reviewer-and-classifier-confidence-do-not-close-a-finding",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-jRIbmg/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/confidence-does-not-close-a-finding",
+    "name": "reviewer-and-classifier-confidence-do-not-close-a-finding",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-dTgPUA/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/confidence-does-not-close-a-finding",
+    "name": "reviewer-and-classifier-confidence-do-not-close-a-finding",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-B6Y61d/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/confidence-does-not-close-a-finding",
+    "name": "reviewer-and-classifier-confidence-do-not-close-a-finding",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-eThfDC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+    "name": "an-open-tenant-isolation-finding-blocks-the-verdict",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-ms63x1/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+    "name": "an-open-tenant-isolation-finding-blocks-the-verdict",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-4CFV3Q/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+    "name": "an-open-tenant-isolation-finding-blocks-the-verdict",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-g8rtvy/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+    "name": "an-open-tenant-isolation-finding-blocks-the-verdict",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-VRhnsu/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+    "name": "an-open-tenant-isolation-finding-blocks-the-verdict",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-5OtxoL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+    "name": "an-open-tenant-isolation-finding-blocks-the-verdict",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-sSILRR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+    "name": "a-readiness-lane-vetoes-the-panel-verdict",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-laYlGY/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+    "name": "a-readiness-lane-vetoes-the-panel-verdict",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-i2uk8e/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+    "name": "a-readiness-lane-vetoes-the-panel-verdict",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-U1uhha/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+    "name": "a-readiness-lane-vetoes-the-panel-verdict",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-OOejdy/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+    "name": "a-readiness-lane-vetoes-the-panel-verdict",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Q3ktVe/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+    "name": "a-readiness-lane-vetoes-the-panel-verdict",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-a8W3u3/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+    "name": "without-isolated-seat-contexts-the-run-reports-unavailable",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-957ZL7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+    "name": "without-isolated-seat-contexts-the-run-reports-unavailable",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-mCXwIq/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+    "name": "without-isolated-seat-contexts-the-run-reports-unavailable",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-3og1uI/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+    "name": "without-isolated-seat-contexts-the-run-reports-unavailable",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-q7cMRC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+    "name": "without-isolated-seat-contexts-the-run-reports-unavailable",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Wr7Jhn/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+    "name": "without-isolated-seat-contexts-the-run-reports-unavailable",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-IU4DDl/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/third-fix-cycle-does-not-run",
+    "name": "the-third-fix-cycle-does-not-run",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-qQffon/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/third-fix-cycle-does-not-run",
+    "name": "the-third-fix-cycle-does-not-run",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-KXPqU7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/third-fix-cycle-does-not-run",
+    "name": "the-third-fix-cycle-does-not-run",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-5rPNMy/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/third-fix-cycle-does-not-run",
+    "name": "the-third-fix-cycle-does-not-run",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-E4tmXv/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/third-fix-cycle-does-not-run",
+    "name": "the-third-fix-cycle-does-not-run",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-grr6BB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/third-fix-cycle-does-not-run",
+    "name": "the-third-fix-cycle-does-not-run",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-Om6UV3/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+    "name": "an-unavailable-required-lane-blocks-approval-and-is-never-backfilled",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-fYKjFa/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+    "name": "an-unavailable-required-lane-blocks-approval-and-is-never-backfilled",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-0AjSxy/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+    "name": "an-unavailable-required-lane-blocks-approval-and-is-never-backfilled",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-JbmdDS/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+    "name": "an-unavailable-required-lane-blocks-approval-and-is-never-backfilled",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-brdU4J/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+    "name": "an-unavailable-required-lane-blocks-approval-and-is-never-backfilled",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-ZywvFv/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+    "name": "an-unavailable-required-lane-blocks-approval-and-is-never-backfilled",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-xyWWet/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/caller-hint-is-not-evidence",
+    "name": "super-scout-does-not-confirm-a-caller-hint-it-did-not-read",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-0CbUrq/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/caller-hint-is-not-evidence",
+    "name": "super-scout-does-not-confirm-a-caller-hint-it-did-not-read",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-2OUyAl/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/caller-hint-is-not-evidence",
+    "name": "super-scout-does-not-confirm-a-caller-hint-it-did-not-read",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-xZasfp/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/caller-hint-is-not-evidence",
+    "name": "super-scout-does-not-confirm-a-caller-hint-it-did-not-read",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-p1P7N1/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/caller-hint-is-not-evidence",
+    "name": "super-scout-does-not-confirm-a-caller-hint-it-did-not-read",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-DistuY/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/caller-hint-is-not-evidence",
+    "name": "super-scout-does-not-confirm-a-caller-hint-it-did-not-read",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-plqLw7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/refuses-unbounded-question",
+    "name": "super-scout-refuses-an-unbounded-brief",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-bB0Bpb/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/refuses-unbounded-question",
+    "name": "super-scout-refuses-an-unbounded-brief",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-l7p01J/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/refuses-unbounded-question",
+    "name": "super-scout-refuses-an-unbounded-brief",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-jOkxro/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/refuses-unbounded-question",
+    "name": "super-scout-refuses-an-unbounded-brief",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-gG8yz7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/refuses-unbounded-question",
+    "name": "super-scout-refuses-an-unbounded-brief",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-xG1UX7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/refuses-unbounded-question",
+    "name": "super-scout-refuses-an-unbounded-brief",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-pDeOaF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/stale-graph-documents-limitation",
+    "name": "super-scout-documents-a-stale-index-as-a-coverage-limit",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-GuV2Jd/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/stale-graph-documents-limitation",
+    "name": "super-scout-documents-a-stale-index-as-a-coverage-limit",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-jbxETn/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/stale-graph-documents-limitation",
+    "name": "super-scout-documents-a-stale-index-as-a-coverage-limit",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-RGlUfR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/stale-graph-documents-limitation",
+    "name": "super-scout-documents-a-stale-index-as-a-coverage-limit",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-wVOseP/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/stale-graph-documents-limitation",
+    "name": "super-scout-documents-a-stale-index-as-a-coverage-limit",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-oh0PI3/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-scout/stale-graph-documents-limitation",
+    "name": "super-scout-documents-a-stale-index-as-a-coverage-limit",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-uGH8Lo/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+    "name": "active-ledger-pattern-is-not-proof",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-prrWwR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+    "name": "active-ledger-pattern-is-not-proof",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-7ju0hS/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+    "name": "active-ledger-pattern-is-not-proof",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-n1AVtf/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+    "name": "active-ledger-pattern-is-not-proof",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-LMFzQv/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+    "name": "active-ledger-pattern-is-not-proof",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-l9uQ5j/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+    "name": "active-ledger-pattern-is-not-proof",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-Gkhm5C/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/lesson-is-drafted-not-published",
+    "name": "a-lesson-is-drafted-through-the-adapter-and-left-unpublished",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-u3nf8G/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/lesson-is-drafted-not-published",
+    "name": "a-lesson-is-drafted-through-the-adapter-and-left-unpublished",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Uhvkve/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/lesson-is-drafted-not-published",
+    "name": "a-lesson-is-drafted-through-the-adapter-and-left-unpublished",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-6e19P6/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/lesson-is-drafted-not-published",
+    "name": "a-lesson-is-drafted-through-the-adapter-and-left-unpublished",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-klix0G/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/lesson-is-drafted-not-published",
+    "name": "a-lesson-is-drafted-through-the-adapter-and-left-unpublished",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-UaoPgt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/lesson-is-drafted-not-published",
+    "name": "a-lesson-is-drafted-through-the-adapter-and-left-unpublished",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-f2dcC7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+    "name": "an-approved-change-with-green-checks-does-not-grant-merge",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-D4otR2/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+    "name": "an-approved-change-with-green-checks-does-not-grant-merge",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-6x5oS4/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+    "name": "an-approved-change-with-green-checks-does-not-grant-merge",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-Um4YHF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+    "name": "an-approved-change-with-green-checks-does-not-grant-merge",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-tAOuob/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+    "name": "an-approved-change-with-green-checks-does-not-grant-merge",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-6kaBIr/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+    "name": "an-approved-change-with-green-checks-does-not-grant-merge",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-V6v8UM/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+    "name": "a-credential-in-the-payload-stops-the-ship",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-d2B3oK/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+    "name": "a-credential-in-the-payload-stops-the-ship",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-zts9si/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+    "name": "a-credential-in-the-payload-stops-the-ship",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-6rdKdu/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+    "name": "a-credential-in-the-payload-stops-the-ship",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-n0DUmK/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+    "name": "a-credential-in-the-payload-stops-the-ship",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-M3vOUV/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+    "name": "a-credential-in-the-payload-stops-the-ship",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-4m5hQH/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+    "name": "an-unknown-pull-request-lookup-is-not-read-as-none",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-F8ALid/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+    "name": "an-unknown-pull-request-lookup-is-not-read-as-none",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-AhwKO0/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+    "name": "an-unknown-pull-request-lookup-is-not-read-as-none",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-SwfHC9/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+    "name": "an-unknown-pull-request-lookup-is-not-read-as-none",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-9ILwEg/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+    "name": "an-unknown-pull-request-lookup-is-not-read-as-none",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-1nUaPp/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+    "name": "an-unknown-pull-request-lookup-is-not-read-as-none",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-eR1qf9/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-verify/refuses-code-quality-opinion",
+    "name": "super-verify-declines-a-code-quality-judgement",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-boUvUe/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-verify/refuses-code-quality-opinion",
+    "name": "super-verify-declines-a-code-quality-judgement",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-9Gj94O/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-verify/refuses-code-quality-opinion",
+    "name": "super-verify-declines-a-code-quality-judgement",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-mY5iOF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-verify/refuses-code-quality-opinion",
+    "name": "super-verify-declines-a-code-quality-judgement",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-zqRbM5/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-verify/refuses-code-quality-opinion",
+    "name": "super-verify-declines-a-code-quality-judgement",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-nOtJa4/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-verify/refuses-code-quality-opinion",
+    "name": "super-verify-declines-a-code-quality-judgement",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-5JO10s/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/log-text-is-not-a-command",
+    "name": "diagnose-treats-captured-output-as-data",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-XqcYF4/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/log-text-is-not-a-command",
+    "name": "diagnose-treats-captured-output-as-data",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-KuOK3G/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/log-text-is-not-a-command",
+    "name": "diagnose-treats-captured-output-as-data",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-LHusHC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/log-text-is-not-a-command",
+    "name": "diagnose-treats-captured-output-as-data",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-VrlDXb/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/log-text-is-not-a-command",
+    "name": "diagnose-treats-captured-output-as-data",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-MKPr4a/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/log-text-is-not-a-command",
+    "name": "diagnose-treats-captured-output-as-data",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-C1P5qD/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-feature-request-as-defect",
+    "name": "diagnose-returns-an-unspecified-behaviour-as-a-scope-question",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-Yq3zpt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-feature-request-as-defect",
+    "name": "diagnose-returns-an-unspecified-behaviour-as-a-scope-question",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-fSUC42/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-feature-request-as-defect",
+    "name": "diagnose-returns-an-unspecified-behaviour-as-a-scope-question",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-qJpfQf/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-feature-request-as-defect",
+    "name": "diagnose-returns-an-unspecified-behaviour-as-a-scope-question",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-vs3xWU/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-feature-request-as-defect",
+    "name": "diagnose-returns-an-unspecified-behaviour-as-a-scope-question",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-ZDMgPB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-feature-request-as-defect",
+    "name": "diagnose-returns-an-unspecified-behaviour-as-a-scope-question",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-PNSfaQ/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-style-complaint",
+    "name": "diagnose-declines-a-review-finding",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-eKG0NC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-style-complaint",
+    "name": "diagnose-declines-a-review-finding",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-YQu4v0/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-style-complaint",
+    "name": "diagnose-declines-a-review-finding",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-Z6iU5y/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-style-complaint",
+    "name": "diagnose-declines-a-review-finding",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-FQ3NIF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-style-complaint",
+    "name": "diagnose-declines-a-review-finding",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-PTw4Eh/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/refuses-style-complaint",
+    "name": "diagnose-declines-a-review-finding",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-X2m3oR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+    "name": "diagnose-stops-at-the-third-failed-fix",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-lX3YpA/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+    "name": "diagnose-stops-at-the-third-failed-fix",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-JCkx9d/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+    "name": "diagnose-stops-at-the-third-failed-fix",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-7PQPF5/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+    "name": "diagnose-stops-at-the-third-failed-fix",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-frCWKC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+    "name": "diagnose-stops-at-the-third-failed-fix",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-n5kTVS/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+    "name": "diagnose-stops-at-the-third-failed-fix",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-6wyZ8m/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-decision-ticket",
+    "name": "super-build-refuses-a-decision-ticket-wearing-implementation-clothes",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-RfA3jF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-decision-ticket",
+    "name": "super-build-refuses-a-decision-ticket-wearing-implementation-clothes",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-qeWxXt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-decision-ticket",
+    "name": "super-build-refuses-a-decision-ticket-wearing-implementation-clothes",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-nypDtP/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-decision-ticket",
+    "name": "super-build-refuses-a-decision-ticket-wearing-implementation-clothes",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-eUPtZL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-decision-ticket",
+    "name": "super-build-refuses-a-decision-ticket-wearing-implementation-clothes",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-AikWGl/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-decision-ticket",
+    "name": "super-build-refuses-a-decision-ticket-wearing-implementation-clothes",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-2wDJkf/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+    "name": "super-build-refuses-a-smell-finding-as-an-implementation-ticket",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-EZNxsf/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+    "name": "super-build-refuses-a-smell-finding-as-an-implementation-ticket",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-m3EecT/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+    "name": "super-build-refuses-a-smell-finding-as-an-implementation-ticket",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-hcITpI/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+    "name": "super-build-refuses-a-smell-finding-as-an-implementation-ticket",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-ABScyv/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+    "name": "super-build-refuses-a-smell-finding-as-an-implementation-ticket",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-7DRgM0/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+    "name": "super-build-refuses-a-smell-finding-as-an-implementation-ticket",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-nsOfAE/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+    "name": "super-build-adjudicates-every-open-finding-at-the-round-cap",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-4zJGQf/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+    "name": "super-build-adjudicates-every-open-finding-at-the-round-cap",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-kotnuc/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+    "name": "super-build-adjudicates-every-open-finding-at-the-round-cap",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-Ign5Ut/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+    "name": "super-build-adjudicates-every-open-finding-at-the-round-cap",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-KkZGHB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+    "name": "super-build-adjudicates-every-open-finding-at-the-round-cap",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-wsh8Xi/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+    "name": "super-build-adjudicates-every-open-finding-at-the-round-cap",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-nHcUxB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/task-local-child-does-not-ship",
+    "name": "a task-local child builds its ticket and leaves shipping to the worker",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-HpiWWF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/task-local-child-does-not-ship",
+    "name": "a task-local child builds its ticket and leaves shipping to the worker",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-ZS5Qxu/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/task-local-child-does-not-ship",
+    "name": "a task-local child builds its ticket and leaves shipping to the worker",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-P2uqff/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/task-local-child-does-not-ship",
+    "name": "a task-local child builds its ticket and leaves shipping to the worker",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-Gikt8E/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/task-local-child-does-not-ship",
+    "name": "a task-local child builds its ticket and leaves shipping to the worker",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-3A7tqo/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-build/task-local-child-does-not-ship",
+    "name": "a task-local child builds its ticket and leaves shipping to the worker",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-RYyCkR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/correction-becomes-one-candidate",
+    "name": "correction-becomes-one-candidate",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-89p0BD/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/correction-becomes-one-candidate",
+    "name": "correction-becomes-one-candidate",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-3qjPqD/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/correction-becomes-one-candidate",
+    "name": "correction-becomes-one-candidate",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-3bgtGq/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/correction-becomes-one-candidate",
+    "name": "correction-becomes-one-candidate",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-Zd3JeX/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/correction-becomes-one-candidate",
+    "name": "correction-becomes-one-candidate",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-VyxZfJ/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/correction-becomes-one-candidate",
+    "name": "correction-becomes-one-candidate",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-vxIIVL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+    "name": "no-knowledgebase-means-no-repo-fallback",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-DWJbbD/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+    "name": "no-knowledgebase-means-no-repo-fallback",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-3SuCIq/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+    "name": "no-knowledgebase-means-no-repo-fallback",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-QKDVR2/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+    "name": "no-knowledgebase-means-no-repo-fallback",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-vbWLKR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+    "name": "no-knowledgebase-means-no-repo-fallback",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-QOyl3n/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+    "name": "no-knowledgebase-means-no-repo-fallback",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-C7RZCb/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+    "name": "doc-review-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-tbCN71/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+    "name": "doc-review-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Dl7EBK/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+    "name": "doc-review-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-TNj62X/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+    "name": "doc-review-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-o2TGXm/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+    "name": "doc-review-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-WfjD2e/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+    "name": "doc-review-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-OujpTl/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-align-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-Tdl4mX/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-align-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-lnplTo/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-align-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-q539LR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-align-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-aMikAF/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-align-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-dzl9lL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-align-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-MVG88T/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+    "name": "typo-fix-does-not-start-alignment",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-BKne56/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+    "name": "typo-fix-does-not-start-alignment",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-E0D3Ol/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+    "name": "typo-fix-does-not-start-alignment",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-iA1fsD/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+    "name": "typo-fix-does-not-start-alignment",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-ZEIGTR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+    "name": "typo-fix-does-not-start-alignment",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-yquZgt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+    "name": "typo-fix-does-not-start-alignment",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-OY0vkn/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+    "name": "unvalidatable-grant-stops-for-explicit-invocation",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-eK9JTs/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+    "name": "unvalidatable-grant-stops-for-explicit-invocation",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-wGx0Bc/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+    "name": "unvalidatable-grant-stops-for-explicit-invocation",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-zylgbC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+    "name": "unvalidatable-grant-stops-for-explicit-invocation",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-qse7gH/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+    "name": "unvalidatable-grant-stops-for-explicit-invocation",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-jEUxSl/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+    "name": "unvalidatable-grant-stops-for-explicit-invocation",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-baydqq/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/vague-request-opens-a-round",
+    "name": "vague-request-opens-a-round",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-TjsqBO/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/vague-request-opens-a-round",
+    "name": "vague-request-opens-a-round",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-nkszxz/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/vague-request-opens-a-round",
+    "name": "vague-request-opens-a-round",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-5FqOLA/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/vague-request-opens-a-round",
+    "name": "vague-request-opens-a-round",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-AyBJmI/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/vague-request-opens-a-round",
+    "name": "vague-request-opens-a-round",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-ZpLq5w/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-align/vague-request-opens-a-round",
+    "name": "vague-request-opens-a-round",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-UtPg3W/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+    "name": "edited-spec-does-not-inherit-approval",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-XKtvOY/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+    "name": "edited-spec-does-not-inherit-approval",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-0bsH4k/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+    "name": "edited-spec-does-not-inherit-approval",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-YlWD1T/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+    "name": "edited-spec-does-not-inherit-approval",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-iKEs0K/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+    "name": "edited-spec-does-not-inherit-approval",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-UGnS9H/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+    "name": "edited-spec-does-not-inherit-approval",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-qEXKEE/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-bound-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-XapPAg/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-bound-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-TN0Ddd/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-bound-no-knowledgebase-write-stops-before-publishing",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-71uaX0/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-bound-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-ijoOSC/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-bound-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-CUYGUt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+    "name": "super-bound-no-knowledgebase-write-stops-before-publishing",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-Bqlgxb/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+    "name": "reviewed-ticket-does-not-reopen-bounding",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-NVzIAX/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+    "name": "reviewed-ticket-does-not-reopen-bounding",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-U42o9S/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+    "name": "reviewed-ticket-does-not-reopen-bounding",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-2LP3Xp/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+    "name": "reviewed-ticket-does-not-reopen-bounding",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-c1Md6o/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+    "name": "reviewed-ticket-does-not-reopen-bounding",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Fx9Bo2/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+    "name": "reviewed-ticket-does-not-reopen-bounding",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-9frfXQ/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+    "name": "zero-context-failure-is-a-decision-ticket",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-0tlYbM/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+    "name": "zero-context-failure-is-a-decision-ticket",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-RyvAqA/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+    "name": "zero-context-failure-is-a-decision-ticket",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-oPNHnN/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+    "name": "zero-context-failure-is-a-decision-ticket",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-2nuMt9/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+    "name": "zero-context-failure-is-a-decision-ticket",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-VSZSd5/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+    "name": "zero-context-failure-is-a-decision-ticket",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-vFQEgY/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+    "name": "a-smell-is-not-handed-to-an-automatic-fixer",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-fRGx4f/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+    "name": "a-smell-is-not-handed-to-an-automatic-fixer",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-UnQghk/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+    "name": "a-smell-is-not-handed-to-an-automatic-fixer",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-tVIm01/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+    "name": "a-smell-is-not-handed-to-an-automatic-fixer",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-k08wjw/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+    "name": "a-smell-is-not-handed-to-an-automatic-fixer",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-EEH6hc/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+    "name": "a-smell-is-not-handed-to-an-automatic-fixer",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-WdwD6O/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+    "name": "the-review-does-not-edit-the-source-it-reviews",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-RqEF1i/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+    "name": "the-review-does-not-edit-the-source-it-reviews",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-rsPKGt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+    "name": "the-review-does-not-edit-the-source-it-reviews",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-5qqNwK/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+    "name": "the-review-does-not-edit-the-source-it-reviews",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-L8R4hc/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+    "name": "the-review-does-not-edit-the-source-it-reviews",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Iuaa3Y/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+    "name": "the-review-does-not-edit-the-source-it-reviews",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-I6wgFz/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+    "name": "grilling-ticket-is-not-self-resolved",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-LA49M9/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+    "name": "grilling-ticket-is-not-self-resolved",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-9M5mco/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+    "name": "grilling-ticket-is-not-self-resolved",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-LCls3E/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+    "name": "grilling-ticket-is-not-self-resolved",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-K9ZRAK/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+    "name": "grilling-ticket-is-not-self-resolved",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-ujLDtI/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+    "name": "grilling-ticket-is-not-self-resolved",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-jwCvAY/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/loose-effort-charts-a-map",
+    "name": "loose-effort-charts-a-map",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-WEljhg/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/loose-effort-charts-a-map",
+    "name": "loose-effort-charts-a-map",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-Emq5KX/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/loose-effort-charts-a-map",
+    "name": "loose-effort-charts-a-map",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-WY23Lp/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/loose-effort-charts-a-map",
+    "name": "loose-effort-charts-a-map",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-HsOOD4/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/loose-effort-charts-a-map",
+    "name": "loose-effort-charts-a-map",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-UnpMKV/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/loose-effort-charts-a-map",
+    "name": "loose-effort-charts-a-map",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-73eLu1/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-fog-means-no-map",
+    "name": "no-fog-means-no-map",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-lhmkOt/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-fog-means-no-map",
+    "name": "no-fog-means-no-map",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-9FyfdM/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-fog-means-no-map",
+    "name": "no-fog-means-no-map",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-As3Ycr/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-fog-means-no-map",
+    "name": "no-fog-means-no-map",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-hzcrXQ/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-fog-means-no-map",
+    "name": "no-fog-means-no-map",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-mRag4A/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-fog-means-no-map",
+    "name": "no-fog-means-no-map",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-m4cs7r/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+    "name": "no-system-of-record-stops-before-charting",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-d8P19A/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+    "name": "no-system-of-record-stops-before-charting",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-HCEodo/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+    "name": "no-system-of-record-stops-before-charting",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-3b6lm5/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+    "name": "no-system-of-record-stops-before-charting",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-v7CsLM/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+    "name": "no-system-of-record-stops-before-charting",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-1DPm8A/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+    "name": "no-system-of-record-stops-before-charting",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-4LaesO/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+    "name": "out-of-scope-needs-a-reason",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-bPobgL/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+    "name": "out-of-scope-needs-a-reason",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-6HEJmR/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+    "name": "out-of-scope-needs-a-reason",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-WOUwV7/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+    "name": "out-of-scope-needs-a-reason",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-ScEHbc/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+    "name": "out-of-scope-needs-a-reason",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-UKDf42/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+    "name": "out-of-scope-needs-a-reason",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-O4wsGB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+    "name": "a worker's own helper is not an independent supervisor judgment, and seat output is kept",
+    "arm": "with",
+    "run": 1,
+    "hostPath": "/private/tmp/e-yCH5eB/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+    "name": "a worker's own helper is not an independent supervisor judgment, and seat output is kept",
+    "arm": "with",
+    "run": 2,
+    "hostPath": "/private/tmp/e-M9jKIv/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+    "name": "a worker's own helper is not an independent supervisor judgment, and seat output is kept",
+    "arm": "with",
+    "run": 3,
+    "hostPath": "/private/tmp/e-otWucN/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+    "name": "a worker's own helper is not an independent supervisor judgment, and seat output is kept",
+    "arm": "without",
+    "run": 1,
+    "hostPath": "/private/tmp/e-5UbXOl/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+    "name": "a worker's own helper is not an independent supervisor judgment, and seat output is kept",
+    "arm": "without",
+    "run": 2,
+    "hostPath": "/private/tmp/e-CLhz5H/out/trace.jsonl",
+    "copy": null
+   },
+   {
+    "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+    "name": "a worker's own helper is not an independent supervisor judgment, and seat output is kept",
+    "arm": "without",
+    "run": 3,
+    "hostPath": "/private/tmp/e-lYxcOo/out/trace.jsonl",
+    "copy": null
+   }
+  ],
+  "costUsd": 42.4787664,
+  "durationSeconds": 1067,
+  "partial": false,
+  "invocations": [
+   {
+    "grant": [],
+    "bundle": ".work/evals/2026-09-25-rerun/a1-host.groups/0/claude-code",
+    "bundleSha256": "94a61e146b41868eea2d142c4a80b2695eb43c5c7f8c23014420db5a2b6f170e",
+    "command": "claude plugin eval .work/evals/2026-09-25-rerun/a1-host.groups/0/claude-code --no-publish --json .work/evals/2026-09-25-rerun/a1-host.group-0.json --runs 3 --concurrency 6 --scaffold --max-cost-usd 80",
+    "exitStatus": 1,
+    "costUsd": 8.784842200000002,
+    "partial": false,
+    "incomplete_cases": [],
+    "scaffoldSkipped": [],
+    "result": ".work/evals/2026-09-25-rerun/a1-host.group-0.json"
+   },
+   {
+    "grant": [
+     "Bash"
+    ],
+    "bundle": ".work/evals/2026-09-25-rerun/a1-host.groups/1/claude-code",
+    "bundleSha256": "f1c3199b3ffd5e9e058ac7933877e76c9ea3c97b9f22251ac74d85ee247e0f89",
+    "command": "claude plugin eval .work/evals/2026-09-25-rerun/a1-host.groups/1/claude-code --no-publish --json .work/evals/2026-09-25-rerun/a1-host.group-1.json --runs 3 --concurrency 6 --scaffold --allow-tools Bash --max-cost-usd 71.2151",
+    "exitStatus": 1,
+    "costUsd": 6.723244399999999,
+    "partial": false,
+    "incomplete_cases": [],
+    "scaffoldSkipped": [],
+    "result": ".work/evals/2026-09-25-rerun/a1-host.group-1.json"
+   },
+   {
+    "grant": [
+     "Bash",
+     "Edit",
+     "Write"
+    ],
+    "bundle": ".work/evals/2026-09-25-rerun/a1-host.groups/2/claude-code",
+    "bundleSha256": "21f713e77e54f99b25c2186ea750850b0460cd3fb8c2a32c0add03669b90a6fa",
+    "command": "claude plugin eval .work/evals/2026-09-25-rerun/a1-host.groups/2/claude-code --no-publish --json .work/evals/2026-09-25-rerun/a1-host.group-2.json --runs 3 --concurrency 6 --scaffold --allow-tools Bash Edit Write --max-cost-usd 64.4919",
+    "exitStatus": 1,
+    "costUsd": 10.824949799999995,
+    "partial": false,
+    "incomplete_cases": [],
+    "scaffoldSkipped": [],
+    "result": ".work/evals/2026-09-25-rerun/a1-host.group-2.json"
+   },
+   {
+    "grant": [
+     "Edit",
+     "Write"
+    ],
+    "bundle": ".work/evals/2026-09-25-rerun/a1-host.groups/3/claude-code",
+    "bundleSha256": "18c1e4dc572801a76b4faef7792b6d9281ebd9d454bb3993430412787f6f1de7",
+    "command": "claude plugin eval .work/evals/2026-09-25-rerun/a1-host.groups/3/claude-code --no-publish --json .work/evals/2026-09-25-rerun/a1-host.group-3.json --runs 3 --concurrency 6 --scaffold --allow-tools Edit Write --max-cost-usd 53.6669",
+    "exitStatus": 1,
+    "costUsd": 12.040039,
+    "partial": false,
+    "incomplete_cases": [],
+    "scaffoldSkipped": [],
+    "result": ".work/evals/2026-09-25-rerun/a1-host.group-3.json"
+   },
+   {
+    "grant": [
+     "Write"
+    ],
+    "bundle": ".work/evals/2026-09-25-rerun/a1-host.groups/4/claude-code",
+    "bundleSha256": "6dde7990c61f67bb132c189e90201948483af1d2ae78cf68f64ce49968842fe2",
+    "command": "claude plugin eval .work/evals/2026-09-25-rerun/a1-host.groups/4/claude-code --no-publish --json .work/evals/2026-09-25-rerun/a1-host.group-4.json --runs 3 --concurrency 6 --scaffold --allow-tools Write --max-cost-usd 41.6269",
+    "exitStatus": 1,
+    "costUsd": 4.105691,
+    "partial": false,
+    "incomplete_cases": [],
+    "scaffoldSkipped": [],
+    "result": ".work/evals/2026-09-25-rerun/a1-host.group-4.json"
+   }
+  ]
+ },
+ "by_tag": {
+  "files": [
+   ".work/evals/2026-09-25-rerun/a1-host.json"
+  ],
+  "cases": 48,
+  "positive": {
+   "cases": 3,
+   "pass_with": "5/9 0.56 [0.27, 0.81]",
+   "pass_without": "3/9 0.33 [0.12, 0.65]",
+   "score_delta_bootstrap": "0.30 [0.00, 0.67]",
+   "pass_hat_3_with": "1/3",
+   "with_only_indicator_all_pass": "0/0",
+   "errored_runs": 0
+  },
+  "negative": {
+   "cases": 15,
+   "pass_with": "15/45 0.33 [0.21, 0.48]",
+   "pass_without": "10/45 0.22 [0.13, 0.36]",
+   "score_delta_bootstrap": "0.06 [0.00, 0.13]",
+   "pass_hat_3_with": "5/15",
+   "with_only_indicator_all_pass": "9/9",
+   "errored_runs": 0
+  },
+  "adversarial": {
+   "cases": 24,
+   "pass_with": "21/72 0.29 [0.20, 0.41]",
+   "pass_without": "17/72 0.24 [0.15, 0.35]",
+   "score_delta_bootstrap": "0.04 [-0.09, 0.17]",
+   "pass_hat_3_with": "5/24",
+   "with_only_indicator_all_pass": "31/72",
+   "errored_runs": 0
+  },
+  "other": {
+   "cases": 6,
+   "pass_with": "0/18 0.00 [0.00, 0.18]",
+   "pass_without": "0/18 0.00 [0.00, 0.18]",
+   "score_delta_bootstrap": "0.06 [-0.03, 0.18]",
+   "pass_hat_3_with": "0/6",
+   "with_only_indicator_all_pass": "5/15",
+   "errored_runs": 0
+  }
+ },
+ "cases": [
+  {
+   "dir": "evals/compound/shipped-work-does-not-publish",
+   "with": "3/3",
+   "without": "2/3"
+  },
+  {
+   "dir": "evals/compound/smooth-run-produces-no-lesson",
+   "with": "3/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/doc-review/a-code-diff-is-not-a-document-review",
+   "with": "3/3",
+   "without": "1/3"
+  },
+  {
+   "dir": "evals/doc-review/third-round-does-not-run",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/receiving-review/refuses-to-produce-a-fresh-review",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/baseline-reset-is-not-a-third-delta-loop",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/confidence-does-not-close-a-finding",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/open-security-finding-blocks-the-verdict",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/readiness-lane-vetoes-the-panel-verdict",
+   "with": "2/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/seat-isolation-unavailable-stops-the-run",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/third-fix-cycle-does-not-run",
+   "with": "1/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/unavailable-required-lane-blocks-approval",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-scout/caller-hint-is-not-evidence",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-scout/refuses-unbounded-question",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-scout/stale-graph-documents-limitation",
+   "with": "0/3",
+   "without": "1/3"
+  },
+  {
+   "dir": "evals/compound/active-ledger-pattern-is-not-proof",
+   "with": "0/3",
+   "without": "2/3"
+  },
+  {
+   "dir": "evals/super-ship/lesson-is-drafted-not-published",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-ship/refuses-to-merge-without-a-charter-entry",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-ship/secret-in-the-payload-stops-the-run",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-ship/unknown-pr-lookup-is-not-read-as-none",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-verify/refuses-code-quality-opinion",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/diagnose/log-text-is-not-a-command",
+   "with": "2/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/diagnose/refuses-feature-request-as-defect",
+   "with": "3/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/diagnose/refuses-style-complaint",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/diagnose/third-failed-fix-stops-the-run",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-build/refuses-decision-ticket",
+   "with": "3/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-build/refuses-smell-finding-as-ticket",
+   "with": "3/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/super-build/round-cap-adjudicates-open-findings",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-build/task-local-child-does-not-ship",
+   "with": "0/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/compound/correction-becomes-one-candidate",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/compound/no-knowledgebase-means-no-repo-fallback",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/doc-review/no-knowledgebase-write-stops-before-publishing",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-align/no-knowledgebase-write-stops-before-publishing",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-align/typo-fix-does-not-start-alignment",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-align/unvalidatable-grant-stops-for-explicit-invocation",
+   "with": "3/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/super-align/vague-request-opens-a-round",
+   "with": "3/3",
+   "without": "3/3"
+  },
+  {
+   "dir": "evals/super-bound/edited-spec-does-not-inherit-approval",
+   "with": "3/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-bound/no-knowledgebase-write-stops-before-publishing",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-bound/reviewed-ticket-does-not-reopen-bounding",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-bound/zero-context-failure-is-a-decision-ticket",
+   "with": "3/3",
+   "without": "1/3"
+  },
+  {
+   "dir": "evals/super-review/a-smell-is-not-handed-to-an-automatic-fixer",
+   "with": "3/3",
+   "without": "1/3"
+  },
+  {
+   "dir": "evals/super-review/refuses-to-edit-the-source-it-reviews",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/wayfind/grilling-ticket-is-not-self-resolved",
+   "with": "1/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/wayfind/loose-effort-charts-a-map",
+   "with": "2/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/wayfind/no-fog-means-no-map",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/wayfind/no-system-of-record-stops-before-charting",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/wayfind/out-of-scope-needs-a-reason",
+   "with": "0/3",
+   "without": "0/3"
+  },
+  {
+   "dir": "evals/super-review/worker-helper-is-not-an-independent-judge",
+   "with": "0/3",
+   "without": "1/3"
+  }
+ ]
+}

@@ -1,0 +1,90 @@
+{
+  "mode": "off",
+  "arms": [
+    {
+      "arm": "with",
+      "completed": true,
+      "claudeCodeCanary": true,
+      "evalCanary": true,
+      "plainCanary": false,
+      "operatorMarkers": [],
+      "launcherSessionId": false,
+      "launcherMessagingSocket": false,
+      "init": {
+        "plugins": [
+          "ak-probe@inline",
+          "agents-md@builtin"
+        ],
+        "mcpServers": [],
+        "skills": [
+          "deep-research",
+          "dataviz",
+          "update-config",
+          "verify",
+          "debug",
+          "code-review",
+          "simplify",
+          "batch",
+          "fewer-permission-prompts",
+          "doctor",
+          "loop",
+          "schedule",
+          "claude-api",
+          "workflow-authoring",
+          "run",
+          "run-skill-generator"
+        ],
+        "agents": [
+          "claude",
+          "Explore",
+          "general-purpose",
+          "Plan",
+          "statusline-setup"
+        ],
+        "memoryPaths": null
+      }
+    },
+    {
+      "arm": "without",
+      "completed": true,
+      "claudeCodeCanary": true,
+      "evalCanary": true,
+      "plainCanary": false,
+      "operatorMarkers": [],
+      "launcherSessionId": false,
+      "launcherMessagingSocket": false,
+      "init": {
+        "plugins": [
+          "agents-md@builtin"
+        ],
+        "mcpServers": [],
+        "skills": [
+          "deep-research",
+          "dataviz",
+          "update-config",
+          "verify",
+          "debug",
+          "code-review",
+          "simplify",
+          "batch",
+          "fewer-permission-prompts",
+          "doctor",
+          "loop",
+          "schedule",
+          "claude-api",
+          "workflow-authoring",
+          "run",
+          "run-skill-generator"
+        ],
+        "agents": [
+          "claude",
+          "Explore",
+          "general-purpose",
+          "Plan",
+          "statusline-setup"
+        ],
+        "memoryPaths": null
+      }
+    }
+  ]
+}

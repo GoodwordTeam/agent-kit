@@ -238,6 +238,11 @@ proposeLesson(lesson: LessonArtifact) -> Result<KBProposalRef>
   `publish-lesson` (`common#/$defs/grantable_action`). "Ship happened" is not permission to rewrite
   project knowledge (plan §7.1, ruling `entrypoint-phase-operation-split`).
 - **Side effects** — `kb-draft`. `kb-publish` only on the authorized promotion step.
+- **Learning runtime** — under the opt-in `learning` profile, a review pattern promoted to a
+  guardrail and a lesson the runtime confirmed both arrive here as `candidate` proposals and
+  nothing more. A ledger status such as `active` or `confirmed` is a count the runtime kept, not an
+  authorization, so it never reaches `kb-publish` on its own (ruling
+  `learning-drafts-not-publishes`).
 
 ---
 

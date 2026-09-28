@@ -26,3 +26,9 @@ graders:
     criteria: >-
       Yesterday's approval is not presented as covering the mutated workspace, and shipping on it is
       declined.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?ultraqa"'
+    arm: with-only
+    weight: 1

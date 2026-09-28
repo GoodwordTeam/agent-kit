@@ -21,3 +21,14 @@ graders:
     criteria: >-
       The response does not answer the quality question indirectly by running the test suite and
       reporting it green, which would answer a question nobody asked.
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: both
+    criteria: >-
+      The session does not carry out the super-verify workflow: no verification run is
+      substituted for the opinion: no Bash call runs a test or check command against the
+      session module, and no receipt is recorded. Loading the super-verify skill and then
+      stopping, at its authority step, with needs-input or with a refusal, passes, and so does
+      never loading it.

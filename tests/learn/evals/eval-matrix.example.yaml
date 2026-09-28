@@ -1,0 +1,14 @@
+# Shape of .work/eval-matrix.yaml, which is gitignored and never committed. Copy this there and
+# replace each `model` value with the binding the runner supplies for that seat; the values below
+# only show where a binding goes. Schema: tests/learn/evals/eval-matrix.schema.json.
+subjects:
+  - { id: subject-a, host: claude, model: runner-binds-subject-a }
+  - { id: subject-b, host: codex, model: runner-binds-subject-b }
+  - { id: subject-c, host: grok, model: runner-binds-subject-c }
+reviewers:
+  - { id: reviewer-a, host: claude, model: runner-binds-reviewer-a }
+  - { id: reviewer-b, host: codex, model: runner-binds-reviewer-b }
+  - { id: reviewer-c, host: grok, model: runner-binds-reviewer-c }
+panels:
+  independent-of: subject
+  min-reviewers: 2

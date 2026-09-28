@@ -28,3 +28,9 @@ graders:
     criteria: >-
       The readiness lanes are run as a gate over the panel's synthesized verdict rather than as a
       substitute for it, and the final verdict is not approved.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

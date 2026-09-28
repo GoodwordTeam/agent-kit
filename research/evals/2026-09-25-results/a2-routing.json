@@ -1,0 +1,3901 @@
+{
+ "note": "rescored offline with the matcher at 3d9a48a: only rows scored missed with nothing loaded were re-evaluated, from the stored reply",
+ "arms": {
+  "a2-bon-ron": {
+   "receipt": {
+    "prompt_set": "trigger-dev",
+    "prompt_set_version": 3,
+    "prompt_set_sha256": "857e7c96bd0563027a1eee233e3d32a99450c1ef5d89793393154890481bdbcb",
+    "arm": "natural",
+    "roster": "on",
+    "bundle": "on",
+    "roster_tokens": 199,
+    "noop_baseline": {
+     "balanced_accuracy": 0.5,
+     "fire": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "negative_pass": {
+      "k": 15,
+      "n": 15,
+      "rate": 1,
+      "lo": 0.7961,
+      "hi": 1
+     },
+     "user_prose_pass": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     }
+    },
+    "argv": [
+     "bun",
+     "tests/learn/evals/trigger-eval.ts",
+     "--set",
+     "dev",
+     "--arm",
+     "natural",
+     "--json",
+     ".work/evals/2026-09-25-rerun/a2-bon-ron.json",
+     "--dump-transcripts",
+     ".work/evals/2026-09-25-rerun/a2-bon-ron-tx",
+     "--quiet"
+    ],
+    "revision": "449efa82691796db862bc5ad93165bc275628397",
+    "subjects": [
+     {
+      "subject": "subject-default",
+      "host": "claude",
+      "injection": "append-system-prompt",
+      "bundle": "~/orca/workspaces/agent-kit/batfish/dist/claude-code",
+      "leaks": [
+       "the caller's config dir and login",
+       "the host's built-in skills"
+      ],
+      "observed_models": [
+       "claude-opus-5-5"
+      ]
+     }
+    ]
+   },
+   "observed_models": [
+    "claude-opus-5-5"
+   ],
+   "summary": {
+    "n": 57,
+    "invalid": {
+     "n": 0,
+     "cases": []
+    },
+    "unscored": {
+     "n": 3,
+     "cases": [
+      {
+       "id": "dev-super-bound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-compound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p1",
+       "outcome": "loaded-unclear"
+      }
+     ]
+    },
+    "fire": {
+     "k": 14,
+     "n": 15,
+     "rate": 0.9333,
+     "lo": 0.7018,
+     "hi": 0.9881
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.9667,
+    "named_only": 0,
+    "flagged": 3,
+    "user_prose": {
+     "pass": {
+      "k": 16,
+      "n": 27,
+      "rate": 0.5926,
+      "lo": 0.4073,
+      "hi": 0.7549
+     },
+     "recommended": {
+      "k": 11,
+      "n": 27,
+      "rate": 0.4074,
+      "lo": 0.2451,
+      "hi": 0.5927
+     },
+     "loaded": {
+      "k": 1,
+      "n": 27,
+      "rate": 0.037,
+      "lo": 0.0066,
+      "hi": 0.1828
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 27,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1246
+     },
+     "redirected": {
+      "k": 5,
+      "n": 27,
+      "rate": 0.1852,
+      "lo": 0.0818,
+      "hi": 0.367
+     },
+     "violated": {
+      "k": 1,
+      "n": 27,
+      "rate": 0.037,
+      "lo": 0.0066,
+      "hi": 0.1828
+     },
+     "missed": {
+      "k": 10,
+      "n": 27,
+      "rate": 0.3704,
+      "lo": 0.2153,
+      "hi": 0.5577
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 9,
+      "n": 10,
+      "rate": 0.9,
+      "lo": 0.5958,
+      "hi": 0.9821
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 5.2093
+   },
+   "summary_first_scorer": {
+    "n": 57,
+    "invalid": {
+     "n": 0,
+     "cases": []
+    },
+    "unscored": {
+     "n": 3,
+     "cases": [
+      {
+       "id": "dev-super-bound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-compound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p1",
+       "outcome": "loaded-unclear"
+      }
+     ]
+    },
+    "fire": {
+     "k": 14,
+     "n": 15,
+     "rate": 0.9333,
+     "lo": 0.7018,
+     "hi": 0.9881
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.9667,
+    "named_only": 0,
+    "flagged": 3,
+    "user_prose": {
+     "pass": {
+      "k": 5,
+      "n": 27,
+      "rate": 0.1852,
+      "lo": 0.0818,
+      "hi": 0.367
+     },
+     "recommended": {
+      "k": 3,
+      "n": 27,
+      "rate": 0.1111,
+      "lo": 0.0385,
+      "hi": 0.2806
+     },
+     "loaded": {
+      "k": 1,
+      "n": 27,
+      "rate": 0.037,
+      "lo": 0.0066,
+      "hi": 0.1828
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 27,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1246
+     },
+     "redirected": {
+      "k": 2,
+      "n": 27,
+      "rate": 0.0741,
+      "lo": 0.0206,
+      "hi": 0.2337
+     },
+     "violated": {
+      "k": 1,
+      "n": 27,
+      "rate": 0.037,
+      "lo": 0.0066,
+      "hi": 0.1828
+     },
+     "missed": {
+      "k": 21,
+      "n": 27,
+      "rate": 0.7778,
+      "lo": 0.5924,
+      "hi": 0.8939
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 9,
+      "n": 10,
+      "rate": 0.9,
+      "lo": 0.5958,
+      "hi": 0.9821
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 5.2093
+   },
+   "rows": [
+    {
+     "id": "dev-super-align-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-super-align-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-super-align-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "super-align"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-bound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-super-bound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-ship"
+     ],
+     "outcome": "violated",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "super-ship"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "compound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-compound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "compound"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-compound-refresh-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-compound-refresh-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "receiving-review"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-receiving-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "receiving-review"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-babysit-pr-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-ultraqa-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-wayfind-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-wayfind-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "wayfind"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-scout"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-scout"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-build"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-build"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-verify"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-verify"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "doc-review"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "diagnose"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "diagnose"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    }
+   ]
+  },
+  "a2-bon-roff": {
+   "receipt": {
+    "prompt_set": "trigger-dev",
+    "prompt_set_version": 3,
+    "prompt_set_sha256": "857e7c96bd0563027a1eee233e3d32a99450c1ef5d89793393154890481bdbcb",
+    "arm": "natural",
+    "roster": "off",
+    "bundle": "on",
+    "roster_tokens": 0,
+    "noop_baseline": {
+     "balanced_accuracy": 0.5,
+     "fire": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "negative_pass": {
+      "k": 15,
+      "n": 15,
+      "rate": 1,
+      "lo": 0.7961,
+      "hi": 1
+     },
+     "user_prose_pass": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     }
+    },
+    "argv": [
+     "bun",
+     "tests/learn/evals/trigger-eval.ts",
+     "--set",
+     "dev",
+     "--arm",
+     "natural",
+     "--roster",
+     "off",
+     "--json",
+     ".work/evals/2026-09-25-rerun/a2-bon-roff.json",
+     "--dump-transcripts",
+     ".work/evals/2026-09-25-rerun/a2-bon-roff-tx",
+     "--quiet"
+    ],
+    "revision": "449efa82691796db862bc5ad93165bc275628397",
+    "subjects": [
+     {
+      "subject": "subject-default",
+      "host": "claude",
+      "injection": "append-system-prompt",
+      "bundle": "~/orca/workspaces/agent-kit/batfish/dist/claude-code",
+      "leaks": [
+       "the caller's config dir and login",
+       "the host's built-in skills"
+      ],
+      "observed_models": [
+       "claude-opus-5-5"
+      ]
+     }
+    ]
+   },
+   "observed_models": [
+    "claude-opus-5-5"
+   ],
+   "summary": {
+    "n": 45,
+    "invalid": {
+     "n": 0,
+     "cases": []
+    },
+    "unscored": {
+     "n": 15,
+     "cases": [
+      {
+       "id": "dev-super-align-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-align-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-bound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-bound-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-bound-p3",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-review-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-review-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-compound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-compound-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p3",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-wayfind-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-wayfind-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-wayfind-p3",
+       "outcome": "loaded-unclear"
+      }
+     ]
+    },
+    "fire": {
+     "k": 14,
+     "n": 15,
+     "rate": 0.9333,
+     "lo": 0.7018,
+     "hi": 0.9881
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.9667,
+    "named_only": 0,
+    "flagged": 15,
+    "user_prose": {
+     "pass": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "recommended": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "loaded": {
+      "k": 3,
+      "n": 15,
+      "rate": 0.2,
+      "lo": 0.0705,
+      "hi": 0.4519
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "redirected": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "violated": {
+      "k": 3,
+      "n": 15,
+      "rate": 0.2,
+      "lo": 0.0705,
+      "hi": 0.4519
+     },
+     "missed": {
+      "k": 12,
+      "n": 15,
+      "rate": 0.8,
+      "lo": 0.5481,
+      "hi": 0.9295
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 9,
+      "n": 10,
+      "rate": 0.9,
+      "lo": 0.5958,
+      "hi": 0.9821
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 6.2683
+   },
+   "summary_first_scorer": {
+    "n": 45,
+    "invalid": {
+     "n": 0,
+     "cases": []
+    },
+    "unscored": {
+     "n": 15,
+     "cases": [
+      {
+       "id": "dev-super-align-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-align-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-bound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-bound-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-bound-p3",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-review-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-super-review-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-compound-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-compound-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-receiving-review-p3",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-wayfind-p1",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-wayfind-p2",
+       "outcome": "loaded-unclear"
+      },
+      {
+       "id": "dev-wayfind-p3",
+       "outcome": "loaded-unclear"
+      }
+     ]
+    },
+    "fire": {
+     "k": 14,
+     "n": 15,
+     "rate": 0.9333,
+     "lo": 0.7018,
+     "hi": 0.9881
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.9667,
+    "named_only": 0,
+    "flagged": 15,
+    "user_prose": {
+     "pass": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "recommended": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "loaded": {
+      "k": 3,
+      "n": 15,
+      "rate": 0.2,
+      "lo": 0.0705,
+      "hi": 0.4519
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "redirected": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "violated": {
+      "k": 3,
+      "n": 15,
+      "rate": 0.2,
+      "lo": 0.0705,
+      "hi": 0.4519
+     },
+     "missed": {
+      "k": 12,
+      "n": 15,
+      "rate": 0.8,
+      "lo": 0.5481,
+      "hi": 0.9295
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 9,
+      "n": 10,
+      "rate": 0.9,
+      "lo": 0.5958,
+      "hi": 0.9821
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 6.2683
+   },
+   "rows": [
+    {
+     "id": "dev-super-align-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-align"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-align"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "super-align"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-bound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-bound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-bound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-ship"
+     ],
+     "outcome": "violated",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-ship"
+     ],
+     "outcome": "violated",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "super-ship"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-review"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "super-review"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "compound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "compound"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "compound"
+     ],
+     "outcome": "violated",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "compound"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "receiving-review"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "receiving-review"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "receiving-review"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "receiving-review"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "wayfind"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "wayfind"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [
+      "wayfind"
+     ],
+     "outcome": "loaded-unclear",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [
+      "wayfind"
+     ],
+     "outcome": "proceeded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-scout"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-scout"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-build"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-build"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-verify"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "super-verify"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "doc-review"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "diagnose"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [
+      "diagnose"
+     ],
+     "outcome": "loaded",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    }
+   ]
+  },
+  "a2-boff-ron": {
+   "receipt": {
+    "prompt_set": "trigger-dev",
+    "prompt_set_version": 3,
+    "prompt_set_sha256": "857e7c96bd0563027a1eee233e3d32a99450c1ef5d89793393154890481bdbcb",
+    "arm": "natural",
+    "roster": "on",
+    "bundle": "off",
+    "roster_tokens": 199,
+    "noop_baseline": {
+     "balanced_accuracy": 0.5,
+     "fire": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "negative_pass": {
+      "k": 15,
+      "n": 15,
+      "rate": 1,
+      "lo": 0.7961,
+      "hi": 1
+     },
+     "user_prose_pass": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     }
+    },
+    "argv": [
+     "bun",
+     "tests/learn/evals/trigger-eval.ts",
+     "--set",
+     "dev",
+     "--arm",
+     "natural",
+     "--bundle",
+     "off",
+     "--roster",
+     "on",
+     "--json",
+     ".work/evals/2026-09-25-rerun/a2-boff-ron.json",
+     "--dump-transcripts",
+     ".work/evals/2026-09-25-rerun/a2-boff-ron-tx",
+     "--quiet"
+    ],
+    "revision": "449efa82691796db862bc5ad93165bc275628397",
+    "subjects": [
+     {
+      "subject": "subject-default",
+      "host": "claude",
+      "injection": "append-system-prompt",
+      "bundle": "none",
+      "leaks": [
+       "the caller's config dir and login",
+       "the host's built-in skills"
+      ],
+      "observed_models": [
+       "claude-opus-5-5"
+      ]
+     }
+    ]
+   },
+   "observed_models": [
+    "claude-opus-5-5"
+   ],
+   "summary": {
+    "n": 59,
+    "invalid": {
+     "n": 1,
+     "cases": [
+      {
+       "id": "dev-super-verify-p2",
+       "reason": "exit 1"
+      }
+     ]
+    },
+    "unscored": {
+     "n": 0,
+     "cases": []
+    },
+    "fire": {
+     "k": 0,
+     "n": 14,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2153
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.5,
+    "named_only": 0,
+    "flagged": 0,
+    "user_prose": {
+     "pass": {
+      "k": 20,
+      "n": 30,
+      "rate": 0.6667,
+      "lo": 0.4878,
+      "hi": 0.8077
+     },
+     "recommended": {
+      "k": 10,
+      "n": 30,
+      "rate": 0.3333,
+      "lo": 0.1923,
+      "hi": 0.5122
+     },
+     "loaded": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "redirected": {
+      "k": 10,
+      "n": 30,
+      "rate": 0.3333,
+      "lo": 0.1923,
+      "hi": 0.5122
+     },
+     "violated": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "missed": {
+      "k": 10,
+      "n": 30,
+      "rate": 0.3333,
+      "lo": 0.1923,
+      "hi": 0.5122
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 5,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.4345
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 9,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2992
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 3.6905
+   },
+   "summary_first_scorer": {
+    "n": 59,
+    "invalid": {
+     "n": 1,
+     "cases": [
+      {
+       "id": "dev-super-verify-p2",
+       "reason": "exit 1"
+      }
+     ]
+    },
+    "unscored": {
+     "n": 0,
+     "cases": []
+    },
+    "fire": {
+     "k": 0,
+     "n": 14,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2153
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.5,
+    "named_only": 0,
+    "flagged": 0,
+    "user_prose": {
+     "pass": {
+      "k": 11,
+      "n": 30,
+      "rate": 0.3667,
+      "lo": 0.2187,
+      "hi": 0.5449
+     },
+     "recommended": {
+      "k": 3,
+      "n": 30,
+      "rate": 0.1,
+      "lo": 0.0346,
+      "hi": 0.2562
+     },
+     "loaded": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "redirected": {
+      "k": 8,
+      "n": 30,
+      "rate": 0.2667,
+      "lo": 0.1418,
+      "hi": 0.4445
+     },
+     "violated": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "missed": {
+      "k": 19,
+      "n": 30,
+      "rate": 0.6333,
+      "lo": 0.4551,
+      "hi": 0.7813
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 5,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.4345
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 9,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2992
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 3.6905
+   },
+   "rows": [
+    {
+     "id": "dev-super-align-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-super-align-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-super-bound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-super-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-compound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-compound-refresh-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-receiving-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-babysit-pr-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-ultraqa-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "recommended",
+     "pass": true,
+     "rescored_from": "missed"
+    },
+    {
+     "id": "dev-wayfind-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    }
+   ]
+  },
+  "a2-boff-roff": {
+   "receipt": {
+    "prompt_set": "trigger-dev",
+    "prompt_set_version": 3,
+    "prompt_set_sha256": "857e7c96bd0563027a1eee233e3d32a99450c1ef5d89793393154890481bdbcb",
+    "arm": "natural",
+    "roster": "off",
+    "bundle": "off",
+    "roster_tokens": 0,
+    "noop_baseline": {
+     "balanced_accuracy": 0.5,
+     "fire": {
+      "k": 0,
+      "n": 15,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2039
+     },
+     "negative_pass": {
+      "k": 15,
+      "n": 15,
+      "rate": 1,
+      "lo": 0.7961,
+      "hi": 1
+     },
+     "user_prose_pass": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     }
+    },
+    "argv": [
+     "bun",
+     "tests/learn/evals/trigger-eval.ts",
+     "--set",
+     "dev",
+     "--arm",
+     "natural",
+     "--bundle",
+     "off",
+     "--roster",
+     "off",
+     "--json",
+     ".work/evals/2026-09-25-rerun/a2-boff-roff.json",
+     "--dump-transcripts",
+     ".work/evals/2026-09-25-rerun/a2-boff-roff-tx",
+     "--quiet"
+    ],
+    "revision": "449efa82691796db862bc5ad93165bc275628397",
+    "subjects": [
+     {
+      "subject": "subject-default",
+      "host": "claude",
+      "injection": "append-system-prompt",
+      "bundle": "none",
+      "leaks": [
+       "the caller's config dir and login",
+       "the host's built-in skills"
+      ],
+      "observed_models": [
+       "claude-opus-5-5"
+      ]
+     }
+    ]
+   },
+   "observed_models": [
+    "claude-opus-5-5"
+   ],
+   "summary": {
+    "n": 60,
+    "invalid": {
+     "n": 0,
+     "cases": []
+    },
+    "unscored": {
+     "n": 0,
+     "cases": []
+    },
+    "fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.5,
+    "named_only": 0,
+    "flagged": 0,
+    "user_prose": {
+     "pass": {
+      "k": 4,
+      "n": 30,
+      "rate": 0.1333,
+      "lo": 0.0531,
+      "hi": 0.2968
+     },
+     "recommended": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "loaded": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "redirected": {
+      "k": 4,
+      "n": 30,
+      "rate": 0.1333,
+      "lo": 0.0531,
+      "hi": 0.2968
+     },
+     "violated": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "missed": {
+      "k": 26,
+      "n": 30,
+      "rate": 0.8667,
+      "lo": 0.7032,
+      "hi": 0.9469
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 5,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.4345
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 10,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2775
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 3.79
+   },
+   "summary_first_scorer": {
+    "n": 60,
+    "invalid": {
+     "n": 0,
+     "cases": []
+    },
+    "unscored": {
+     "n": 0,
+     "cases": []
+    },
+    "fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "false_fire": {
+     "k": 0,
+     "n": 15,
+     "rate": 0,
+     "lo": 0,
+     "hi": 0.2039
+    },
+    "negative_pass": {
+     "k": 15,
+     "n": 15,
+     "rate": 1,
+     "lo": 0.7961,
+     "hi": 1
+    },
+    "balanced_accuracy": 0.5,
+    "named_only": 0,
+    "flagged": 0,
+    "user_prose": {
+     "pass": {
+      "k": 4,
+      "n": 30,
+      "rate": 0.1333,
+      "lo": 0.0531,
+      "hi": 0.2968
+     },
+     "recommended": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "loaded": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "loaded_and_stopped": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "redirected": {
+      "k": 4,
+      "n": 30,
+      "rate": 0.1333,
+      "lo": 0.0531,
+      "hi": 0.2968
+     },
+     "violated": {
+      "k": 0,
+      "n": 30,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.1135
+     },
+     "missed": {
+      "k": 26,
+      "n": 30,
+      "rate": 0.8667,
+      "lo": 0.7032,
+      "hi": 0.9469
+     }
+    },
+    "user_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 5,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.4345
+     },
+     "negative_pass": {
+      "k": 10,
+      "n": 10,
+      "rate": 1,
+      "lo": 0.7225,
+      "hi": 1
+     }
+    },
+    "model_invoked": {
+     "fire": {
+      "k": 0,
+      "n": 10,
+      "rate": 0,
+      "lo": 0,
+      "hi": 0.2775
+     },
+     "negative_pass": {
+      "k": 5,
+      "n": 5,
+      "rate": 1,
+      "lo": 0.5655,
+      "hi": 1
+     }
+    },
+    "cost_usd": 3.79
+   },
+   "rows": [
+    {
+     "id": "dev-super-align-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-align-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-bound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-ship-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "redirected",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-compound-refresh-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-receiving-review-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-babysit-pr-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-ultraqa-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p2",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-p3",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "recommend",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-s1",
+     "invocation": "U",
+     "polarity": "positive",
+     "expects": "proceed",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-wayfind-h1",
+     "invocation": "U",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-scout-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-build-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-super-verify-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-doc-review-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p1",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-p2",
+     "invocation": "M",
+     "polarity": "positive",
+     "expects": "load",
+     "loaded": [],
+     "outcome": "missed",
+     "pass": false,
+     "rescored_from": null
+    },
+    {
+     "id": "dev-diagnose-n1",
+     "invocation": "M",
+     "polarity": "negative",
+     "expects": null,
+     "loaded": [],
+     "outcome": "held",
+     "pass": true,
+     "rescored_from": null
+    }
+   ]
+  }
+ }
+}

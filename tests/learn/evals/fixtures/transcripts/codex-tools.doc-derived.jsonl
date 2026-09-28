@@ -1,0 +1,11 @@
+{"type":"thread.started","thread_id":"00000000-0000-0000-0000-000000000001"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"Looking for the skill."}}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"/bin/zsh -lc \"sed -n '1,80p' skills/super-align/SKILL.md && head -n 20 README.md 2>/dev/null\"","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"/bin/zsh -lc \"sed -n '1,80p' skills/super-align/SKILL.md && head -n 20 README.md 2>/dev/null\"","aggregated_output":"---\nname: super-align\n","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_2","type":"file_change","changes":[{"path":"notes/plan.md","kind":"add"},{"path":"src/app.ts","kind":"update"}],"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_3","type":"mcp_tool_call","server":"tracker","tool":"get_issue","arguments":{"id":"ENG-1"},"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_4","type":"web_search","query":"agent skills spec"}}
+{"type":"item.completed","item":{"id":"item_5","type":"agent_message","text":"Loaded super-align."}}
+{"type":"item.started","item":{"id":"item_6","type":"command_execution","command":"bash -lc 'bun test'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"turn.completed","usage":{"input_tokens":100,"cached_input_tokens":0,"output_tokens":10}}

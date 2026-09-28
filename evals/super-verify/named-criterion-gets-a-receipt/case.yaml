@@ -7,6 +7,8 @@ execution:
     current head.
   max_turns: 14
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: discovers-the-projects-own-command
     type: llm
@@ -25,3 +27,9 @@ graders:
     type: tool_used
     tool: Bash
     weight: 2
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-verify"'
+    arm: with-only
+    weight: 1

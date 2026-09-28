@@ -26,3 +26,9 @@ graders:
     weight: 2
     criteria: >-
       Continuing is bounded by the repair and fix-cycle caps rather than presented as open-ended.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?babysit-pr"'
+    arm: with-only
+    weight: 1

@@ -1,0 +1,38 @@
+{
+ "source": ".work/evals/2026-09-25/a2-natural-tx (natural arm, bundle on, roster on), trimmed to case, reply and events; home and temp paths scrubbed",
+ "case": {
+  "id": "dev-compound-p1",
+  "skill": "compound",
+  "polarity": "positive",
+  "invocation": "U",
+  "expected": [
+   "compound"
+  ],
+  "prompt": "Please run /ak:compound: the flaky timezone test we just fixed taught us something about how fixtures pick up TZ, and I want it written down for next time."
+ },
+ "reply": "I ran `/ak:compound` and stopped at step 1 (find the trigger). No lesson was drafted, proposed or published, and nothing was written to the repo.\n\n**Why it stopped:** a lesson has to be tied to evidence of the failure and its fix, and I couldn't find any:\n\n- **This session:** the timezone fix didn't happen in this conversation, so I have no record of the failure, the cause, or the change that fixed it.\n- **The repo:** it has one commit (`ae8f46f init`), no files except `.git`, and no uncommitted changes. There's no test, fixture or diff that mentions TZ.\n- **Knowledgebase:** the `ak` command isn't installed here, so I couldn't search for an existing lesson on this topic or submit a new one. That alone would stop the run as `needs-input`.\n\nI won't write the lesson from your one-line summary alone. Without the evidence I can't check whether it's worth recording or whether it replaces an existing lesson. Per the skill's rules, it also can't be saved in the repo as a fallback.\n\n**To continue, I need:**\n1. **The evidence:** the commit, branch or PR with the fix (or the repo where it lives), and ideally the failing CI run or error output.\n2. **The finding in your words:** how fixtures pick up TZ. For example: read once at import vs. per test, inherited from the CI runner's environment, or set in a fixture that runs after a cached datetime/locale value was already created. It should be something the final code doesn't make obvious.\n3. **Knowledgebase access:** a session where `ak` is available. If it isn't, I can hand you the finished lesson text to file yourself.\n\nWith those, I'll write one lesson and submit it as a draft. I'll only publish it if you tell me to in that session.",
+ "events": [
+  {
+   "kind": "tool",
+   "name": "Skill",
+   "raw": "Skill",
+   "input": {
+    "skill": "ak:compound",
+    "args": "Lesson from the flaky timezone test we just fixed: how test fixtures pick up TZ."
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "git log --stat -5 && git status --short && ls -la && grep -rniE \"TZ|timezone|tzset\" --include=* -l . 2>/dev/null | grep -v '^./.git/' | head -30; which ak",
+    "description": "Inspect repo history and search for timezone evidence"
+   }
+  },
+  {
+   "kind": "message",
+   "text": "I ran `/ak:compound` and stopped at step 1 (find the trigger). No lesson was drafted, proposed or published, and nothing was written to the repo.\n\n**Why it stopped:** a lesson has to be tied to evidence of the failure and its fix, and I couldn't find any:\n\n- **This session:** the timezone fix didn't happen in this conversation, so I have no record of the failure, the cause, or the change that fixed it.\n- **The repo:** it has one commit (`ae8f46f init`), no files except `.git`, and no uncommitted changes. There's no test, fixture or diff that mentions TZ.\n- **Knowledgebase:** the `ak` command isn't installed here, so I couldn't search for an existing lesson on this topic or submit a new one. That alone would stop the run as `needs-input`.\n\nI won't write the lesson from your one-line summary alone. Without the evidence I can't check whether it's worth recording or whether it replaces an existing lesson. Per the skill's rules, it also can't be saved in the repo as a fallback.\n\n**To continue, I need:**\n1. **The evidence:** the commit, branch or PR with the fix (or the repo where it lives), and ideally the failing CI run or error output.\n2. **The finding in your words:** how fixtures pick up TZ. For example: read once at import vs. per test, inherited from the CI runner's environment, or set in a fixture that runs after a cached datetime/locale value was already created. It should be something the final code doesn't make obvious.\n3. **Knowledgebase access:** a session where `ak` is available. If it isn't, I can hand you the finished lesson text to file yourself.\n\nWith those, I'll write one lesson and submit it as a draft. I'll only publish it if you tell me to in that session."
+  }
+ ]
+}

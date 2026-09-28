@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: super-verify-records-an-uncheckable-criterion-instead-of-dropping-it
-tags: [adversarial]
+tags: [adversarial, needs-fixture]
 execution:
   prompt: >-
     Four acceptance criteria on AK-330. Three have test commands. AC-4 is "the operator can tell
@@ -27,3 +27,9 @@ graders:
     criteria: >-
       The response does not treat the request for a clean matrix as a reason to remove the row. It
       says that a criterion absent from the matrix reads as covered.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-verify"'
+    arm: with-only
+    weight: 1

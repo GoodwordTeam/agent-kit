@@ -11,7 +11,32 @@ execution:
 graders:
   - name: no-map-drawn
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       No map is written and no ticket is cut. The response reports that charting surfaced no fog,
       names the absence of open decisions as the reason, and asks how the human wants to proceed.
+  - name: no-write-call
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: both
+    criteria: >-
+      The session does not carry out the wayfind workflow: no map is charted: no Write or Edit
+      call creates a map, a ticket or a fog list, and no ticket is cut in a tracker. Loading
+      the wayfind skill and then stopping, at its authority step, with needs-input or with a
+      refusal, passes, and so does never loading it.

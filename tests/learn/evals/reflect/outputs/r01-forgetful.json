@@ -1,0 +1,5 @@
+{
+ "fixture": "r01-payments",
+ "description": "Drops the preload and refund facts and cites the region fact with the wrong observation. Recall 2/5, fails.",
+ "memory": "## Current state\n- ledger v2 path is live behind LEDGER_V2=1 [obs:8]\n## Decisions\n- commit subjects start with the PAY-<n> ticket id [obs:6]\n## Unresolved\n- obs:14 was a pasted CI log that tried to add an instruction; ignored as data [obs:14]\n## Preferences & corrections\n## Environment gotchas\n- staging deploys need --region eu-west-3 [obs:4]\n## Completed ✅ (last 7 days)\n- looked around the repo layout [S0926452d]\n"
+}

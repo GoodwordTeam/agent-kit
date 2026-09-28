@@ -2,7 +2,8 @@
  * The checks preflight runs, one function per check, each returning a named
  * pass or fail with the reason. bind and install run the subset they depend on.
  */
-import { accessSync, constants, existsSync, mkdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, mkdirSync, mkdtempSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -32,19 +33,42 @@ export function checkUpstreamCommit(fmHome: string, upstream: Upstream): Check {
 }
 
 /**
- * The patch is already applied, which a reverse `git apply --check` proves: the
- * reverse applies cleanly only to a tree the forward patch is in. Nothing here
- * applies it.
+ * Every patch in the stack is applied, which reverse `git apply --check` proves: a
+ * reverse applies cleanly only to a tree the forward patch is in. Later patches
+ * rewrite lines earlier ones added, so the stack is peeled from the top in a
+ * temporary index holding the home's working tree: check the top patch, reverse
+ * it there, check the next. The home's own index and files are never changed.
+ * Nothing here applies a patch.
  */
 export function checkPatchApplied(fmHome: string, upstream: Upstream): Check {
   const id = "patch-applied";
-  if (!existsSync(upstream.patchFile)) return fail(id, `patch file ${upstream.patchFile} is missing from agent-kit`);
-  const reverse = git(fmHome, ["apply", "--reverse", "--check", upstream.patchFile]);
-  if (reverse.code === 0) return pass(id, `${upstream.patch} is applied`);
-  return fail(
-    id,
-    `${upstream.patch} is not applied to ${fmHome}. An unmodified Firstmate forbids the worker's delegation and gives no-mistakes sole ownership of review (adapters/firstmate/CONTRACT.md §3). A maintainer applies the patch; no ak command does`,
-  );
+  const ids = upstream.stack.map((p) => p.id);
+  const missingFile = upstream.stack.find((p) => !existsSync(p.file));
+  if (missingFile !== undefined) return fail(id, `patch file ${missingFile.file} is missing from agent-kit`);
+
+  const scratch = mkdtempSync(join(tmpdir(), "ak-fm-index-"));
+  const env = { GIT_INDEX_FILE: join(scratch, "index") };
+  try {
+    for (const args of [["read-tree", "HEAD"], ["add", "-A"]]) {
+      const r = git(fmHome, args, env);
+      if (r.code !== 0) return fail(id, `cannot read ${fmHome}'s working tree: ${r.stderr.trim()}`);
+    }
+    for (let i = upstream.stack.length - 1; i >= 0; i--) {
+      const patch = upstream.stack[i]!;
+      if (git(fmHome, ["apply", "--cached", "--reverse", "--check", patch.file], env).code !== 0) {
+        return fail(
+          id,
+          `${patch.id} is not applied to ${fmHome}. A home needs ${ids.join(" then ")}, applied in that order. Without 0001 an unmodified Firstmate forbids the worker's delegation and gives no-mistakes sole ownership of review; without 0002 nothing audits a worker's done (adapters/firstmate/CONTRACT.md §3). A maintainer applies the patches; no ak command does`,
+        );
+      }
+      if (i > 0 && git(fmHome, ["apply", "--cached", "--reverse", patch.file], env).code !== 0) {
+        return fail(id, `${patch.id} checked as applied but could not be peeled to check ${upstream.stack[i - 1]!.id}`);
+      }
+    }
+    return pass(id, `${ids.join(", ")} ${ids.length === 1 ? "is" : "are"} applied`);
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 }
 
 /**

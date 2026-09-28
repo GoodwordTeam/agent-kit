@@ -22,6 +22,7 @@ import { checkDocumentRules } from "./docrules.ts";
 import { checkTemplateDocuments } from "./documents.ts";
 import { checkEvals } from "./evals.ts";
 import { checkFrontmatter } from "./frontmatter.ts";
+import { checkCaseNames, checkFiredIndicators, checkGraderSurfaces } from "./graders.ts";
 import { checkInvocation } from "./invocation.ts";
 import { checkBundleLinks, checkLoaderLinks, checkSourceLinks } from "./links.ts";
 import { checkInvocationPartition } from "./partition.ts";
@@ -87,6 +88,9 @@ export const CHECKS: readonly Check[] = [
   { name: "rulings", run: checkRulings },
   { name: "restatements", run: checkRestatements },
   { name: "evals", run: checkEvals },
+  { name: "grader-surfaces", run: checkGraderSurfaces },
+  { name: "fired-indicators", run: checkFiredIndicators },
+  { name: "case-names", run: checkCaseNames },
 ];
 
 export function runValidation(root: string, options: RunOptions = {}): ValidationRun {

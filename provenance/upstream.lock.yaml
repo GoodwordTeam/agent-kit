@@ -57,6 +57,30 @@ donors:
     license: MIT
     copyright: "Copyright (c) 2026 Yeachan-Heo"
     license_file: provenance/licenses/Yeachan-Heo_oh-my-codex.LICENSE
+  # The two learning-stack donors (ruling `learning-runtime-is-host-adapter`). claude-mem is the
+  # first donor that is not MIT: Apache-2.0 obliges a copy of the licence, its NOTICE text carried
+  # in ours, and a statement that files were changed. `notice_file` holds the NOTICE verbatim;
+  # the root NOTICE reproduces it; every adapted file's row in provenance/adaptations.d/learning.yaml
+  # says what was changed.
+  - id: claude-mem
+    repo: thedotmack/claude-mem
+    url: https://github.com/thedotmack/claude-mem
+    path: .donors/thedotmack_claude-mem
+    commit: 02cd0c9c47e38a849e764477290c571e84dfa043
+    commit_date: "2026-09-24T18:11:49-07:00"
+    license: Apache-2.0
+    copyright: "Copyright 2026 Alex Newman"
+    license_file: provenance/licenses/thedotmack_claude-mem.LICENSE
+    notice_file: provenance/licenses/thedotmack_claude-mem.NOTICE
+  - id: claude-reflect
+    repo: BayramAnnakov/claude-reflect
+    url: https://github.com/BayramAnnakov/claude-reflect
+    path: .donors/BayramAnnakov_claude-reflect
+    commit: 2c892cab8fe1285d8116216ec18b6b7b44bcd394
+    commit_date: "2026-09-19T23:13:35-07:00"
+    license: MIT
+    copyright: "Copyright (c) 2025 Bayram Annakov"
+    license_file: provenance/licenses/BayramAnnakov_claude-reflect.LICENSE
 # ---------------------------------------------------------------------------
 # Local sources: third-party or design material held in-repo rather than at a
 # donor pin. This block is the register that says what these files are, who owns
@@ -202,3 +226,17 @@ local_sources:
     # to it survives while meaning something else.
     sha256: fba7f575c6ac0d26e3d2ddf0c5d7c7851d7f624437830a1d5eb667bdc3cab088
     lines: 676
+  - id: wikiskill-summary
+    description: >-
+      A third-party summary, not the paper, of Tang, Rashtchian, Ferng, Tomkins, Juan and Vu,
+      "WikiSkill: Compiling Agent Experience into Persistent Knowledge for Skill Evolution",
+      arXiv:2608.27454v1, 27 August 2026. Supplied by the maintainer in the planning session for the
+      learning stack and reproduced verbatim with its line breaks restored. It is the design
+      authority research/dossiers/learning.md cites for the raw, wiki and policy layering; a claim
+      drawn from it is a claim about the summary until checked against the paper.
+    working_copy: research/sources/wikiskill-summary.md
+    sha256: 6c943a6b5dcc1f115cf1a9bea2a16b781c8c80d310e7385697e645b433dabd8a
+    lines: 1278
+    # No upstream author whose licence governs the copy, and no adaptations row cites it: nothing
+    # in the catalog is adapted from its text, only designed after the structure it describes.
+    cited_in_adaptations: false

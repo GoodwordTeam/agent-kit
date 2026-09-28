@@ -8,6 +8,8 @@ execution:
     and its tests. Find out why and fix it.
   max_turns: 24
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: ran-a-command
     type: tool_used
@@ -41,3 +43,17 @@ graders:
     criteria: >-
       Debug instrumentation and throwaway harnesses are removed before the run ends, and the run
       does not declare the finding closed on its own evidence.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?diagnose"'
+    arm: with-only
+    weight: 1
+  - name: skill-before-first-write
+    type: tool_order
+    before:
+      tool: Skill
+      input_match: '"skill"\s*:\s*"(?:[^"]*:)?diagnose"'
+    after: Write
+    arm: with-only
+    weight: 1

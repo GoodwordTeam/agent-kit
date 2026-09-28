@@ -1,0 +1,232 @@
+[
+ {
+  "arm": "installed",
+  "prompt": "Review PR 1885 the way Phil would, with his severity calibration.",
+  "expected": [
+   "phil-review"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Run the Regulis subagent team review on this pushed PR.",
+  "expected": [
+   "regulis-review"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Fetch the review comments on this branch's PR and address the ones worth fixing.",
+  "expected": [
+   "resolve-pr-comments"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "I need a Drizzle migration for a new appointment_window column on appointments.",
+  "expected": [
+   "drizzle-migrations"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Debug trace 8f2c1a3b and show me what happened in that run.",
+  "expected": [
+   "regulis-logs"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Run the per-org SMS launch-readiness audit and KPI funnel for the RUAN org.",
+  "expected": [
+   "sms-data-validation"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Style this new settings panel so it matches the dashboard's semantic tokens.",
+  "expected": [
+   "dashboard-ui-style"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Draft an SOP document for the appointment reschedule flow.",
+  "expected": [
+   "draft-sop"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "The Brooke agent primitive failed codegen validation, regenerate it.",
+  "expected": [
+   "regenerate-primitive"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Apply the customer's batch of requested changes to the generated Brooke agent.",
+  "expected": [
+   "update-agent"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Check REG-301 and tell me what state it's in.",
+  "expected": [
+   "linearis"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "What finding classes keep coming up in our code reviews, and is the repeat rate going down?",
+  "expected": [
+   "review-learn"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Set up the Playwright e2e suite in this worktree so the push gate passes.",
+  "expected": [
+   "setup-e2e-in-worktree"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Iterate review and fix on this branch until no findings remain, then verify independently.",
+  "expected": [
+   "converging-code-review-loops",
+   "review-fix-loop"
+  ]
+ },
+ {
+  "arm": "installed",
+  "prompt": "Make an architecture diagram of the appointment pipeline as standalone HTML.",
+  "expected": [
+   "archify"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Use the ripwire code map to find every caller of recordAppointmentResponse.",
+  "expected": [
+   "ripwire-navigate",
+   "ripwire-router"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "I inherited the vendors router and didn't write any of it. Where's the rot, what's risky to touch?",
+  "expected": [
+   "ripwire-fresh-eyes",
+   "ripwire-router"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Before I commit this diff, tell me what code quality got worse.",
+  "expected": [
+   "ripwire-quality-bar",
+   "ripwire-router"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "The notifications package has no tests. Find what nothing covers and add a safety net.",
+  "expected": [
+   "ripwire-write-tests",
+   "ripwire-router"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Using the gitnexus graph, tell me what breaks if I change getUserSession.",
+  "expected": [
+   "gitnexus-impact-analysis"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Apply the CodeRabbit review-thread feedback on PR 1885 with per-change approval.",
+  "expected": [
+   "autofix"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Make PR 1885 merge-ready: tight scope, honest description, no leftover debug statements.",
+  "expected": [
+   "pr-hygiene"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Add UI test coverage for the drivers page dashboard components.",
+  "expected": [
+   "ui-test-coverage"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Log into the OTM portal in the browser and check the appointment status for order 12345.",
+  "expected": [
+   "otm-browser-ops"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Use graft to map the callers of resolveConversation.",
+  "expected": [
+   "graft"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Run the impeccable pass on the dashboard settings page.",
+  "expected": [
+   "impeccable"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Kill the slop in packages/api/src/services/appointments/postOutcomeHooks.ts: drive-by refactors, obvious comments, extra files.",
+  "expected": [
+   "kill-slop",
+   "deslop"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Build a lobster pipeline that babysits PR 1885 until it is merge-ready.",
+  "expected": [
+   "lobster"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Re-test the Brooke contact hand-off end to end against staging.",
+  "expected": [
+   "brooke"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Give me a quick visual code-shape sketch of the appointment intake flow to help me understand it.",
+  "expected": [
+   "show-me"
+  ]
+ },
+ {
+  "arm": "indexed",
+  "prompt": "Write a handoff brief for the appointments subsystem for a teammate who has never seen it.",
+  "expected": [
+   "ripwire-handoff",
+   "ripwire-router"
+  ]
+ },
+ {
+  "_removed_prompt": "Your last answer about why we keep the pattern ledger private went completely over my head. Say the same thing again, much simpler.",
+  "_expected": "bro",
+  "_removed_on": "2026-09-18",
+  "_reason": "Structurally untestable in a single-turn eval. bro re-explains the PREVIOUS assistant answer; a fresh `claude -p` session has none. Two rewrites failed for different reasons: one with code nouns routed to code-map skills, one without them drew the explicit reply 'No prior answer ... exists in this conversation \u2014 this is the first message I've received from you here.' Refusing is correct. Removed on that evidence, not because it failed. bro needs a two-turn harness."
+ }
+]

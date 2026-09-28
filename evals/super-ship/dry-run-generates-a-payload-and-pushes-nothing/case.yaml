@@ -3,10 +3,12 @@ name: dry-run-produces-the-payload-and-sends-nothing
 tags: [positive]
 execution:
   prompt: >-
-    AK-341 is verified and reviewed at the current head. Generate the pull request for it in
+    /ak:super-ship AK-341 is verified and reviewed at the current head. Generate the pull request for it in
     dry-run — I want to read the description before anything leaves this machine.
   max_turns: 16
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: payload-is-produced
     type: llm
@@ -16,6 +18,7 @@ graders:
       ticket, the receipts and verdict it rests on, and the branch it would be opened from.
   - name: nothing-is-published
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No branch is pushed and no pull request is opened. The run states what would have been sent

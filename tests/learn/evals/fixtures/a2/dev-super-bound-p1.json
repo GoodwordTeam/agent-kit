@@ -1,0 +1,65 @@
+{
+ "source": ".work/evals/2026-09-25/a2-natural-tx (natural arm, bundle on, roster on), trimmed to case, reply and events; home and temp paths scrubbed",
+ "case": {
+  "id": "dev-super-bound-p1",
+  "skill": "super-bound",
+  "polarity": "positive",
+  "invocation": "U",
+  "expected": [
+   "super-bound"
+  ],
+  "prompt": "Please start /ak:super-bound on the audit logging direction we signed off yesterday (docs/direction/audit-log.md). Somebody new should be able to pick up each piece."
+ },
+ "reply": "I've stopped before starting the bounding: `docs/direction/audit-log.md` doesn't exist in this repo, so there's no approved direction to plan from.\n\n- The working tree is empty. It holds only `.git`.\n- There is one commit on `main` (`ae8f46f init`), and it adds no files.\n- There are no other branches and no stashes.\n- The sandbox wouldn't let me look outside the repo, so I couldn't check whether the file is sitting nearby.\n\nThis step only starts from an approved direction that matches the current code. I didn't want to write it from memory or guess what was agreed yesterday. Without it, any spec and tickets would describe decisions nobody approved.\n\nTo continue, I need one of these:\n1. **Commit or push the direction doc** to this repo (or tell me which branch has it). I'll check that it matches the current code and continue.\n2. **Paste the signed-off doc here.** I'll use it as the approved direction for this run and note where it came from.\n3. **Point me to where yesterday's approval is recorded**, if it's outside the repo (a knowledgebase page or an earlier alignment run).\n\nAlso worth knowing: the repo has no code yet, so there's no existing test runner, lint or CI setup to check against. Once I have the direction, I'll ask you about those choices before writing the spec, unless the direction already settles them.",
+ "events": [
+  {
+   "kind": "tool",
+   "name": "Skill",
+   "raw": "Skill",
+   "input": {
+    "skill": "ak:super-bound",
+    "args": "docs/direction/audit-log.md — approved direction (signed off yesterday). Goal: tickets a zero-context newcomer can pick up."
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "git log --oneline -5 && git rev-parse HEAD && find . -path ./.git -prune -o -type f -print | head -100",
+    "description": "Show commits and list repo files"
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "ls -la && git ls-files && git show --stat HEAD && git branch -a && git stash list",
+    "description": "Inspect repo contents and init commit"
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "cd /tmp/ak-eval && ls -la; git -C repo log --all --oneline -- docs/direction/audit-log.md",
+    "description": "Check parent dir and git history for the doc"
+   }
+  },
+  {
+   "kind": "tool",
+   "name": "Bash",
+   "raw": "Bash",
+   "input": {
+    "command": "ls -la /tmp/ak-eval",
+    "description": "List parent directory"
+   }
+  },
+  {
+   "kind": "message",
+   "text": "I've stopped before starting the bounding: `docs/direction/audit-log.md` doesn't exist in this repo, so there's no approved direction to plan from.\n\n- The working tree is empty. It holds only `.git`.\n- There is one commit on `main` (`ae8f46f init`), and it adds no files.\n- There are no other branches and no stashes.\n- The sandbox wouldn't let me look outside the repo, so I couldn't check whether the file is sitting nearby.\n\nThis step only starts from an approved direction that matches the current code. I didn't want to write it from memory or guess what was agreed yesterday. Without it, any spec and tickets would describe decisions nobody approved.\n\nTo continue, I need one of these:\n1. **Commit or push the direction doc** to this repo (or tell me which branch has it). I'll check that it matches the current code and continue.\n2. **Paste the signed-off doc here.** I'll use it as the approved direction for this run and note where it came from.\n3. **Point me to where yesterday's approval is recorded**, if it's outside the repo (a knowledgebase page or an earlier alignment run).\n\nAlso worth knowing: the repo has no code yet, so there's no existing test runner, lint or CI setup to check against. Once I have the direction, I'll ask you about those choices before writing the spec, unless the direction already settles them."
+  }
+ ]
+}

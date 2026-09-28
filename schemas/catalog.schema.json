@@ -179,7 +179,12 @@
               "charter",
               "decision",
               "event",
-              "lesson"
+              "lesson",
+              "review-event",
+              "review-pattern",
+              "episode",
+              "memory-run",
+              "learn-state"
             ]
           },
           "batch": { "$ref": "#/$defs/batch" },

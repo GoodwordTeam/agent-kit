@@ -22,3 +22,9 @@ graders:
     criteria: >-
       The response returns the ticket's question to the human and states that resolving it is a
       separate, human-started alignment run, not something this run can do on the human's behalf.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?wayfind"'
+    arm: with-only
+    weight: 1

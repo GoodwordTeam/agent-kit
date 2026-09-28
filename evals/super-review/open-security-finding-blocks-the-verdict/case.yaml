@@ -38,3 +38,9 @@ graders:
       needing independent verification evidence bound to the head under review plus the policy rule
       saying that evidence suffices, and the implementer is named as someone who cannot supply
       closure for their own finding either way.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-review"'
+    arm: with-only
+    weight: 1

@@ -9,6 +9,8 @@ execution:
     at skills/doc-review/tests/constraint-change.md. Review it again.
   max_turns: 16
   allowed_tools: [Read, Glob, Grep, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: finding-resurfaces
     type: llm
@@ -23,3 +25,9 @@ graders:
       The response names the withdrawn contract-end constraint as the reason the finding is being
       asked again, and states that the document's unchanged wording does not establish unchanged
       evidence.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?doc-review"'
+    arm: with-only
+    weight: 1

@@ -34,7 +34,7 @@ discovery:
 {
   "name": "ak",
   "version": "0.1.0",
-  "description": "One engineering lifecycle, amalgamated from six MIT donors.",
+  "description": "One engineering lifecycle, amalgamated from eight donors: seven MIT, one Apache-2.0.",
   "author": { "name": "agent-kit maintainers" },
   "license": "MIT",
   "skills": ["./skills/super-align", "./skills/super-bound"],
@@ -229,3 +229,17 @@ Load order beyond the manifest's enumeration, the operator's permission settings
 handling, MCP server configuration, and anything that would require the package to inspect the user's
 session. A behavior that cannot be produced from this bundle's own files belongs to the runner
 contract, not here.
+
+---
+
+## 7. The learning runtime's hooks
+
+Under the opt-in `learning` profile, `ak learn setup wire` registers two hooks in the operator's
+host settings: `ak learn hook session-start` on `SessionStart` and `ak learn hook stop` on `Stop`.
+They inject the working memory and active guardrails at session start and queue ingestion when a
+session ends. User corrections reach the runtime on this host from claude-reflect's per-project
+queue, read-only, where that plugin is installed, rather than from a prompt hook. This bundle ships none of them: no skill in it requires
+a hook, every skill behaves the same with them absent, and `ak learn setup uninstall` removes what
+`wire` added. The runtime is a host adapter, not a phase, and its ledgers live under the host's
+configuration directory, never inside a project repository (ruling
+`learning-runtime-is-host-adapter`).

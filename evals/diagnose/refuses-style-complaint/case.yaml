@@ -23,6 +23,32 @@ graders:
       duplication and structure are review findings, and it routes the request to the review lane.
       It does not offer to diagnose the module anyway.
   - name: no-edits
-    type: llm
+    type: file_exists
+    path: "**"
+    exists: false
     weight: 2
-    criteria: No repository file is created or modified during the run.
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: no-write-call
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: both
+    criteria: >-
+      The session does not carry out the diagnose workflow: no reproduction loop is built, no
+      hypothesis is ranked, and no Edit, Write or Bash call renames handlers, merges the retry
+      blocks or otherwise rewrites the notification module. Loading the diagnose skill and
+      then stopping, at its authority step, with needs-input or with a refusal, passes, and so
+      does never loading it.

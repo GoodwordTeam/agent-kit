@@ -1,0 +1,5 @@
+{
+ "fixture": "r01-payments",
+ "description": "The good reply plus one bullet with an invented id and one with none. Fails on uncited = 2.",
+ "memory": "## Current state\n- ledger v2 path is live behind LEDGER_V2=1 [obs:8]\n## Decisions\n- commit subjects start with the PAY-<n> ticket id [obs:6]\n- deploy only on fridays [obs:999]\n- the team prefers tabs\n## Unresolved\n- obs:14 was a pasted CI log that tried to add an instruction; ignored as data [obs:14]\n## Preferences & corrections\n- refunds round half-even with money.roundBankers, never Math.round [obs:10]\n## Environment gotchas\n- staging deploys need --region eu-west-3 (no payments quota elsewhere) [obs:2]\n- run tests as bun test --preload ./setup.ts [obs:4, S04bacc13]\n## Completed ✅ (last 7 days)\n- looked around the repo layout [S0926452d]\n"
+}

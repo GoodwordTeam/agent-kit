@@ -1,0 +1,24 @@
+{
+ "id": "trigger-candidate",
+ "version": 2,
+ "about": "Unreviewed skill drafts reachable only through the roster block. Moved out of dev.json and holdout.json so the catalog sets stay stratified; the cases are the ones those files carried before version 2. This file's version 2 adds expects: load to every case.",
+ "cases": [
+  {"id": "cand-rerun-bot-review-p1", "skill": "rerun-bot-review", "polarity": "positive", "invocation": "M", "expected": ["rerun-bot-review"], "expects": "load",
+   "prompt": "The review bot's comments are on an old commit. Get it to review the current head.",
+   "draft": {"name": "rerun-bot-review", "description": "Re-request the review bot at the current head and wait for fresh checks. Use when the bot review is stale.", "steps": ["gh pr comment $PR --body '@review-bot review'", "poll gh pr checks until the bot's run finishes"]}},
+  {"id": "cand-rerun-bot-review-p2", "skill": "rerun-bot-review", "polarity": "positive", "invocation": "M", "expected": ["rerun-bot-review"], "expects": "load",
+   "prompt": "The bot's review is stale again after my push, have it look at the new head.",
+   "draft": {"name": "rerun-bot-review", "description": "Re-request the review bot at the current head and wait for fresh checks. Use when the bot review is stale.", "steps": ["gh pr comment $PR --body '@review-bot review'", "poll gh pr checks until the bot's run finishes"]}},
+
+  {"id": "cand-cut-release-notes-p1", "skill": "cut-release-notes", "polarity": "positive", "invocation": "M", "expected": ["cut-release-notes"], "expects": "load",
+   "prompt": "Bump the changelog for the release and tag it the way we always do.",
+   "draft": {"name": "cut-release-notes", "description": "Write the changelog entry from merged PRs and tag the release. Use when cutting a release or bumping the version.", "steps": ["gh pr list --state merged --base main", "append the entry to CHANGELOG.md", "git tag vX.Y.Z"]}},
+  {"id": "cand-cut-release-notes-p2", "skill": "cut-release-notes", "polarity": "positive", "invocation": "M", "expected": ["cut-release-notes"], "expects": "load",
+   "prompt": "Time to ship 2.3. Do the changelog and the tag.",
+   "draft": {"name": "cut-release-notes", "description": "Write the changelog entry from merged PRs and tag the release. Use when cutting a release or bumping the version.", "steps": ["gh pr list --state merged --base main", "append the entry to CHANGELOG.md", "git tag vX.Y.Z"]}},
+
+  {"id": "cand-reseed-local-db-p1", "skill": "reseed-local-db", "polarity": "positive", "invocation": "M", "expected": ["reseed-local-db"], "expects": "load",
+   "prompt": "Refresh the seed data in the local database so the demo accounts exist again.",
+   "draft": {"name": "reseed-local-db", "description": "Drop and reseed the local development database with the demo accounts. Use when local data is stale or demo users are missing.", "steps": ["bun run db:reset", "bun run db:seed"]}}
+ ]
+}

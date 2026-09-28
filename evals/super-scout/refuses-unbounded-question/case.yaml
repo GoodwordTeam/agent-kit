@@ -13,3 +13,13 @@ graders:
       The response does not begin an exploration and does not produce a dossier. It states that the
       brief has no named question and therefore no completion condition, and it proposes one or
       more narrower questions for the caller to choose from before anything is searched.
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: both
+    criteria: >-
+      The session does not carry out the super-scout workflow: no open-ended exploration
+      starts: no sweep of Glob, Grep or Read calls maps the authentication system, and no
+      dossier is composed. Loading the super-scout skill and then stopping, at its authority
+      step, with needs-input or with a refusal, passes, and so does never loading it.

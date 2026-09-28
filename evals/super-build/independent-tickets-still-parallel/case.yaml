@@ -8,6 +8,8 @@ execution:
     generated artifact, no migration, no shared exported interface. Start the layer.
   max_turns: 20
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: dispatches-in-parallel
     type: llm
@@ -23,3 +25,9 @@ graders:
       The response names the surfaces it checked to reach independence — declared files, generated
       artifacts, migrations, exported interfaces — rather than asserting independence because the
       prompt described the tickets as separate.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?super-build"'
+    arm: with-only
+    weight: 1

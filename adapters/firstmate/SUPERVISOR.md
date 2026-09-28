@@ -7,8 +7,8 @@ only when the task in front of you needs it; this index is enough to route.
 
 | Step | Command | What it proves |
 |---|---|---|
-| Apply patch 0001 | A maintainer, by hand, to a clone at `a5d78f8` | Nothing in `ak` applies it |
-| Preflight | `ak firstmate preflight --fm-home <home> --project <repo>` | Upstream commit, patch applied, host capabilities, the pinned bundle's contents, the project's no-mistakes `auto_fix` values, the evidence store |
+| Apply patches 0001 then 0002 | A maintainer, by hand, to a clone at `a5d78f8` | Nothing in `ak` applies them |
+| Preflight | `ak firstmate preflight --fm-home <home> --project <repo>` | Upstream commit, both patches applied in order, host capabilities, the pinned bundle's contents, the project's no-mistakes `auto_fix` values, the evidence store |
 | Install | `ak firstmate install --fm-home <home>` | Writes `config/agent-kit.env`, `config/agent-kit/worker-settings.json` and, with `--evidence`, `config/agent-kit/evidence.env`; nothing else |
 
 Preflight fails closed. With no knowledgebase configured, a home can only run in dry-run against a

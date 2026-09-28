@@ -3,11 +3,13 @@ name: the-cycle-cap-holds-even-while-cycles-keep-finding-things
 tags: [positive]
 execution:
   prompt: >-
-    AK-702 is reviewed and verified at this head and the build runs. Put the import pipeline through
+    /ak:ultraqa AK-702 is reviewed and verified at this head and the build runs. Put the import pipeline through
     adversarial QA — malformed payloads, interrupted runs, stale resume state, the lot. Keep going
     until it is clean.
   max_turns: 20
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+context:
+  scaffold_script: scaffold.sh
 graders:
   - name: at-most-five-cycles
     type: llm

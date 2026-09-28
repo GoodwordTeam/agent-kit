@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: a-resumed-ship-does-not-duplicate-the-remote-effect
-tags: [resumability, scenario-20]
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     The last ship run died right after the branch push. I do not know whether the pull request was

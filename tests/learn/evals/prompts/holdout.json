@@ -1,0 +1,101 @@
+{
+ "id": "trigger-holdout",
+ "version": 3,
+ "about": "Skill-routing holdout set, version 3: the same 15 skills. M skills: 1 positive (expects load) + 1 negative. U skills: 2 prose positives (expects recommend) + 1 hard negative. Not tuned against; run it only to report. tests/learn/trigger-prompts.test.ts holds the split and the leakage guard.",
+ "cases": [
+  {"id": "ho-super-align-p1", "skill": "super-align", "polarity": "positive", "invocation": "U", "expected": ["super-align"], "expects": "recommend",
+   "prompt": "Kick off /ak:super-align for the idea of letting customers export their dashboards. Nobody agrees yet on formats or who gets access."},
+  {"id": "ho-super-align-p2", "skill": "super-align", "polarity": "positive", "invocation": "U", "expected": ["super-align"], "expects": "recommend",
+   "prompt": "We haven't settled whether the new importer should dedupe records or just flag them. Can you lay out the options and pick one?"},
+  {"id": "ho-super-align-h1", "skill": "super-align", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-align", "super-bound"],
+   "prompt": "Rename the `usr` variable to `user` in src/session.ts; nothing else."},
+
+  {"id": "ho-super-bound-p1", "skill": "super-bound", "polarity": "positive", "invocation": "U", "expected": ["super-bound"], "expects": "recommend",
+   "prompt": "Run /ak:super-bound now: we agreed to move sessions from cookies to server-side storage and I want the implementation plan and tickets."},
+  {"id": "ho-super-bound-p2", "skill": "super-bound", "polarity": "positive", "invocation": "U", "expected": ["super-bound"], "expects": "recommend",
+   "prompt": "We signed off on replacing the cron scheduler with a queue. Write up the spec and break it into work items."},
+  {"id": "ho-super-bound-h1", "skill": "super-bound", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-bound", "super-align"],
+   "prompt": "Bump the lodash version in package.json to the latest patch release."},
+
+  {"id": "ho-super-ship-p1", "skill": "super-ship", "polarity": "positive", "invocation": "U", "expected": ["super-ship"], "expects": "recommend",
+   "prompt": "Go ahead with /ak:super-ship for the rate limiter branch, dry run only, nothing leaves this machine."},
+  {"id": "ho-super-ship-p2", "skill": "super-ship", "polarity": "positive", "invocation": "U", "expected": ["super-ship"], "expects": "recommend",
+   "prompt": "Everything on feature/rate-limit is approved. Check it for leaked secrets, commit, and open the pull request."},
+  {"id": "ho-super-ship-h1", "skill": "super-ship", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-ship"],
+   "prompt": "What does `git push --force-with-lease` protect against?"},
+
+  {"id": "ho-super-review-p1", "skill": "super-review", "polarity": "positive", "invocation": "U", "expected": ["super-review"], "expects": "recommend",
+   "prompt": "Kick off /ak:super-review readiness for feature/session-store."},
+  {"id": "ho-super-review-p2", "skill": "super-review", "polarity": "positive", "invocation": "U", "expected": ["super-review"], "expects": "recommend",
+   "prompt": "Take a hard look at the changes in src/billing before I open the PR. Anything that would get rejected?"},
+  {"id": "ho-super-review-h1", "skill": "super-review", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["super-review"],
+   "prompt": "What is a CODEOWNERS file for?"},
+
+  {"id": "ho-compound-p1", "skill": "compound", "polarity": "positive", "invocation": "U", "expected": ["compound"], "expects": "recommend",
+   "prompt": "Invoke /ak:compound for the reviewer's catch about unbounded retries; I want it kept as a lesson."},
+  {"id": "ho-compound-p2", "skill": "compound", "polarity": "positive", "invocation": "U", "expected": ["compound"], "expects": "recommend",
+   "prompt": "We finally figured out why the webhook signature check failed in staging. Save what we learned somewhere the team will find it."},
+  {"id": "ho-compound-h1", "skill": "compound", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["compound"],
+   "prompt": "What's a good template for a bug report?"},
+
+  {"id": "ho-compound-refresh-p1", "skill": "compound-refresh", "polarity": "positive", "invocation": "U", "expected": ["compound-refresh"], "expects": "recommend",
+   "prompt": "Kick off /ak:compound-refresh. Two of our notes about caching now say opposite things."},
+  {"id": "ho-compound-refresh-p2", "skill": "compound-refresh", "polarity": "positive", "invocation": "U", "expected": ["compound-refresh"], "expects": "recommend",
+   "prompt": "Our written guidance on error handling has drifted and some entries clash. Can you reconcile them?"},
+  {"id": "ho-compound-refresh-h1", "skill": "compound-refresh", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["compound-refresh"],
+   "prompt": "How often should a team revisit its coding guidelines, as a rule of thumb?"},
+
+  {"id": "ho-receiving-review-p1", "skill": "receiving-review", "polarity": "positive", "invocation": "U", "expected": ["receiving-review"], "expects": "recommend",
+   "prompt": "Invoke /ak:receiving-review for pull request 77. Some of the suggestions look wrong to me."},
+  {"id": "ho-receiving-review-p2", "skill": "receiving-review", "polarity": "positive", "invocation": "U", "expected": ["receiving-review"], "expects": "recommend",
+   "prompt": "The bot left twenty suggestions on my PR. Apply the good ones and reply to the rest."},
+  {"id": "ho-receiving-review-h1", "skill": "receiving-review", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["receiving-review"],
+   "prompt": "What does 'nit:' mean at the start of a review comment?"},
+
+  {"id": "ho-babysit-pr-p1", "skill": "babysit-pr", "polarity": "positive", "invocation": "U", "expected": ["babysit-pr"], "expects": "recommend",
+   "prompt": "Invoke /ak:babysit-pr for pull request 88 until the checks settle."},
+  {"id": "ho-babysit-pr-p2", "skill": "babysit-pr", "polarity": "positive", "invocation": "U", "expected": ["babysit-pr"], "expects": "recommend",
+   "prompt": "My PR keeps going red whenever main moves. Stay on it and react when something new happens."},
+  {"id": "ho-babysit-pr-h1", "skill": "babysit-pr", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["babysit-pr"],
+   "prompt": "What does a yellow dot next to a commit on GitHub mean?"},
+
+  {"id": "ho-ultraqa-p1", "skill": "ultraqa", "polarity": "positive", "invocation": "U", "expected": ["ultraqa"], "expects": "recommend",
+   "prompt": "Kick off /ak:ultraqa on the file upload endpoint in the local build."},
+  {"id": "ho-ultraqa-p2", "skill": "ultraqa", "polarity": "positive", "invocation": "U", "expected": ["ultraqa"], "expects": "recommend",
+   "prompt": "Try to break the new import command with weird inputs and tell me what crashes."},
+  {"id": "ho-ultraqa-h1", "skill": "ultraqa", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["ultraqa"],
+   "prompt": "What's the difference between fuzzing and property-based testing?"},
+
+  {"id": "ho-wayfind-p1", "skill": "wayfind", "polarity": "positive", "invocation": "U", "expected": ["wayfind"], "expects": "recommend",
+   "prompt": "Invoke /ak:wayfind for the observability overhaul. We don't know the path yet."},
+  {"id": "ho-wayfind-p2", "skill": "wayfind", "polarity": "positive", "invocation": "U", "expected": ["wayfind"], "expects": "recommend",
+   "prompt": "Moving everything onto the new event bus is full of unknowns. List the big open decisions for me."},
+  {"id": "ho-wayfind-h1", "skill": "wayfind", "polarity": "negative", "invocation": "U", "expected": [], "forbidden": ["wayfind"],
+   "prompt": "Give me a one-paragraph definition of technical debt."},
+
+  {"id": "ho-super-scout-p1", "skill": "super-scout", "polarity": "positive", "invocation": "M", "expected": ["super-scout"], "expects": "load",
+   "prompt": "I'm landing cold in this repo. Survey the storage layer and list what you verified and what you could not."},
+  {"id": "ho-super-scout-n1", "skill": "super-scout", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["super-scout"],
+   "prompt": "Rename the config loader's search path variable everywhere it's used."},
+
+  {"id": "ho-super-build-p1", "skill": "super-build", "polarity": "positive", "invocation": "M", "expected": ["super-build"], "expects": "load",
+   "prompt": "Implement the approved change to the rate limiter; write the failing test before the code."},
+  {"id": "ho-super-build-n1", "skill": "super-build", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["super-build"],
+   "prompt": "Here's a rough idea about caching that nobody has looked at yet. Should we even do it?"},
+
+  {"id": "ho-super-verify-p1", "skill": "super-verify", "polarity": "positive", "invocation": "M", "expected": ["super-verify"], "expects": "load",
+   "prompt": "Show me a matrix of acceptance criteria against the commands that prove them on this commit."},
+  {"id": "ho-super-verify-n1", "skill": "super-verify", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["super-verify"],
+   "prompt": "Two of the acceptance checks fail on this branch. Change the code until they pass."},
+
+  {"id": "ho-doc-review-p1", "skill": "doc-review", "polarity": "positive", "invocation": "M", "expected": ["doc-review"], "expects": "load",
+   "prompt": "Is this requirements doc coherent enough to plan from? Point out ambiguity."},
+  {"id": "ho-doc-review-n1", "skill": "doc-review", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["doc-review"], "load_fails": true,
+   "prompt": "Look through the diff in src/api for bugs."},
+
+  {"id": "ho-diagnose-p1", "skill": "diagnose", "polarity": "positive", "invocation": "M", "expected": ["diagnose"], "expects": "load",
+   "prompt": "Search got about three times slower after last week's deploy and nobody knows why. Track it down."},
+  {"id": "ho-diagnose-n1", "skill": "diagnose", "polarity": "negative", "invocation": "M", "expected": [], "forbidden": ["diagnose"],
+   "prompt": "It's basically a bug that the app has no dark mode. Add one."}
+ ]
+}

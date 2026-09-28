@@ -187,3 +187,15 @@ behavioral corpus is executed against the claude-code bundle and, when a runner 
 the host-neutral harness in `adapters/runner-contract/CONTRACT.md`. Results for the codex bundle
 alone are `not-run`, recorded as such in the release evidence rather than inferred from the
 claude-code run.
+
+---
+
+## 6. The learning runtime's hooks
+
+`ak learn setup wire` registers three hooks in `$CODEX_HOME` when it exists, and skips this host
+with a message when it does not: `ak learn hook session-start` on `SessionStart`,
+`ak learn hook prompt` on `UserPromptSubmit`, which captures user corrections, and
+`ak learn hook stop --source codex` on `Stop`. As on claude-code
+(`adapters/claude-code/CONTRACT.md` §7), no skill requires a hook, the bundle ships none, and the
+runtime's ledgers never live inside a project repository (ruling
+`learning-runtime-is-host-adapter`).

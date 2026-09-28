@@ -1,6 +1,6 @@
 schema_version: "1.1"
-name: interrupted-publish-resumes-on-the-idempotency-key
-tags: [resumability, scenario-20]
+name: super-bound-interrupted-publish-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20, needs-fixture]
 execution:
   prompt: >-
     Picking the bounding run back up. The requirements page went to the knowledgebase and then the

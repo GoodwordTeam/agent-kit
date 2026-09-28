@@ -3,7 +3,7 @@
  * find agent-kit, plus the evidence store only `ak` reads, and nothing else
  * (CONTRACT.md §3).
  *
- * install refuses a home the patch is not applied to, and refuses to overwrite
+ * install refuses a home the patch stack is not applied to, and refuses to overwrite
  * any file it did not write. remove deletes exactly those files, and only when
  * install wrote them.
  */

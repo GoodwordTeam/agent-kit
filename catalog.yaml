@@ -30,7 +30,7 @@ package:
   # different texts about different objects, and adapters/codex/CONTRACT.md §5.2
   # is what keeps them from being forced to agree. Stated verbatim by
   # adapters/claude-code/CONTRACT.md §1.
-  description: One engineering lifecycle, amalgamated from six MIT donors.
+  description: "One engineering lifecycle, amalgamated from eight donors: seven MIT, one Apache-2.0."
   # Emitted into both host manifests from here, so the two cannot drift apart or
   # drift from the catalog. Both values are specified verbatim by
   # adapters/claude-code/CONTRACT.md §1 and are not chosen here.
@@ -148,10 +148,10 @@ skills:
   - id: compound
     kind: standalone
     invocation: U
-    profiles: [core]
+    profiles: [core, learning]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Capture a reusable lesson tied to a real failure, correction or surprising review result.
       No manufactured lesson just because a run ended.
@@ -159,10 +159,10 @@ skills:
   - id: compound-refresh
     kind: standalone
     invocation: U
-    profiles: [maintainer]
+    profiles: [maintainer, learning]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Keep, update, consolidate, replace or retire captured lessons, recording evidence and
       supersession instead of silently erasing provenance.
@@ -476,7 +476,7 @@ packs:
     summary: Dependency scope, compatibility, supply-chain evidence, explicit authorization.
 
 # ---------------------------------------------------------------------------
-# Protocols — 7. Shared phase logic, invoked by skills, never by humans.
+# Protocols — 8. Shared phase logic, invoked by skills, never by humans.
 # ---------------------------------------------------------------------------
 protocols:
   - id: phase-operations
@@ -530,9 +530,18 @@ protocols:
     summary: >-
       Deterministic pack selection by artifact and semantics with recorded rationale. Attaches
       constraints and lenses; never starts a phase.
+  - id: evidence-gate
+    batch: 9
+    provenance_origin: conversation
+    status: authored
+    summary: >-
+      What the learning runtime may admit from a judge: cited ids must be in the input, a pattern
+      is active and promoted only at counted thresholds from distinct sources, a lesson is
+      confirmed only across sessions, and a degenerate rewrite is rejected whole. The runtime
+      counts; the judge never does.
 
 # ---------------------------------------------------------------------------
-# Roles — 29. Role prompts, not skills. Never individually invocable.
+# Roles — 34. Role prompts, not skills. Never individually invocable.
 # ---------------------------------------------------------------------------
 roles:
   # Core (4)
@@ -726,6 +735,45 @@ roles:
       Challenges premises and stress-tests decisions rather than evaluating document quality.
       Not activated on a routine in-scope plan with validated upstream provenance.
 
+  # Learn (5) — judgement prompts for the opt-in learning runtime. `ak learn` reads each body
+  # verbatim and appends the output contract and the inputs; the judge that fills the seat is
+  # bound by the runner (ruling `learning-judge-is-runner-bound`).
+  - id: learn/pattern-maintainer
+    batch: 9
+    provenance_origin: conversation
+    status: authored
+    summary: >-
+      Classifies review findings, resolutions and user corrections into reusable pattern pages,
+      matching before creating. Never sets a count or a status.
+  - id: learn/reflector
+    batch: 9
+    provenance_origin: conversation
+    status: authored
+    summary: >-
+      Rewrites one project's working memory from new observations into six fixed sections, every
+      bullet ending in evidence ids copied from the input.
+  - id: learn/consolidator
+    batch: 9
+    provenance_origin: conversation
+    status: authored
+    summary: >-
+      Turns a night's high-signal sessions into at most a handful of short lessons that would have
+      changed a decision, each citing the sessions it came from.
+  - id: learn/lesson-merger
+    batch: 9
+    provenance_origin: conversation
+    status: authored
+    summary: >-
+      Merges only lessons that say the same thing about the same subject and names the pairs that
+      cannot both be true. A shared theme is not a merge.
+  - id: learn/skill-scout
+    batch: 9
+    provenance_origin: donor
+    status: authored
+    summary: >-
+      Finds requests repeated across sessions that no installed skill serves and drafts a skill
+      candidate for each. Repeated corrections become guardrails, not skills.
+
 # ---------------------------------------------------------------------------
 # References — 5. Loaded on demand. Never exposed as slash commands.
 # ---------------------------------------------------------------------------
@@ -768,7 +816,7 @@ references:
       linear-linearis setup and guarded invocation, shipped inside the plugin.
 
 # ---------------------------------------------------------------------------
-# Schemas — 19. `common` holds shared $defs and validates no document itself.
+# Schemas — 24. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -864,6 +912,36 @@ schemas:
     summary: >-
       A project folder's ak.tracker.yaml: which tracker binding this checkout uses, where its
       gitignored secret is, and the backend defaults. Never the system-of-record decision.
+  - id: review-event
+    batch: 9
+    status: authored
+    summary: >-
+      One line of the review ledger's raw log: a review finding, a resolution replying to one, or a
+      user correction, keyed by a stable hash so re-ingesting is a no-op.
+  - id: review-pattern
+    batch: 9
+    status: authored
+    summary: >-
+      The frontmatter of one pattern page in the review ledger. Counts, sources and status are the
+      runtime's, recomputed from events; a promoted pattern becomes a guardrail draft.
+  - id: episode
+    batch: 9
+    status: authored
+    summary: >-
+      One ended session as the memory ledger sees it: size, outcome and signal counts, and the
+      priority the runtime derives from them for consolidation.
+  - id: memory-run
+    batch: 9
+    status: authored
+    summary: >-
+      One line of the memory ledger's run log: which job ran, whether it was accepted, rejected or
+      failed, and what the evidence gate dropped.
+  - id: learn-state
+    batch: 9
+    status: authored
+    summary: >-
+      The memory ledger's watermarks and schedule marks, so a job resumes from the last evidence it
+      consumed instead of replaying or skipping any.
 
 # ---------------------------------------------------------------------------
 # Policies — 5. Machine-referenceable rulings.
@@ -894,7 +972,7 @@ policies:
       wherever a skill touches one.
 
 # ---------------------------------------------------------------------------
-# Profiles — 4. Install sets. Never model names.
+# Profiles — 5. Install sets. Never model names.
 # ---------------------------------------------------------------------------
 profiles:
   - id: core
@@ -916,15 +994,24 @@ profiles:
     batch: 1
     status: authored
     summary: Adds catalog and codebase maintenance skills.
+  - id: learning
+    batch: 9
+    status: authored
+    summary: >-
+      Opt-in. Installs the `ak learn` runtime's hooks and scheduler and lets compound and
+      compound-refresh read its ledgers. Never required: every skill works without it.
 
 # ---------------------------------------------------------------------------
-# Adapters — 6. Host contracts.
+# Adapters — 8. Host and evidence-source contracts.
 # Arch 4 also sketched issue-tracker and repository-events directories. repository-events is
 # folded into runner-contract, which owns the event-delivery capability
 # (schemas/common.schema.json#/$defs/capability); splitting it out would create an adapter with no
 # independent contract. issue-tracker is the tracker adapter: the ticket operations and the
 # system-of-record chain are a contract of their own that must hold across trackers, which the
 # runner contract never stated (ruling tracker-of-record-falls-back-to-kb).
+# observation-source and review-source are not that split reopened. They deliver nothing to a run:
+# they are the read-only evidence the opt-in learning runtime consumes after the fact, and no skill
+# requires either (ruling `learning-runtime-is-host-adapter`).
 # ---------------------------------------------------------------------------
 adapters:
   - id: claude-code
@@ -962,3 +1049,15 @@ adapters:
     summary: >-
       Backend-agnostic ticket operations over one system of record: a configured tracker, else the
       knowledgebase's ticket records, else a refusal. Contract only; names no vendor.
+  - id: observation-source
+    batch: 9
+    status: authored
+    summary: >-
+      Read-only access to recorded session observations for the learning runtime. claude-mem is
+      the first binding; the database is opened read-only and never written.
+  - id: review-source
+    batch: 9
+    status: authored
+    summary: >-
+      Pull-request review threads as review events: findings, the resolutions that reply to them,
+      and severity where the text carries one. Read-only.

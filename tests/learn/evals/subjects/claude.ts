@@ -1,0 +1,109 @@
+/**
+ * Claude Code in print mode. Its tool names are the shared vocabulary, so parsing only flattens
+ * stream-json into events. Not a test file.
+ *
+ *   claude -p --output-format stream-json --verbose [--model M] [--max-turns N]
+ *     --settings '{"disableAllHooks":true}' --setting-sources project,local --strict-mcp-config
+ *     --no-session-persistence
+ *     [--plugin-dir BUNDLE] [--append-system-prompt TEXT] PROMPT
+ *
+ * Isolation is argv only. A scratch CLAUDE_CONFIG_DIR loses the keychain login unless an API key
+ * is in the environment, so the session keeps the caller's config dir; `--setting-sources` without
+ * `user` drops the caller's plugins, skills and hooks from it, and `--strict-mcp-config` their MCP
+ * servers. A skill is installed with `--plugin-dir`, and a Skill call names it `<plugin>:<id>`.
+ * `--setting-sources` does not keep out the caller's CLAUDE.md: from a cwd under $HOME the host
+ * walks up to $HOME and reads ~/.claude/CLAUDE.md as an ancestor's project instructions, and
+ * auto-memory names the caller's real memory dir. `CLAUDE_CODE_DISABLE_CLAUDE_MDS` (what
+ * `claude plugin eval` sets for its own children) and `CLAUDE_CODE_DISABLE_AUTO_MEMORY` close
+ * both; `--no-session-persistence` keeps the run out of the caller's transcript store.
+ * research/evals/2026-09-25-isolation.md, "Direct `claude -p` subjects", has the measurements.
+ */
+import type { Isolation, SessionEvent, SessionRequest, SubjectAdapter } from "./types.ts";
+
+interface Part {
+  type?: string;
+  text?: string;
+  name?: string;
+  input?: Record<string, unknown>;
+}
+
+interface Line {
+  type?: string;
+  subtype?: string;
+  model?: string;
+  slash_commands?: unknown;
+  message?: { content?: Part[] | string };
+  result?: string;
+  total_cost_usd?: number;
+  num_turns?: number;
+}
+
+export const claude: SubjectAdapter = {
+  host: "claude",
+  injection: "append-system-prompt",
+  command(req: SessionRequest, model: string | undefined): string[] {
+    return [
+      "claude",
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      ...(model === undefined ? [] : ["--model", model]),
+      ...(req.maxTurns === undefined ? [] : ["--max-turns", String(req.maxTurns)]),
+      "--settings",
+      '{"disableAllHooks":true}',
+      "--setting-sources",
+      "project,local",
+      "--strict-mcp-config",
+      "--no-session-persistence",
+      ...(req.bundleDir === undefined ? [] : ["--plugin-dir", req.bundleDir]),
+      ...(req.appendSystemPrompt === undefined ? [] : ["--append-system-prompt", req.appendSystemPrompt]),
+      req.prompt,
+    ];
+  },
+  parse(stdout: string) {
+    const events: SessionEvent[] = [];
+    let reply = "";
+    let costUsd: number | undefined;
+    let turns: number | undefined;
+    let model: string | undefined;
+    let slashCommands: string[] | undefined;
+    for (const raw of stdout.split("\n")) {
+      let line: Line;
+      try {
+        line = JSON.parse(raw) as Line;
+      } catch {
+        continue;
+      }
+      if (line.type === "system" && line.subtype === "init") {
+        if (typeof line.model === "string") model = line.model;
+        // A typed `/ak:<id>` expands on the client with no stream line; this list is how the scorer sees it.
+        if (Array.isArray(line.slash_commands)) slashCommands = line.slash_commands.filter((c): c is string => typeof c === "string");
+      } else if (line.type === "assistant" && Array.isArray(line.message?.content)) {
+        for (const part of line.message.content) {
+          if (part.type === "text" && typeof part.text === "string" && part.text !== "") events.push({ kind: "message", text: part.text });
+          if (part.type === "tool_use" && typeof part.name === "string") events.push({ kind: "tool", name: part.name, raw: part.name, input: part.input ?? {} });
+        }
+      } else if (line.type === "user") {
+        // A typed slash command's expansion arrives as a user line; tool results are not user text.
+        const content = line.message?.content;
+        if (typeof content === "string" && content !== "") events.push({ kind: "user", text: content });
+        else if (Array.isArray(content)) {
+          for (const part of content) if (part.type === "text" && typeof part.text === "string" && part.text !== "") events.push({ kind: "user", text: part.text });
+        }
+      } else if (line.type === "result") {
+        reply = (line.result ?? "").trim();
+        costUsd = line.total_cost_usd;
+        turns = line.num_turns;
+      }
+    }
+    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }), ...(model === undefined ? {} : { model }), ...(slashCommands === undefined ? {} : { slashCommands }) };
+  },
+  isolate(): Isolation {
+    return {
+      env: { CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1", CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" },
+      leaks: ["the caller's config dir and login", "the host's built-in skills"],
+      release: () => {},
+    };
+  },
+};

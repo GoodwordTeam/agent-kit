@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/tests/eval-matrix.schema.json",
+  "title": "Cross-host eval matrix",
+  "description": "Who runs the cross-host evals: subjects under test and reviewers who grade them, each a role label bound to a host CLI. The `model` value is the runner's binding, an opaque string passed to the host; this repository commits roles and hosts only, and the bound file lives at .work/eval-matrix.yaml.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subjects",
+    "reviewers",
+    "panels"
+  ],
+  "properties": {
+    "subjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/subject"
+      }
+    },
+    "reviewers": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "$ref": "#/$defs/seat"
+      }
+    },
+    "panels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "independent-of",
+        "min-reviewers"
+      ],
+      "properties": {
+        "independent-of": {
+          "const": "subject",
+          "description": "A reviewer bound like the subject it would grade is refused for that subject and its seat reported unavailable, never backfilled (ruling missing-supervisor-never-implementer)."
+        },
+        "min-reviewers": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Fewer independent reviewers than this and the panel is unavailable."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 2,
+          "description": "Seat at most this many reviewers, chosen to span host families. Absent seats every independent reviewer."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "host"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "A role label such as subject-a or reviewer-b."
+        },
+        "host": {
+          "enum": [
+            "claude",
+            "codex",
+            "grok"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The runner's binding, passed to the host opaquely. Absent, the host runs its own default binding, and no reviewer on the same host is independent of it."
+        }
+      }
+    },
+    "seat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "host",
+        "model"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "A role label such as subject-a or reviewer-b."
+        },
+        "host": {
+          "enum": [
+            "claude",
+            "codex",
+            "grok"
+          ]
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The runner's binding, passed to the host opaquely."
+        }
+      },
+      "description": "A reviewer. Always bound, so its independence from each subject can be checked."
+    }
+  }
+}

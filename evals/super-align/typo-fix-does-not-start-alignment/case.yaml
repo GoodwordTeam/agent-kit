@@ -15,3 +15,14 @@ graders:
       The response does not open an alignment round. It asks no clarifying questions about the
       direction, states no hypothesis and offers no restatement for approval; it treats the request
       as a mechanical correction that enters at build.
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: with-only
+    criteria: >-
+      The session does not carry out the super-align workflow: no alignment round is opened:
+      no design tree, restatement, frontier question list or concept page is produced, and no
+      Write call records an alignment artifact. Loading the super-align skill and then
+      stopping, at its authority step, with needs-input or with a refusal, passes, and so does
+      never loading it.

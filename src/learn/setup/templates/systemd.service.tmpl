@@ -1,0 +1,9 @@
+[Unit]
+Description=agent-kit learning runtime: scheduled memory tick
+
+[Service]
+Type=oneshot
+ExecStart=${exec}
+${environment}
+StandardOutput=append:${log}
+StandardError=append:${log}

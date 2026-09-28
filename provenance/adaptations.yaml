@@ -2,6 +2,15 @@
 # Write surface: provenance/adaptations.d/<batch>.yaml, one fragment per batch.
 # Each adapted file is recorded here with its exact donor@commit:path source.
 adaptations:
+  - path: adapters/observation-source/claude-mem/code--review-learning.json
+    source: claude-mem@02cd0c9c47e38a849e764477290c571e84dfa043:plugin/modes/code.json
+    rationale: "Changed: two observation types (review-finding, review-resolution) and one concept (recurrence) are added to the code mode, with prompt text telling the observer to record a reviewer's finding and its resolution as first-class observations. Named review products and named review skills in the added text are replaced by generic descriptions. The code mode's existing types and concepts are kept as they are."
+  - path: adapters/observation-source/CONTRACT.md
+    source: claude-mem@02cd0c9c47e38a849e764477290c571e84dfa043:src/services/sqlite/SessionStore.ts
+    rationale: "Changed: the store's table and column vocabulary is restated as read-only operations (listProjects, observationsSince, sessions, summaries, sessionPrompts) that any observer can answer. No code is copied; every write path of the donor store is excluded."
+  - path: adapters/observation-source/CONTRACT.md
+    source: claude-mem@02cd0c9c47e38a849e764477290c571e84dfa043:src/services/sqlite/tool-uses.ts
+    rationale: "Changed: the tool-use table is restated as two optional read operations, editedFiles and toolUseCwds, with the contract's behaviour when an observer cannot answer them. No code is copied."
   - path: protocols/apply-findings/PROTOCOL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md
     rationale: "Severity and owner routing. Recorded conflict: plan §5.5's four-value autofix_class (including safe_auto) stands and matches schemas/finding.schema.json, while this donor has evolved to a three-value enum that rejects safe_auto. Adopted the plan's, recorded the tension rather than silently taking either."
@@ -179,6 +188,9 @@ adaptations:
   - path: roles/implementer/ROLE.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
     rationale: "The surrounding task loop: a fresh implementer per ticket, TDD mandatory within it."
+  - path: roles/learn/skill-scout/ROLE.md
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:commands/reflect-skills.md
+    rationale: "Finding repeated user requests across sessions and proposing them as candidate skills is adapted as a judge prompt. The donor's in-command skill-file writing is dropped: the role returns candidates to the runtime, which records them as drafts and installs nothing (ruling learning-drafts-not-publishes). The session threshold is the runtime's, not the judge's."
   - path: roles/plan-review/architect/ROLE.md
     source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ralplan/SKILL.md
     rationale: The architect steelmans, and runs strictly before the critic. Explicitly NOT merged with omx's same-named parallel-lane code-review architect, which judges a diff.
@@ -203,6 +215,9 @@ adaptations:
   - path: roles/reviewer-standards/ROLE.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/task-reviewer-prompt.md
     rationale: Code-quality half of the same reviewer template.
+  - path: schemas/review-event.schema.json
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
+    rationale: The correction record's shape (message, sentiment, timestamp) is adapted into the correction kind of review event, which shares one schema with review findings and resolutions. The donor's confidence score is kept as an optional field and never read as a gate.
   - path: skills/babysit-pr/SKILL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/references/watch-loop.md
     rationale: The donor's wake-reason taxonomy, claim-act-confirm idempotency rule, settle window, non-convergence protocol with its anti-cry-wolf line, and CI fix-round budget are carried as the classification, deduplication, settle, parking and repair-cap steps.
@@ -215,6 +230,27 @@ adaptations:
   - path: skills/babysit-pr/skill.yaml
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-babysit-pr/SKILL.md
     rationale: "The declaration's entrypoint pair, hard gates and constraints condense the donor's bounded- authority model: the watch holds no mutation authority, and the repair runs under its own grant rather than inside the watch's."
+  - path: skills/compound-refresh/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/per-action-flows.md
+    rationale: The per-outcome handling is condensed into the Workflow's classification list. The donor's file moves and renames become knowledgebase candidate changes, and the learning runtime's ledgers change only through its retire and rollback commands.
+  - path: skills/compound-refresh/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/references/worth-audit.md
+    rationale: "The retrieval-value test for consolidation is adapted: merge only where the merged lesson is as findable as each original."
+  - path: skills/compound-refresh/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/SKILL.md
+    rationale: The five outcomes, contradiction ahead of staleness, age alone not being staleness, unverifiable not being false, Replace needing real evidence, and never editing product code or guidance files are adapted. The donor's Delete becomes Retire or supersession, because the lesson schema never removes a record.
+  - path: skills/compound-refresh/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound-refresh/SKILL.md
+    rationale: The triggers, non-triggers and hard gates condense the same donor text the body adapts.
+  - path: skills/compound/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/references/assembly.md
+    rationale: "The assembly of a learning from its trigger, evidence and applicability is adapted into the lesson schema's fields. The donor's file layout and frontmatter are dropped: the knowledgebase adapter resolves placement."
+  - path: skills/compound/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/SKILL.md
+    rationale: The counterfactual eligibility bar, one learning per run, updating an existing inaccurate learning instead of duplicating it, and asking nothing in a non-interactive run are adapted. The donor's write into a repository docs tree becomes a candidate proposed to the central knowledgebase (ruling central-kb-owns-project-artifacts), and publication moves behind explicit authorization or a lesson-publication grant (ruling learning-drafts-not-publishes).
+  - path: skills/compound/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-compound/SKILL.md
+    rationale: The triggers, non-triggers, hard gates and the one-lesson limit condense the same donor text the body adapts. The capture and publish entrypoints are this package's, split by ruling entrypoint-phase-operation-split; the donor has one command.
   - path: skills/diagnose/references/feedback-loops.md
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/diagnosing-bugs/SKILL.md
     rationale: "The donor's ranked list of ways to construct a feedback loop, and its tightening guidance, are adapted wholesale into this reference because they are a catalogue: a body that inlined them would carry ten techniques to use one. The ordering is the donor's. The sections on intermittent bugs, performance regressions and the case where no loop can be built are drawn from the same donor's handling of those cases."
@@ -467,3 +503,9 @@ adaptations:
   - path: skills/wayfind/skill.yaml
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/wayfinder/SKILL.md
     rationale: The triggers, the no-fog non-trigger, the hard gates, and the one-ticket-per-session limit with its research exception, declared as the skill's own enforced cap.
+  - path: src/learn/review/hooks.ts
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
+    rationale: "detectPatterns is a port of detect_patterns: the same pattern tables, thresholds and order of checks, translated to TypeScript. A detected correction becomes a review event of kind correction in the runtime's own ledger rather than an entry in the donor's learnings queue."
+  - path: src/learn/skills/learn.ts
+    source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
+    rationale: "extractUserMessages ports extract_user_messages, with should_include_message's filter: user turns of a JSONL transcript, meta turns and non-text parts dropped. The messages feed the skill scout's repetition count; the donor's in-command skill writing is not ported."

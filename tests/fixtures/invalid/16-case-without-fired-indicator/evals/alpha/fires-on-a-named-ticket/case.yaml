@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: alpha-fires-on-a-named-ticket
+tags: [positive]
+execution:
+  prompt: "Run alpha on ticket AK-1."
+  max_turns: 8
+  allowed_tools: [Read, Skill]
+graders:
+  - name: receipt-returned
+    type: llm
+    weight: 1
+    criteria: >-
+      The response returns one receipt for ticket AK-1.

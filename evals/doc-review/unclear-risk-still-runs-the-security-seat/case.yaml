@@ -1,6 +1,6 @@
 schema_version: "1.1"
 name: unclear-risk-still-runs-the-security-seat
-tags: [adversarial]
+tags: [adversarial, needs-fixture]
 execution:
   prompt: >-
     Review the attached design note. Nobody has decided yet whether it touches the tenant boundary
@@ -29,3 +29,9 @@ graders:
     criteria: >-
       Every lane appears in the lane table, and the ambiguous tenant-boundary section is named as
       the reason the security and adversarial seats activated.
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[^"]*:)?doc-review"'
+    arm: with-only
+    weight: 1

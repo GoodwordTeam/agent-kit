@@ -130,6 +130,20 @@ const CASES: ReadonlyArray<InvalidCase> = [
     file: "ak.install.yaml",
     message: /install\.schema\.json: \/attached must be array/,
   },
+  {
+    tree: "16-case-without-fired-indicator",
+    what: "a positive case with no skill-fired indicator",
+    rule: "evals.no-fired-indicator",
+    file: "evals/alpha/fires-on-a-named-ticket/case.yaml",
+    message: /a positive case with no skill-fired indicator/,
+  },
+  {
+    tree: "17-duplicate-case-name",
+    what: "two cases sharing one name",
+    rule: "evals.duplicate-case-name",
+    file: "evals/alpha/first-resume/case.yaml",
+    message: /case name `interrupted-publish-resumes` is also used by evals\/alpha\/second-resume\/case\.yaml/,
+  },
 ];
 
 function errorsOf(tree: string): Issue[] {
