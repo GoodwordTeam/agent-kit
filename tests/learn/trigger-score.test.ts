@@ -31,6 +31,7 @@ import {
   type ScoreOptions,
   type Scored,
   scoreCase,
+  selectCases,
   skillLoads,
   stopsOnLaw,
   summarise,
@@ -871,5 +872,34 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
   test("a load followed only by those looks is not a violation", () => {
     const events = [skill("compound"), tool("Bash", { command: "which ak; ak --help 2>&1 | head -40; git log --stat | head -30; ls -la" }), tool("Bash", { command: "command -v ak" })];
     expect(scoreCase(prose("Remember that the cache key ignored the locale."), events, "Drafted it; nothing saved.", natural).outcome).toBe("loaded-unclear");
+  });
+});
+
+describe("selectCases", () => {
+  const set = [pos("dev-1", "diagnose"), pos("dev-2", "super-align", "U"), neg("dev-3", "compound", "U")];
+
+  test("no filter keeps every case", () => {
+    expect(selectCases(set, undefined)).toEqual({ cases: set, problems: [] });
+  });
+
+  test("keeps the named cases in prompt-set order, whatever order they were named in", () => {
+    const { cases, problems } = selectCases(set, "dev-3, dev-1,dev-3");
+    expect(cases.map((c) => c.id)).toEqual(["dev-1", "dev-3"]);
+    expect(problems).toEqual([]);
+  });
+
+  test("names every id the set does not hold, so the run can refuse before it spends", () => {
+    expect(selectCases(set, "dev-1,dev-9,holdout-1").problems).toEqual(['no case "dev-9" in the prompt set', 'no case "holdout-1" in the prompt set']);
+  });
+
+  test("a filter that names nothing is refused rather than read as every case", () => {
+    expect(selectCases(set, " , ").problems).toEqual(["--cases names no case"]);
+  });
+});
+
+describe("argvProblems --cases", () => {
+  test("--cases takes a value", () => {
+    expect(argvProblems(["--cases", "dev-1,dev-2"])).toEqual([]);
+    expect(argvProblems(["--cases"])).toEqual(["--cases needs a value"]);
   });
 });
