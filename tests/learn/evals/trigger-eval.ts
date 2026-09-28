@@ -776,10 +776,15 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
   };
 }
 
-/** Why a session is not a trial: it timed out, the host exited non-zero, or it left no reply. Null when it counts. */
-export function invalidSession(session: Pick<SessionResult, "exitCode" | "timedOut" | "reply">): string | null {
+/**
+ * Why a session is not a trial: it timed out, the host exited non-zero, the host cancelled the turn
+ * on a refused call (grok's `stopReason: cancelled`), or it left no reply. Null when it counts. The
+ * scored outcome is kept beside the reason, so a cancelled session's loads can still be read.
+ */
+export function invalidSession(session: Pick<SessionResult, "exitCode" | "timedOut" | "reply" | "stopReason">): string | null {
   if (session.timedOut) return "timeout";
   if (session.exitCode !== 0) return `exit ${session.exitCode}`;
+  if (session.stopReason === "cancelled") return "host cancelled a refused call";
   if (session.reply.trim() === "") return "empty reply";
   return null;
 }

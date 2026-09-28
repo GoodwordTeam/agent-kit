@@ -134,6 +134,11 @@ describe("grok", () => {
     const parsed = grok.parse(fixture("grok-denied-write.jsonl"));
     expect(tools(parsed.events).map((e) => e.name)).toEqual(["Read", "Edit"]);
     expect(parsed.reply).toBe("");
+    expect(parsed.stopReason).toBe("cancelled");
+  });
+
+  test("a session that ends normally reports its stop reason", () => {
+    expect(grok.parse(JSON.stringify({ type: "end", stopReason: "end_turn", num_turns: 1 })).stopReason).toBe("end_turn");
   });
 
   test("documented tools map onto the shared names; unmapped ones keep their own", () => {

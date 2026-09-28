@@ -54,6 +54,7 @@ export async function runSubject(adapter: SubjectAdapter, subjectId: string, mod
       ...(parsed.turns === undefined ? {} : { turns: parsed.turns }),
       ...(parsed.model === undefined ? {} : { model: parsed.model }),
       ...(parsed.slashCommands === undefined ? {} : { slashCommands: parsed.slashCommands }),
+      ...(parsed.stopReason === undefined ? {} : { stopReason: parsed.stopReason }),
       durationMs: Date.now() - started,
       ...(isolation === undefined ? {} : { leaks: isolation.leaks }),
     };

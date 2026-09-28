@@ -622,6 +622,12 @@ describe("invalid sessions and the no-op floor", () => {
     expect(invalidSession({ exitCode: 0, timedOut: false, reply: "done" })).toBeNull();
   });
 
+  test("a session the host cancelled on a refused call says so, rather than reading as an empty reply", () => {
+    // grok under dontAsk ends the turn at the first refused call, with no reply.
+    expect(invalidSession({ exitCode: 0, timedOut: false, reply: "", stopReason: "cancelled" })).toBe("host cancelled a refused call");
+    expect(invalidSession({ exitCode: 0, timedOut: false, reply: "", stopReason: "end_turn" })).toBe("empty reply");
+  });
+
   test("invalid cases are counted apart and left out of every rate", () => {
     const ok = scoreCase(pos("p1", "diagnose"), [skill("diagnose")], "done", natural);
     const bad: Scored = { ...scoreCase(pos("p2", "diagnose"), [], "", natural), invalid: "exit 1" };
