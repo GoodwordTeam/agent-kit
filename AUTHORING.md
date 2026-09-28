@@ -423,6 +423,14 @@ No other key is read — but an unread key is not a discarded one. The whole row
 into the generated merge, so an invented key appears in the published record having never been
 checked by anything.
 
+**Every donor file a row cites is also committed as a pristine snapshot.** The snapshot goes under
+`provenance/donor-snapshots/<donor>@<sha12>/<path>`, and `research/probes/snapshot-donors.sh`
+writes it from the full-depth clones the lock names. The script also prunes snapshots that no row
+cites, and with `--check` it reports drift without writing. `tests/donor-snapshots.test.ts`
+fails `bun test` on a cited file that has no snapshot. When `.donors/` is present, the same test also
+fails on a snapshot whose bytes differ from the pin. A new row is therefore not finished until the
+script has been run and its output committed with the fragment.
+
 **A row may not point at anything outside the merge.** Keys *beside* `adaptations:` in a fragment are
 a different matter: the merge takes the `adaptations` list and nothing else, so a sibling key is
 dropped. A `rationale:` that refers the reader to one — "recorded under `<key>` below" — resolves in
