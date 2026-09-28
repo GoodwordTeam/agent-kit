@@ -336,7 +336,7 @@ fi
 [[ ${#parts[@]} -gt 0 ]] || { echo "eval-local: no result at $json" >&2; exit "$status"; }
 if [[ ${#groups[@]} -gt 1 ]]; then
   # The host's overall figures are per invocation; the merged ones are unweighted means over cases.
-  jq -s '{cases: [.[].cases[]], costUsd: (map(.costUsd // 0) | add),
+  jq -s '{cases: [.[].cases[]], costUsd: ((map(.costUsd // 0) | add) * 10000 | round / 10000),
           durationSeconds: (map(.durationSeconds // 0) | add), partial: any(.[]; .partial == true),
           aggregates: {overallScore: ([.[].cases[].aggregates.score | numbers] | if length > 0 then add / length else null end),
                        meanDelta: ([.[].cases[].aggregates.delta | numbers] | if length > 0 then add / length else null end)},

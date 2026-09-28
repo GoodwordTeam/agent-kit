@@ -171,7 +171,7 @@ describe("eval-local: the cost cap", () => {
   test("spend summing to exactly the cap is not over budget", () => {
     const r = run(["--case", "case-one", "--case", "case-three", "--max-cost-usd", "0.3"], { FAKE_COST: "0.1,0.2" });
     expect(r.receipt.invocations).toHaveLength(2);
-    expect(r.receipt).toMatchObject({ budget: 0.3, over_budget: false });
+    expect(r.receipt).toMatchObject({ budget: 0.3, over_budget: false, costUsd: 0.3 });
     expect(r.stderr).not.toContain("against a cap");
   });
 
