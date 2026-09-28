@@ -153,6 +153,63 @@ All 60 prose rows per subject, invalid included.
 - **Misses are still p3 prompts** that describe a need without naming a skill: 13 of 14 for
   subject-opus and all 15 for subject-astra.
 
+## Rescored with the calibrated scorer
+
+The run above was measured and scored at `67e61e9`, the tree before this branch was rebased. Here
+the same 600 stored sessions are rescored at `9ad7885`, which is `main` with the calibration work
+(PR #17). No session was rerun. Every session was dumped with its full events, so none had to be
+scored from its reply alone.
+
+How it was run:
+
+- One `git archive` extract per tree, each scoring the same dumps with `scoreCase`.
+- Skill fingerprints come from `67e61e9`, the tree the sessions ran against.
+- The claude-host sessions get every `/ak:<id>` as a slash command, as the host listed them.
+- Invalid sessions keep the reason recorded at run time.
+- **Control:** the same script run with the `67e61e9` scorer reproduces all 600 stored outcomes, so
+  the differences below come from the scorer and nothing else.
+- PR #18's narrower conditional ask (`9cd9b1da`) was applied on top of `9ad7885` as well. It
+  changes nothing on this data.
+
+Pooled over both replicates, stored (`67e61e9`) → rescored (`9ad7885`), valid sessions only:
+
+| Subject | M positives loaded | Negatives quiet | U slash loaded | U prose passing | U prose loaded | Violated |
+|---|---|---|---|---|---|---|
+| subject-opus | 18/20 → 18/20 | 30/30 → 30/30 | 10/10 → 10/10 | 31/46 → 36/46 | 15/60 → 15/60 | 1 → 1 |
+| subject-fable | 4/6 → 4/6 | 28/28 → 28/28 | 5/5 → 5/5 | 10/30 → 13/30 | 13/38 → 13/38 | 5 → 5 |
+| subject-sol | 20/20 → 20/20 | 29/29 → 29/29 | 10/10 → 10/10 | 20/37 → 23/35 | 46/60 → 46/60 | 8 → 3 |
+| subject-astra | 20/20 → 20/20 | 30/30 → 30/30 | 10/10 → 10/10 | 4/23 → 4/22 | 42/60 → 42/60 | 4 → 3 |
+| subject-grok | 0/0 → 0/0 | 9/11 → 9/11 | 0/0 → 0/0 | 0/0 → 0/0 | 0/0 → 0/0 | 0 → 0 |
+
+With invalid sessions counted, subject-fable's U prose passing goes from 10/41 to 13/39 and its
+violations from 14 to 12. Grok's figures do not move in either view (prose 0/7, violated 4).
+
+- **Only the U prose figures move.** Loads, negatives and typed commands are decided before the
+  authority check, and the recalibration did not touch them.
+- **Eight misses become recommendations**: five for subject-opus, three for subject-fable. Each reply
+  names `/ak:<id>` inside a conditional or a numbered option ("Once I have it, I'd suggest running
+  `/ak:super-bound` yourself"). The old detector missed that form.
+- **Eight violations disappear.** All were `command -v ak`, `command -v gh` or `which ak`, alone or in a
+  `git status` / `ls` / `rg --files` chain. Seven become loaded-unclear and one loaded-and-stopped. Five of the
+  eight are subject-sol's, on compound and compound-refresh.
+- **Two loaded-unclear rows become loaded-and-stopped**, both subject-sol.
+- **23 violations remain (12 in valid sessions), and none is a write.** Each is a read-only shell look the classifier still
+  counts as a side effect:
+  - `cd <tmp> && ls`
+  - `git show --stat`, `git config --list`, `git show-ref`, `git worktree list`,
+    `git branch -a -vv`, and `git tag` with no arguments
+  - `find .git`
+  - `gh auth status`, `gh pr view --json`
+  - `env | grep`
+  - a `curl -o /dev/null` status probe
+  - a `for` loop that `cat`s AGENTS.md
+  - `ak learn memory show`
+
+  None of the 23 sessions called Write, Edit or a patch tool.
+- **The headline holds.** subject-opus now passes 78% of scorable prose rows and still loads a U
+  skill in 15 of 60. The codex subjects still load in 42 and 46 of 60. The gap between hosts is in
+  loading, and loading is not something the scorer decides.
+
 ## What changed in this branch
 
 - `trigger-eval.ts` takes `--cases <id,id,...>`. It runs only the named cases, in set order. An id the
@@ -180,4 +237,3 @@ All 60 prose rows per subject, invalid included.
   `cat`, and `git -c … branch -vv` still count as writes.
 - **Whether a prose request names the command** is still the invocation-law question from
   2026-09-26, and the codex and grok hosts answer it by loading far more often.
-- **Rescore** the stored transcripts with PR #17's scorer, which has landed.
