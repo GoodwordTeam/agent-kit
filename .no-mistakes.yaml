@@ -15,3 +15,11 @@ commands:
   prepare: "bun install --frozen-lockfile"
   test: "bun test"
   lint: "bun run validate && bun run build"
+
+# Review findings the reviewer marks `auto-fix` (mechanical, low risk) are
+# fixed and re-reviewed without parking for approval, up to three rounds, the
+# same limit the other steps use. Findings marked `ask-user` still park for
+# the operator: the executor only auto-fixes `auto-fix` findings and gates on
+# any `ask-user` finding that remains.
+auto_fix:
+  review: 3
