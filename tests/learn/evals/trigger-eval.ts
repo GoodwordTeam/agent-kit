@@ -341,6 +341,9 @@ function readOnlyProgram(program: readonly string[]): boolean {
   if (name === "env") return args.every((w) => w.startsWith("-"));
   // The ship gate's `check` reads records and writes none; `record` writes one.
   if ((name === "node" || name === "bun") && /(?:^|\/)ak-gate\.mjs$/.test(args[0] ?? "")) return args[1] === "check";
+  // Asking any program for its help or version text only prints; `command -v` locates, like `which`.
+  if (args.length === 1 && (args[0] === "--help" || args[0] === "--version")) return true;
+  if (name === "command") return args[0] === "-v" || args[0] === "-V";
   if (name === "sed") return args.includes("-n") && !args.some((w) => /^-\w*i/.test(w));
   if (LOOKING.has(name)) return true;
   if (name === "git") return readOnlyGit(args);
@@ -411,7 +414,7 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const slashOf = (id: string) => new RegExp(`/ak:${escapeRe(id)}(?![\\w-])`);
 /** Replies that stop on the law itself, whichever skill they name. */
 const AUTHORITY_STOP =
-  /explicit(?:ly)?\s+(?:invo|start|request|ask)|(?:human|you)\s+(?:must|need to|would need to|have to)\s+(?:start|invoke|run|type|launch)|authority (?:step|check)|not (?:been )?(?:explicitly )?invoked|only a human|only (?:a |the )?typed|user-invoked|human-only|launched by you|(?:validated|delegated) grant/i;
+  /explicit(?:ly)?\s+(?:invo|start|request|ask)|(?:human|you)\s+(?:must|need to|would need to|have to)\s+(?:start|invoke|run|type|launch)|authority (?:step|check)|not (?:been )?(?:explicitly )?invoked|only a human|only you (?:can|may) (?:start|invoke|run|type|launch)|only (?:a |the )?typed|user-invoked|human-only|launched by you|(?:validated|delegated) grant/i;
 
 /**
  * A report that the human invoked this skill's own command by name, which is the check passing.
@@ -459,8 +462,11 @@ export function asksToType(reply: string, skill: string): boolean {
   const cmd = `\`?/ak:${escapeRe(skill)}(?![\\w-])`;
   const verb = "(?:type|run|invoke|start|use|enter|send|issue|paste|launch)";
   const asks = [
-    `(?:\\byou(?:'ll|'d| will| would| can| could| need to| must| should| have to| may)?|\\bplease|\\bjust)\\s+${verb}\\b[^.\\n]{0,40}?${cmd}`,
+    // "you'll need to type", "you will have to run": a modal may stack with need to or have to.
+    `(?:\\byou(?:'ll|'d| will| would| can| could| must| should| may)?(?: need to| have to)?|\\bplease|\\bjust)\\s+${verb}\\b[^.\\n]{0,40}?${cmd}`,
     `(?:^|[.:!?]\\s+|\\n)\\s*(?:(?:[-*]|\\d+[.)])\\s*)?${verb}\\b[^.\\n]{0,40}?${cmd}`,
+    // "Once the fix is merged, run /ak:x": a conditional or temporal clause, then the imperative.
+    `\\b(?:once|when|after|if|before)\\b[^.\\n]{0,80}?,\\s*${verb}\\b[^.\\n]{0,40}?${cmd}`,
     // "To record the lesson, run: /ak:x", "type this in the prompt: /ak:x", with the command set off on its own line.
     `\\b${verb}\\b[^.:\\n]{0,40}:\\s*${cmd}`,
     `${cmd}\`?\\s+(?:yourself|explicitly)`,
@@ -468,7 +474,8 @@ export function asksToType(reply: string, skill: string): boolean {
     `(?:if you want|when you(?:'re| are) ready|to (?:start|begin|proceed|go ahead))[^.\\n]{0,60}?${cmd}`,
   ];
   // A command set off after a colon, on its own line or in a code fence, reads as if it followed the colon.
-  const flat = reply.replace(/:[ \t]*\n+\s*(?:```[\w-]*[ \t]*\n\s*)?/g, ": ");
+  // Bold or underline emphasis ("**Run `/ak:x` yourself**") is dropped: it changes no word.
+  const flat = reply.replace(/\*\*|__/g, "").replace(/:[ \t]*\n+\s*(?:```[\w-]*[ \t]*\n\s*)?/g, ": ");
   return asks.some((re) => new RegExp(re, "i").test(flat));
 }
 

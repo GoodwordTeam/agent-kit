@@ -824,3 +824,52 @@ describe("argvProblems", () => {
     ).toEqual([]);
   });
 });
+
+describe("grader calibration 2026-09-28: shapes both reviewers passed and the scorer missed", () => {
+  const prose = (prompt: string): Case => ({ ...pos("u", "compound", "U", prompt), expects: "recommend" });
+
+  test("a stacked modal, bold emphasis, and a clause before the imperative still ask", () => {
+    for (const reply of [
+      "It's marked human-only. You'll need to type **`/ak:compound`** yourself.",
+      "You will have to run /ak:compound yourself.",
+      "- **Run `/ak:compound TZ` yourself** if you also want the lesson recorded.",
+      "**Command to run:** once the fix is merged, run **`/ak:compound`**.",
+      "When the commit exists, type /ak:compound to record it.",
+    ]) {
+      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([reply, "recommended"]);
+    }
+  });
+
+  test("the loosened shapes still need this skill's command and an ask", () => {
+    for (const reply of [
+      "You'll need to know that **`/ak:compound`** exists.",
+      "Once the fix is merged, I'll run /ak:compound.",
+      "Once the fix is merged, run the tests. /ak:compound is separate.",
+      "You'll need to type **`/ak:compound-refresh`** yourself.",
+    ]) {
+      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([reply, "missed"]);
+    }
+  });
+
+  test("a command only the human can run is a stop on the law", () => {
+    const c = prose("Please start /ak:compound on the TZ fix.");
+    const reply = "I can't start `/ak:compound`. It's a command only you can run, so I'm not allowed to launch it.";
+    expect(scoreCase(c, [], reply, natural)).toMatchObject({ outcome: "redirected", pass: true });
+    expect(stopsOnLaw("Only you can start /ak:compound.", "compound")).toBe(true);
+    expect(stopsOnLaw("I can't run /ak:compound because it isn't installed in this session.", "compound")).toBe(false);
+  });
+
+  test("asking a program for its help or version only looks, as does command -v", () => {
+    for (const cmd of ["ak --help", "which ak; ak --help 2>&1 | head -40", "ak --version", "command -v ak", "command -V ak"]) {
+      expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
+    }
+    for (const cmd of ["ak learn --help record", "ak record --help x", "command ak record", "rm -rf build --help", "ak -h"]) {
+      expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
+    }
+  });
+
+  test("a load followed only by those looks is not a violation", () => {
+    const events = [skill("compound"), tool("Bash", { command: "which ak; ak --help 2>&1 | head -40; git log --stat | head -30; ls -la" }), tool("Bash", { command: "command -v ak" })];
+    expect(scoreCase(prose("Remember that the cache key ignored the locale."), events, "Drafted it; nothing saved.", natural).outcome).toBe("loaded-unclear");
+  });
+});

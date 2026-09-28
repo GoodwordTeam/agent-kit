@@ -18,6 +18,7 @@ import {
   loadRuns,
   parseArgs,
   readLabels,
+  rescoreLabels,
   stratifiedSample,
   suggestedOf,
   tierOf,
@@ -206,8 +207,9 @@ function item(id: string, fields: Partial<LabelItem> = {}): LabelItem {
 const fileOf = (items: LabelItem[]): LabelFile => ({ version: 1, criteria: CRITERIA, seed: 1, target: items.length, sources: [], strata: {}, skipped: {}, items });
 
 describe("kappaReport", () => {
-  test("κ per reviewer against the human, per reviewer pair, and for the scorer, over labelled items only", () => {
-    const s = (verdict: "PASS" | "FAIL" | null) => ({ verdict, outcome: "recommended" as const, reason: "" });
+  const s = (verdict: "PASS" | "FAIL" | null) => ({ verdict, outcome: "recommended" as const, reason: "" });
+
+  test("human-anchored κ over labelled items; reviewer pairs and the scorer against each reviewer over every item both rated", () => {
     const labels = fileOf([
       item("1", { label: "PASS", suggested: s("PASS"), votes: { "reviewer-b": "PASS", "reviewer-c": "PASS" } }),
       item("2", { label: "PASS", suggested: s("FAIL"), votes: { "reviewer-b": "PASS", "reviewer-c": "FAIL" } }),
@@ -222,16 +224,54 @@ describe("kappaReport", () => {
     expect(report.reviewer_vs_human.map((r) => [r.a, r.b, r.n])).toEqual([["reviewer-b", "human", 4], ["reviewer-c", "human", 3]]);
     expect(b!.kappa).toBe(1);
     expect(c!.kappa).toBeCloseTo(0.4, 10);
-    expect(report.reviewer_pairs.map((r) => [r.a, r.b, r.n])).toEqual([["reviewer-b", "reviewer-c", 3]]);
-    expect(report.reviewer_pairs[0]!.kappa).toBeCloseTo(0.4, 10);
     expect(report.scorer_vs_human).toMatchObject({ a: "scorer", b: "human", n: 3 });
     expect(report.scorer_vs_human!.kappa).toBeCloseTo(0.4, 10);
+    // Item 5 counts here although no human labelled it: b and c agree on 1 and 3 only, so κ is 0.
+    expect(report.reviewer_pairs.map((r) => [r.a, r.b, r.n, r.kappa])).toEqual([["reviewer-b", "reviewer-c", 4, 0]]);
+    expect(report.scorer_vs_reviewers.map((r) => [r.a, r.b, r.n])).toEqual([["scorer", "reviewer-b", 4], ["scorer", "reviewer-c", 4]]);
+    expect(report.scorer_vs_reviewers[1]!.kappa).toBe(1);
   });
 
-  test("with nothing labelled every row has n 0 and no κ", () => {
-    const report = kappaReport(fileOf([item("1", { votes: { "reviewer-b": "PASS" } })]));
+  test("with nothing labelled the human rows have n 0 and no κ, and the reviewer and scorer rows still count", () => {
+    const report = kappaReport(
+      fileOf([
+        item("1", { suggested: s("PASS"), votes: { "reviewer-b": "PASS", "reviewer-c": "PASS" } }),
+        item("2", { suggested: s("FAIL"), votes: { "reviewer-b": "FAIL", "reviewer-c": "FAIL" } }),
+        item("3", { suggested: s("PASS"), votes: { "reviewer-b": "FAIL", "reviewer-c": "FAIL" } }),
+      ]),
+    );
     expect(report.labelled).toBe(0);
-    expect(report.reviewer_vs_human).toEqual([{ a: "reviewer-b", b: "human", n: 0, kappa: null }]);
+    expect(report.reviewer_vs_human).toEqual([
+      { a: "reviewer-b", b: "human", n: 0, kappa: null },
+      { a: "reviewer-c", b: "human", n: 0, kappa: null },
+    ]);
+    expect(report.scorer_vs_human).toEqual({ a: "scorer", b: "human", n: 0, kappa: null });
+    expect(report.reviewer_pairs).toEqual([{ a: "reviewer-b", b: "reviewer-c", n: 3, kappa: 1 }]);
+    expect(report.scorer_vs_reviewers.map((r) => [r.b, r.n])).toEqual([["reviewer-b", 3], ["reviewer-c", 3]]);
+    for (const r of report.scorer_vs_reviewers) expect(r.kappa).toBeCloseTo(0.4, 10);
+  });
+});
+
+describe("rescoreLabels", () => {
+  test("re-applies the current scorer to each item's stored session and names what changed", () => {
+    const run = storedRun();
+    const sources = [run.receipt];
+    const labels = buildLabels(loadRuns(sources, scoring), { n: 80, seed: 1, sources });
+    const current = labels.items.map((i) => i.suggested);
+    // As an older scorer might have written it: the recommendation read as a miss.
+    const stale = labels.items.find((i) => i.suggested.outcome === "recommended")!;
+    stale.suggested = { verdict: "FAIL", outcome: "missed", reason: "missed" };
+    stale.votes = { "reviewer-b": "PASS" };
+    const orphan = item("gone", { source: join(scratch, "runs", "gone.json#subject-a/x") });
+    labels.items.push(orphan);
+    const result = rescoreLabels(labels, loadRuns(sources, scoring));
+    expect(result.changed).toEqual([{ id: stale.id, from: { verdict: "FAIL", outcome: "missed", reason: "missed" }, to: current[labels.items.indexOf(stale)]! }]);
+    expect(result.missing).toEqual(["gone"]);
+    expect(result.labels.items.slice(0, -1).map((i) => i.suggested)).toEqual(current);
+    // Votes, labels and the orphan are left alone, and the input is not mutated.
+    expect(result.labels.items.find((i) => i.id === stale.id)!.votes).toEqual({ "reviewer-b": "PASS" });
+    expect(result.labels.items.at(-1)).toEqual(orphan);
+    expect(stale.suggested.outcome).toBe("missed");
   });
 });
 
@@ -342,7 +382,9 @@ describe("parseArgs", () => {
     expect(parseArgs(["grade", "--spnd"])).toEqual({ problems: ["grade does not take --spnd"] });
     expect(parseArgs(["sample", "--from"])).toEqual({ problems: ["--from needs a value", "sample needs at least one --from"] });
     expect(parseArgs(["sample", "--from", "a", "--n", "eighty"])).toEqual({ problems: ["--n must be a whole number, not eighty"] });
-    expect(parseArgs(["label"])).toEqual({ problems: ['the first argument must be sample, grade or kappa, not "label"'] });
+    expect(parseArgs(["label"])).toEqual({ problems: ['the first argument must be sample, grade, kappa or rescore, not "label"'] });
+    expect(parseArgs(["rescore", "--file", "a.json", "--out", "b.json"])).toMatchObject({ command: "rescore", values: { "--file": ["a.json"], "--out": ["b.json"] } });
+    expect(parseArgs(["rescore", "--spend"])).toEqual({ problems: ["rescore does not take --spend"] });
     const ok = parseArgs(["sample", "--from", "a", "--from", "b"]);
     expect("problems" in ok ? ok.problems : ok.values["--from"]).toEqual(["a", "b"]);
   });
