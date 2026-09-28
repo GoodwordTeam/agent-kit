@@ -289,7 +289,7 @@ for i in "${!groups[@]}"; do
                     | .value | to_entries[] | [$d, $c, $a, (.key + 1), (.value.tracePath // "")] | @tsv' "$out")
     cost="$(jq '.costUsd // 0' "$out")"
     partial="$(jq '.partial == true' "$out")"
-    spent="$(jq -n --argjson a "$spent" --argjson b "$cost" '$a + $b')"
+    spent="$(jq -n --argjson a "$spent" --argjson b "$cost" '($a + $b) * 10000 | round / 10000')"
   fi
   # Cases with fewer runs on an arm than were asked for (--runs, else the case's runs, else the
   # host's default of 3), or absent from the result. The without arm counts unless --ablation none.
@@ -330,7 +330,7 @@ status=$aggregate
 over_budget=false
 if [[ -n "$budget" ]] && jq -e -n --argjson b "$budget" --argjson s "$spent" '$s > $b' >/dev/null; then
   over_budget=true
-  echo "eval-local: spent \$$(jq -n --argjson s "$spent" '$s * 10000 | round / 10000') against a cap of \$$budget; runs already in flight when the cap was reached finished past it" >&2
+  echo "eval-local: spent \$$spent against a cap of \$$budget; runs already in flight when the cap was reached finished past it" >&2
 fi
 
 [[ ${#parts[@]} -gt 0 ]] || { echo "eval-local: no result at $json" >&2; exit "$status"; }

@@ -15,7 +15,7 @@ const SCRIPT = join(REPO, "scripts", "eval-local.sh");
 
 // The stub host. It sees only the variables eval-local passes through, so its knobs are named in
 // AK_EVAL_PASS_ENV: FAKE_DIR (where argv is logged), FAKE_DROP (case names left out of the result)
-// and FAKE_COST (dollars spent per invocation).
+// and FAKE_COST (dollars spent per invocation, or a comma list of them taken in call order).
 const FAKE_HOST = `#!/usr/bin/env bun
 import { appendFileSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -23,6 +23,7 @@ const argv = process.argv.slice(2);
 if (argv[0] === "--version") { console.log("0.0.0 (fake host)"); process.exit(0); }
 if (argv.includes("--help")) { console.log("--case <name>  --tag <tag>  --runs <n>  --max-cost-usd <usd>"); process.exit(0); }
 appendFileSync(join(process.env.FAKE_DIR!, "argv.jsonl"), JSON.stringify(argv) + "\\n");
+const call = readFileSync(join(process.env.FAKE_DIR!, "argv.jsonl"), "utf8").trim().split("\\n").length - 1;
 const target = argv[2]!;
 const out = argv[argv.indexOf("--json") + 1]!;
 const at = (flag: string) => argv.flatMap((a, i) => (a === flag ? [argv[i + 1]!] : []));
@@ -39,7 +40,8 @@ const run = { graders: [{ name: "g", passed: true, withOnly: false }] };
 const cases = found
   .filter((c) => (wanted === undefined || c.name === wanted) && !drop.includes(c.name))
   .map((c) => ({ ...c, arms: { with: Array(runs).fill(run), without: Array(runs).fill(run) }, aggregates: { score: 1, scoreWithout: 1, delta: 0 } }));
-const cost = cases.length === 0 ? 0 : Number(process.env.FAKE_COST ?? "0.5");
+const costs = (process.env.FAKE_COST ?? "0.5").split(",");
+const cost = cases.length === 0 ? 0 : Number(costs[Math.min(call, costs.length - 1)]);
 writeFileSync(out, JSON.stringify({ cases, costUsd: cost, durationSeconds: 1, partial: false, aggregates: { overallScore: cases.length ? 1 : null, meanDelta: 0 } }));
 if (cases.length === 0) { console.error("No eval cases found matching --case " + JSON.stringify(wanted)); process.exit(1); }
 process.exit(0);
@@ -163,6 +165,13 @@ describe("eval-local: the cost cap", () => {
   test("spend within the cap is not over budget", () => {
     const r = run(["--case", "case-three", "--max-cost-usd", "3"], { FAKE_COST: "2.5" });
     expect(r.receipt).toMatchObject({ budget: 3, over_budget: false });
+    expect(r.stderr).not.toContain("against a cap");
+  });
+
+  test("spend summing to exactly the cap is not over budget", () => {
+    const r = run(["--case", "case-one", "--case", "case-three", "--max-cost-usd", "0.3"], { FAKE_COST: "0.1,0.2" });
+    expect(r.receipt.invocations).toHaveLength(2);
+    expect(r.receipt).toMatchObject({ budget: 0.3, over_budget: false });
     expect(r.stderr).not.toContain("against a cap");
   });
 
