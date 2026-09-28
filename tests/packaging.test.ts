@@ -333,6 +333,14 @@ describe("bundle planning", () => {
     expect([...plan.files.keys()]).not.toContain("skills/alpha/SKILL.md");
   });
 
+  test("--profile all installs every catalog skill, whichever profile it belongs to", () => {
+    const plan = planBundle(ctxFor(), "claude-code", { profile: "all" });
+    const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta"]);
+    expect(plan.profile).toBe("all");
+    expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(false);
+  });
+
   test("an unknown profile is an error, not an empty bundle", () => {
     const plan = planBundle(ctxFor(), "claude-code", { profile: "nonesuch" });
     expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(true);

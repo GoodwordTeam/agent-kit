@@ -21,7 +21,8 @@
  * only through the roster, so the candidate set with the roster off measures a floor, not routing.
  *
  * Bundle (`--bundle`, default on): whether the host gets the package's packaged skills
- * (`dist/<bundle>`, from `ak build`) for the session. With the bundle off nothing is installed,
+ * (`dist/<bundle>`, from `ak build --profile all`) for the session. The bundle must install every
+ * skill the prompt set targets, or the run refuses to start (`bundleMissing`). With the bundle off nothing is installed,
  * so the roster names skills whose bodies the session cannot load through the host.
  *
  * The comparison that reproduces roster.ts's 5/14 to 12/14 is the roster alone, with the skills
@@ -940,6 +941,18 @@ export function noopBaseline(cases: readonly Case[], options: ScoreOptions) {
   return { balanced_accuracy: s.balanced_accuracy, fire: s.fire, negative_pass: s.negative_pass, user_prose_pass: s.user_prose.pass };
 }
 
+/**
+ * Skills the prompt set targets that the bundle does not install. A prompt aimed at a skill the
+ * host cannot load scores the bundle, not routing, and the roster would name a command nobody
+ * has. The core profile leaves out three U skills the dev set targets, so the eval installs
+ * `ak build --profile all`. Candidate drafts reach a session only through the roster and are
+ * never in a bundle.
+ */
+export function bundleMissing(bundleDir: string, cases: readonly Case[], drafts: ReadonlySet<string>): string[] {
+  const wanted = new Set(cases.flatMap((c) => [c.skill, ...c.expected]).filter((name) => !drafts.has(name)));
+  return [...wanted].filter((name) => !existsSync(join(bundleDir, "skills", name, "SKILL.md"))).sort();
+}
+
 // ---------------------------------------------------------------------------
 // Running.
 // ---------------------------------------------------------------------------
@@ -1003,7 +1016,50 @@ function revision(): string {
   return result.code === 0 ? result.stdout.trim() : "unknown";
 }
 
+const VALUE_FLAGS: Record<string, readonly string[] | null> = {
+  "--set": null,
+  "--arm": null,
+  "--roster": ["on", "off"],
+  "--bundle": ["on", "off"],
+  "--subject": null,
+  "--jobs": null,
+  "--json": null,
+  "--dump-transcripts": null,
+};
+const SWITCHES = new Set(["--dry-run", "--quiet"]);
+
+/**
+ * What is wrong with the command line, or [] when nothing is. A flag the parser does not know,
+ * a value flag with no value, or an on/off flag with any other value would otherwise fall back
+ * to its default without a word: `"--bundle off"` passed as one token ran with the bundle on.
+ */
+export function argvProblems(argv: readonly string[]): string[] {
+  const problems: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const token = argv[i]!;
+    if (SWITCHES.has(token)) continue;
+    if (!(token in VALUE_FLAGS)) {
+      problems.push(token.startsWith("--") ? `unknown flag ${JSON.stringify(token)}` : `stray argument ${JSON.stringify(token)}`);
+      continue;
+    }
+    const value = argv[i + 1];
+    const allowed = VALUE_FLAGS[token];
+    if (value === undefined || value.startsWith("--")) {
+      problems.push(`${token} needs a value`);
+      continue;
+    }
+    if (allowed && !allowed.includes(value)) problems.push(`${token} must be ${allowed.join(" or ")}, not ${value}`);
+    i++;
+  }
+  return problems;
+}
+
 async function main(argv: string[]): Promise<number> {
+  const problems = argvProblems(argv);
+  if (problems.length > 0) {
+    for (const problem of problems) console.error(`trigger-eval: ${problem}`);
+    return 2;
+  }
   const armFlag = option(argv, "--arm") ?? "natural";
   if (!["natural", "nudged", "catalog", "candidate"].includes(armFlag)) {
     console.error(`trigger-eval: --arm must be natural or nudged, not ${armFlag}`);
@@ -1042,7 +1098,12 @@ async function main(argv: string[]): Promise<number> {
     // The package's skills reach the host only through its packaged bundle; `ak build` writes it.
     const bundleDir = bundleOn ? join(PACKAGE_ROOT, "dist", BUNDLE_FOR[subject.host]) : undefined;
     if (bundleDir !== undefined && !existsSync(bundleDir) && !dryRun) {
-      console.error(`trigger-eval: ${bundleDir} is missing; run \`bun run ak build\` first, or pass --bundle off`);
+      console.error(`trigger-eval: ${bundleDir} is missing; run \`bun run ak build --profile all\` first, or pass --bundle off`);
+      return 2;
+    }
+    const missing = bundleDir === undefined || dryRun ? [] : bundleMissing(bundleDir, cases, new Set(drafts.values()));
+    if (missing.length > 0) {
+      console.error(`trigger-eval: ${bundleDir} does not install ${missing.join(", ")}; run \`bun run ak build --profile all\` first`);
       return 2;
     }
     const request = (c: Case): SessionRequest => ({

@@ -37,12 +37,18 @@ export interface ProfileMembership {
  * because there is nothing left to link. One bad field would silence an
  * unrelated check. Selecting everything and saying `"all"` keeps both the build
  * and the complaint honest.
+ *
+ * `--profile all` asks for that same everything on purpose: every catalog skill,
+ * whatever profile it belongs to. The routing eval builds it so each skill its
+ * prompts target, and each command the roster lists, is installed. A catalog
+ * that declares its own profile named `all` keeps it.
  */
 export function resolveProfile(root: string, catalog: Catalog, profileId: string | undefined): ProfileMembership {
   const all = catalog.bySection("skills").map((e) => e.id);
   const declaredDefault = catalog.package.defaultProfile;
   const hasDefault = declaredDefault.length > 0 && catalog.get("profiles", declaredDefault) !== undefined;
   const selected = profileId ?? (hasDefault ? declaredDefault : undefined);
+  if (selected === "all" && catalog.get("profiles", "all") === undefined) return { profile: "all", skills: all, issues: [] };
   if (selected === undefined) return { profile: "all", skills: all, issues: [] };
 
   if (catalog.get("profiles", selected) === undefined) {
