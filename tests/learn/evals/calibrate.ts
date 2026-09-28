@@ -8,6 +8,7 @@
  *   bun tests/learn/evals/calibrate.ts sample --from PATH [--from PATH ...] [--n 80] [--seed 1] [--out FILE]
  *   bun tests/learn/evals/calibrate.ts grade [--file FILE] [--subject ID] [--matrix FILE] [--spend] [--max-calls N] [--retry-invalid]
  *   bun tests/learn/evals/calibrate.ts kappa [--file FILE]
+ *   bun tests/learn/evals/calibrate.ts rescore [--file FILE] [--out FILE]
  *
  * FILE defaults to `.work/calibration/labels.json`, the matrix to `.work/eval-matrix.yaml`.
  *
@@ -41,8 +42,15 @@
  *          `--retry-invalid` the seats holding one are graded again, only those seats; each retry
  *          replaces its invalid vote and counts against `--max-calls` like any other call.
  * kappa    Cohen's κ (./stats.ts `kappaTable`) for each reviewer against the human, each reviewer
- *          pair, and the scorer's suggested verdict against the human, each with its n. `invalid`
- *          votes and items the scorer abstains on are left out of their rows.
+ *          pair, the scorer's suggested verdict against the human, and the scorer against each
+ *          reviewer, each with its n. A row counts the items both its raters rated, so the rows
+ *          against the human count labelled items only, and the others count every item: they
+ *          hold with no human label yet. `invalid` votes and items the scorer abstains on are left
+ *          out of their rows. Without human labels the figures measure agreement, not correctness.
+ * rescore  Re-applies the current scorer to each item's stored session, read again from the
+ *          file's `sources`, and replaces `suggested`; labels, votes and transcripts are left as
+ *          they are. It prints each item whose verdict or outcome changed and each item whose
+ *          session is no longer in its sources (left untouched). Writes in place unless `--out`.
  *
  * The scorer's verdict is `suggested`, mapped onto `CRITERIA`: recommended, redirected,
  * loaded-and-stopped and a held negative pass; violated, missed and a fired negative fail;
@@ -425,6 +433,32 @@ export function buildLabels(loaded: Loaded, options: { n: number; seed: number; 
   return { version: 1, criteria: CRITERIA, seed: options.seed, target: options.n, sources: [...options.sources], strata, skipped: loaded.skipped, items };
 }
 
+export interface Rescored {
+  labels: LabelFile;
+  /** Items whose suggested verdict or outcome changed. */
+  changed: { id: string; from: Suggested; to: Suggested }[];
+  /** Items whose session `loaded` does not hold; their suggestion is left as it was. */
+  missing: string[];
+}
+
+/** The label file with each item's `suggested` taken from its session in `loaded`, rescored. Does not mutate `labels`. */
+export function rescoreLabels(labels: LabelFile, loaded: Loaded): Rescored {
+  const bySource = new Map(loaded.candidates.map((c) => [c.source, c]));
+  const changed: Rescored["changed"] = [];
+  const missing: string[] = [];
+  const items = labels.items.map((item) => {
+    const cand = bySource.get(item.source);
+    if (cand === undefined) {
+      missing.push(item.id);
+      return item;
+    }
+    const to = suggestedOf(cand.scored);
+    if (to.verdict !== item.suggested.verdict || to.outcome !== item.suggested.outcome) changed.push({ id: item.id, from: item.suggested, to });
+    return { ...item, suggested: to };
+  });
+  return { labels: { ...labels, items }, changed, missing };
+}
+
 /** The scoring the sample rescores with: the catalog's user-invoked skills, ids and body fingerprints. */
 function catalogScoring(): ScoreOptions {
   const { catalog } = loadCatalog(PACKAGE_ROOT);
@@ -587,21 +621,27 @@ export const SCORER = "scorer";
 export interface KappaReport {
   items: number;
   labelled: number;
-  /** Each reviewer against the human, then reviewer pairs, then the scorer against the human. */
+  /** Over labelled items: each reviewer against the human, and the scorer against the human. */
   reviewer_vs_human: KappaRow[];
-  reviewer_pairs: KappaRow[];
   scorer_vs_human: KappaRow | null;
+  /** Over every item both raters rated, labelled or not: reviewer pairs, and the scorer against each reviewer. */
+  reviewer_pairs: KappaRow[];
+  scorer_vs_reviewers: KappaRow[];
   bar: number;
 }
 
-/** κ over the labelled items of a label file. Votes and labels on unlabelled items are ignored. */
+/**
+ * κ for every pair of raters over the items both rated. The human rated only the labelled items,
+ * so the rows against the human count those alone; reviewer pairs and the scorer against each
+ * reviewer count every item, and hold before anything is labelled.
+ */
 export function kappaReport(labels: LabelFile): KappaReport {
   const labelled = labels.items.filter((i) => i.label === "PASS" || i.label === "FAIL");
   const ratings: Record<string, Record<string, string>> = { [HUMAN]: {}, [SCORER]: {} };
   // Every reviewer that voted anywhere gets a row, so one with nothing on the labelled items shows n 0 rather than vanishing.
   const reviewers = new Set(labels.items.flatMap((i) => Object.keys(i.votes ?? {})));
-  for (const item of labelled) {
-    ratings[HUMAN]![item.id] = item.label!;
+  for (const item of labels.items) {
+    if (item.label === "PASS" || item.label === "FAIL") ratings[HUMAN]![item.id] = item.label;
     if (item.suggested.verdict !== null) ratings[SCORER]![item.id] = item.suggested.verdict;
     for (const [reviewer, vote] of Object.entries(item.votes ?? {})) {
       if (vote === "invalid") continue;
@@ -616,8 +656,9 @@ export function kappaReport(labels: LabelFile): KappaReport {
     items: labels.items.length,
     labelled: labelled.length,
     reviewer_vs_human: rows.filter((r) => involves(r, HUMAN) && !involves(r, SCORER)).map((r) => oriented(r, r.a === HUMAN ? r.b : r.a)),
-    reviewer_pairs: rows.filter((r) => !involves(r, HUMAN) && !involves(r, SCORER)),
     scorer_vs_human: rows.map((r) => (involves(r, HUMAN) && involves(r, SCORER) ? oriented(r, SCORER) : null)).find((r) => r !== null) ?? null,
+    reviewer_pairs: rows.filter((r) => !involves(r, HUMAN) && !involves(r, SCORER)),
+    scorer_vs_reviewers: rows.filter((r) => involves(r, SCORER) && !involves(r, HUMAN)).map((r) => oriented(r, SCORER)),
     bar: KAPPA_BAR,
   };
 }
@@ -630,10 +671,11 @@ const FLAGS: Record<string, { values: ReadonlySet<string>; switches: ReadonlySet
   sample: { values: new Set(["--from", "--n", "--seed", "--out"]), switches: new Set(), repeat: new Set(["--from"]) },
   grade: { values: new Set(["--file", "--subject", "--matrix", "--max-calls"]), switches: new Set(["--spend", "--retry-invalid"]), repeat: new Set() },
   kappa: { values: new Set(["--file"]), switches: new Set(), repeat: new Set() },
+  rescore: { values: new Set(["--file", "--out"]), switches: new Set(), repeat: new Set() },
 };
 
 export interface Args {
-  command: "sample" | "grade" | "kappa";
+  command: "sample" | "grade" | "kappa" | "rescore";
   values: Record<string, string[]>;
   switches: Set<string>;
 }
@@ -641,7 +683,7 @@ export interface Args {
 /** Parse the command line, or return what is wrong with it. An unknown flag is an error, never ignored. */
 export function parseArgs(argv: readonly string[]): Args | { problems: string[] } {
   const [command, ...rest] = argv;
-  if (command === undefined || !(command in FLAGS)) return { problems: [`the first argument must be sample, grade or kappa, not ${JSON.stringify(command ?? "")}`] };
+  if (command === undefined || !(command in FLAGS)) return { problems: [`the first argument must be sample, grade, kappa or rescore, not ${JSON.stringify(command ?? "")}`] };
   const spec = FLAGS[command]!;
   const problems: string[] = [];
   const values: Record<string, string[]> = {};
@@ -678,14 +720,26 @@ function printPlan(plan: GradePlan): void {
   console.log(`judge calls: ${plan.calls}`);
 }
 
-async function main(argv: string[]): Promise<number> {
+export async function main(argv: string[], labelsFile = LABELS_FILE): Promise<number> {
   const args = parseArgs(argv);
   if ("problems" in args) {
     for (const p of args.problems) console.error(`calibrate: ${p}`);
     return 2;
   }
   const one = (flag: string) => args.values[flag]?.[0];
-  const file = resolve(one("--file") ?? one("--out") ?? LABELS_FILE);
+  const file = resolve((args.command === "sample" ? one("--out") : one("--file")) ?? labelsFile);
+
+  if (args.command === "rescore") {
+    const labels = readLabels(file);
+    const out = resolve(one("--out") ?? file);
+    const result = rescoreLabels(labels, loadRuns(labels.sources, catalogScoring()));
+    const show = (x: Suggested) => `${x.verdict ?? "abstain"} (${x.outcome})`;
+    for (const c of result.changed) console.log(`  ${c.id} ${labels.items.find((i) => i.id === c.id)!.stratum.padEnd(24)} ${show(c.from)} -> ${show(c.to)}`);
+    for (const id of result.missing) console.log(`  ${id} not in the sources any more; left as it was`);
+    writeLabels(out, result.labels);
+    console.log(`rescored ${labels.items.length - result.missing.length} of ${labels.items.length} item(s); ${result.changed.length} changed; wrote ${out}`);
+    return 0;
+  }
 
   if (args.command === "sample") {
     const sources = args.values["--from"]!.map((p) => resolve(p));
@@ -732,6 +786,8 @@ async function main(argv: string[]): Promise<number> {
   for (const r of report.reviewer_pairs) console.log(line(r));
   console.log("scorer vs human:");
   if (report.scorer_vs_human !== null) console.log(line(report.scorer_vs_human));
+  console.log("scorer vs reviewer:");
+  for (const r of report.scorer_vs_reviewers) console.log(line(r));
   console.log(JSON.stringify(report));
   return 0;
 }
