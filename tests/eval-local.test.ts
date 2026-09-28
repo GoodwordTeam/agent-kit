@@ -175,6 +175,13 @@ describe("eval-local: the cost cap", () => {
     expect(r.stderr).not.toContain("against a cap");
   });
 
+  test("a single group's host cost is recorded at the precision the cap is judged at", () => {
+    const r = run(["--case", "case-three", "--max-cost-usd", "0.3"], { FAKE_COST: "0.30003" });
+    expect(r.receipt.invocations).toHaveLength(1);
+    expect(r.receipt).toMatchObject({ budget: 0.3, over_budget: false, costUsd: 0.3 });
+    expect(r.stderr).not.toContain("against a cap");
+  });
+
   test("with no cap, the receipt says so", () => {
     const r = run(["--case", "case-three"]);
     expect(r.receipt).toMatchObject({ budget: null, over_budget: false });

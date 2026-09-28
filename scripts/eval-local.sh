@@ -289,7 +289,7 @@ for i in "${!groups[@]}"; do
                     | .value | to_entries[] | [$d, $c, $a, (.key + 1), (.value.tracePath // "")] | @tsv' "$out")
     cost="$(jq '.costUsd // 0' "$out")"
     partial="$(jq '.partial == true' "$out")"
-    spent="$(jq -n --argjson a "$spent" --argjson b "$cost" '($a + $b) * 10000 | round / 10000')"
+    spent="$(jq -n --argjson a "$spent" --argjson b "$cost" '$a + $b')"
   fi
   # Cases with fewer runs on an arm than were asked for (--runs, else the case's runs, else the
   # host's default of 3), or absent from the result. The without arm counts unless --ablation none.
@@ -325,18 +325,10 @@ for i in "${!groups[@]}"; do
       incomplete_cases: $incomplete, error: $error, scaffoldSkipped: $scaffold_skipped, result: $out}' >>"$invocations"
 done
 status=$aggregate
-# The host checks its cap as runs start, so runs already in flight can finish past it. Nothing is
-# stopped here; the overshoot is warned about and recorded.
-over_budget=false
-if [[ -n "$budget" ]] && jq -e -n --argjson b "$budget" --argjson s "$spent" '$s > $b' >/dev/null; then
-  over_budget=true
-  echo "eval-local: spent \$$spent against a cap of \$$budget; runs already in flight when the cap was reached finished past it" >&2
-fi
-
 [[ ${#parts[@]} -gt 0 ]] || { echo "eval-local: no result at $json" >&2; exit "$status"; }
 if [[ ${#groups[@]} -gt 1 ]]; then
   # The host's overall figures are per invocation; the merged ones are unweighted means over cases.
-  jq -s '{cases: [.[].cases[]], costUsd: ((map(.costUsd // 0) | add) * 10000 | round / 10000),
+  jq -s '{cases: [.[].cases[]], costUsd: (map(.costUsd // 0) | add),
           durationSeconds: (map(.durationSeconds // 0) | add), partial: any(.[]; .partial == true),
           aggregates: {overallScore: ([.[].cases[].aggregates.score | numbers] | if length > 0 then add / length else null end),
                        meanDelta: ([.[].cases[].aggregates.delta | numbers] | if length > 0 then add / length else null end)},
@@ -357,7 +349,7 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
    --argjson donors "$donors" --arg host "$host_version" --arg isolation "$isolation" \
    --argjson status "$status" --arg json "$json" --arg grant_source "$grant_source" \
    --slurpfile invocations "$invocations" --slurpfile traces "$traces" --arg scaffold "$scaffold" \
-   --argjson exclusions "$exclusions" --argjson budget "${budget:-null}" --argjson over_budget "$over_budget" \
+   --argjson exclusions "$exclusions" --argjson budget "${budget:-null}" \
    --args '
   def wilson($k; $n): if $n == 0 then {lo: 0, hi: 1} else
       ($k / $n) as $p | 3.8416 as $z2
@@ -371,7 +363,8 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
       | if (map(length) | add // 0) == 0 then null
         else {n: length, fired: map(select(length > 0 and all)) | length} end;
   def skill_graders: [.graders[]? | select(.type == "tool_used" and .config.tool == "Skill") | .name];
-  {
+  (.costUsd | if type == "number" then . * 10000 | round / 10000 else . end) as $cost
+  | {
     measured: {revision: $revision, dirty: $dirty},
     bundle: {path: $bundle, sha256: $bundle_sha, freshAgainstSources: $fresh},
     install: $install,
@@ -390,11 +383,15 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
     overall: {score: .aggregates.overallScore, meanDelta: .aggregates.meanDelta,
               mergedFrom: (.merged // 1)},
     traces: $traces,
-    costUsd: .costUsd, durationSeconds: .durationSeconds,
-    budget: $budget, over_budget: $over_budget,
+    costUsd: $cost, durationSeconds: .durationSeconds,
+    budget: $budget, over_budget: ($budget != null and $cost > $budget),
     partial: (.partial or any($invocations[]; .partial))
   }' "${passed[@]+"${passed[@]}"}" <"$json" >"$receipt" \
   || echo "eval-local: could not write the receipt for $json" >&2
+# The host checks its cap as runs start, so runs already in flight can finish past it. Nothing is
+# stopped here; the overshoot is warned about and recorded.
+jq -r 'select(.over_budget) | "eval-local: spent $\(.costUsd) against a cap of $\(.budget); runs already in flight when the cap was reached finished past it"' \
+  "$receipt" >&2 2>/dev/null || true
 
 echo
 jq -r '
