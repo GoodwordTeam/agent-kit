@@ -19,6 +19,7 @@ The files beside this one:
 | `CHILD-ROLES.md` | The worker's children | The envelope a task-local child runs inside |
 | `hooks/child-guard.sh` | The Claude Code host | The PreToolUse hook that enforces part of that envelope |
 | `upstream/a5d78f8/0001-agent-kit-mode.patch` | A Firstmate maintainer | The opt-in delivery mode this adapter depends on |
+| `upstream/a5d78f8/0002-agent-kit-audit.patch` | A Firstmate maintainer | Applied after 0001: the dry-run definition of done, Firstmate's audit of a worker's `done:`, and the optional worker budget |
 
 ---
 
@@ -92,17 +93,22 @@ worker started is not independent of the worker (ruling `missing-supervisor-neve
 | Firstmate | What works |
 |---|---|
 | **Unmodified upstream** (`a5d78f8` or later, no patch) | Nothing in this adapter. The worker role forbids delegation outright and the supervisor rule gives no-mistakes sole ownership of review, so an agent-kit lifecycle inside a Firstmate worker contradicts its own brief. `ak firstmate preflight` reports this and refuses |
-| **Upstream `a5d78f8` with patch 0001** | Delivery mode `agent-kit` for Claude Code workers with the child guard enforced; other harnesses with the guard declared but not enforced (§5). Everything in §2 and §4 |
-| **Not supported yet** | Evidence published to a knowledgebase (none exists); runner-validated grants (no runner; under Firstmate the binding stands in, §6); autopilot (a contract); cross-task child budgets (no run ledger); any Firstmate commit the patch does not apply to cleanly |
+| **Upstream `a5d78f8` with patches 0001 then 0002** | Delivery mode `agent-kit` for Claude Code workers with the child guard enforced; other harnesses with the guard declared but not enforced (§5). Everything in §2 and §4. With 0002, a `dry-run` binding's worker publishes nothing, and Firstmate itself runs `ak firstmate status <binding> --verify` on every agent-kit `done:` and keeps it only on exit 0 |
+| **Upstream `a5d78f8` with patch 0001 only** | Nothing: `ak firstmate preflight` refuses it and names 0002 |
+| **Not supported yet** | Evidence published to a knowledgebase (none exists); runner-validated grants (no runner; under Firstmate the binding stands in, §6); autopilot (a contract); cross-task child budgets (no run ledger); any Firstmate commit the patches do not apply to cleanly |
 
-The patch is version-bound. It is carried here, under the upstream commit it was made against, and
-it is never applied to a live Firstmate home by any `ak` command. `ak firstmate preflight` checks
-that the home contains the upstream commit and that the patch is already applied, by a reverse
-`git apply --check`; `ak firstmate install` refuses on a home where it is not.
+The patches are version-bound and form a stack: 0002 rewrites lines 0001 added, so it applies only
+on top of 0001. They are carried here, under the upstream commit they were made against, and never
+applied to a live Firstmate home by any `ak` command. `ak firstmate preflight` checks that the home
+contains the upstream commit and that every patch in the stack is already applied, by reverse
+`git apply --check` from the top patch down. It peels each checked patch off in a scratch git index
+built from the home's working tree, so the home's own index and files are never changed.
+`ak firstmate install` refuses on a home where the stack is not applied.
 
 `ak firstmate install` writes into the home's `config/` only: `agent-kit.env`, which holds exactly
-the three keys the patch parses (`AK_FIRSTMATE_BIN`, `AK_FIRSTMATE_PATCH`,
-`AK_FIRSTMATE_WORKER_SETTINGS`) and which the patch refuses if it holds any other;
+the three keys 0001 requires (`AK_FIRSTMATE_BIN`, `AK_FIRSTMATE_PATCH`,
+`AK_FIRSTMATE_WORKER_SETTINGS`), which the patched parser refuses if it holds any other key but
+0002's optional `AK_FIRSTMATE_WORKER_BUDGET_USD` (install never writes that one; a maintainer adds it);
 `agent-kit/worker-settings.json`, whose hook command carries `'__AK_FIRSTMATE_BINDING__'`, in
 single quotes, for the patch to replace with the task's bare binding path; and, when an evidence store is given,
 `agent-kit/evidence.env`, which only `ak` reads. It is idempotent and `ak firstmate remove` deletes
@@ -150,7 +156,8 @@ history and they count, so use one branch per task or pass `--run` for a fresh r
 grant the run needed must have left a grant record naming this binding by path and by the hash the ledger registered,
 and the binding must still hash to it. Any refusal prints `refused: …` lines and a `needs-decision`
 hint, exits 1, and prints no `done` line. `ak firstmate status <binding> --verify` runs the same audit
-on its own, for a supervisor that wants to check a `done` it was handed. A knowledgebase store fails
+on its own, for a supervisor that wants to check a `done` it was handed; with patch 0002 Firstmate
+runs it on every agent-kit `done:` (§3). A knowledgebase store fails
 closed here too: the audit cannot read it, so it refuses.
 
 ---

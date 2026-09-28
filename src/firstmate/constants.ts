@@ -7,22 +7,24 @@ import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 
 export interface Upstream {
-  /** The upstream commit the patch was made against. */
+  /** The upstream commit the patches were made against. */
   commit: string;
-  /** The patch id, as the binding records it. */
+  /** The delivery-mode patch id, as the binding and `AK_FIRSTMATE_PATCH` record it. */
   patch: string;
-  /** The patch file, absolute. */
-  patchFile: string;
+  /** Every patch a home must carry, in the order a maintainer applies them. Absolute files. */
+  stack: { id: string; file: string }[];
 }
 
 export const UPSTREAM_COMMIT = "a5d78f8";
 export const PATCH_ID = "0001-agent-kit-mode";
+/** 0002 adds the dry-run definition of done, the `status --verify` audit of a worker's done, and the worker budget. */
+export const PATCH_STACK = [PATCH_ID, "0002-agent-kit-audit"] as const;
 
 export function defaultUpstream(akRoot: string): Upstream {
   return {
     commit: UPSTREAM_COMMIT,
     patch: PATCH_ID,
-    patchFile: join(akRoot, "adapters/firstmate/upstream", UPSTREAM_COMMIT, `${PATCH_ID}.patch`),
+    stack: PATCH_STACK.map((id) => ({ id, file: join(akRoot, "adapters/firstmate/upstream", UPSTREAM_COMMIT, `${id}.patch`) })),
   };
 }
 
@@ -39,7 +41,8 @@ export const MOCK_LABEL = "mock evidence store: fixture demonstration, not a kno
 
 /**
  * The files `ak firstmate install` writes, relative to the home. Nothing else. ENV_FILE holds only
- * the three keys patch 0001 accepts; the evidence store, which only `ak` reads, is kept apart.
+ * the three keys patch 0001 requires (0002's optional budget key is maintainer-added); the evidence
+ * store, which only `ak` reads, is kept apart.
  */
 export const ENV_FILE = "config/agent-kit.env";
 export const EVIDENCE_FILE = "config/agent-kit/evidence.env";

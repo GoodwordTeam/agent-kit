@@ -33,7 +33,7 @@ interface Io {
 }
 
 export const FIRSTMATE_USAGE = [
-  "ak firstmate — bind agent-kit to a Firstmate home patched with 0001-agent-kit-mode",
+  "ak firstmate — bind agent-kit to a Firstmate home patched with 0001-agent-kit-mode then 0002-agent-kit-audit",
   "",
   "  ak firstmate preflight --fm-home <dir> --project <dir> [--host claude-code|codex]",
   "                         [--evidence kb|mock --evidence-location <dir>] [--json]",
@@ -49,7 +49,7 @@ export const FIRSTMATE_USAGE = [
   "                      audit the run: a current gate record per required gate, grants that match the ledger",
   "  ak firstmate grant --binding <file> --operation review.full|review.readiness|ship.prepare [--cwd <dir>]",
   "",
-  "Nothing here applies the patch or writes Firstmate state. See adapters/firstmate/CONTRACT.md.",
+  "Nothing here applies the patches or writes Firstmate state. See adapters/firstmate/CONTRACT.md.",
 ];
 
 const BOOL = new Set(["json", "dry-run", "verify"]);

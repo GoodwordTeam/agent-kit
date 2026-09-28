@@ -52,7 +52,8 @@ parked run (`skills/super-ship/references/transport-no-mistakes.md`).
 `adapters/firstmate/upstream/a5d78f8/0001-agent-kit-mode.patch` adds delivery mode `agent-kit` to
 Firstmate. It is never applied by `ak`, and never to a live home: a maintainer applies it to a
 checkout at `a5d78f8`, and `ak firstmate preflight` refuses a home where it does not reverse-apply
-cleanly. Every other mode, and the default worker role text, stay byte-identical.
+cleanly. `0002-agent-kit-audit.patch` applies on top of it (see Patch 0002 below), and preflight
+requires both, in that order. Every other mode, and the default worker role text, stay byte-identical.
 
 The mode changes the one contract source, `fm-dod-lib.sh`, so fresh launch, relaunch and promotion
 all carry the same contract. In that mode fm-brief calls `ak firstmate bind`, which writes the
@@ -152,6 +153,31 @@ project):
 
 **Not checked:** no Claude session loaded that settings file, and no forge was involved.
 
+## Patch 0002
+
+`adapters/firstmate/upstream/a5d78f8/0002-agent-kit-audit.patch`: one commit over 0001, 15 files,
++511/−43. It rewrites lines 0001 added, so it applies only on top of 0001, never on bare `a5d78f8`.
+
+- **Dry run.** fm-dod-lib reads the binding's `delivery.action`. `publish` keeps the transport
+  contract; `dry-run` renders a definition of done under which the worker never runs no-mistakes,
+  pushes or opens a PR, and reports the line `ak firstmate status <binding> complete` prints. A
+  binding whose action is neither is refused at bind.
+- **Done audit.** Firstmate runs `ak firstmate status <binding> --verify` itself on every agent-kit
+  `done:` and keeps the done only on exit 0. A refusal, a missing `ak` or a timeout reads `parked`
+  with a `needs-decision:` reason carrying ak's refusal lines. A dry-run done has no named head, so
+  the audit alone decides it.
+- **Worker budget.** An optional `AK_FIRSTMATE_WORKER_BUDGET_USD` in `config/agent-kit.env` passes
+  `--max-budget-usd` to a Claude Code worker; with it set, an agent-kit launch on any other harness
+  is refused. `ak firstmate install` never writes it.
+
+`ak firstmate preflight` checks the stack from the top down in a scratch git index built from the
+home's working tree, peeling each checked patch before checking the one below, so the home's own
+index and files are never touched.
+
+**Checked against the real stack** (a scratch clone of the Firstmate home at `a5d78f8`): 0002 does
+not apply to bare `a5d78f8`; 0001 then 0002 apply cleanly; `checkPatchApplied` passes on that
+tree and, on a tree with 0001 alone, fails naming `0002-agent-kit-audit`.
+
 ## Evidence for the hook
 
 The child guard relies on Claude Code identifying a subagent's tool call. A probe against Claude Code
@@ -179,7 +205,7 @@ Firstmate supervisor, worker and local subagent ran together.
 | 9 | Parent crashes with children active | `status` reports `blocked … child <id> state unknown` and keeps the task. Reconciling children needs the runner | mock/contract; recovery **blocked on runner** |
 | 10 | Same event arrives twice | idempotent run id; super-ship reconciles open PR and active run before pushing; managed `babysit-pr` handles one delivered event | mock/contract (run id) ; prose |
 | 11 | Launch, promotion, resume | Firstmate: fresh launch, promotion and relaunch carry the same DoD, binding and role clause; spawn and relaunch refuse without a binding (patch tests) | real host (Firstmate bash tests on a scratch clone, with a stub `ak`) |
-| 12 | Upstream version conflict | preflight refuses a missing upstream commit and an unapplied patch; the CLI refuses on a home without `a5d78f8` | mock/contract |
+| 12 | Upstream version conflict | preflight refuses a missing upstream commit, an unapplied patch and a stack missing 0002; the CLI refuses on a home without `a5d78f8` | mock/contract |
 | 13 | PR open, merge not authorized | binding `delivery.merge` is `false` by schema; super-ship never merges | mock/contract |
 | 14 | Setup twice, then removed | install is idempotent, writes only its own files (the env file holds exactly the patch's three keys), refuses files it did not write; remove deletes exactly those | mock/contract |
 

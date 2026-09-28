@@ -1,0 +1,1040 @@
+From 396e68242737adea3c8eda32d77712eb66226b94 Mon Sep 17 00:00:00 2001
+From: Pibomeister <edy7picazo@gmail.com>
+Date: Thu, 24 Sep 2026 18:18:53 -0600
+Subject: [PATCH] feat(delivery): agent-kit dry-run DoD, done audit, worker
+ budget
+
+Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
+---
+ .agents/skills/project-management/SKILL.md |   1 +
+ AGENTS.md                                  |   5 +
+ bin/fm-agent-kit-lib.sh                    | 105 +++++++++++++--
+ bin/fm-brief.sh                            |  11 +-
+ bin/fm-crew-state.sh                       |  17 ++-
+ bin/fm-dod-lib.sh                          |  91 +++++++++++--
+ bin/fm-promote.sh                          |   4 +-
+ bin/fm-spawn.sh                            |  17 ++-
+ docs/architecture.md                       |   3 +
+ docs/scripts.md                            |   2 +-
+ tests/fixtures.sh                          |  22 ++-
+ tests/fm-brief.test.sh                     |  23 ++++
+ tests/fm-crew-state.test.sh                |  43 ++++++
+ tests/fm-dod-lib.test.sh                   | 149 +++++++++++++++++++--
+ tests/fm-task-delivery.test.sh             |  61 +++++++++
+ 15 files changed, 511 insertions(+), 43 deletions(-)
+
+diff --git a/.agents/skills/project-management/SKILL.md b/.agents/skills/project-management/SKILL.md
+index 77586f57..038d7f23 100644
+--- a/.agents/skills/project-management/SKILL.md
++++ b/.agents/skills/project-management/SKILL.md
+@@ -42,6 +42,7 @@ Choose that posture when adding or creating the project:
+ - `direct-PR` pushes and opens a PR without the no-mistakes pipeline.
+ - `local-only` has no required remote or PR and lands only through the approved local fast-forward path.
+ - `agent-kit` is opt-in and needs `config/agent-kit.env`: agent-kit's bound lifecycle judges the work and no-mistakes only delivers it.
++  A binding with `delivery.action` `dry-run` publishes nothing, and Firstmate audits every agent-kit `done:` with `ak firstmate status <binding> --verify`.
+ - `no-mistakes-prod-only` is a conditional policy rather than one flat mode: genuinely internal-only tooling, automation, contributor or operator process, and release or submission work ships `direct-PR`, while product-facing, mixed, and uncertain work ships `no-mistakes`.
+ 
+ `no-mistakes-prod-only` is the default for a newly added or created remote-backed project when the captain specifies nothing, and a project with no remote defaults to `local-only`.
+diff --git a/AGENTS.md b/AGENTS.md
+index 4ce0fb6f..3e172dd4 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -359,6 +359,8 @@ The path's worker, automated gates, and captain approval remain authoritative:
+ - **direct-PR** has the worker push and open a PR without the no-mistakes pipeline, then waits for the configured merge authority.
+ - **local-only** has the worker stop with a clean ready branch, then waits for the configured merge authority before firstmate uses the guarded fast-forward merge path.
+ - **agent-kit** is opt-in through `config/agent-kit.env` (`bin/fm-agent-kit-lib.sh`): the worker runs the lifecycle in its brief's `# agent-kit binding` section and ships through `no-mistakes axi run --skip review,document,rebase`, then waits for the configured merge authority.
++  A binding whose `delivery.action` is `dry-run` publishes nothing: its worker never runs no-mistakes, pushes, or opens a PR, and reports `done [at=<epoch>]: dry-run ship prepared, nothing published evidence=<refs>` as printed by `ak firstmate status <binding> complete --evidence <refs>`.
++  An optional `AK_FIRSTMATE_WORKER_BUDGET_USD` in `config/agent-kit.env` passes `--max-budget-usd <n>` to the claude worker, and refuses any other harness.
+ 
+ Delivery mode and `yolo` are orthogonal.
+ `yolo` governs merge authority only: with it off, the captain approves every PR merge and every local-only landing; with it on, firstmate merges green, in-scope work itself.
+@@ -405,6 +407,9 @@ A direct-PR worker pushes that commit to its PR branch, and a local-only worker
+ A no-mistakes worker re-validates it with /no-mistakes so the pipeline stays the one publisher; it never pushes from its copy.
+ An agent-kit worker re-ships it through its bound lifecycle for the same reason.
+ In no-mistakes mode the earlier `done [at=<epoch>]: {summary}` is the pipeline handoff and is not gated; agent-kit has no such handoff, so its every ship `done:` is gated.
++An agent-kit `done:` is also audited: Firstmate runs `ak firstmate status <binding> --verify` itself, and only exit 0 keeps the done.
++A refused audit, or one that cannot run because `ak` is missing, reads `parked` with a `needs-decision:` reason carrying ak's refusal lines, so decide it with the captain rather than steering the worker to ship again.
++A dry-run done has no named head to gate, so that audit alone decides it.
+ Tell the captain the PR's full `https://...` URL copied from the worker's ready line, the resolved checks-green crew-state line, or the task's `pr=` metadata, a concise outcome summary, and the no-mistakes risk level when applicable.
+ A captain instruction to merge is explicit authority; `yolo` is the only standing routine merge authority.
+ For any custom `state/<id>.check.sh` you write yourself, keep it an ordinary single-link mode-`0700` file, print one line only when firstmate should wake, print nothing otherwise, finish before `FM_CHECK_TIMEOUT`, then bind its current bytes with `bin/fm-check-register.sh <id>` before the watcher may execute it.
+diff --git a/bin/fm-agent-kit-lib.sh b/bin/fm-agent-kit-lib.sh
+index 4100ff23..df1fd977 100644
+--- a/bin/fm-agent-kit-lib.sh
++++ b/bin/fm-agent-kit-lib.sh
+@@ -2,40 +2,55 @@
+ # Single owner of the opt-in agent-kit delivery binding: the config/agent-kit.env
+ # parser, the `ak firstmate bind` call that renders a ship brief's
+ # `# agent-kit binding` section, and the per-task Claude settings merge that
+-# carries agent-kit's child guard hooks.
+-# Sourced by bin/fm-brief.sh and bin/fm-promote.sh (bind) and by bin/fm-spawn.sh
+-# (config and settings). This file is sourced and has no side effects on source.
++# carries agent-kit's child guard hooks, the binding's delivery action, and the
++# supervisor audit (`ak firstmate status <binding> --verify`) of a worker's done:.
++# Sourced by bin/fm-brief.sh and bin/fm-promote.sh (bind), by bin/fm-spawn.sh
++# (config, settings, and worker budget), and by bin/fm-dod-lib.sh (action and
++# audit). This file is sourced and has no side effects on source.
+ # agent-kit judges, no-mistakes delivers: the bound lifecycle owns review, fixes,
+ # and the ship decision, and bin/fm-dod-lib.sh owns the Definition of done that
+ # points the worker at this section.
+ # Every path fails closed. The env file is parsed, never sourced: blank and `#`
+ # lines are ignored, every other line must be KEY=value or KEY='value' for one of
+-# the three keys below, each exactly once, and a value holding quotes, spaces,
+-# `$`, or backticks is refused rather than interpreted.
++# the keys below, each at most once (the first three are required), and a value
++# holding quotes, spaces, `$`, or backticks is refused rather than interpreted.
+ #   AK_FIRSTMATE_BIN              absolute path to an executable `ak`
+ #   AK_FIRSTMATE_PATCH            the Firstmate patch the binding targets; must be 0001-agent-kit-mode
+ #   AK_FIRSTMATE_WORKER_SETTINGS  absolute path to a JSON file whose `hooks` object guards child agents;
+ #                                 its hook `command` strings must carry the single-quoted token
+ #                                 '__AK_FIRSTMATE_BINDING__', which becomes the task's absolute binding
+ #                                 path in the per-task settings file
++#   AK_FIRSTMATE_WORKER_BUDGET_USD optional; a positive decimal number of US dollars that
++#                                 bin/fm-spawn.sh passes to an agent-kit claude worker as
++#                                 `--max-budget-usd`; unset passes no flag, and an agent-kit
++#                                 launch on any other harness is refused while it is set
+ # A bind is accepted only when `ak` exits 0, writes the binding JSON, and prints
+ # a section whose first line is exactly `# agent-kit binding` and which holds no
+ # `Delivery contract: mode=` line, so the section can never override the mode
+ # line bin/fm-spawn.sh checks. A refused bind leaves no binding JSON and removes
+-# the task data directory when this call created it.
++# the task data directory when this call created it, and so does a binding whose
++# delivery.action is not `publish` or `dry-run`.
++# The audit runs AK_FIRSTMATE_BIN, bounded by FM_AGENT_KIT_VERIFY_TIMEOUT
++# seconds, and fails closed: a missing or refused config, a missing binding, a
++# missing `ak`, a timeout, or any non-zero exit is a refusal, never a pass.
+ 
+ FM_AGENT_KIT_PATCH_ID=0001-agent-kit-mode
+ FM_AGENT_KIT_HEADING='# agent-kit binding'
+ FM_AGENT_KIT_BINDING_PLACEHOLDER=__AK_FIRSTMATE_BINDING__
++FM_AGENT_KIT_VERIFY_TIMEOUT=60
+ 
+-# Load <config-dir>/agent-kit.env into AK_FIRSTMATE_BIN, AK_FIRSTMATE_PATCH, and
+-# AK_FIRSTMATE_WORKER_SETTINGS. Prints the reason on stderr and returns 1 on any
+-# refusal.
++# shellcheck source=bin/fm-timeout-lib.sh
++. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-timeout-lib.sh"
++
++# Load <config-dir>/agent-kit.env into AK_FIRSTMATE_BIN, AK_FIRSTMATE_PATCH,
++# AK_FIRSTMATE_WORKER_SETTINGS, and AK_FIRSTMATE_WORKER_BUDGET_USD (empty when
++# unset). Prints the reason on stderr and returns 1 on any refusal.
+ fm_agent_kit_config_load() {  # <config-dir>
+   local file="$1/agent-kit.env" line key value n=0 seen=' '
+   AK_FIRSTMATE_BIN=
+   AK_FIRSTMATE_PATCH=
+   AK_FIRSTMATE_WORKER_SETTINGS=
++  AK_FIRSTMATE_WORKER_BUDGET_USD=
+   if [ ! -f "$file" ]; then
+     echo "error: agent-kit mode needs $file; it is missing" >&2
+     return 1
+@@ -64,7 +79,7 @@ fm_agent_kit_config_load() {  # <config-dir>
+         ;;
+     esac
+     case "$key" in
+-      AK_FIRSTMATE_BIN | AK_FIRSTMATE_PATCH | AK_FIRSTMATE_WORKER_SETTINGS) ;;
++      AK_FIRSTMATE_BIN | AK_FIRSTMATE_PATCH | AK_FIRSTMATE_WORKER_SETTINGS | AK_FIRSTMATE_WORKER_BUDGET_USD) ;;
+       *)
+         echo "error: $file:$n has unknown key '$key'" >&2
+         return 1
+@@ -81,6 +96,7 @@ fm_agent_kit_config_load() {  # <config-dir>
+       AK_FIRSTMATE_BIN) AK_FIRSTMATE_BIN=$value ;;
+       AK_FIRSTMATE_PATCH) AK_FIRSTMATE_PATCH=$value ;;
+       AK_FIRSTMATE_WORKER_SETTINGS) AK_FIRSTMATE_WORKER_SETTINGS=$value ;;
++      AK_FIRSTMATE_WORKER_BUDGET_USD) AK_FIRSTMATE_WORKER_BUDGET_USD=$value ;;
+     esac
+   done <"$file"
+   case "$AK_FIRSTMATE_BIN" in
+@@ -105,6 +121,12 @@ fm_agent_kit_config_load() {  # <config-dir>
+       return 1
+       ;;
+   esac
++  [ -n "$AK_FIRSTMATE_WORKER_BUDGET_USD" ] || return 0
++  if ! printf '%s\n' "$AK_FIRSTMATE_WORKER_BUDGET_USD" | grep -Eq '^[0-9]+(\.[0-9]+)?$' \
++    || printf '%s\n' "$AK_FIRSTMATE_WORKER_BUDGET_USD" | grep -Eq '^0+(\.0+)?$'; then
++    echo "error: $file: AK_FIRSTMATE_WORKER_BUDGET_USD must be a positive number of US dollars (got '$AK_FIRSTMATE_WORKER_BUDGET_USD')" >&2
++    return 1
++  fi
+ }
+ 
+ # Run the bind and print the validated `# agent-kit binding` section on stdout.
+@@ -132,6 +154,8 @@ fm_agent_kit_bind() {  # <config-dir> <fm-home> <task-id> <project> <binding-out
+   elif [ ! -s "$out" ]; then
+     echo "error: agent-kit bind wrote no binding at $out" >&2
+     rc=1
++  elif ! fm_agent_kit_binding_action "$out" >/dev/null; then
++    rc=1
+   fi
+   if [ "$rc" -ne 0 ]; then
+     rm -f -- "$out"
+@@ -188,3 +212,64 @@ fm_agent_kit_claude_settings() {  # <base-json> <binding-path>
+     $base + {hooks: (.hooks | walk(if type == "object" and has("command") then .command |= subst else . end))}
+   ' "$settings"
+ }
++
++# The task's binding file in this home's data directory.
++fm_agent_kit_binding_path() {  # <task-id>
++  printf '%s/%s/agent-kit-binding.json\n' "${FM_DATA_OVERRIDE:-${FM_HOME:-}/data}" "$1"
++}
++
++# Print the binding's delivery.action, `publish` or `dry-run`. Anything else,
++# an unreadable binding, or a missing jq prints the reason on stderr and
++# returns 1, so no caller renders or accepts a delivery it cannot name.
++fm_agent_kit_binding_action() {  # <binding-json>
++  local binding=$1 action=
++  if ! command -v jq >/dev/null 2>&1; then
++    echo "error: agent-kit needs jq to read the delivery action of $binding" >&2
++    return 1
++  fi
++  action=$(jq -r 'if type == "object" and (.delivery | type) == "object" then (.delivery.action | strings) else empty end' \
++    "$binding" 2>/dev/null) || action=
++  case "$action" in
++    publish | dry-run) printf '%s\n' "$action" ;;
++    *)
++      echo "error: agent-kit binding $binding has no delivery.action of publish or dry-run" >&2
++      return 1
++      ;;
++  esac
++}
++
++# Firstmate's own audit of an agent-kit worker's done:, the same check
++# `ak firstmate status <binding> complete` ran before printing that line.
++# 0 when `ak firstmate status <binding> --verify` exits 0. Otherwise prints one
++# line on stdout - the reason, or every `refused:` line ak printed joined with
++# "; " - and returns 1. <worktree>, when it is a directory, is passed as
++# --project so the worker's own commits answer the audit's ancestry checks.
++fm_agent_kit_verify_done() {  # <config-dir> <binding-json> [<worktree>]
++  local config=$1 binding=$2 wt=${3:-} out rc=0
++  local -a args
++  if ! fm_agent_kit_config_load "$config" 2>/dev/null; then
++    out=$(fm_agent_kit_config_load "$config" 2>&1 >/dev/null)
++    printf 'agent-kit audit could not run: %s\n' "$(fm_agent_kit_one_line "$out")"
++    return 1
++  fi
++  if [ ! -f "$binding" ]; then
++    printf 'agent-kit audit could not run: binding %s is missing\n' "$binding"
++    return 1
++  fi
++  args=(firstmate status "$binding" --verify)
++  [ -z "$wt" ] || [ ! -d "$wt" ] || args+=(--project "$wt")
++  out=$(fm_run_timed "$FM_AGENT_KIT_VERIFY_TIMEOUT" "$AK_FIRSTMATE_BIN" "${args[@]}" </dev/null 2>&1) || rc=$?
++  [ "$rc" -ne 0 ] || return 0
++  if [ "$rc" -eq 124 ]; then
++    printf 'agent-kit audit timed out after %ss\n' "$FM_AGENT_KIT_VERIFY_TIMEOUT"
++    return 1
++  fi
++  out=$(fm_agent_kit_one_line "$out")
++  printf 'agent-kit audit refused done (ak exit %s): %s\n' "$rc" "${out:-no output}"
++  return 1
++}
++
++# Join the non-empty lines of <text> with "; ".
++fm_agent_kit_one_line() {  # <text>
++  printf '%s\n' "$1" | awk 'NF { printf "%s%s", (n++ ? "; " : ""), $0 }'
++}
+diff --git a/bin/fm-brief.sh b/bin/fm-brief.sh
+index 58a3a6a9..b481809d 100755
+--- a/bin/fm-brief.sh
++++ b/bin/fm-brief.sh
+@@ -507,6 +507,10 @@ fi
+ # which bin/fm-promote.sh renders too so a promoted scout receives the same contract.
+ # The block opens with the fixed "Delivery contract: mode=<mode>" line that
+ # bin/fm-spawn.sh checks against its own explicit --mode before launching.
++# An agent-kit brief takes Rule 1 and the Definition of done from its binding's
++# delivery action; a dry run never runs no-mistakes, so it skips its setup step.
++AK_BINDING_FILE=
++[ "$MODE" != agent-kit ] || AK_BINDING_FILE="$DATA/$ID/agent-kit-binding.json"
+ case "$MODE" in
+   direct-PR)
+     SETUP2=""
+@@ -517,10 +521,13 @@ case "$MODE" in
+   *)  # no-mistakes and agent-kit
+     SETUP2="
+ 2. Run \`no-mistakes doctor\`; if it reports the repo is not initialized here, run \`no-mistakes init\`."
++    if [ "$MODE" = agent-kit ] && [ "$(fm_agent_kit_binding_action "$AK_BINDING_FILE")" = dry-run ]; then
++      SETUP2=""
++    fi
+     ;;
+ esac
+-RULE1=$(fm_ship_rule_one "$MODE" "$ID") || exit 1
+-DOD=$(fm_dod_block "$MODE" "$ID") || exit 1
++RULE1=$(fm_ship_rule_one "$MODE" "$ID" "$AK_BINDING_FILE") || exit 1
++DOD=$(fm_dod_block "$MODE" "$ID" "$AK_BINDING_FILE") || exit 1
+ 
+ cat > "$BRIEF" <<EOF
+ You are a crewmate: an autonomous worker agent managed by firstmate. Work on your own; do not wait for a human.
+diff --git a/bin/fm-crew-state.sh b/bin/fm-crew-state.sh
+index 8a75968c..86564e3b 100755
+--- a/bin/fm-crew-state.sh
++++ b/bin/fm-crew-state.sh
+@@ -12,6 +12,10 @@
+ # the pane busy-signature) and reconciles the possibly-stale log against it.
+ # A ship `done:` is current-state done only when bin/fm-dod-lib.sh accepts the
+ # named head as reachable outside the worker's disposable copy; otherwise blocked.
++# An agent-kit `done:` must also pass Firstmate's own `ak firstmate status
++# <binding> --verify` audit, including when an attributed run-step reads done;
++# a refused or unrunnable audit reads parked (needs-decision) with the refusal
++# lines as its detail, never done.
+ #
+ # The determinism lives entirely here - run-step / pane / log reads, fixed
+ # mapping logic, and terminal passed-run PR detail from bounded evidence only,
+@@ -231,11 +235,15 @@ fi
+ # A ship `done:` is not current-state done while bin/fm-dod-lib.sh refuses the
+ # named-head reachability gate: that claim is blocked so a disposable copy is
+ # not treated as finished-and-safe.
++# An agent-kit done: whose supervisor audit refuses is a decision, not a
++# blocker: it reads parked with the audit's needs-decision reason.
+ emit_ship_status_done() {  # [extra-detail]
+-  local extra=${1:-} reason
+-  if reason=$(fm_dod_accept_ship_done "$KIND" "$(meta_value mode)" "$WT" "$(meta_value project)" "$LOG_LINE" "$STATE" "$ID" "$META"); then
++  local extra=${1:-} reason rc=0
++  reason=$(fm_dod_accept_ship_done "$KIND" "$(meta_value mode)" "$WT" "$(meta_value project)" "$LOG_LINE" "$STATE" "$ID" "$META") || rc=$?
++  if [ "$rc" -eq 0 ]; then
+     emit "done" status-log "$(status_line_note "$LOG_LINE")${extra:+${SEP}$extra}"
+   fi
++  [ "$rc" -ne 2 ] || emit parked status-log "$reason"
+   emit blocked status-log "$reason"
+ }
+ 
+@@ -1161,6 +1169,11 @@ if [ "$HAVE_RUN" = 1 ]; then
+   esac
+ 
+   [ -z "$SELECTED_RUN_ID" ] || RUN_DETAIL="$RUN_DETAIL${SEP}run: $SELECTED_RUN_ID"
++  # A passed agent-kit transport run is not the worker's done: its reported
++  # done: still owes Firstmate's audit before the task reads done.
++  if [ "$RUN_STATE" = "done" ] && [ "$LOG_VERB" = "done" ] && [ "$(meta_value mode)" = agent-kit ]; then
++    emit_ship_status_done "$RUN_DETAIL"
++  fi
+   emit "$RUN_STATE" run-step "$RUN_DETAIL"
+ fi
+ 
+diff --git a/bin/fm-dod-lib.sh b/bin/fm-dod-lib.sh
+index d6f0f887..139d18ef 100755
+--- a/bin/fm-dod-lib.sh
++++ b/bin/fm-dod-lib.sh
+@@ -19,8 +19,13 @@
+ # (state/<id>.pr-poll-merge-notified). Teardown's landed-work test remains the
+ # complete discard gate.
+ # agent-kit gates every ship done:; see fm_dod_forge_head_is_worker_head for
+-# why its named head is always the worker copy's HEAD.
+-# fm_dod_block <no-mistakes|direct-PR|local-only|agent-kit> <task-id> prints the block on
++# why its named head is always the worker copy's HEAD. Before that gate,
++# Firstmate audits every agent-kit done: itself with `ak firstmate status
++# <binding> --verify` (bin/fm-agent-kit-lib.sh) against the binding it wrote at
++# data/<id>/agent-kit-binding.json; a refused or unrunnable audit refuses the
++# done: as a decision (exit 2), and a passing audit of a `dry-run` binding
++# accepts it with no named-head gate, since a dry run publishes nothing.
++# fm_dod_block <no-mistakes|direct-PR|local-only|agent-kit> <task-id> [<agent-kit-binding>] prints the block on
+ # stdout with no trailing blank line. The caller validates the mode; an unknown
+ # mode is refused rather than silently rendered as the pipeline contract.
+ # The block opens with the fixed machine-readable "Delivery contract: mode=<mode>"
+@@ -32,7 +37,10 @@
+ # The agent-kit block binds the worker to the lifecycle in the brief's
+ # `# agent-kit binding` section (bin/fm-agent-kit-lib.sh) and to the
+ # review-less no-mistakes transport; it reuses the no-mistakes `--intent`,
+-# drive-call, and `--yes` rules through the helpers that print them.
++# drive-call, and `--yes` rules through the helpers that print them. Its
++# binding's delivery.action picks the block: `publish` renders that transport
++# contract, while `dry-run` drops no-mistakes, CI, the PR, and gh-axi and asks
++# for the done line `ak firstmate status <binding> complete` prints.
+ # This file is the one owner of the no-mistakes `--intent` contract: only the
+ # brief's `## Captain's intent` subsection plus later captain words, never
+ # `## Firstmate spec` and never the worker's own tradeoffs.
+@@ -67,6 +75,8 @@
+ . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-pr-lib.sh"
+ # shellcheck source=bin/fm-classify-lib.sh
+ . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-classify-lib.sh"
++# shellcheck source=bin/fm-agent-kit-lib.sh
++. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fm-agent-kit-lib.sh"
+ 
+ fm_brief_worker_role() {  # <state-dir> <task-id> [<mode>]
+   local state=$1 task_id=$2 mode=${3:-}
+@@ -88,8 +98,8 @@ EOF
+ EOF
+ }
+ 
+-fm_ship_rule_one() {  # <no-mistakes|direct-PR|local-only|agent-kit> <task-id>
+-  local mode=$1 id=$2
++fm_ship_rule_one() {  # <no-mistakes|direct-PR|local-only|agent-kit> <task-id> [<agent-kit-binding>]
++  local mode=$1 id=$2 binding=${3:-} action
+   case "$mode" in
+     direct-PR)
+       printf '%s\n' "1. Never push to the default branch (push only your \`fm/$id\` branch). Never merge a PR."
+@@ -101,7 +111,12 @@ fm_ship_rule_one() {  # <no-mistakes|direct-PR|local-only|agent-kit> <task-id>
+       printf '%s\n' '1. Never push to the default branch. Never merge a PR.'
+       ;;
+     agent-kit)
+-      printf '%s\n' "1. Never push to the default branch. Never merge a PR. Never push except through super-ship's no-mistakes transport."
++      action=$(fm_dod_agent_kit_action "$binding") || return 1
++      if [ "$action" = dry-run ]; then
++        printf '%s\n' '1. Never push to any remote, never open a PR, and never merge: this agent-kit dry run publishes nothing.'
++      else
++        printf '%s\n' "1. Never push to the default branch. Never merge a PR. Never push except through super-ship's no-mistakes transport."
++      fi
+       ;;
+     *)
+       echo "error: fm_ship_rule_one: unknown delivery mode '$mode'" >&2
+@@ -313,8 +328,19 @@ fm_dod_yes_ban() {
+ EOF
+ }
+ 
+-fm_dod_block() {  # <mode> <task-id>
+-  local mode=$1 id=$2
++# The delivery action of an agent-kit task's <binding>: `publish` or
++# `dry-run`. A missing binding or any other action refuses rather than
++# rendering a contract the binding does not name.
++fm_dod_agent_kit_action() {  # <binding>
++  if [ -z "$1" ]; then
++    echo "error: agent-kit delivery needs the task's binding file to name its delivery action" >&2
++    return 1
++  fi
++  fm_agent_kit_binding_action "$1"
++}
++
++fm_dod_block() {  # <mode> <task-id> [<agent-kit-binding>]
++  local mode=$1 id=$2 binding=${3:-} action
+   case "$mode" in
+     direct-PR)
+       cat <<EOF
+@@ -379,6 +405,29 @@ If you deliberately keep the PR a draft, append \`paused [at=<epoch>]: {why the
+ EOF
+       ;;
+     agent-kit)
++      action=$(fm_dod_agent_kit_action "$binding") || return 1
++      if [ "$action" = dry-run ]; then
++        cat <<EOF
++# Definition of done
++Delivery contract: mode=agent-kit
++This task ships **agent-kit** as a dry run: agent-kit judges the work, and nothing is published.
++The task is complete only when committed on your branch.
++Run the lifecycle bound in \`# agent-kit binding\` below; super-ship owns the ship decision and, because the binding's delivery action is \`dry-run\`, prepares the ship without publishing it.
++Do not run no-mistakes, push, open a PR, or merge: there is no pipeline, no CI, and no PR in this task.
++
++Firstmate-specific rules layer on top of that guidance:
++- ask-user findings are never yours to answer: escalate to firstmate using rule 6's ask-user format and stop.
++  Firstmate applies \`ask-user-authority\` and obtains any required captain decision.
++  When the decision comes back, act on it through the lifecycle - do not route the question to "the user".
++- Task-local native subagents you start never fleet-spawn, push, merge, or contact firstmate or the captain; you remain the owner of everything they return.
++
++When super-ship reports the dry-run ship prepared, run \`ak firstmate status <binding> complete --evidence {refs}\`, where \`<binding>\` is the binding file named in \`# agent-kit binding\` and \`{refs}\` names the lifecycle evidence the binding records, comma-separated with no spaces.
++It audits the run first and, only when the audit passes, prints \`done [at=<epoch>]: dry-run ship prepared, nothing published evidence={refs}\`; append exactly that line to the status file and stop. You are finished.
++If it prints \`refused:\` lines instead, do not append \`done:\`: run the missing phases through the lifecycle, or report the \`needs-decision\` it names.
++Firstmate re-runs the same audit with \`ak firstmate status <binding> --verify\` before it accepts the \`done:\`, and a refused audit turns that \`done:\` into a decision rather than a finished task.
++EOF
++        return 0
++      fi
+       cat <<EOF
+ # Definition of done
+ Delivery contract: mode=agent-kit
+@@ -534,12 +583,32 @@ fm_dod_named_head_reachable_outside_worktree() {  # <worktree> <project> <mode>
+ # HEAD - is reachable outside that disposable copy. There is no free-text SHA
+ # scan: a SHA that happens to appear in the note is not the named head. 1 when
+ # the claim is refused; stdout then holds a one-line reason and no other
+-# output. <state> <id> <meta> supply pr=,
++# output. 2 when an agent-kit claim is refused by, or could not run, the
++# supervisor audit: the task needs a decision, and stdout holds one line
++# starting `needs-decision: ` that carries ak's refusal lines.
++# <state> <id> <meta> supply pr=,
+ # pr_head=, and the merge-notified marker; <meta> may be a captured copy
+-# (bin/fm-fleet-snapshot.sh), so the marker is read from <state>.
++# (bin/fm-fleet-snapshot.sh), so the marker is read from <state>. <id> also
++# names an agent-kit task's binding.
+ fm_dod_accept_ship_done() {  # <kind> <mode> <worktree> <project> <line> [<state> <id> <meta>]
+-  local kind=$1 mode=$2 wt=$3 project=$4 line=$5 state=${6:-} id=${7:-} meta=${8:-} url sha
++  local kind=$1 mode=$2 wt=$3 project=$4 line=$5 state=${6:-} id=${7:-} meta=${8:-} url sha binding reason
+   fm_dod_should_gate_ship_done "$kind" "$mode" "$line" || return 0
++  if [ "$mode" = agent-kit ]; then
++    if [ -z "$id" ]; then
++      printf '%s\n' "needs-decision: agent-kit audit could not run: no task id names the binding"
++      return 2
++    fi
++    binding=$(fm_agent_kit_binding_path "$id")
++    reason=$(fm_agent_kit_verify_done "${FM_CONFIG_OVERRIDE:-${FM_HOME:-}/config}" "$binding" "$wt") || {
++      printf 'needs-decision: %s\n' "$reason"
++      return 2
++    }
++    if ! reason=$(fm_agent_kit_binding_action "$binding" 2>&1); then
++      printf 'needs-decision: %s\n' "$(fm_agent_kit_one_line "$reason")"
++      return 2
++    fi
++    [ "$reason" != dry-run ] || return 0
++  fi
+   if url=$(fm_dod_pr_url_from_done_note "$(status_line_note "$line")") \
+     && fm_dod_recorded_pr_on_forge "$state" "$id" "$meta" "$mode" "$url"; then
+     return 0
+diff --git a/bin/fm-promote.sh b/bin/fm-promote.sh
+index 4259f83c..b42f14dd 100755
+--- a/bin/fm-promote.sh
++++ b/bin/fm-promote.sh
+@@ -226,13 +226,13 @@ The mode-specific Definition of done below is the current delivery contract.
+ 
+ # Current ship safety rule
+ EOF
+-  fm_ship_rule_one "$MODE" "$ID"
++  fm_ship_rule_one "$MODE" "$ID" "$AK_BINDING"
+   if [ -n "$PROMOTION_ASK_USER_BLOCK" ]; then
+     printf '\nThe no-mistakes ask-user escalation below supersedes the scout rule 6 escalation shape.\n'
+     printf '%s\n' "$PROMOTION_ASK_USER_BLOCK"
+   fi
+   printf '\n'
+-  fm_dod_block "$MODE" "$ID"
++  fm_dod_block "$MODE" "$ID" "$AK_BINDING"
+   [ -z "$AGENT_KIT_SECTION" ] || printf '\n%s\n' "$AGENT_KIT_SECTION"
+ }
+ mkdir -p "$DATA/$ID"
+diff --git a/bin/fm-spawn.sh b/bin/fm-spawn.sh
+index 61e9070c..91b65c57 100755
+--- a/bin/fm-spawn.sh
++++ b/bin/fm-spawn.sh
+@@ -33,7 +33,11 @@
+ #   command's __AK_FIRSTMATE_BINDING__ replaced by the absolute binding path - in place of the
+ #   inline JSON, because claude honours only the last --settings flag; missing,
+ #   invalid, or token-less worker settings refuse the launch. Any other harness launches
+-#   with a notice that agent-kit's child guard is not enforced there.
++#   with a notice that agent-kit's child guard is not enforced there. When
++#   config/agent-kit.env sets AK_FIRSTMATE_WORKER_BUDGET_USD (a positive number,
++#   validated by bin/fm-agent-kit-lib.sh), the claude launch also passes
++#   `--max-budget-usd <n>`; unset passes no flag, and a set budget refuses any
++#   other harness rather than launching a worker it cannot bound.
+ #   Ship/scout launches always put fm-dod-lib.sh's current worker role scope
+ #   first in the private launch-brief overlay, including the exact task-owned
+ #   steering inbox. This never rewrites a project's instruction files or a
+@@ -1828,6 +1832,7 @@ agy_model_validate() {  # <agy-bin> <model>
+ # settings file that carries it plus agent-kit's child guard hooks.
+ CLAUDE_INLINE_SETTINGS='{"feedbackDrafts":"off","attribution":{"commit":"","pr":"","sessionUrl":false}}'
+ AK_CLAUDE_SETTINGS=
++AK_CLAUDE_BUDGET_FLAG=
+ 
+ # The verified launch command per adapter. The knowledge half of each adapter
+ # (busy-state source, exit command, dialogs, quirks) lives in the harness-adapters skill.
+@@ -2835,8 +2840,16 @@ if [ "$KIND" = ship ]; then
+         echo "error: agent-kit claude launch for $ID refused: its child guard cannot be enforced" >&2
+         exit 1
+       }
++      # The value is validated as digits with an optional decimal part, so it
++      # needs no quoting in the launch line.
++      [ -z "$AK_FIRSTMATE_WORKER_BUDGET_USD" ] \
++        || AK_CLAUDE_BUDGET_FLAG=" --max-budget-usd $AK_FIRSTMATE_WORKER_BUDGET_USD"
+       ;;
+     *)
++      if [ -n "$AK_FIRSTMATE_WORKER_BUDGET_USD" ]; then
++        echo "error: agent-kit worker budget AK_FIRSTMATE_WORKER_BUDGET_USD=$AK_FIRSTMATE_WORKER_BUDGET_USD is enforced only on the claude launch; refusing harness ${HARNESS:-raw launch} for $ID" >&2
++        exit 1
++      fi
+       echo "notice: agent-kit child guard is not enforced on harness ${HARNESS:-raw launch} for $ID; only the claude launch template carries agent-kit's worker hooks" >&2
+       ;;
+     esac
+@@ -4657,7 +4670,7 @@ LAUNCH=${LAUNCH//__MODELFLAG__/$MODELFLAG}
+ LAUNCH=${LAUNCH//__EFFORTFLAG__/$EFFORTFLAG}
+ LAUNCH=${LAUNCH//__CLAUDEPERMFLAG__/$CLAUDE_PERM_FLAG}
+ if [ -n "$AK_CLAUDE_SETTINGS" ]; then
+-  LAUNCH=${LAUNCH//__CLAUDESETTINGS__/"$(shell_quote "$STATE_REAL/$ID.agent-kit-settings.json")"}
++  LAUNCH=${LAUNCH//__CLAUDESETTINGS__/"$(shell_quote "$STATE_REAL/$ID.agent-kit-settings.json")$AK_CLAUDE_BUDGET_FLAG"}
+ else
+   LAUNCH=${LAUNCH//__CLAUDESETTINGS__/"$(shell_quote "$CLAUDE_INLINE_SETTINGS")"}
+ fi
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 104dc1c3..9e554715 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -351,6 +351,9 @@ The `data/secondmates.md` line contract is owned by the [`secondmate-provisionin
+ `no-mistakes` tasks run the full validation pipeline, `direct-PR` tasks open PRs without that pipeline, and `local-only` tasks stay local until firstmate performs an approved fast-forward merge.
+ Opt-in `agent-kit` tasks are judged by agent-kit's bound lifecycle and delivered by no-mistakes with its review, document, and rebase steps skipped.
+ `bin/fm-agent-kit-lib.sh` owns that binding: it parses `config/agent-kit.env` without sourcing it, runs `ak firstmate bind` when the brief or promotion is written, and merges agent-kit's worker hooks into a claude launch's per-task settings file; any failure refuses the brief, promotion, or spawn.
++It also reads the binding's `delivery.action`: `publish` keeps the transport contract, while `dry-run` renders a Definition of done that publishes nothing.
++It runs Firstmate's own audit of an agent-kit `done:` through `ak firstmate status <binding> --verify`, and a refused or unrunnable audit becomes a `needs-decision` rather than a done.
++An optional `AK_FIRSTMATE_WORKER_BUDGET_USD` bounds the claude worker with `--max-budget-usd`.
+ Each task's mode and `yolo` merge posture are firstmate's decision at intake.
+ The mode is passed explicitly to `bin/fm-brief.sh`, and both values are passed explicitly to `bin/fm-spawn.sh` and `bin/fm-promote.sh`; each command refuses to guess the values it consumes.
+ A ship brief records its mode as a fixed machine-readable line and the spawn refuses to launch on a different one, so the worker's instructions and the recorded task delivery cannot diverge.
+diff --git a/docs/scripts.md b/docs/scripts.md
+index 85aac474..5d6e6dd3 100644
+--- a/docs/scripts.md
++++ b/docs/scripts.md
+@@ -34,7 +34,7 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
+ | `fm-decision-hold.sh`    | One-release compatibility shim mapping the retired decision commands onto fm-captain-hold.sh |
+ | `fm-brief.sh`            | Scaffold ship (explicit `--mode`), scout, secondmate-charter, and Herdr-lab briefs, with Captain's intent and Firstmate spec subsections on ship/scout |
+ | [`fm-dod-lib.sh`](../bin/fm-dod-lib.sh) | Own ship/scout worker role scope, ship definitions of done, the named-head reachability gate on ship `done:` acceptance, and the no-mistakes `--intent` contract |
+-| [`fm-agent-kit-lib.sh`](../bin/fm-agent-kit-lib.sh) | Own the opt-in agent-kit binding: the `config/agent-kit.env` parser, the `ak firstmate bind` call, and the per-task claude settings merge |
++| [`fm-agent-kit-lib.sh`](../bin/fm-agent-kit-lib.sh) | Own the opt-in agent-kit binding: the `config/agent-kit.env` parser, the `ak firstmate bind` call, the binding's delivery action, the `ak firstmate status --verify` done audit, and the per-task claude settings merge |
+ | `fm-herdr-lab.sh`        | Provision and guardedly operate an isolated, never-default Herdr lab session         |
+ | `fm-herdr-lab-viewer.py` | The pty engine behind `fm-herdr-lab.sh viewer`: one real foreground Herdr client on a non-zero window grid |
+ | `fm-install-herdr.sh`    | Install CI's exact-version Herdr pin with official asset URL, SHA-256, and protocol checks |
+diff --git a/tests/fixtures.sh b/tests/fixtures.sh
+index 76ec0c73..fd6650b8 100755
+--- a/tests/fixtures.sh
++++ b/tests/fixtures.sh
+@@ -74,13 +74,30 @@ SH
+ # `ak firstmate bind` appends its arguments to <bin-dir>/ak.calls, writes the
+ # --binding-out JSON, and prints a `# agent-kit binding` section. Set
+ # FM_FAKE_AK_BIND to fail (exit 3), noheading, contract (adds a
+-# `Delivery contract: mode=` line), or nojson to break one acceptance rule.
++# `Delivery contract: mode=` line), nojson, or noaction (a binding with no
++# delivery.action) to break one acceptance rule. The binding's delivery.action
++# is FM_FAKE_AK_ACTION (default publish).
++# `ak firstmate status <binding> --verify` also appends its arguments to
++# ak.calls; it prints `verified: ...` and exits 0, or with FM_FAKE_AK_VERIFY
++# set to refuse prints two `refused:` lines on stderr and exits 1, or with
++# usage exits 2.
+ fm_test_fake_agent_kit() {
+   local config=$1 bindir=$2
+   mkdir -p "$config" "$bindir"
+   cat > "$bindir/ak" <<SH
+ #!/usr/bin/env bash
+ printf '%s\\n' "\$*" >> '$bindir/ak.calls'
++if [ "\$2" = status ]; then
++  case "\${FM_FAKE_AK_VERIFY:-ok}" in
++    refuse)
++      printf '%s\\n' 'ak firstmate status: refused: gate verify has no current evidence' \\
++        'ak firstmate status: refused: grant ship has no record' >&2
++      exit 1 ;;
++    usage) printf '%s\\n' 'ak firstmate status: needs <binding.json>' >&2; exit 2 ;;
++  esac
++  printf '%s\\n' 'verified: run r-fake has a current record for verify'
++  exit 0
++fi
+ out=
+ while [ "\$#" -gt 0 ]; do
+   [ "\$1" = --binding-out ] && out=\$2
+@@ -91,8 +108,9 @@ case "\${FM_FAKE_AK_BIND:-ok}" in
+   noheading) printf '{}\\n' > "\$out"; printf '%s\\n' '# Something else'; exit 0 ;;
+   contract) printf '{}\\n' > "\$out"; printf '%s\\n' '# agent-kit binding' 'Delivery contract: mode=no-mistakes'; exit 0 ;;
+   nojson) printf '%s\\n' '# agent-kit binding' 'Lifecycle: fake'; exit 0 ;;
++  noaction) printf '{"binding":"fake"}\\n' > "\$out" ;;
++  *) printf '{"binding":"fake","delivery":{"action":"%s"}}\\n' "\${FM_FAKE_AK_ACTION:-publish}" > "\$out" ;;
+ esac
+-printf '{"binding":"fake"}\\n' > "\$out"
+ printf '%s\\n' '# agent-kit binding' 'Lifecycle: super-plan, super-build, super-verify, super-review, super-ship.' "Binding file: \$out"
+ SH
+   chmod +x "$bindir/ak"
+diff --git a/tests/fm-brief.test.sh b/tests/fm-brief.test.sh
+index 8cced208..e54523c5 100755
+--- a/tests/fm-brief.test.sh
++++ b/tests/fm-brief.test.sh
+@@ -1131,6 +1131,27 @@ test_agent_kit_brief_renders_dod_and_binding() {
+   pass "fm-brief.sh: an agent-kit brief renders its DoD, then the binding, then home additions"
+ }
+ 
++test_agent_kit_dry_run_brief_publishes_nothing() {
++  local home brief
++  home=$(agent_kit_home ak-dry-brief-home)
++  FM_HOME="$home" FM_FAKE_AK_ACTION=dry-run "$ROOT/bin/fm-brief.sh" ak-dry-1 ak-proj --mode agent-kit >/dev/null \
++    || fail "dry-run agent-kit brief did not scaffold"
++  brief="$home/data/ak-dry-1/brief.md"
++  grep -qx 'Delivery contract: mode=agent-kit' "$brief" || fail "dry-run brief lacks its delivery contract line"
++  assert_grep 'done [at=<epoch>]: dry-run ship prepared, nothing published evidence={refs}' "$brief" \
++    "dry-run brief lacks the dry-run done line"
++  assert_grep 'ak firstmate status <binding> complete --evidence {refs}' "$brief" "dry-run brief does not have ak print the done line"
++  assert_grep 'Never push to any remote, never open a PR, and never merge' "$brief" "dry-run brief lacks its rule 1"
++  assert_no_grep 'no-mistakes doctor' "$brief" "dry-run brief still sets up no-mistakes"
++  assert_no_grep 'no-mistakes init' "$brief" "dry-run brief still initializes no-mistakes"
++  assert_no_grep 'checks green' "$brief" "dry-run brief still asks for CI green"
++  assert_no_grep 'gh-axi pr' "$brief" "dry-run brief still requires gh-axi"
++  assert_no_grep "Never push except through super-ship's no-mistakes transport" "$brief" "dry-run brief kept the publish rule 1"
++  assert_grep 'Lifecycle: super-plan, super-build, super-verify, super-review, super-ship.' "$brief" \
++    "dry-run brief lost the bound lifecycle"
++  pass "fm-brief.sh: a dry-run agent-kit brief drops every publish requirement"
++}
++
+ test_other_modes_never_bind() {
+   local home mode brief
+   home=$(agent_kit_home ak-other-home)
+@@ -1177,6 +1198,7 @@ bind exits non-zero|none|fail|ak-proj|agent-kit bind exited 3
+ output without the heading|none|noheading|ak-proj|does not begin with '# agent-kit binding'
+ output with a delivery contract line|none|contract|ak-proj|carries a 'Delivery contract: mode=' line
+ no binding JSON|none|nojson|ak-proj|wrote no binding
++binding without a delivery action|none|noaction|ak-proj|has no delivery.action of publish or dry-run
+ missing project checkout|none|ok|no-such-proj|is not a directory
+ ROWS
+   assert_absent "$home/pwned" "the env file was executed instead of parsed"
+@@ -1212,5 +1234,6 @@ test_scout_and_secondmate_scaffold
+ test_scout_lavish_line_follows_presentation_floor
+ test_home_brief_include_is_appended_last
+ test_agent_kit_brief_renders_dod_and_binding
++test_agent_kit_dry_run_brief_publishes_nothing
+ test_other_modes_never_bind
+ test_agent_kit_bind_refusals_write_nothing
+diff --git a/tests/fm-crew-state.test.sh b/tests/fm-crew-state.test.sh
+index 745f32c8..1847e8fb 100755
+--- a/tests/fm-crew-state.test.sh
++++ b/tests/fm-crew-state.test.sh
+@@ -43,6 +43,8 @@ set -u
+ 
+ # shellcheck source=tests/lib.sh
+ . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
++# shellcheck source=tests/fixtures.sh
++. "$(dirname "${BASH_SOURCE[0]}")/fixtures.sh"
+ # shellcheck source=/dev/null
+ . "$ROOT/bin/fm-classify-lib.sh"
+ # shellcheck source=/dev/null
+@@ -1984,6 +1986,46 @@ test_unpushed_ship_done_is_blocked() {
+   pass "unpushed ship done: is current-state blocked"
+ }
+ 
++# An agent-kit done: with a published head still owes Firstmate's
++# `ak firstmate status <binding> --verify` audit: a pass reads done, a refusal
++# or a missing ak reads parked with the needs-decision reason, never done.
++test_agent_kit_done_is_audited() {
++  reset_fakes
++  local d out
++  d=$(new_case ak-audit)
++  make_repo_on_branch "$d/wt" fm/ak-audit
++  git -C "$d/wt" commit -q --allow-empty -m 'shipped head'
++  git -C "$d/wt" update-ref refs/remotes/no-mistakes/fm/ak-audit "$(git -C "$d/wt" rev-parse HEAD)"
++  make_fakebin "$d" >/dev/null
++  fm_test_fake_agent_kit "$d/config" "$d/akbin"
++  mkdir -p "$d/data/akaudit"
++  printf '{"binding":"fake","delivery":{"action":"publish"}}\n' > "$d/data/akaudit/agent-kit-binding.json"
++  fm_write_meta "$d/state/akaudit.meta" \
++    "window=fm:fm-akaudit" "worktree=$d/wt" "project=$d/wt" \
++    "kind=ship" "mode=agent-kit" "harness=claude"
++  printf 'done [at=1]: PR https://example.test/o/r/pull/9 checks green evidence=verify,review\n' \
++    > "$d/state/akaudit.status"
++  arm_idle_record "$d/state" akaudit
++
++  out=$(PATH="$d/fakebin:$PATH" FM_HOME="$d" FM_STATE_OVERRIDE="$d/state" "$CREW_STATE" akaudit)
++  assert_contains "$out" "state: done" "an audited agent-kit done: did not read done"
++  assert_grep "firstmate status $d/data/akaudit/agent-kit-binding.json --verify --project $d/wt" "$d/akbin/ak.calls" \
++    "crew-state did not run the ak audit on the task binding"
++
++  out=$(PATH="$d/fakebin:$PATH" FM_HOME="$d" FM_STATE_OVERRIDE="$d/state" FM_FAKE_AK_VERIFY=refuse "$CREW_STATE" akaudit)
++  assert_contains "$out" "state: parked" "a refused agent-kit audit did not read as a decision"
++  assert_contains "$out" "source: status-log" "audit refusal is not status-log sourced"
++  assert_contains "$out" "needs-decision: agent-kit audit refused done (ak exit 1)" "parked detail lacks the audit refusal"
++  assert_contains "$out" "refused: grant ship has no record" "parked detail lacks ak's refusal lines"
++  assert_not_contains "$out" "state: done" "a refused agent-kit audit kept the done"
++
++  mv "$d/akbin/ak" "$d/akbin/ak.away"
++  out=$(PATH="$d/fakebin:$PATH" FM_HOME="$d" FM_STATE_OVERRIDE="$d/state" "$CREW_STATE" akaudit)
++  assert_contains "$out" "state: parked" "a missing ak did not fail closed as a decision"
++  assert_contains "$out" "needs-decision: agent-kit audit could not run" "missing ak detail does not say the audit could not run"
++  pass "an agent-kit done: reads done only after Firstmate's ak audit, else parked needs-decision"
++}
++
+ # Fleet snapshot hands crew-state a captured meta copy outside state/. The
+ # poll's merge marker stays in the live state dir, so a squash-merged PR whose
+ # branch fleet sync pruned still reads done there.
+@@ -5174,6 +5216,7 @@ test_terminal_run_without_live_sibling_is_unchanged
+ test_coarse_run_does_not_probe_other_branch_ci_log_for_ready_status
+ test_other_branch_run_ignored
+ test_unpushed_ship_done_is_blocked
++test_agent_kit_done_is_audited
+ test_merged_pr_reads_done_under_captured_meta
+ test_no_mistakes_prevalidation_done_stays_done
+ test_moved_remote_branch_without_named_head_is_blocked
+diff --git a/tests/fm-dod-lib.test.sh b/tests/fm-dod-lib.test.sh
+index e137d1d9..2e1a3e02 100644
+--- a/tests/fm-dod-lib.test.sh
++++ b/tests/fm-dod-lib.test.sh
+@@ -6,6 +6,8 @@ set -u
+ 
+ # shellcheck source=tests/lib.sh
+ . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
++# shellcheck source=tests/fixtures.sh
++. "$(dirname "${BASH_SOURCE[0]}")/fixtures.sh"
+ # shellcheck source=bin/fm-dod-lib.sh
+ . "$ROOT/bin/fm-dod-lib.sh"
+ 
+@@ -16,6 +18,16 @@ accept_done() {  # <kind> <mode> <worktree> <project> <line> [<state> <id> <meta
+   fm_dod_accept_ship_done "$@"
+ }
+ 
++# A firstmate home whose config names the fake `ak` and whose data holds a
++# bound <id> with the given delivery action. Prints the home.
++ak_gate_home() {  # <name> <id> <publish|dry-run>
++  local home="$TMP_ROOT/$1"
++  mkdir -p "$home/data/$2" "$home/state"
++  fm_test_fake_agent_kit "$home/config" "$home/akbin"
++  printf '{"binding":"fake","delivery":{"action":"%s"}}\n' "$3" > "$home/data/$2/agent-kit-binding.json"
++  printf '%s\n' "$home"
++}
++
+ write_merge_marker() {  # <state> <id> <provider> <host> <path> <number>
+   printf '%s\n' fm-pr-poll-merge-notified-v1 "$3" "$4" "$5" "$6" > "$1/$2.pr-poll-merge-notified"
+   chmod 600 "$1/$2.pr-poll-merge-notified"
+@@ -306,26 +318,30 @@ test_non_done_lines_are_not_gated() {
+ # agent-kit has no pre-ship handoff: a summary done: is gated like any other,
+ # and an unpushed head is refused even on the CI-ready evidence line.
+ test_agent_kit_every_done_is_gated() {
+-  local repo wt sha reason rc
++  local repo wt sha reason rc home
+   repo="$TMP_ROOT/ak-gate-repo"
+   wt="$TMP_ROOT/ak-gate-wt"
++  home=$(ak_gate_home ak-gate-home akg publish)
+   fm_git_worktree "$repo" "$wt" fm/ak-gate
+   git -C "$wt" commit -q --allow-empty -m 'only in the disposable copy'
+   sha=$(git -C "$wt" rev-parse HEAD)
+   rc=0
+-  accept_done ship agent-kit "$wt" "$repo" 'done: implemented the fix' >/dev/null || rc=$?
++  FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" 'done: implemented the fix' \
++    "$home/state" akg "" >/dev/null || rc=$?
+   [ "$rc" -eq 1 ] || fail "agent-kit summary done: skipped the gate (exit $rc)"
+   rc=0
+-  reason=$(accept_done ship agent-kit "$wt" "$repo" \
+-    'done [at=1]: PR https://github.com/o/r/pull/7 checks green evidence=plan,verify,review') || rc=$?
++  reason=$(FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" \
++    'done [at=1]: PR https://github.com/o/r/pull/7 checks green evidence=plan,verify,review' \
++    "$home/state" akg "") || rc=$?
+   [ "$rc" -eq 1 ] || fail "agent-kit CI-ready done: with an unpushed head was accepted"
+   case "$reason" in
+     *"named head $sha is unreachable outside the worker copy") ;;
+     *) fail "agent-kit refusal did not name the unpushed commit: $reason" ;;
+   esac
+   git -C "$wt" update-ref refs/remotes/no-mistakes/fm/ak-gate "$sha"
+-  accept_done ship agent-kit "$wt" "$repo" \
++  FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" \
+     'done [at=1]: PR https://github.com/o/r/pull/7 checks green evidence=plan,verify,review' \
++    "$home/state" akg "" \
+     || fail "agent-kit done: whose head the transport pushed was refused"
+   pass "every agent-kit ship done: is gated on the worker head"
+ }
+@@ -333,11 +349,12 @@ test_agent_kit_every_done_is_gated() {
+ # The review-less transport authors no commit, so a recorded forge head is the
+ # named head only when it is exactly the worker copy's HEAD.
+ test_agent_kit_forge_head_must_equal_worker_head() {
+-  local repo wt meta state head other rc
++  local repo wt meta state head other rc home
+   repo="$TMP_ROOT/ak-forge-repo"
+   wt="$TMP_ROOT/ak-forge-wt"
+-  state="$TMP_ROOT/ak-forge-state"
+-  mkdir -p "$state"
++  home=$(ak_gate_home ak-forge-home akf publish)
++  state="$home/state"
++  export FM_HOME="$home"
+   fm_git_worktree "$repo" "$wt" fm/ak-forge
+   git -C "$wt" commit -q --allow-empty -m 'shipped head'
+   head=$(git -C "$wt" rev-parse HEAD)
+@@ -363,9 +380,80 @@ test_agent_kit_forge_head_must_equal_worker_head() {
+   accept_done ship agent-kit "$wt" "$repo" 'done: PR https://github.com/o/r/pull/8 checks green evidence=r1' \
+     "$state" akf "$meta" >/dev/null || rc=$?
+   [ "$rc" -eq 1 ] || fail "agent-kit accepted a commit made after the ship"
++  unset FM_HOME
+   pass "an agent-kit forge head is accepted only when it is the worker HEAD"
+ }
+ 
++# Firstmate audits every agent-kit done: with `ak firstmate status <binding>
++# --verify`. A pass keeps the done; a refusal or an audit that cannot run turns
++# it into a decision (exit 2) carrying ak's refusal lines; a dry run needs no
++# published head once the audit passes.
++test_agent_kit_done_audit() {
++  local repo wt home state binding line reason rc
++  repo="$TMP_ROOT/ak-audit-repo"
++  wt="$TMP_ROOT/ak-audit-wt"
++  home=$(ak_gate_home ak-audit-home aka publish)
++  state="$home/state"
++  binding="$home/data/aka/agent-kit-binding.json"
++  line='done [at=1]: PR https://github.com/o/r/pull/9 checks green evidence=verify,review'
++  fm_git_worktree "$repo" "$wt" fm/ak-audit
++  git -C "$wt" commit -q --allow-empty -m 'shipped head'
++  git -C "$wt" update-ref refs/remotes/no-mistakes/fm/ak-audit "$(git -C "$wt" rev-parse HEAD)"
++
++  FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" "$line" "$state" aka "" >/dev/null \
++    || fail "a passing agent-kit audit did not keep the done:"
++  grep -qxF -- "firstmate status $binding --verify --project $wt" "$home/akbin/ak.calls" \
++    || fail "the audit did not run ak firstmate status --verify on the task binding: $(cat "$home/akbin/ak.calls")"
++
++  rc=0
++  reason=$(FM_HOME="$home" FM_FAKE_AK_VERIFY=refuse accept_done ship agent-kit "$wt" "$repo" "$line" "$state" aka "") || rc=$?
++  [ "$rc" -eq 2 ] || fail "a refused agent-kit audit did not refuse as a decision (exit $rc)"
++  [ "$(printf '%s\n' "$reason" | wc -l | tr -d ' ')" = 1 ] || fail "audit refusal is not one line: $reason"
++  case "$reason" in
++    "needs-decision: agent-kit audit refused done (ak exit 1): "*"refused: gate verify has no current evidence; "*"refused: grant ship has no record") ;;
++    *) fail "audit refusal did not carry ak's refusal lines: $reason" ;;
++  esac
++
++  rc=0
++  reason=$(FM_HOME="$home" FM_FAKE_AK_VERIFY=usage accept_done ship agent-kit "$wt" "$repo" "$line" "$state" aka "") || rc=$?
++  [ "$rc" -eq 2 ] || fail "an ak usage exit passed the audit (exit $rc)"
++  assert_contains "$reason" "(ak exit 2)" "usage refusal did not name ak's exit"
++
++  mv "$home/akbin/ak" "$home/akbin/ak.away"
++  rc=0
++  reason=$(FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" "$line" "$state" aka "") || rc=$?
++  [ "$rc" -eq 2 ] || fail "a missing ak passed the audit (exit $rc)"
++  assert_contains "$reason" "needs-decision: agent-kit audit could not run: " "missing ak did not fail closed as a decision"
++  assert_contains "$reason" "missing or not executable" "missing ak refusal did not name the missing binary"
++  mv "$home/akbin/ak.away" "$home/akbin/ak"
++
++  rc=0
++  reason=$(FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" "$line" "$state" no-binding "") || rc=$?
++  [ "$rc" -eq 2 ] || fail "an unbound agent-kit done: passed the audit (exit $rc)"
++  assert_contains "$reason" "is missing" "unbound refusal did not name the missing binding"
++
++  rc=0
++  reason=$(FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" "$line") || rc=$?
++  [ "$rc" -eq 2 ] || fail "an agent-kit done: with no task id passed the audit (exit $rc)"
++
++  # A dry run publishes nothing: the audit alone decides, with no pushed head.
++  home=$(ak_gate_home ak-dry-home akd dry-run)
++  git -C "$wt" commit -q --allow-empty -m 'prepared, never pushed'
++  line='done [at=2]: dry-run ship prepared, nothing published evidence=verify,review'
++  FM_HOME="$home" accept_done ship agent-kit "$wt" "$repo" "$line" "$home/state" akd "" >/dev/null \
++    || fail "a passing dry-run audit did not keep the done: without a published head"
++  rc=0
++  reason=$(FM_HOME="$home" FM_FAKE_AK_VERIFY=refuse accept_done ship agent-kit "$wt" "$repo" "$line" "$home/state" akd "") || rc=$?
++  [ "$rc" -eq 2 ] || fail "a refused dry-run audit kept the done: (exit $rc)"
++  assert_contains "$reason" "needs-decision: " "refused dry-run audit is not a decision"
++
++  # Other modes never call ak.
++  : > "$home/akbin/ak.calls"
++  FM_HOME="$home" accept_done ship direct-PR "$wt" "$repo" 'done: PR https://github.com/o/r/pull/1' "$home/state" akd "" >/dev/null || true
++  [ ! -s "$home/akbin/ak.calls" ] || fail "a direct-PR done: ran the agent-kit audit"
++  pass "an agent-kit done: stands only when Firstmate's ak audit verifies it, and fails closed as a decision"
++}
++
+ # shellcheck disable=SC2016  # single quotes are deliberate: the backticks are literal brief text
+ intent_rule_lines() {  # reads a DoD block on stdin
+   sed -n '/^When starting no-mistakes, pass `--intent`/,/^This replaces the no-mistakes skill/p'
+@@ -373,8 +461,9 @@ intent_rule_lines() {  # reads a DoD block on stdin
+ 
+ # shellcheck disable=SC2016  # single quotes are deliberate: the backticks are literal brief text
+ test_agent_kit_definition_of_done() {
+-  local block nm rule
+-  block=$(fm_dod_block agent-kit t-ak) || fail "fm_dod_block refused agent-kit"
++  local block nm rule home
++  home=$(ak_gate_home ak-dod-home t-ak publish)
++  block=$(fm_dod_block agent-kit t-ak "$home/data/t-ak/agent-kit-binding.json") || fail "fm_dod_block refused agent-kit"
+   nm=$(fm_dod_block no-mistakes t-ak)
+   [ "$(printf '%s\n' "$block" | sed -n 1p)" = '# Definition of done' ] || fail "agent-kit block does not open with the DoD heading"
+   [ "$(printf '%s\n' "$block" | sed -n 2p)" = 'Delivery contract: mode=agent-kit' ] || fail "agent-kit block lacks its delivery contract line"
+@@ -396,13 +485,49 @@ test_agent_kit_definition_of_done() {
+   [ -n "$rule" ] || fail "agent-kit DoD lacks the --intent rule"
+   [ "$rule" = "$(printf '%s\n' "$nm" | intent_rule_lines)" ] || fail "agent-kit --intent rule differs from the no-mistakes rule"
+   assert_not_contains "$nm" 'agent-kit' "no-mistakes DoD mentions agent-kit"
+-  rule=$(fm_ship_rule_one agent-kit t-ak) || fail "fm_ship_rule_one refused agent-kit"
++  rule=$(fm_ship_rule_one agent-kit t-ak "$home/data/t-ak/agent-kit-binding.json") || fail "fm_ship_rule_one refused agent-kit"
+   assert_contains "$rule" 'Never push to the default branch' "agent-kit rule 1 allows default-branch pushes"
+   assert_contains "$rule" 'Never merge a PR' "agent-kit rule 1 allows merging"
+   assert_contains "$rule" "Never push except through super-ship's no-mistakes transport" "agent-kit rule 1 allows direct pushes"
+   pass "the agent-kit Definition of done carries the delivery contract"
+ }
+ 
++# shellcheck disable=SC2016  # single quotes are deliberate: the backticks are literal brief text
++test_agent_kit_dry_run_definition_of_done() {
++  local home dry pub rule binding
++  home=$(ak_gate_home ak-dry-dod-home t-dry dry-run)
++  binding="$home/data/t-dry/agent-kit-binding.json"
++  dry=$(fm_dod_block agent-kit t-dry "$binding") || fail "fm_dod_block refused a dry-run binding"
++  printf '{"delivery":{"action":"publish"}}\n' > "$TMP_ROOT/ak-publish-binding.json"
++  pub=$(fm_dod_block agent-kit t-dry "$TMP_ROOT/ak-publish-binding.json") || fail "fm_dod_block refused a publish binding"
++  [ "$(printf '%s\n' "$dry" | sed -n 2p)" = 'Delivery contract: mode=agent-kit' ] || fail "dry-run block lacks its delivery contract line"
++  assert_contains "$dry" '`done [at=<epoch>]: dry-run ship prepared, nothing published evidence={refs}`' "dry-run DoD lacks the dry-run done line"
++  assert_contains "$dry" '`ak firstmate status <binding> complete --evidence {refs}`' "dry-run DoD does not have ak print the done line"
++  assert_contains "$dry" '`ak firstmate status <binding> --verify`' "dry-run DoD does not announce Firstmate's audit"
++  assert_contains "$dry" '`# agent-kit binding`' "dry-run DoD does not point at the binding section"
++  assert_contains "$dry" "rule 6's ask-user format" "dry-run DoD lacks ask-user escalation"
++  assert_contains "$dry" 'never fleet-spawn, push, merge, or contact firstmate or the captain' "dry-run DoD lacks the child limits"
++  assert_not_contains "$dry" 'checks green' "dry-run DoD still asks for CI green"
++  assert_not_contains "$dry" 'PR {url}' "dry-run DoD still asks for a PR url"
++  assert_not_contains "$dry" 'gh-axi' "dry-run DoD still requires gh-axi"
++  assert_not_contains "$dry" 'no-mistakes axi run' "dry-run DoD still runs the transport"
++  assert_not_contains "$dry" 'no-mistakes init' "dry-run DoD still initializes no-mistakes"
++  assert_not_contains "$dry" '--intent' "dry-run DoD still carries the pipeline --intent rule"
++  assert_contains "$pub" '`done [at=<epoch>]: PR {url} checks green evidence={refs}`' "publish DoD lost the CI-ready done line"
++  assert_contains "$pub" 'gh-axi pr ready' "publish DoD lost gh-axi"
++  assert_contains "$pub" '`no-mistakes axi run --skip review,document,rebase`' "publish DoD lost the transport"
++  assert_not_contains "$pub" 'dry-run' "publish DoD mentions the dry run"
++  rule=$(fm_ship_rule_one agent-kit t-dry "$binding") || fail "fm_ship_rule_one refused a dry-run binding"
++  assert_contains "$rule" 'Never push to any remote, never open a PR, and never merge' "dry-run rule 1 allows publishing"
++  assert_not_contains "$rule" 'no-mistakes transport' "dry-run rule 1 still points at the transport"
++  printf '{"delivery":{"action":"ship-it"}}\n' > "$TMP_ROOT/ak-bad-binding.json"
++  fm_dod_block agent-kit t-dry "$TMP_ROOT/ak-bad-binding.json" >/dev/null 2>&1 && fail "fm_dod_block rendered an unknown delivery action"
++  fm_dod_block agent-kit t-dry >/dev/null 2>&1 && fail "fm_dod_block rendered agent-kit with no binding"
++  fm_dod_block agent-kit t-dry "$TMP_ROOT/no-such-binding.json" >/dev/null 2>&1 && fail "fm_dod_block rendered agent-kit from a missing binding"
++  fm_ship_rule_one agent-kit t-dry >/dev/null 2>&1 && fail "fm_ship_rule_one rendered agent-kit with no binding"
++  pass "a dry-run agent-kit binding renders the dry-run Definition of done; publish keeps the transport contract"
++}
++
+ test_worker_role_mode_clause() {
+   local base nm ak extra
+   base=$(fm_brief_worker_role /st t-role)
+@@ -441,7 +566,9 @@ test_standalone_local_only_needs_project_ref
+ test_non_done_lines_are_not_gated
+ test_agent_kit_every_done_is_gated
+ test_agent_kit_forge_head_must_equal_worker_head
++test_agent_kit_done_audit
+ test_agent_kit_definition_of_done
++test_agent_kit_dry_run_definition_of_done
+ test_worker_role_mode_clause
+ 
+ echo "all fm-dod-lib tests passed"
+diff --git a/tests/fm-task-delivery.test.sh b/tests/fm-task-delivery.test.sh
+index 60bb1f8c..a47867cd 100755
+--- a/tests/fm-task-delivery.test.sh
++++ b/tests/fm-task-delivery.test.sh
+@@ -1029,6 +1029,66 @@ EOF
+   pass "fm-spawn: a non-claude agent-kit launch proceeds with the unenforced-guard notice"
+ }
+ 
++# AK_FIRSTMATE_WORKER_BUDGET_USD bounds a claude worker with --max-budget-usd.
++# Unset passes no flag; a non-positive or non-numeric value refuses the spawn;
++# a set budget refuses a harness that cannot carry it.
++test_agent_kit_worker_budget() {
++  local rec home proj wt fakebin log id=ak-budget-1 out status settings bad env
++  rec=$(ak_spawn_case ak-budget claude "$id")
++  IFS='|' read -r home proj wt fakebin log <<EOF
++$rec
++EOF
++  env="$home/config/agent-kit.env"
++  cp "$env" "$env.orig"
++  settings="$home/state/$id.agent-kit-settings.json"
++
++  : > "$log"
++  out=$(FM_FAKE_LAUNCH_LOG="$log" fm_test_run_spawn "$home" "$wt" "$fakebin" "$id" "$proj" --mode agent-kit --yolo off)
++  expect_code 0 "$?" "an unbudgeted agent-kit claude spawn should succeed: $out"
++  assert_not_contains "$(cat "$log")" "--max-budget-usd" "an unset budget still passed --max-budget-usd"
++
++  for bad in 0 0.00 abc -5 1e3 '5 --dangerously-skip-permissions'; do
++    { cat "$env.orig"; printf 'AK_FIRSTMATE_WORKER_BUDGET_USD=%s\n' "$bad"; } > "$env"
++    rm -f "$home/state/$id.meta" "$settings"
++    : > "$log"
++    out=$(FM_FAKE_LAUNCH_LOG="$log" fm_test_run_spawn "$home" "$wt" "$fakebin" "$id" "$proj" --mode agent-kit --yolo off)
++    status=$?
++    [ "$status" -ne 0 ] || fail "budget '$bad': agent-kit spawn should refuse"
++    assert_contains "$out" "AK_FIRSTMATE_WORKER_BUDGET_USD" "budget '$bad': refusal did not explain itself"
++    assert_absent "$home/state/$id.meta" "budget '$bad': refused spawn recorded task metadata"
++    [ ! -s "$log" ] || fail "budget '$bad': refused spawn typed a launch"
++  done
++
++  { cat "$env.orig"; printf 'AK_FIRSTMATE_WORKER_BUDGET_USD=%s\n' 5; } > "$env"
++  rm -f "$home/state/$id.meta" "$settings"
++  : > "$log"
++  out=$(FM_FAKE_LAUNCH_LOG="$log" fm_test_run_spawn "$home" "$wt" "$fakebin" "$id" "$proj" --mode agent-kit --yolo off)
++  expect_code 0 "$?" "a budgeted agent-kit claude spawn should succeed: $out"
++  assert_contains "$(cat "$log")" "--settings '$settings' --max-budget-usd 5" "a set budget did not pass --max-budget-usd"
++  [ "$(grep -o -- '--max-budget-usd' "$log" | wc -l | tr -d ' ')" = 1 ] || fail "claude launch passed more than one budget flag"
++
++  { cat "$env.orig"; printf 'AK_FIRSTMATE_WORKER_BUDGET_USD=%s\n' 2.50; } > "$env"
++  rm -f "$home/state/$id.meta" "$settings"
++  : > "$log"
++  out=$(FM_FAKE_LAUNCH_LOG="$log" fm_test_run_spawn "$home" "$wt" "$fakebin" "$id" "$proj" --mode agent-kit --yolo off)
++  expect_code 0 "$?" "a fractional budget should be accepted: $out"
++  assert_contains "$(cat "$log")" "--max-budget-usd 2.50" "a fractional budget was not passed through"
++
++  rec=$(ak_spawn_case ak-budget-codex codex ak-budget-2)
++  IFS='|' read -r home proj wt fakebin log <<EOF
++$rec
++EOF
++  printf 'AK_FIRSTMATE_WORKER_BUDGET_USD=%s\n' 5 >> "$home/config/agent-kit.env"
++  : > "$log"
++  out=$(FM_FAKE_LAUNCH_LOG="$log" fm_test_run_spawn "$home" "$wt" "$fakebin" ak-budget-2 "$proj" --mode agent-kit --yolo off)
++  status=$?
++  [ "$status" -ne 0 ] || fail "a budgeted codex agent-kit spawn should refuse"
++  assert_contains "$out" "is enforced only on the claude launch; refusing harness codex for ak-budget-2" \
++    "budgeted codex refusal did not explain itself"
++  [ ! -s "$log" ] || fail "budgeted codex spawn typed a launch"
++  pass "fm-spawn: the agent-kit worker budget becomes --max-budget-usd on claude, is absent when unset, and refuses invalid values"
++}
++
+ # Promotion into agent-kit binds exactly as a fresh brief does: the promoted worker
+ # receives the same Definition of done and binding, and a refused bind leaves the
+ # scout untouched.
+@@ -1105,5 +1165,6 @@ test_agent_kit_spawn_refuses_without_a_binding
+ test_agent_kit_claude_launch_uses_the_task_settings_file
+ test_agent_kit_claude_launch_refuses_bad_worker_settings
+ test_agent_kit_other_harness_prints_the_unenforced_notice
++test_agent_kit_worker_budget
+ test_agent_kit_promotion_carries_the_brief_contract
+ echo "# all fm-task-delivery tests passed"
+-- 
+2.50.1 (Apple Git-155)
+
