@@ -1351,9 +1351,9 @@ pass needs the skill to work on the presumed state, rather than refuse or stop r
 a run stops at `needs-input`, as it should, and its graders fail it, so its score is evidence about
 the missing fixture, not about the skill. `unscaffolded`, which older positives carry, says only that
 the case has no scaffold. `needs-fixture` is the tag to exclude on. `claude plugin eval` has
-`--tag` to include cases and no option to exclude them (checked at `claude 2.1.282`), so a run that
-leaves these cases out selects the other cases by name with `--case`, or filters its results by tag
-afterwards. A case loses the tag when its scaffold lands.
+`--tag` to include cases and no option to exclude them (checked at `claude 2.1.282`), and it keeps
+only the last `--case` it is given. So a run that leaves these cases out goes through
+`scripts/eval-local.sh --exclude-tag needs-fixture`, or filters its results by tag afterwards. A case loses the tag when its scaffold lands.
 
 **The eval sandbox blocks git.** Every git binary is denied inside a case run, so a case cannot commit,
 and a grader that checks a commit, a branch or `git log` scores a run that did the work as a failure.
