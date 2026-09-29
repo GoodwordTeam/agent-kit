@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "ignorePatterns": [
+    "**/*.md",
+    "**/*.yaml",
+    "**/*.yml",
+    "provenance/**",
+    "research/sources/**",
+    "research/dossiers/**",
+    "tests/fixtures/**",
+    "tests/learn/evals/fixtures/**",
+    "tests/learn/evals/reflect/outputs/**",
+    "evals/**/_fixtures/**",
+    "research/evals/**",
+    "tools/oxlint/anti-slop/**",
+    ".donors/**",
+    "dist/**",
+    ".work/**",
+    ".lavish/**",
+    ".omc/**",
+    ".claude/**"
+  ]
+}
