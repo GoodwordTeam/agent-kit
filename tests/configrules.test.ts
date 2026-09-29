@@ -337,6 +337,30 @@ describe("profile capabilities", () => {
     expect(issues.map((i) => i.message)).toEqual([expect.stringContaining("required lists disk-write")]);
   });
 
+  test("an unknown id under any other list is an error, whatever the list is called", () => {
+    const issues = checkProfileCapabilities(
+      ctxFor({
+        "catalog.yaml": catalog,
+        "schemas/common.schema.json": COMMON,
+        "profiles/core.yaml": `${profile("repository-read", "kb-write")}    rarely_added: [skill-source-write]\n`,
+      }),
+    );
+    expect(issues.map((i) => [i.rule, i.file])).toEqual([["profile.unknown-capability", "profiles/core.yaml"]]);
+    expect(issues[0]?.message).toContain("rarely_added lists skill-source-write");
+  });
+
+  test("an unparseable profile is reported as unparseable, not as an unknown capability", () => {
+    const issues = checkProfileCapabilities(
+      ctxFor({
+        "catalog.yaml": catalog,
+        "schemas/common.schema.json": COMMON,
+        "profiles/core.yaml": profile("repository-read", "kb-write"),
+        "profiles/maintainer.yaml": "id: maintainer\nincludes: [unclosed\n",
+      }),
+    );
+    expect(issues.map((i) => [i.rule, i.severity, i.file])).toEqual([["profile.unparseable", "error", "profiles/maintainer.yaml"]]);
+  });
+
   test("profiles listing only capabilities pass", () => {
     const issues = checkProfileCapabilities(
       ctxFor({

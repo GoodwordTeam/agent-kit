@@ -109,8 +109,6 @@ export function checkCatalogRules(ctx: CheckContext): Issue[] {
 }
 
 /** The keys of a profile's `includes.capabilities` that list capability ids; `note` is prose. */
-const PROFILE_CAPABILITY_LISTS = ["required", "commonly_added", "optional"] as const;
-
 /** `$defs/capability` from schemas/common.schema.json, or null when it cannot be read. */
 function capabilityVocabulary(root: string): Set<string> | null {
   const text = readTextIfPresent(join(root, "schemas/common.schema.json"));
@@ -145,12 +143,16 @@ export function checkProfileCapabilities(ctx: CheckContext): Issue[] {
 
   for (const profile of ctx.catalog.bySection("profiles")) {
     const file = `profiles/${profile.id}.yaml`;
-    const manifest = readManifest(ctx, file, "profile.unknown-capability", issues);
+    const manifest = readManifest(ctx, file, "profile.unparseable", issues);
     if (manifest === null) continue;
     const capabilities = obj(obj(manifest.doc["includes"])?.["capabilities"]);
     if (capabilities === null) continue;
-    for (const list of PROFILE_CAPABILITY_LISTS) {
-      for (const value of arr(capabilities[list])) {
+    // Every list under includes.capabilities names capabilities, whatever it
+    // is called; only `note` is prose. A fixed list of keys would pass a new
+    // one unexamined.
+    for (const [list, values] of Object.entries(capabilities)) {
+      if (list === "note" || !Array.isArray(values)) continue;
+      for (const value of values) {
         const id = str(value);
         if (id === null) continue;
         if (vocabulary === null) {
