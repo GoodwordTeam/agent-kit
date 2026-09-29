@@ -102,6 +102,11 @@ describe("actionClaim", () => {
     "No duplicate record is produced.",
     // A phrasal particle is cut from the active forms only.
     "The suite is not run through CI.",
+    // A reporting verb exempts its own clause, not a claim conjoined after it.
+    "It reports that the lane is unavailable and does not publish the verdict.",
+    "The run notes that the key matches, then does not post the comment again.",
+    "It states that the gate is closed, so no ticket is created.",
+    "It tells them that the gate is closed and does not merge the branch.",
   ])("finds the claim in %p", (criteria) => {
     expect(actionClaim(criteria)).not.toBeNull();
   });
@@ -139,6 +144,7 @@ describe("actionClaim", () => {
     "It creates a summary once the checks finish.",
     // What a reporting verb introduces is what the reply says.
     "It explains that the record is not written by hand.",
+    "It tells them that the branch is not merged.",
   ])("does not flag %p", (criteria) => {
     expect(actionClaim(criteria)).toBeNull();
   });

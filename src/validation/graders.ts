@@ -176,7 +176,7 @@ export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
   // "No second record is published", ", and nothing is deleted", "Only one
   // pull request is created", "At most one comment is posted".
   new RegExp(
-    String.raw`(?:^|[,;:]\s*(?:and\s+|but\s+)?|\b(?:and|but)\s+)(?:no|nothing|none|(?:only|at most|exactly)\s+one)\b(?:\s+[\w-]+){0,4}?\s+(?:is|are|gets?)\s+${ADVERB}${PARTICIPLE}`,
+    String.raw`(?:^|[,;:]\s*(?:(?:and|but|so|then)\s+)?|\b(?:and|but|so|then)\s+)(?:no|nothing|none|(?:only|at most|exactly)\s+one)\b(?:\s+[\w-]+){0,4}?\s+(?:is|are|gets?)\s+${ADVERB}${PARTICIPLE}`,
     "i",
   ),
   // "is published at most once", "will post it again", "publishes it twice":
@@ -188,7 +188,7 @@ export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
   // "No second pull request appears", "no duplicate record is produced": a
   // repeat named outright takes any participle or a verb of existence.
   new RegExp(
-    String.raw`(?:^|[,;:]\s*(?:and\s+|but\s+)?|\b(?:and|but)\s+)no\s+(?:second|duplicate)\b(?:\s+[\w-]+){0,3}?\s+(?:appears?|exists?|(?:is|are|gets?)\s+${ADVERB}\w+(?:ed|en)\b)`,
+    String.raw`(?:^|[,;:]\s*(?:(?:and|but|so|then)\s+)?|\b(?:and|but|so|then)\s+)no\s+(?:second|duplicate)\b(?:\s+[\w-]+){0,3}?\s+(?:appears?|exists?|(?:is|are|gets?)\s+${ADVERB}\w+(?:ed|en)\b)`,
     "i",
   ),
   // "rather than publishing a second page", "rather than cutting another".
@@ -200,9 +200,12 @@ export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
 /**
  * A sentence without the clause a reporting verb introduces: in "it explains
  * that the record is not written by hand", what follows "explains that" is
- * what the reply says, not what the run does.
+ * what the reply says, not what the run does. The clause ends at a
+ * conjunction or semicolon, so "reports that X and does not publish" still
+ * reads the second claim.
  */
-const REPORTED = /\b(?:explains|says|states|notes|reports|tells\s+\w+)(?:\s+\w+ly)?\s+that\b.*$/i;
+const REPORTED =
+  /\b(?:explains|says|states|notes|reports|tells\s+\w+)(?:\s+\w+ly)?\s+that\b.*?(?=,?\s+(?:and|then|so|but)\s|;|$)/i;
 
 function unreported(sentence: string): string {
   return sentence.replace(REPORTED, "");

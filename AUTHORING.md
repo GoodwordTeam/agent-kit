@@ -1323,11 +1323,13 @@ what the run must do. Idioms are not the action, and each is cut as narrowly as 
 off-by-one guards", "start with" but not "start by", "record opinions as findings" but not "record
 the finding as fixed", and "never runs through" or "never pushes back", where the particle changes
 the verb only in its active forms ("is not run through CI" is still a claim). What follows a
-reporting verb ("explains that", "states that") is what the reply says, and is not read.
+reporting verb ("explains that", "states that") is what the reply says, and is not read; the
+exemption ends at the next conjunction or semicolon, so a claim joined after it ("states that the
+gate is closed, so no ticket is created") is still read.
 
 Each narrowing trades a false positive for a false negative, and the trade is written down here so
 it is made on purpose. A count mid-clause is lost ("posts it again to the thread" is not caught),
-and so is a real claim a criterion puts after "states that". Both are rarer in the corpus than the
+and so is a real claim a criterion puts inside the clause "states that" introduces. Both are rarer in the corpus than the
 readings they remove, and an unflagged claim is still the author's to aim.
 
 Split a grader that mixes an action with reasoning or with what the reply says. The resumability
