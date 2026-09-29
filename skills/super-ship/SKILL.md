@@ -104,8 +104,9 @@ The project's own release checks, discovered rather than assumed.
    the receipts and the review verdict.
 7. Detect whether an open pull request already exists for this branch, deterministically. Only an
    exit-0 empty result means there is none; any other outcome is unknown, and unknown is not none.
-8. In `dry-run`, emit the payload and the check results as run artifacts and stop. No branch is
-   pushed, no pull request is opened, and the report says what would have been sent and to where.
+8. In `dry-run`, emit the ship evidence record, holding the payload and the check results, and
+   stop. No branch is pushed, no pull request is opened, and the report says what would have been
+   sent and to where.
 9. In `publish`, derive an idempotency key for each remote effect from the run id, the operation id,
    the target identity and the input artifact hash — never from a timestamp, a random value, an
    attempt counter or a session id. Read the target back before the effect and again after it.
@@ -168,7 +169,8 @@ One ship evidence record, a run artifact with envelope schema `ship-evidence`
 (`schemas/ship-evidence.schema.json`), holding the next three parts.
 
 The pull-request payload: title, description, the linked ticket, the receipts and the review verdict
-it rests on, and the branch it would be opened from. In `dry-run` this is the whole output.
+it rests on, and the branch it would be opened from. In `dry-run` the record holds this payload and
+the pre-flight record, and no remote effect.
 
 The pre-flight record: the sensitive-data scan, the dependency-audit triage and each project release
 check, with its outcome against this head and a reason wherever it did not run.

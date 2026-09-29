@@ -104,8 +104,8 @@ outputs:
     summary: >-
       A run artifact with envelope schema ship-evidence holding three parts. The pull-request
       payload: title, description, linked ticket, the receipts and verdict it rests on, and the
-      branch it would be opened from; in dry-run this is the whole output with the pre-flight
-      record. The pre-flight record: the sensitive-data scan, the dependency-audit triage and each
+      branch it would be opened from; in dry-run the record holds this payload and the pre-flight
+      record, and no remote effect. The pre-flight record: the sensitive-data scan, the dependency-audit triage and each
       project release check, with its outcome against this head and a reason wherever it did not
       run. The ship record: which remote effects were performed, the idempotency key each carried,
       and the read-back result before and after.
@@ -296,8 +296,8 @@ tests:
       A verified, reviewed change and a request for the pull-request payload in dry-run mode, in a
       repository with no remote configured.
     expect: >-
-      The payload and the pre-flight record are emitted as run artifacts. No branch is pushed and no
-      pull request is opened, and the report names what would have been sent and to where.
+      One ship evidence record holding the payload and the pre-flight record is emitted. No branch
+      is pushed and no pull request is opened, and the report names what would have been sent and to where.
   - id: refuses-to-merge-without-a-charter-entry
     kind: negative
     given: >-

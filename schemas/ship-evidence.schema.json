@@ -16,7 +16,7 @@
       "enum": ["dry-run", "publish"]
     },
     "payload": {
-      "description": "The pull-request payload. In 'dry-run' this is the whole output; the report says what would have been sent and to where.",
+      "description": "The pull-request payload. In 'dry-run' the record holds this payload and the pre-flight record, and no remote effect; the report says what would have been sent and to where.",
       "type": "object",
       "additionalProperties": false,
       "required": ["title", "description", "branch", "receipts", "review"],
