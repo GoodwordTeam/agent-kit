@@ -1017,8 +1017,9 @@ function verificationRules(rc: RuleContext): void {
       if (status === "passed" && exit !== null && exit !== 0) {
         fail(rc, RULE_PROSE, `receipt status is passed with exit_status ${exit}`);
       }
-      if (status === "failed" && exit === 0) {
-        fail(rc, RULE_PROSE, "receipt status is failed with exit_status 0");
+      const disagreement = obj(doc["exit_disagreement"]);
+      if (status === "failed" && exit === 0 && disagreement === null) {
+        fail(rc, RULE_PROSE, "receipt status is failed with exit_status 0 but records no exit_disagreement from the output");
       }
     }
   }
