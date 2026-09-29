@@ -54,7 +54,7 @@
     },
     "schema_id": {
       "description": "Artifact schemas that carry the envelope.",
-      "enum": ["project", "ticket", "dossier", "finding", "review", "verification", "charter", "decision", "event", "lesson", "handoff-record", "evaluation", "map", "plan-record", "ship-evidence", "diagnostic-packet", "run-ledger"]
+      "enum": ["project", "ticket", "dossier", "finding", "review", "verification", "charter", "decision", "event", "lesson", "handoff-record", "evaluation", "map", "plan-record", "ship-evidence", "run-ledger"]
     },
     "hash": {
       "description": "Content digest. For an artifact: sha256 over its canonical JSON form (keys sorted, no insignificant whitespace) with the 'approvals' member removed.",

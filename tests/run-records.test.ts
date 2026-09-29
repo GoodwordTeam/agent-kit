@@ -9,8 +9,7 @@ import { compileSchemas } from "../src/validation/schemas.ts";
 /**
  * The run records that ADR-0001 §3 assigned without a schema: the handoff
  * record, the evaluation record `bakeoff` and `prototype` share, the `wayfind`
- * map, and later the plan record, ship evidence, diagnostic packet and run
- * ledger. Without an id in `common#/$defs/schema_id` none of them
+ * map, and later the plan record, ship evidence and run ledger. Without an id in `common#/$defs/schema_id` none of them
  * could pass `publishArtifact`, which refuses an artifact that fails its own
  * schema before any write, so a skill that published one could never reach
  * `complete`. Each case below is a shipped example under templates/ plus the
@@ -177,8 +176,8 @@ describe("the evaluation record", () => {
   });
 });
 
-// The four records ADR-0001 §3 assigned to super-bound, super-ship, diagnose
-// and autopilot, in the same form: the shipped example, then each branch the
+// The three records ADR-0001 §3 assigned to super-bound, super-ship and
+// autopilot, in the same form: the shipped example, then each branch the
 // skill's body states, refused on the example with one thing changed.
 
 describe("the plan record", () => {
@@ -249,58 +248,6 @@ describe("the ship evidence", () => {
     const { payload: _, preflight: __, effects: ___, ...bare } = base;
     expect(validate({ ...bare, status: "needs-input" })).toBe(false);
     expect(validate({ ...bare, status: "needs-input", reason: "No review verdict binds to this head." })).toBe(true);
-  });
-});
-
-describe("the diagnostic packet", () => {
-  const validate = validatorFor("diagnostic-packet");
-  const base = example("diagnostic-packet.example.json");
-  const receipt = (id: string, c: string) => ({ id, schema: "verification", hash: `sha256:${c.repeat(64)}` });
-  const patch = {
-    files: ["src/loader.ts", "tests/loader.test.ts"],
-    regression_test: "tests/loader.test.ts: a run artifact two directories deep is loaded.",
-    receipts: { red: receipt("example-verification-6", "6"), green: receipt("example-verification-7", "7"), reproduction_rerun: receipt("example-verification-8", "8") },
-  };
-  const { packet: _, ...withoutPacket } = base;
-  const patched = { ...withoutPacket, grant: { covers_fix: true, ref: "grant-loader-fix" }, patch };
-
-  test("the shipped example and its patch form are valid", () => {
-    expect(validate(base)).toBe(true);
-    expect(validate(patched)).toBe(true);
-  });
-
-  test("a patch and a packet together are refused", () => {
-    expect(validate({ ...patched, packet: base.packet })).toBe(false);
-  });
-
-  test("a complete run with neither output is refused", () => {
-    expect(validate(withoutPacket)).toBe(false);
-  });
-
-  test("a patch no grant covered is refused", () => {
-    expect(validate({ ...patched, grant: { covers_fix: false } })).toBe(false);
-  });
-
-  test("a patch carries a regression test or the recorded absence of a seam, not both", () => {
-    const { regression_test: __, ...bare } = patch;
-    expect(validate({ ...patched, patch: bare })).toBe(false);
-    expect(validate({ ...patched, patch: { ...bare, seam_absent: "The walk is only reachable through the nightly job." } })).toBe(true);
-    expect(validate({ ...patched, patch: { ...patch, seam_absent: "No seam." } })).toBe(false);
-  });
-
-  test("hypotheses without a feedback loop are refused", () => {
-    const { loop: __, ...loopless } = base;
-    expect(validate({ ...loopless, status: "needs-input", reason: "No loop could be built." })).toBe(false);
-  });
-
-  test("fewer than three hypotheses are refused", () => {
-    expect(validate({ ...base, hypotheses: (base.hypotheses as unknown[]).slice(0, 2) })).toBe(false);
-  });
-
-  test("at the cap the packet states the architecture question", () => {
-    expect(validate({ ...base, status: "cap-reached" })).toBe(false);
-    const packet = { ...(base.packet as object), architecture_question: "Should the loader own the directory layout at all?" };
-    expect(validate({ ...base, status: "cap-reached", packet })).toBe(true);
   });
 });
 

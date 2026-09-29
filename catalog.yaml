@@ -923,12 +923,6 @@ schemas:
     summary: >-
       super-ship's record of one ship: the pull-request payload, the pre-flight checks against the
       head, and each remote effect with its idempotency key and read-backs. A dry run has none.
-  - id: diagnostic-packet
-    batch: 10
-    status: authored
-    summary: >-
-      diagnose's published record: symptom, loop, hypotheses, causal chain and summary, with
-      exactly one of a verified bounded patch or a work packet, never both.
   - id: run-ledger
     batch: 10
     status: authored
