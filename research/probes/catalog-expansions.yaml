@@ -52,7 +52,7 @@ references:
 
 schemas:
   baseline: 14
-  catalog: 27
+  catalog: 30
   expansions:
     - ids: [case]
       reason: >-
@@ -89,6 +89,11 @@ schemas:
         carries only schema_id values; the ruling was to add real schemas rather than widen the
         contract.
       commits: [62e8dbb]
+    - ids: [plan-record, ship-evidence, run-ledger]
+      reason: >-
+        Run-record schemas the skill bodies already require, added in the follow-ups plan decision
+        "Add real schemas".
+      commits: [24d8953]
 
 profiles:
   baseline: 4
