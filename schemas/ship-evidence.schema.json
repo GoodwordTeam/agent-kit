@@ -15,10 +15,6 @@
       "description": "'dry-run' and 'publish' follow the same steps up to the first remote call; 'dry-run' stops there and makes none.",
       "enum": ["dry-run", "publish"]
     },
-    "source_revision": {
-      "description": "Narrowed from the envelope: the head being shipped, named. The receipts and the review verdict must bind to it, and null is not admissible.",
-      "$ref": "common.schema.json#/$defs/revision_ref"
-    },
     "payload": {
       "description": "The pull-request payload. In 'dry-run' this is the whole output; the report says what would have been sent and to where.",
       "type": "object",
@@ -108,6 +104,11 @@
   "unevaluatedProperties": false,
   "allOf": [
     { "$ref": "common.schema.json#/$defs/envelope" },
+    {
+      "description": "The envelope's source_revision is the head being shipped, and the receipts and the review verdict must bind to it. Only a run that stopped with needs-input, which is where an unnamed head ends, may leave it null.",
+      "if": { "not": { "properties": { "status": { "const": "needs-input" } }, "required": ["status"] } },
+      "then": { "properties": { "source_revision": { "$ref": "common.schema.json#/$defs/revision_ref" } } }
+    },
     {
       "description": "A dry run makes no remote call. Not a reduced one, not a single harmless one: none.",
       "if": { "properties": { "mode": { "const": "dry-run" } }, "required": ["mode"] },
