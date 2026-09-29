@@ -48,9 +48,13 @@
       "type": "string",
       "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
     },
+    "kb_kind": {
+      "description": "The nine knowledgebase document kinds (docs/decisions/0001-kb-document-vocabulary.md §2, adapters/knowledgebase/CONTRACT.md `KBDocumentType`). A KB document is a curated page and not a schema-bound run artifact; agent-kit adds no tenth kind.",
+      "enum": ["adr", "concept", "foundation", "gotcha", "pattern", "prd", "process", "sop", "system"]
+    },
     "schema_id": {
       "description": "Artifact schemas that carry the envelope.",
-      "enum": ["project", "ticket", "dossier", "finding", "review", "verification", "charter", "decision", "event", "lesson", "handoff-record", "evaluation", "map"]
+      "enum": ["project", "ticket", "dossier", "finding", "review", "verification", "charter", "decision", "event", "lesson", "handoff-record", "evaluation", "map", "plan-record", "ship-evidence", "run-ledger"]
     },
     "hash": {
       "description": "Content digest. For an artifact: sha256 over its canonical JSON form (keys sorted, no insignificant whitespace) with the 'approvals' member removed.",

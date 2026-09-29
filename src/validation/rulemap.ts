@@ -105,6 +105,9 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
   "pack.attachment-records-rationale-and-matched-rule": ["pack.attachment-records-rationale-and-matched-rule"],
   "pack.provenance-donor-path-exists-at-pin": ["provenance.source-not-at-pin", "provenance.unknown-donor", "provenance.commit-not-pinned", "provenance.malformed-source"],
 
+  // plan-record.schema.json
+  "plan-record.specification-approval-binds-to-the-specification-hash": ["plan-record.specification-hash-mismatch", "approval.stale"],
+
   // project.schema.json
   "project.kb-root-is-not-an-application-local-docs-tree": ["project.kb-root-is-not-an-application-local-docs-tree"],
   "project.standards-path-resolves-or-lane-returns-empty": ["project.standards-path-resolves-or-lane-returns-empty"],

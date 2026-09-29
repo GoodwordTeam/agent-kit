@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { checkArtifacts, loadArtifacts } from "../src/validation/artifacts.ts";
 import { checkTemplateDocuments } from "../src/validation/documents.ts";
-import { artifactHash } from "../src/util/hash.ts";
+import { artifactHash, canonicalJson, sha256Hex } from "../src/util/hash.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -90,6 +90,33 @@ describe("finding axes stay separate", () => {
       "templates/f.json": JSON.stringify(envelope("finding", { spec_quality: "smell", difficulty: null, autofix_class: "safe_auto" })),
     });
     expect(checkArtifacts(ctx).some((i) => i.rule === "finding.smell-is-not-autofixable")).toBe(true);
+  });
+});
+
+describe("the plan record's specification approval binds to the specification", () => {
+  const spec = { problem: "Nested run artifacts are not loaded." };
+  const specHash = `sha256:${sha256Hex(canonicalJson(spec))}`;
+  const approval = (hash: string) => ({ artifact_hash: hash, by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" });
+  const plan = (extra: Record<string, unknown>) =>
+    envelope("plan-record", { specification: spec, specification_hash: specHash, specification_approval: approval(specHash), ...extra });
+  const rules = (value: unknown) =>
+    checkArtifacts(ctxFor({ "templates/p.json": JSON.stringify(value) }))
+      .filter((i) => i.rule === "approval.stale" || i.rule === "plan-record.specification-hash-mismatch")
+      .map((i) => i.rule);
+
+  test("an approval of the specification survives re-slicing", () => {
+    expect(rules(plan({ slices: [{ type: "implementation" }] }))).toEqual([]);
+    expect(rules(plan({ slices: [{ type: "decision" }, { type: "implementation" }] }))).toEqual([]);
+  });
+
+  test("an edited specification does not inherit the approval, and its declared hash is caught", () => {
+    const edited = { ...spec, non_goals: ["Added after approval."] };
+    expect(rules(plan({ specification: edited }))).toEqual(["plan-record.specification-hash-mismatch", "approval.stale"]);
+  });
+
+  test("an approval bound to the whole record rather than the specification is stale", () => {
+    const record = plan({});
+    expect(rules({ ...record, specification_approval: approval(artifactHash(record)) })).toEqual(["approval.stale"]);
   });
 });
 

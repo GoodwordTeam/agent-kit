@@ -82,10 +82,14 @@ inputs:
 
 outputs:
   - id: retirement-adr
+    placement: kb-document
+    kb_kind: adr
     summary: >-
       A proposed adr for the decision, published through publishArtifact under a kb-document
       placement scoped to the project.
   - id: notice-and-migration-guide
+    placement: kb-document
+    kb_kind: process
     summary: >-
       A process page carrying the deprecation notice and migration guide, published the same way.
       The knowledgebase resolves the location; no file is written into the working repository.

@@ -147,7 +147,21 @@
             "description": "The artifact schema this output validates against, when the output is a durable artifact.",
             "$ref": "common.schema.json#/$defs/schema_id"
           },
-          "summary": { "type": "string" }
+          "summary": { "type": "string" },
+          "placement": {
+            "description": "Marks an output that is a knowledgebase document page: published through the knowledgebase adapter's `publishArtifact` under a `kb-document` placement (adapters/knowledgebase/CONTRACT.md). Run artifacts are marked by `schema` instead, so no other value is needed here.",
+            "const": "kb-document"
+          },
+          "kb_kind": {
+            "description": "The kind a `kb-document` output is published as. One of the knowledgebase's nine kinds; ADR-0001 §3 fixes which kinds each skill may write.",
+            "$ref": "common.schema.json#/$defs/kb_kind"
+          }
+        },
+        "dependentRequired": { "placement": ["kb_kind"], "kb_kind": ["placement"] },
+        "if": { "required": ["placement"] },
+        "then": {
+          "description": "A KB document is a curated page, not a schema-bound run artifact (docs/decisions/0001-kb-document-vocabulary.md §2).",
+          "not": { "required": ["schema"] }
         }
       }
     },

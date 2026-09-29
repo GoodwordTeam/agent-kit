@@ -161,7 +161,7 @@ operations:
       - an approved alignment result exists and binds to the current source revision
     hard_gates:
       - a decision ticket is never emitted as executable work
-      - approval binds to the artifact hash; a changed spec does not inherit the old approval
+      - approval binds to the specification's hash; a changed spec does not inherit the old approval
     side_effects: [artifact-write, scratch-write, kb-draft]
     on_unvalidatable_grant: stop-for-explicit-invocation
 

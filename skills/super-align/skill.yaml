@@ -75,10 +75,14 @@ inputs:
 
 outputs:
   - id: concept-page
+    placement: kb-document
+    kb_kind: concept
     summary: >-
       Settled vocabulary for the scope, published through publishArtifact under a kb-document
       placement naming kind concept. The knowledgebase resolves the location; no path is supplied.
   - id: proposed-adr
+    placement: kb-document
+    kb_kind: adr
     summary: >-
       The approved direction, published through publishArtifact with status proposed. This skill
       never accepts one.

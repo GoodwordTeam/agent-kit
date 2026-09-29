@@ -1,0 +1,96 @@
+{
+  "schema": "plan-record",
+  "schema_version": 1,
+  "id": "example-plan-record-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "super-bound"
+  },
+  "inputs": [
+    {
+      "id": "example-alignment-1",
+      "hash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "published",
+  "specification": {
+    "problem": "The artifact loader reads only the top-level directory, so nested run artifacts are silently missing from every report.",
+    "solution": "The loader walks the run directory recursively and reports each file it skipped with the reason.",
+    "non_goals": [
+      "Changing the on-disk layout of run artifacts."
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "AC-1",
+        "text": "A run artifact two directories deep appears in the loaded set."
+      },
+      {
+        "id": "AC-2",
+        "text": "Every skipped file is reported with its path and the reason it was skipped."
+      }
+    ],
+    "test_seams": [
+      {
+        "seam": "The loader's public load function, called on a fixture tree.",
+        "why": "It is the highest seam that sees both the walk and the skip report without a running service."
+      }
+    ],
+    "verification_commands": [
+      "bun test tests/loader.test.ts"
+    ],
+    "out_of_scope": [
+      "Loading artifacts from remote storage."
+    ]
+  },
+  "specification_hash": "sha256:ffab1849ba829732cd3275ff94f8b69895652d4d22d6fba59614bb70b9e8a099",
+  "specification_approval": {
+    "artifact_hash": "sha256:ffab1849ba829732cd3275ff94f8b69895652d4d22d6fba59614bb70b9e8a099",
+    "by": "human",
+    "authority": "explicit",
+    "at": "2026-09-19T08:30:00Z"
+  },
+  "slices": [
+    {
+      "ticket": {
+        "id": "bound-loader-read-all",
+        "schema": "ticket",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "type": "implementation"
+    },
+    {
+      "ticket": {
+        "id": "bound-loader-report-skips",
+        "schema": "ticket",
+        "hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "type": "implementation"
+    },
+    {
+      "ticket": {
+        "id": "align-loader-storage-shape",
+        "schema": "ticket",
+        "hash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "type": "decision"
+    }
+  ],
+  "dependency_graph": {
+    "edges": [
+      {
+        "ticket": "bound-loader-report-skips",
+        "blocked_by": "bound-loader-read-all"
+      }
+    ]
+  }
+}

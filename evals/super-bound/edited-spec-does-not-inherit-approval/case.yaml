@@ -19,9 +19,9 @@ graders:
     type: llm
     weight: 1
     criteria: >-
-      The response states that approval binds to the specification's artifact hash, that the edits
-      changed that hash, and asks for approval against the current document before any ticket is
-      cut.
+      The response states that approval binds to the specification's own hash (specification_hash),
+      not the whole plan's, that the edits changed that hash, and asks for approval against the
+      current document before any ticket is cut.
   - name: skill-fired
     type: tool_used
     tool: Skill

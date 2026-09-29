@@ -161,15 +161,16 @@ Placement = { class: "kb-document", kind: KBDocumentType, scope: Scope }
 
 - **Carries** any artifact whose `envelope.schema` is in `common#/$defs/schema_id` — `project`,
   `ticket`, `dossier`, `finding`, `review`, `verification`, `charter`, `decision`, `event`, `lesson`,
-  `handoff-record`, `evaluation`, `map`.
+  `handoff-record`, `evaluation`, `map`, `plan-record`, `ship-evidence`, `run-ledger`.
 - **Inputs** — the artifact, plus the `placement` that declares its §0 class. A `kb-document`
   placement names one of the nine kinds and a **scope**; the KB resolves the scope to a location
   (ADR-0001 §7) and the caller supplies no path. A `run-artifact` placement names the run and the KB
   records the artifact should be linked from.
 - **Outputs** — the KB record ref and stored content hash.
 - **Failure modes** — an artifact failing its own schema is refused before any write. A `kind` outside
-  the nine is refused; the caller does not invent a tenth. A `kb-document` placement whose kind the
-  calling skill is not assigned in ADR-0001 §3 is a validation failure, caught before release.
+  the nine is refused; the caller does not invent a tenth. Whether a `kb-document` placement's kind
+  is one ADR-0001 §3 assigns to the calling skill is not enforced: that table is prose, and no check
+  reads it (`AUTHORING.md` §4.1).
 - **ADR lifecycle** — an `adr` is published with status `proposed`. **No operation in this contract
   accepts one**, and no skill may call one that appears to: acceptance happens in review and never by
   the author (ADR-0001 §4). `policies/authority-defaults.yaml` treats KB acceptance as an authority a
@@ -310,8 +311,10 @@ Tests this adapter owns, in `tests/adapters/` and `tests/scenarios/`:
    the working repository free of any documentation directory (scenario 21).
 2. **No tenth kind** — a publish naming a `kind` outside the nine is refused, and `ak validate` fails
    a skill declaring one.
-3. **Emission-table conformance** — a skill publishing a KB document of a kind ADR-0001 §3 does not
-   assign it fails validation, and a skill absent from that table publishes no KB document at all.
+3. **Emission-table conformance** — not enforced. ADR-0001 §3 is prose, so nothing checks that a
+   skill publishes only the kinds it assigns, or that a skill absent from it publishes no KB
+   document. `schemas/skill.schema.json` holds a tagged output to the nine kinds and no further
+   (`AUTHORING.md` §4.1).
 4. **An ADR is proposed, never accepted** — publishing an `adr` yields status `proposed`, and no
    operation or skill path reaches acceptance (ADR-0001 §4).
 5. **Scope, not path** — a publish carrying a computed KB path rather than a scope is refused
