@@ -65,8 +65,18 @@ export interface SkillManifest {
    * reports it; this only records that there was something to report.
    */
   duplicateHosts: string[];
-  /** Skills and phase operations this skill declares it may start. */
+  /**
+   * Skills and phase operations this skill declares it may start, from every
+   * key that declares one -- `model_operations` included, so the invocation
+   * graph sees each edge whatever authority it runs under.
+   */
   calls: string[];
+  /**
+   * The subset of `calls` declared under `model_operations`: model-authority
+   * phase operations, which run on no grant and so are judged against their
+   * `callable_by` rather than against the delegated-grant rule.
+   */
+  modelOperations: string[];
   raw: Record<string, unknown>;
   parseError?: string;
 }
@@ -104,6 +114,7 @@ export const EMPTY_MANIFEST: SkillManifest = {
   hosts: {},
   duplicateHosts: [],
   calls: [],
+  modelOperations: [],
   raw: {},
 };
 
@@ -146,6 +157,7 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
   }
 
   const raw = record(parsed);
+  const modelOperations = strings(pick(raw, "model_operations", "model-operations"));
   const manifest: SkillManifest = {
     ...hostRows(record(pick(raw, "packaging"))),
     requires: strings(pick(raw, "requires")),
@@ -153,7 +165,9 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
       ...strings(pick(raw, "calls")),
       ...strings(pick(raw, "child_operations", "child-operations")),
       ...strings(pick(raw, "invokes")),
+      ...modelOperations,
     ],
+    modelOperations,
     raw,
   };
 

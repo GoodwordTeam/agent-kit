@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { checkInvocation, extractSkillReferences } from "../src/validation/invocation.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
+import { loadSkillManifest } from "../src/packaging/manifest.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const CATALOG = `schema_version: 1
@@ -177,6 +178,53 @@ describe("the invocation law", () => {
     expect(issues.some((i) => i.rule === "invocation.policy-unavailable")).toBe(true);
     expect(issues.some((i) => i.rule === "invocation.u-calls-u")).toBe(true);
     expect(issues.some((i) => i.rule === "invocation.undeclared-operation")).toBe(true);
+  });
+});
+
+describe("model_operations", () => {
+  const MODEL_POLICY = `${POLICY}  - id: compound.draft
+    exposed_by: compound
+    authority: model
+    callable_by: [ship]
+`;
+  const bodies = {
+    "policies/invocation.yaml": MODEL_POLICY,
+    "skills/ship/SKILL.md": head("ship"),
+    "skills/compound/SKILL.md": head("compound"),
+    "skills/scout/SKILL.md": head("scout"),
+  };
+
+  test("the edge is part of the graph the invocation check walks", () => {
+    const ctx = ctxFor({ ...bodies, "skills/ship/skill.yaml": "id: ship\nmodel_operations: [compound.draft]\n" });
+    const manifest = loadSkillManifest(ctx.root, "ship");
+    expect(manifest.calls).toContain("compound.draft");
+    expect(manifest.modelOperations).toEqual(["compound.draft"]);
+    expect(checkInvocation(ctx).filter((i) => i.severity === "error")).toEqual([]);
+  });
+
+  test("the same operation under child_operations is still a side door", () => {
+    const ctx = ctxFor({ ...bodies, "skills/ship/skill.yaml": "id: ship\nchild_operations: [compound.draft]\n" });
+    expect(checkInvocation(ctx).map((i) => i.rule)).toContain("invocation.operation-not-delegated");
+  });
+
+  test("an operation whose callable_by excludes the skill fails", () => {
+    const ctx = ctxFor({ ...bodies, "skills/scout/skill.yaml": "id: scout\nmodel_operations: [compound.draft]\n" });
+    const issues = checkInvocation(ctx).filter((i) => i.severity === "error");
+    expect(issues.map((i) => [i.rule, i.file])).toEqual([["invocation.model-operation-not-callable", "skills/scout/skill.yaml"]]);
+  });
+
+  test("an operation that is not model-authority fails under model_operations", () => {
+    const ctx = ctxFor({ ...bodies, "skills/ship/skill.yaml": "id: ship\nmodel_operations: [compound.capture]\n" });
+    const rules = checkInvocation(ctx)
+      .filter((i) => i.severity === "error")
+      .map((i) => i.rule);
+    expect(rules).toContain("invocation.model-operation-not-model");
+    expect(rules).not.toContain("invocation.operation-not-delegated");
+  });
+
+  test("an undeclared operation fails under model_operations too", () => {
+    const ctx = ctxFor({ ...bodies, "skills/ship/skill.yaml": "id: ship\nmodel_operations: [compound.invent]\n" });
+    expect(checkInvocation(ctx).map((i) => i.rule)).toContain("invocation.undeclared-operation");
   });
 });
 

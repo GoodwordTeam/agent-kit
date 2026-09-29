@@ -163,6 +163,13 @@
       "uniqueItems": true,
       "items": { "$ref": "common.schema.json#/$defs/operation_id" }
     },
+    "model_operations": {
+      "description": "Model-authority phase operations this skill may start (policies/invocation.yaml, authority: model). They run on no grant, so they are kept apart from child_operations, whose entries must be runner-delegable. Each must name this skill in its callable_by.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/operation_id" },
+      "x-validator-rule": "skill.model-operation-is-model-authority-and-callable"
+    },
     "child_skills": {
       "description": "Skills this skill may start directly. A user-invoked skill may list only model-invoked skills here; the check is an invocation-graph walk because the child's own invocation lives in the child's file (AGENTS.md, 'The invocation law').",
       "type": "array",
