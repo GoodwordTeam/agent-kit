@@ -314,15 +314,15 @@ const MUTATING = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit", "Delete"
 /** Tools that start other work; after a U skill loads they mean it went on, but a read-only helper is possible. */
 const DELEGATING = new Set(["Agent", "Task", "Skill"]);
 /** Programs that only look, whatever their arguments (subject to `WRITING_FLAGS`). `cd` moves, and changes nothing. */
-const LOOKING = new Set(["cd", "pushd", "popd", "ls", "cat", "bat", "nl", "less", "more", "head", "tail", "wc", "grep", "egrep", "fgrep", "rg", "find", "pwd", "echo", "awk", "tree", "stat", "file", "which", "type", "true"]);
+const LOOKING = new Set(["cd", "pushd", "popd", "ls", "cat", "bat", "nl", "less", "more", "head", "tail", "wc", "grep", "egrep", "fgrep", "rg", "find", "pwd", "echo", "awk", "tree", "stat", "file", "which", "type", "true", "cut", "realpath", "lsof", "[", "test"]);
 /** git subcommands that only look, whatever their flags. */
 const GIT_LOOKING = new Set(["status", "log", "diff", "show", "rev-parse", "ls-files", "ls-tree", "blame", "shortlog", "describe", "cat-file", "grep", "merge-base", "rev-list", "for-each-ref", "show-ref"]);
 /** git subcommands that look only with one of these first operands (or none, where `""` is listed). */
 const GIT_LOOKING_ACTION: Record<string, ReadonlySet<string>> = {
   stash: new Set(["list", "show"]),
   remote: new Set(["", "show", "get-url"]),
-  reflog: new Set(["", "show"]),
   worktree: new Set(["list"]),
+  notes: new Set(["list"]),
 };
 /** git options that come before the subcommand and take a value. */
 const GIT_GLOBAL_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
@@ -341,18 +341,29 @@ function readOnlyProgram(program: readonly string[]): boolean {
   const name = head.split("/").at(-1)!;
   if (name === "curl") return readOnlyCurl(args);
   if (args.some((w) => WRITING_FLAGS.has(w) || w.startsWith("--output"))) return false;
-  // Bare `env` or `printenv` prints; `env VAR=x cmd` runs something else.
+  // Bare `env` or `printenv` prints; assignments may prefix another command, which is classified in turn.
   if (name === "printenv") return true;
-  if (name === "env") return args.every((w) => w.startsWith("-"));
+  if (name === "env") {
+    const nested = args.findIndex((w) => !/^[A-Za-z_]\w*=/.test(w));
+    if (nested < 0) return true;
+    if (nested === 0) return args.every((w) => w.startsWith("-"));
+    return readOnlyProgram(args.slice(nested));
+  }
   // The ship gate's `check` reads records and writes none; `record` writes one.
   if ((name === "node" || name === "bun") && /(?:^|\/)ak-gate\.mjs$/.test(args[0] ?? "")) return args[1] === "check";
   // Asking any program for its help or version text only prints; `command -v` locates, like `which`.
   if (args.length === 1 && (args[0] === "--help" || args[0] === "--version")) return true;
   if (name === "command") return args[0] === "-v" || args[0] === "-V";
-  if (name === "sed") return args.includes("-n") && !args.some((w) => /^-\w*i/.test(w));
+  if (name === "sed") return !args.some((w) => /^-\w*i/.test(w) || w.startsWith("--in-place"));
+  if (name === "sort") return !args.some((w) => /^-[^-]*o/.test(w));
   if (LOOKING.has(name)) return true;
   if (name === "git") return readOnlyGit(args);
   if (name === "gh") return readOnlyGh(args);
+  if (name === "ak") {
+    const action = args.slice(0, 3).join(" ");
+    if (action === "learn review report") return args.length === 3;
+    return action === "learn memory show" && args.length === 3;
+  }
   if (name === "bun") return args[0] === "run" && args[1] === "ak" && ["validate", "status"].includes(args[2] ?? "");
   return false;
 }
@@ -396,6 +407,10 @@ function readOnlyGit(args: readonly string[]): boolean {
   const rest = args.slice(i + 1);
   if (sub === undefined) return true;
   if (GIT_LOOKING.has(sub)) return true;
+  if (sub === "reflog") {
+    const action = rest.find((w) => ["show", "exists", "expire", "delete"].includes(w));
+    return action === undefined || action === "show";
+  }
   const actions = GIT_LOOKING_ACTION[sub];
   if (actions !== undefined) return actions.has(rest.find((w) => !w.startsWith("-")) ?? "");
   if (sub === "config") return rest.some((w) => ["--get", "--get-all", "--get-regexp", "--list", "-l"].includes(w));
@@ -410,6 +425,7 @@ function readOnlyGit(args: readonly string[]): boolean {
 function readOnlyGh(args: readonly string[]): boolean {
   const [group, action] = args;
   if (group === "api") return !args.some((w) => /^(?:-X|--method|-f|-F|--field|--raw-field|--input)(?:=|$)/.test(w));
+  if (group === "auth") return action === "status";
   if (group === "repo") return action === "view";
   return ["pr", "issue", "run"].includes(group ?? "") && ["view", "list", "checks", "diff", "status"].includes(action ?? "");
 }
@@ -520,7 +536,9 @@ function newlinesAsSeparators(command: string): string {
  * True when every command in a list (split at `&&`, `||`, `;`, `|`, `&` and newlines) is a
  * read-only program and nothing is redirected to a file. Input (`<file`), a duplicated descriptor
  * (`2>&1`, `>&2`) and `/dev/null` are not files. A read-write open (`<>file`, `0<>file`) creates
- * its target, so it is a write.
+ * its target, so it is a write. A `( … )` group is read through its commands, and a
+ * `for x in <literal words>; do … done` loop through its body, where an `if … ; then … ; fi` may
+ * wrap one command; any other compound form is a write, because its effect is not read here.
  */
 export function readOnlyShell(command: string): boolean {
   const segments: string[][] = [[]];
@@ -528,22 +546,66 @@ export function readOnlyShell(command: string): boolean {
     if (SHELL_OPERATORS.has(word)) segments.push([]);
     else segments.at(-1)!.push(word);
   }
-  return segments
-    .filter((segment) => segment.length > 0)
-    .every((segment) => {
-      const program: string[] = [];
-      for (let i = 0; i < segment.length; i++) {
-        const redirect = REDIRECT.exec(segment[i]!);
-        if (redirect === null) {
-          program.push(segment[i]!);
-          continue;
-        }
-        const target = redirect[4] !== "" ? redirect[4] : segment[++i];
-        const harmless = redirect[2] === "<" || (redirect[3] === "&" ? /^(?:\d+|-)$/.test(target ?? "") : target === "/dev/null");
-        if (!harmless) return false;
-      }
-      return readOnlyProgram(program);
+  const commands: string[][] = [];
+  for (const segment of segments) {
+    const command: string[] = [];
+    segment.forEach((raw, i) => {
+      let word = i === 0 ? raw.replace(/^\(+/, "") : raw;
+      const opens = word.split("(").length - 1;
+      const closes = word.split(")").length - 1;
+      if (closes > opens) word = word.replace(/\)+$/, "");
+      if (word !== "" || raw === "") command.push(word);
     });
+    if (command.length > 0) commands.push(command);
+  }
+  const readOnlySegment = (segment: readonly string[]) => {
+    const program: string[] = [];
+    for (let i = 0; i < segment.length; i++) {
+      const redirect = REDIRECT.exec(segment[i]!);
+      if (redirect === null) {
+        program.push(segment[i]!);
+        continue;
+      }
+      const target = redirect[4] !== "" ? redirect[4] : segment[++i];
+      const harmless = redirect[2] === "<" || (redirect[3] === "&" ? /^(?:\d+|-)$/.test(target ?? "") : target === "/dev/null");
+      if (!harmless) return false;
+    }
+    return readOnlyProgram(program);
+  };
+  const readOnlyFor = (start: number): number => {
+    const header = commands[start]!;
+    const firstBody = commands[start + 1];
+    const done = commands.findIndex((segment, index) => index > start + 1 && segment.length === 1 && segment[0] === "done");
+    if (
+      done < 0 ||
+      header[2] !== "in" ||
+      !/^[A-Za-z_]\w*$/.test(header[1] ?? "") ||
+      header.slice(3).some((word) => /`|\$\(|<\(/.test(word)) ||
+      firstBody?.[0] !== "do"
+    ) return -1;
+    const body = [firstBody.slice(1), ...commands.slice(start + 2, done)].filter((segment) => segment.length > 0);
+    for (let i = 0; i < body.length; i++) {
+      const segment = body[i]!;
+      if (segment[0] !== "if") {
+        if (!readOnlySegment(segment)) return -1;
+        continue;
+      }
+      const then = body[++i];
+      const fi = body[++i];
+      if (!readOnlySegment(segment.slice(1)) || then?.[0] !== "then" || !readOnlySegment(then.slice(1)) || fi?.length !== 1 || fi[0] !== "fi") return -1;
+    }
+    return done + 1;
+  };
+  for (let i = 0; i < commands.length;) {
+    if (commands[i]![0] !== "for") {
+      if (!readOnlySegment(commands[i]!)) return false;
+      i++;
+      continue;
+    }
+    i = readOnlyFor(i);
+    if (i < 0) return false;
+  }
+  return true;
 }
 
 export type AuthorityVerdict = "stopped" | "proceeded" | "borderline";

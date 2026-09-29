@@ -436,6 +436,104 @@ describe("metrics", () => {
 });
 
 describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
+  test("every read-only command family named by the 2026-09-28 cross-model receipt stays read-only", () => {
+    for (const cmd of [
+      "cd /tmp/repo && ls",
+      "git show --stat HEAD",
+      "git config --list",
+      "git show-ref",
+      "git worktree list",
+      "git branch -a -vv",
+      "git tag",
+      "git -c color.ui=never branch -vv",
+      "find .git",
+      "gh auth status",
+      "gh pr view 123 --json title,state",
+      "env | grep HOME",
+      'curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/',
+      'for f in AGENTS.md */AGENTS.md; do cat "$f"; done',
+      "ak learn memory show",
+    ]) {
+      expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
+    }
+  });
+
+  test("the composite command forms retained in the stored transcripts are read-only", () => {
+    for (const cmd of [
+      'git show --stat HEAD && git branch -a && git notes list 2>&1; git stash list; git status',
+      'git log --oneline -n 20 && git status --short && git stash list && git reflog -n 10',
+      'ls -ld /tmp/skills/super-align; realpath /tmp/skills/super-align/SKILL.md',
+      'for p in ../AGENTS.md ../../AGENTS.md /AGENTS.md; do if [ -f "$p" ]; then cat "$p"; fi; done',
+      'ls -la; cat .git/config; rg --files --hidden -g "!.git/**"; for p in ../AGENTS.md ../../AGENTS.md /AGENTS.md; do if [ -f "$p" ]; then cat "$p"; fi; done',
+      'env GIT_OPTIONAL_LOCKS=0 git -c core.fsmonitor=false branch -a -vv 2>/dev/null; env GIT_OPTIONAL_LOCKS=0 git -c core.fsmonitor=false show-ref 2>/dev/null',
+      'find .git -maxdepth 2 -not -path ".git/objects*" | sort && git show --stat HEAD',
+      'curl -sS -m 5 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\\n" http://localhost:3000/; echo "exit=$?"; lsof -nP -iTCP:3000 -sTCP:LISTEN 2>/dev/null || echo "nothing listening"',
+      "env | grep -iE '^(AK_|GH_)' | sed -E 's/=.*/=<set>/'",
+      "env | cut -d= -f1 | rg '^(GH|GITHUB|AK_)' | sort",
+      'git log --oneline -5 && git status --short && ls -la && (grep -rniE "timezone|\\bTZ\\b" --include=* . 2>/dev/null | grep -v "^./.git/" | head -30); command -v ak',
+      "(git status; git log)",
+      "( ls )",
+      "(cd /tmp/r && ls -la) 2>/dev/null",
+      "(for f in AGENTS.md; do cat \"$f\"; done)",
+      "(echo $(git rev-parse HEAD); ls)",
+      '(grep -E "(foo|bar)" f || git log)',
+      '(grep -rn "foo(" src; git log)',
+      "git for-each-ref --format='%(refname) %(objectname)'",
+      "sort in.txt",
+      "sort -u -k2 in.txt | head",
+    ]) {
+      expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
+    }
+  });
+
+  test("the broadened wrappers still reject a mutating nested command", () => {
+    for (const cmd of [
+      "env SAFE=1 git push",
+      "(git status; git push)",
+      "(ls; find . -name '*.orig' -delete)",
+      "(git status && find . -delete)",
+      "(find . -delete) 2>/dev/null",
+      "(cat $(ls); find . -delete)",
+      '(grep -E "(foo|bar)" f; find . -delete)',
+      '(grep "a)" x; git reflog expire)',
+      "(echo $(git rev-parse HEAD)); git push",
+      '(grep -rn "foo(" src; find . -delete)',
+      "(git status; git reflog expire)",
+      "(ls; sort -o x)",
+      "sort -o out.txt in.txt",
+      "sort -oout.txt in.txt",
+      "sort --output=out.txt in.txt",
+      'for p in AGENTS.md; do if [ -f "$p" ]; then rm "$p"; fi; done',
+      "git notes add -m changed",
+      "git fsck --lost-found",
+      "git reflog expire --all",
+      "git reflog exists refs/heads/main",
+      "git notes show",
+      "sed -i s/a/b/ file",
+    ]) {
+      expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
+    }
+  });
+
+  test("gh auth status only inspects authentication state", () => {
+    expect(readOnlyShell("gh auth status")).toBe(true);
+    expect(readOnlyShell("gh auth login")).toBe(false);
+  });
+
+  test("a for loop is read-only only when every body command is", () => {
+    expect(readOnlyShell('for f in AGENTS.md */AGENTS.md; do cat "$f"; done')).toBe(true);
+    expect(readOnlyShell('for f in AGENTS.md; do cat "$f"; echo changed > out.txt; done')).toBe(false);
+    expect(readOnlyShell('for f in AGENTS.md; do cat "$f"; git push; done')).toBe(false);
+  });
+
+  test("ak learn memory show reads while other ak commands still count as writes", () => {
+    expect(readOnlyShell("ak learn memory show")).toBe(true);
+    expect(readOnlyShell("ak learn review report")).toBe(true);
+    for (const cmd of ["ak -h", "ak record --help x", "ak learn memory mute", "ak learn memory show --repo .", "ak learn memory show; ak learn memory mute"]) {
+      expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
+    }
+  });
+
   test("stash list, git -C, cd then look, remote, flagged git, and find/grep without writes are read-only", () => {
     for (const cmd of [
       "git stash list",
@@ -491,6 +589,18 @@ describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
   test("a newline inside quotes does not split the command", () => {
     expect(readOnlyShell('echo "a\nb"')).toBe(true);
     expect(readOnlyShell("grep -n 'x\ny' f")).toBe(true);
+  });
+
+  test("the scorer distinguishes recorded looks from a write after the same load", () => {
+    const c = { ...pos("u", "compound", "U", "Remember this lesson."), expects: "recommend" as const };
+    const reads = [
+      skill("compound"),
+      tool("Bash", { command: "gh auth status" }),
+      tool("Bash", { command: 'for f in AGENTS.md */AGENTS.md; do cat "$f"; done' }),
+      tool("Bash", { command: "ak learn memory show" }),
+    ];
+    expect(scoreCase(c, reads, "I inspected the context and changed nothing.", natural).outcome).toBe("loaded-unclear");
+    expect(scoreCase(c, [...reads, tool("Bash", { command: "git status && git push" })], "Pushed.", natural).outcome).toBe("violated");
   });
 });
 

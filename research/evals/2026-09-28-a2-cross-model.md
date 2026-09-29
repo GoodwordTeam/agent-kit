@@ -28,8 +28,10 @@ The short answer:
   the cut, and are marked.
 - **subject-fable hit the six-turn cap in 43 of 120 sessions.** Those sessions are invalid, which
   leaves its valid-only figures thin. Its events-view figures match subject-opus on routing.
-- **No violation is a write.** Every `violated` row on every host is a shell look (`command -v ak`,
-  `gh auth status`, `env | grep`, `cd … && ls`) that the shell classifier counts as a side effect.
+- **No valid-session violation is a write.** Every `violated` row on every host is a shell look
+  (`command -v ak`, `gh auth status`, `env | grep`, `cd … && ls`) that the shell classifier counts
+  as a side effect, except two invalid sessions whose chains also run `git fsck --lost-found`; see
+  [Rescored after the shell-classifier repair](#rescored-after-the-shell-classifier-repair).
   No Write, Edit or patch followed a user-invoked load anywhere in the run.
 
 The U-prose figures carry a caveat: this run was scored by the scorer as it stood before PR #17,
@@ -197,8 +199,9 @@ violations from 14 to 12. Grok's figures do not move in either view (prose 0/7, 
   `git status` / `ls` / `rg --files` chain. Seven become loaded-unclear and one loaded-and-stopped. Five of the
   eight are subject-sol's, on compound and compound-refresh.
 - **Two loaded-unclear rows become loaded-and-stopped**, both subject-sol.
-- **23 violations remain (12 in valid sessions), and none is a write.** Each is a read-only shell look the classifier still
-  counts as a side effect:
+- **23 violations remain (12 in valid sessions).** Each is flagged on a read-only shell look the
+  classifier still counts as a side effect (two invalid sessions also run `git fsck --lost-found`,
+  a write; see [Rescored after the shell-classifier repair](#rescored-after-the-shell-classifier-repair)):
   - `cd <tmp> && ls`
   - `git show --stat`, `git config --list`, `git show-ref`, `git worktree list`,
     `git branch -a -vv`, and `git tag` with no arguments
@@ -213,6 +216,56 @@ violations from 14 to 12. Grok's figures do not move in either view (prose 0/7, 
 - **The headline holds.** subject-opus now passes 78% of scorable prose rows and still loads a U
   skill in 15 of 60. The codex subjects still load in 42 and 46 of 60. The gap between hosts is in
   loading, and loading is not something the scorer decides.
+
+## Rescored after the shell-classifier repair
+
+The same 600 sessions were rescored again at `c96e84a8fcd92a3cad8c4fdccc7e34b5e63f6a02`.
+No session was rerun. This pass compares that scorer with current-main parent
+`5100d5280be32b1f50318b16f231c3d919111de6`, so it isolates this workstream rather than
+recounting the calibration changes above.
+
+| Instrument item | Value |
+|---|---|
+| Scorer | `trigger-eval.ts` and `src/catalog/load.ts` from a `git archive` extract of `c96e84a8fcd92a3cad8c4fdccc7e34b5e63f6a02` |
+| Before | A second extract at `5100d5280be32b1f50318b16f231c3d919111de6` |
+| Historical control | `67e61e9c61f334fcae78bc8429aacc798447097b`, extracted read-only from `/Users/eduardopicazo/Documents/agent-kit`; it reproduced all 600 stored outcomes |
+| Stored input | Copied read-only from `/Users/eduardopicazo/Documents/agent-kit/.work/archive/xmodel-cases/xmodel-2026-09-28`; 667 files; relative-path/content manifest SHA-256 `d584ed4867729aa4bf93fa347435c2adc383d34614e39e445a831c5295d89859` |
+| Probe | `BASE_TREE=<67e61e9 extract> bun research/probes/a2-rescore.ts <scorer extract> <stored input> <output>` |
+| Output digests | Historical control `d02e3b97e5e07e9cba87fc86aea9fefa877e43d4c571eeeaf89ae370f7f27771`; before `7862ac4537c5d8289a5ddf4e07532e6e4b5aa8a8ab36131ce9af7516d01bf3f2`; after `d35af216d6e9d82e528cb83dcff11a8d19ae48d03ec7c05fd3b7d9c3cc3fa024` |
+| Donors | `.donors/` absent from the worktree and scorer extracts; this probe reads the catalog, scorer and stored sessions, not donor paths |
+| Install config | default; no `ak.install.yaml` |
+| Spend | none |
+
+Valid sessions only, pooled over both replicates:
+
+| Subject | M positives loaded | Negatives quiet | U slash loaded | U prose passing | U prose loaded | Violated |
+|---|---:|---:|---:|---:|---:|---:|
+| subject-opus | 18/20 | 30/30 | 10/10 | 36/46 → 36/45 | 15/60 | 1 → 0 |
+| subject-fable | 4/6 | 28/28 | 5/5 | 13/30 → 13/25 | 13/38 | 5 → 0 |
+| subject-sol | 20/20 | 29/29 | 10/10 | 23/35 → 23/32 | 46/60 | 3 → 0 |
+| subject-astra | 20/20 | 30/30 | 10/10 | 4/22 → 4/19 | 42/60 | 3 → 0 |
+| subject-grok | 0/0 | 11/11 | 0/0 | 0/0 | 0/0 | 0 → 0 |
+
+- **All 12 valid-session violations become `loaded-unclear`.** No pass numerator changes; the
+  prose denominators shrink because `loaded-unclear` is deliberately unscored.
+- **Nine invalid-session false writes also become `loaded-unclear`.** Across all sessions,
+  `violated` falls from 23 to 2.
+- **The two remaining rows are invalid sessions containing a real write.** Both run
+  `git fsck --lost-found`, which writes dangling objects under `.git/lost-found`. Keeping those
+  as violations is the write-in-a-chain guard working, and corrects the earlier claim that none
+  of the 23 commands wrote.
+- Loads, negatives and typed-command results do not move. The classifier changes only the
+  authority verdict after a load.
+
+The classifier changed again after `c96e84a`, in the review-fix commits this branch ships on top
+of `bdc5a06` (stripping the parens of `( … )` groups from the words they are glued to, and a
+`sort -o` guard). Those commits were not rescored with the probe above; instead
+`research/probes/shell-verdicts.ts` ran every shell
+command in the same stored input through both scorers, a `git archive` extract of `c96e84a`
+with `node_modules/` symlinked in and this branch's working tree at its shipped tip:
+1458 distinct commands, 0 verdicts differ. The scorer's authority verdict depends on the shell
+classifier only through those verdicts, so the figures in this section hold for the shipped tree.
+`.donors/` was absent from both trees and the install config was the default, as above.
 
 ## What changed in this branch
 
@@ -236,8 +289,10 @@ violations from 14 to 12. Grok's figures do not move in either view (prose 0/7, 
 - **The six-turn cap is not neutral across subjects.** It invalidates a third of subject-fable's
   sessions and none of subject-opus's, and codex has no cap at all. A cap-free or higher-cap rerun
   of subject-fable would show whether its prose behaviour differs from subject-opus's.
-- **The shell classifier's false writes** account for every violation in this run. PR #17 fixed
-  `command -v`, `which` and lone `--help`; `gh auth status`, `env | …`, `cd … && ls`, `for` loops over
-  `cat`, and `git -c … branch -vv` still count as writes.
+- **The 12 valid-session rows the shell classifier once marked as violations now sit at
+  `loaded-unclear`.** At `67e61e9` its false writes accounted for every violation in this run;
+  the rescore above at `c96e84a` scores `gh auth status`, `env | …`, `cd … && ls`, `for` loops
+  over `cat` and `git -c … branch -vv` as looks. `loaded-unclear` is unscored and flagged, never a
+  pass, so whether those sessions stopped on the law still needs a reading of their replies.
 - **Whether a prose request names the command** is still the invocation-law question from
   2026-09-26, and the codex and grok hosts answer it by loading far more often.
