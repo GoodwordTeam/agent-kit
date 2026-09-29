@@ -140,9 +140,10 @@ when unconfigured, and that lifts the ceiling on a capability, never on authorit
 
 ## Outputs
 
-The ledger: one decision record per checkpoint (`schemas/decision.schema.json`), each carrying its
-card, both judgments, the authority check and the ruling or the escalation. Rulings read
-`Ruling: <what> — <why> — <what it costs if wrong>`.
+The ledger, a run artifact with envelope schema `run-ledger` (`schemas/run-ledger.schema.json`):
+one entry per checkpoint, pointing at that checkpoint's decision record
+(`schemas/decision.schema.json`), which carries its card, both judgments, the authority check and
+the ruling or the escalation. Rulings read `Ruling: <what> — <why> — <what it costs if wrong>`.
 
 At most one open escalation (`schemas/common.schema.json#/$defs/escalation`): the one decision
 needed, the options, the evidence gathered, the recommended default, the triggering charter or

@@ -1,0 +1,91 @@
+{
+  "schema": "ship-evidence",
+  "schema_version": 1,
+  "id": "example-ship-evidence-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "super-ship"
+  },
+  "inputs": [
+    {
+      "id": "example-verification-1",
+      "schema": "verification",
+      "hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    },
+    {
+      "id": "example-review-1",
+      "schema": "review",
+      "hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "complete",
+  "mode": "publish",
+  "payload": {
+    "title": "Load nested run artifacts and report skipped files",
+    "description": "The loader now walks the run directory recursively. Skipped files are reported with their reason. Rests on the linked receipts and the review verdict at this head.",
+    "branch": "loader-nested-artifacts",
+    "ticket": {
+      "id": "bound-loader-read-all",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "receipts": [
+      {
+        "id": "example-verification-1",
+        "schema": "verification",
+        "hash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      }
+    ],
+    "review": {
+      "id": "example-review-1",
+      "schema": "review",
+      "hash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    }
+  },
+  "preflight": [
+    {
+      "check": "sensitive-data-scan",
+      "outcome": "passed"
+    },
+    {
+      "check": "dependency-audit",
+      "outcome": "not-run",
+      "reason": "The change adds no dependency and the lockfile is unchanged; the project's audit runs on lockfile changes only."
+    },
+    {
+      "check": "release-check",
+      "name": "typecheck",
+      "outcome": "passed"
+    }
+  ],
+  "effects": [
+    {
+      "effect": "remote-push",
+      "target": "example-org/example-service#loader-nested-artifacts",
+      "idempotency_key": "example-run-1:ship.prepare:loader-nested-artifacts:sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "read_back": {
+        "before": "The branch does not exist on the remote.",
+        "after": "The remote branch is at 1111111111111111111111111111111111111111."
+      }
+    },
+    {
+      "effect": "pr-open",
+      "target": "example-org/example-service pull request from loader-nested-artifacts",
+      "idempotency_key": "example-run-1:ship.prepare:pr:loader-nested-artifacts:sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "read_back": {
+        "before": "The pull-request lookup exited 0 with an empty list.",
+        "after": "Pull request 42 is open from loader-nested-artifacts."
+      }
+    }
+  ]
+}

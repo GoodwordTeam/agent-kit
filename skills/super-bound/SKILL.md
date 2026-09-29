@@ -130,8 +130,9 @@ skill enters, not a skill it starts:
   adapter's `publishArtifact` under a `kb-document` placement naming kind `prd` and the scope. The
   knowledgebase resolves the location and this skill supplies no path (ruling
   `central-kb-owns-project-artifacts`).
-- Plan record — the specification, the seams, the slicing and the dependency graph, published under
-  a `run-artifact` placement and linked from the `prd`.
+- Plan record, a run artifact with envelope schema `plan-record`
+  (`schemas/plan-record.schema.json`) — the specification, the seams, the slicing and the dependency
+  graph, published under a `run-artifact` placement and linked from the `prd`.
 - `ticket` (`schemas/ticket.schema.json`), `type: implementation`, id shape
   `bound-<spec>-<slice>` — one per slice, each with its interfaces, its owned files, its blocking
   edges, its acceptance criteria and its verification command.

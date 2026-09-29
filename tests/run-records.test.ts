@@ -7,9 +7,10 @@ import { parse } from "yaml";
 import { compileSchemas } from "../src/validation/schemas.ts";
 
 /**
- * The three run records that ADR-0001 §3 assigned without a schema: the
- * handoff record, the evaluation record `bakeoff` and `prototype` share, and
- * the `wayfind` map. Without an id in `common#/$defs/schema_id` none of them
+ * The run records that ADR-0001 §3 assigned without a schema: the handoff
+ * record, the evaluation record `bakeoff` and `prototype` share, the `wayfind`
+ * map, and later the plan record, ship evidence, diagnostic packet and run
+ * ledger. Without an id in `common#/$defs/schema_id` none of them
  * could pass `publishArtifact`, which refuses an artifact that fails its own
  * schema before any write, so a skill that published one could never reach
  * `complete`. Each case below is a shipped example under templates/ plus the
@@ -173,6 +174,167 @@ describe("the evaluation record", () => {
     expect(validate({ ...prototype, judge })).toBe(false);
     expect(validate({ ...bakeoff, question: "Which layout reads best?" })).toBe(false);
     expect(validate({ ...prototype, status: "selected" })).toBe(false);
+  });
+});
+
+// The four records ADR-0001 §3 assigned to super-bound, super-ship, diagnose
+// and autopilot, in the same form: the shipped example, then each branch the
+// skill's body states, refused on the example with one thing changed.
+
+describe("the plan record", () => {
+  const validate = validatorFor("plan-record");
+  const base = example("plan-record.example.json");
+  const spec = base.specification as Record<string, unknown>;
+
+  test("the shipped example is valid", () => {
+    expect(validate(base)).toBe(true);
+  });
+
+  test("a specification missing one of its sections is refused", () => {
+    const { non_goals: _, ...rest } = spec;
+    expect(validate({ ...base, specification: rest })).toBe(false);
+    expect(validate({ ...base, specification: { ...spec, non_goals: [] } })).toBe(true);
+  });
+
+  test("a specification with no test seam, or a seam without its reason, is refused", () => {
+    expect(validate({ ...base, specification: { ...spec, test_seams: [] } })).toBe(false);
+    expect(validate({ ...base, specification: { ...spec, test_seams: [{ seam: "The load function." }] } })).toBe(false);
+  });
+
+  test("a plan with no slices is refused", () => {
+    expect(validate({ ...base, slices: [] })).toBe(false);
+  });
+
+  test("the bound.run draft and the published record are the only states", () => {
+    expect(validate({ ...base, status: "draft" })).toBe(true);
+    expect(validate({ ...base, status: "approved" })).toBe(false);
+  });
+});
+
+describe("the ship evidence", () => {
+  const validate = validatorFor("ship-evidence");
+  const base = example("ship-evidence.example.json");
+  const effects = base.effects as Array<Record<string, unknown>>;
+  const preflight = base.preflight as Array<Record<string, unknown>>;
+
+  test("the shipped example is valid", () => {
+    expect(validate(base)).toBe(true);
+  });
+
+  test("a dry run records no remote effect", () => {
+    const { effects: _, ...dry } = base;
+    expect(validate({ ...dry, mode: "dry-run" })).toBe(true);
+    expect(validate({ ...base, mode: "dry-run" })).toBe(false);
+  });
+
+  test("a remote effect without its idempotency key is refused", () => {
+    const { idempotency_key: _, ...keyless } = effects[0]!;
+    expect(validate({ ...base, effects: [keyless, effects[1]] })).toBe(false);
+  });
+
+  test("a complete publish records both the push and the pull request", () => {
+    expect(validate({ ...base, effects: [effects[0]] })).toBe(false);
+  });
+
+  test("a complete ship's pre-flight holds the sensitive-data scan", () => {
+    expect(validate({ ...base, preflight: preflight.filter((c) => c.check !== "sensitive-data-scan") })).toBe(false);
+  });
+
+  test("a check that did not run says why", () => {
+    const silent = { check: "dependency-audit", outcome: "not-run" };
+    expect(validate({ ...base, preflight: [preflight[0], silent] })).toBe(false);
+  });
+
+  test("a stopped ship names what it needs", () => {
+    const { payload: _, preflight: __, effects: ___, ...bare } = base;
+    expect(validate({ ...bare, status: "needs-input" })).toBe(false);
+    expect(validate({ ...bare, status: "needs-input", reason: "No review verdict binds to this head." })).toBe(true);
+  });
+});
+
+describe("the diagnostic packet", () => {
+  const validate = validatorFor("diagnostic-packet");
+  const base = example("diagnostic-packet.example.json");
+  const receipt = (id: string, c: string) => ({ id, schema: "verification", hash: `sha256:${c.repeat(64)}` });
+  const patch = {
+    files: ["src/loader.ts", "tests/loader.test.ts"],
+    regression_test: "tests/loader.test.ts: a run artifact two directories deep is loaded.",
+    receipts: { red: receipt("example-verification-6", "6"), green: receipt("example-verification-7", "7"), reproduction_rerun: receipt("example-verification-8", "8") },
+  };
+  const { packet: _, ...withoutPacket } = base;
+  const patched = { ...withoutPacket, grant: { covers_fix: true, ref: "grant-loader-fix" }, patch };
+
+  test("the shipped example and its patch form are valid", () => {
+    expect(validate(base)).toBe(true);
+    expect(validate(patched)).toBe(true);
+  });
+
+  test("a patch and a packet together are refused", () => {
+    expect(validate({ ...patched, packet: base.packet })).toBe(false);
+  });
+
+  test("a complete run with neither output is refused", () => {
+    expect(validate(withoutPacket)).toBe(false);
+  });
+
+  test("a patch no grant covered is refused", () => {
+    expect(validate({ ...patched, grant: { covers_fix: false } })).toBe(false);
+  });
+
+  test("a patch carries a regression test or the recorded absence of a seam, not both", () => {
+    const { regression_test: __, ...bare } = patch;
+    expect(validate({ ...patched, patch: bare })).toBe(false);
+    expect(validate({ ...patched, patch: { ...bare, seam_absent: "The walk is only reachable through the nightly job." } })).toBe(true);
+    expect(validate({ ...patched, patch: { ...patch, seam_absent: "No seam." } })).toBe(false);
+  });
+
+  test("hypotheses without a feedback loop are refused", () => {
+    const { loop: __, ...loopless } = base;
+    expect(validate({ ...loopless, status: "needs-input", reason: "No loop could be built." })).toBe(false);
+  });
+
+  test("fewer than three hypotheses are refused", () => {
+    expect(validate({ ...base, hypotheses: (base.hypotheses as unknown[]).slice(0, 2) })).toBe(false);
+  });
+
+  test("at the cap the packet states the architecture question", () => {
+    expect(validate({ ...base, status: "cap-reached" })).toBe(false);
+    const packet = { ...(base.packet as object), architecture_question: "Should the loader own the directory layout at all?" };
+    expect(validate({ ...base, status: "cap-reached", packet })).toBe(true);
+  });
+});
+
+describe("the run ledger", () => {
+  const validate = validatorFor("run-ledger");
+  const base = example("run-ledger.example.json");
+  const entries = base.entries as Array<Record<string, unknown>>;
+  const open = (id: string) => ({
+    checkpoint: "finding-adjudication",
+    decision: { id, schema: "decision", hash: `sha256:${"9".repeat(64)}` },
+    outcome: "escalation",
+    answered: false,
+  });
+
+  test("the shipped example is valid", () => {
+    expect(validate(base)).toBe(true);
+  });
+
+  test("one open escalation is admitted and a second is refused", () => {
+    expect(validate({ ...base, entries: [...entries, open("example-decision-3")] })).toBe(true);
+    expect(validate({ ...base, entries: [...entries, open("example-decision-3"), open("example-decision-4")] })).toBe(false);
+  });
+
+  test("a ruling reads what, why and what it costs if wrong", () => {
+    const ruling = { what: "Approve.", why: "Both seats agreed and the charter lists it." };
+    expect(validate({ ...base, entries: [{ ...entries[0], ruling }] })).toBe(false);
+  });
+
+  test("an escalation carries no ruling", () => {
+    expect(validate({ ...base, entries: [{ ...entries[1], ruling: (entries[0] as { ruling: unknown }).ruling }] })).toBe(false);
+  });
+
+  test("a checkpoint outside the charter categories is refused", () => {
+    expect(validate({ ...base, entries: [{ ...entries[0], checkpoint: "merge" }] })).toBe(false);
   });
 });
 

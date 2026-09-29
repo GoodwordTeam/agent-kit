@@ -164,6 +164,9 @@ with `needs-input` and the decision named, rather than waiting on a prompt nobod
 
 ## Outputs
 
+One ship evidence record, a run artifact with envelope schema `ship-evidence`
+(`schemas/ship-evidence.schema.json`), holding the next three parts.
+
 The pull-request payload: title, description, the linked ticket, the receipts and the review verdict
 it rests on, and the branch it would be opened from. In `dry-run` this is the whole output.
 

@@ -93,6 +93,11 @@ inputs:
 
 outputs:
   - id: ledger
+    schema: run-ledger
+    summary: >-
+      A run artifact with envelope schema run-ledger: one entry per checkpoint, pointing at its
+      decision record and stating the ruling or the escalation.
+  - id: decision-records
     schema: decision
     summary: >-
       One decision record per checkpoint: the frozen card, both judgments, the authority check and

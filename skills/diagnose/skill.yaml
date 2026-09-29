@@ -92,6 +92,13 @@ outputs:
       Emitted where no grant covered the fix: the work-packet shape of ticket, carrying the
       minimised reproduction, the ranked hypotheses with what confirmed or disconfirmed each, and
       the causal chain with its locations.
+  - id: diagnostic-packet
+    schema: diagnostic-packet
+    summary: >-
+      A run artifact with envelope schema diagnostic-packet, the one record published at the end of
+      the run: the symptom as reported, the loop, the minimised reproduction, the ranked
+      hypotheses, the causal chain, the grant decision and the summary, with exactly one of the
+      bounded patch or the work packet, never both.
   - id: diagnosis-receipts
     schema: verification
     summary: >-

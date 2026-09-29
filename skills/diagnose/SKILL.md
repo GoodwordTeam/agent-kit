@@ -167,6 +167,11 @@ specified well enough to be implemented once rather than guessed at a second tim
 Either way the run reports the same summary: what was broken, the causal chain with locations, the
 tests that should have caught it, what was changed or why nothing was, and a confidence.
 
+The record published in step 9 is a run artifact with envelope schema `diagnostic-packet`
+(`schemas/diagnostic-packet.schema.json`): the symptom as reported, the loop, the hypotheses, the
+causal chain, the grant decision and the summary, describing the patch or pointing at the packet.
+The schema admits one of the two and refuses both.
+
 ## Side effects
 
 `process-exec`, `workspace-write`, `scratch-write`, `artifact-write`, `kb-publish`.

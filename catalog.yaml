@@ -911,6 +911,30 @@ schemas:
     summary: >-
       A wayfinding map: destination, notes, decisions so far, not yet specified, out of scope, and
       the ticket set by id. An index, not a store.
+  - id: plan-record
+    batch: 10
+    status: authored
+    summary: >-
+      super-bound's plan: the decision-level specification, its test seams, the slicing into
+      tickets by reference and the dependency graph. Approval binds to its hash.
+  - id: ship-evidence
+    batch: 10
+    status: authored
+    summary: >-
+      super-ship's record of one ship: the pull-request payload, the pre-flight checks against the
+      head, and each remote effect with its idempotency key and read-backs. A dry run has none.
+  - id: diagnostic-packet
+    batch: 10
+    status: authored
+    summary: >-
+      diagnose's published record: symptom, loop, hypotheses, causal chain and summary, with
+      exactly one of a verified bounded patch or a work packet, never both.
+  - id: run-ledger
+    batch: 10
+    status: authored
+    summary: >-
+      autopilot's ledger: one entry per checkpoint pointing at its decision record, with the ruling
+      or the escalation. At most one escalation is open.
   - id: install
     batch: 5
     status: authored
