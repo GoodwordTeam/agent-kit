@@ -4,13 +4,13 @@
  * home, binding or ledger anywhere.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runCli } from "../../src/cli.ts";
 import { loadCatalog } from "../../src/catalog/load.ts";
-import { PRE_SHIP_GATES, type Gate } from "../../src/lifecycle/gate.ts";
+import { defaultEvidenceDir, PRE_SHIP_GATES, type Gate, type GateRecord } from "../../src/lifecycle/gate.ts";
 import { GATE_FILE, planBundle } from "../../src/packaging/plan.ts";
 import { makeTree } from "../helpers/tree.ts";
 
@@ -78,6 +78,36 @@ describe("ak lifecycle check, standalone", () => {
     expect(r.err).toContain("refused: gate review-readiness has no current evidence");
     // build-checks and review-full were on this revision, which is still the head's.
     expect(r.err).not.toContain("gate build-checks");
+  });
+
+  test("refusal messages name the latest record by recorded time", () => {
+    const dir = repo();
+    record(dir, "verify", "review-full");
+    writeFileSync(join(dir, "src/a.js"), "export const a = 3;\n");
+    record(dir, "verify", "review-full");
+
+    const latest: Partial<Record<Gate, GateRecord>> = {};
+    for (const gate of ["verify", "review-full"] as const) {
+      const evidence = join(defaultEvidenceDir(dir), "feature", gate);
+      const files = readdirSync(evidence).filter((name) => name.endsWith(".json")).sort();
+      expect(files).toHaveLength(2);
+      for (const [index, file] of files.entries()) {
+        const path = join(evidence, file);
+        const gateRecord = JSON.parse(readFileSync(path, "utf8")) as GateRecord;
+        gateRecord.recorded_at = index === 0 ? "2026-01-02T00:00:00.000Z" : "2026-01-01T00:00:00.000Z";
+        writeFileSync(path, `${JSON.stringify(gateRecord, null, 2)}\n`);
+        if (index === 0) latest[gate] = gateRecord;
+      }
+    }
+
+    writeFileSync(join(dir, "src/a.js"), "export const a = 4;\n");
+    const r = ak(dir, "check", "--gates", "verify,review-full");
+    expect(r.code).toBe(1);
+    for (const gate of ["verify", "review-full"] as const) {
+      const snapshot = latest[gate]!.snapshot;
+      const named = `${snapshot.revision.slice(0, 12)}/${snapshot.diff_hash.replace(/^sha256:/, "").slice(0, 12)}`;
+      expect(r.err).toContain(gate === "verify" ? `the latest record is for ${named}` : `the full review is for ${named}`);
+    }
   });
 
   test("a fix cycle passes with verify again and a delta review, and fails without the delta", () => {

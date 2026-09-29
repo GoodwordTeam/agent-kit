@@ -296,7 +296,7 @@ export function checkGates(a: CheckArgs): CheckResult {
   const fork = a.forkBound === true && a.gates.some((g) => EARLIER.has(g)) ? forkPoint(a.project, head.revision) : undefined;
 
   for (const gate of a.gates) {
-    const records = readRecords(a.dir, a.run, gate);
+    const records = readRecords(a.dir, a.run, gate).sort((x, y) => x.recorded_at.localeCompare(y.recorded_at));
     if (records.length === 0) {
       stale(gate, `no record for run ${a.run} in ${a.dir}`);
       continue;
