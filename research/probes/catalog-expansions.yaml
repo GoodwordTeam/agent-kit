@@ -1,22 +1,26 @@
-# Catalog entries beyond the plan's count, each with the change that added it.
+# Catalog entries beyond the baseline's count, each with the change that added it.
 #
 # research/probes/catalog-progress.sh compares each catalog.yaml section with the
-# plan's count (its TARGETS table, first declared in catalog.yaml at a185bd1,
-# "catalog.yaml: declare the full catalog"). A section that grew for a recorded
-# reason is not a disagreement: the probe adds the ids recorded here to the plan
-# count, and flags the section only when the catalog differs from that sum, when
-# a recorded id is not in the catalog, or when `catalog` below no longer matches.
+# baseline: the counts catalog.yaml first declared at a185bd1 ("catalog.yaml:
+# declare the full catalog"). The baseline is that commit, not the arch plan in
+# research/sources/, whose lists differ from it (11 schema files, 4 policies and
+# 6 adapters, among them issue-tracker and repository-events). A section that
+# grew for a recorded reason is not a disagreement: the probe adds the ids
+# recorded here to the baseline count, and flags the section when the catalog
+# differs from that sum, when a recorded id is not in the catalog or was already
+# in the baseline, or when `baseline` or `catalog` below no longer matches.
 #
 # `catalog` is the section's size once these expansions are in. It is written
 # down so a change that adds an entry has to touch this file too; the probe
 # fails when the figure goes stale rather than letting it drift.
 #
-# Every `commits` sha is the commit that first added the ids to catalog.yaml,
-# found with `git log -- catalog.yaml`, and `docs` names a decision record where
-# one exists. The plan itself (research/sources/) is never edited.
+# Every `commits` sha is a commit whose catalog.yaml change adds the ids it is
+# cited for, found with `git log -- catalog.yaml`; the probe checks that it
+# resolves and adds them. `docs` names a decision record where one exists. The
+# plan itself (research/sources/) is never edited.
 
 protocols:
-  plan: 7
+  baseline: 7
   catalog: 8
   expansions:
     - ids: [evidence-gate]
@@ -27,7 +31,7 @@ protocols:
       commits: [8e4a0de]
 
 roles:
-  plan: 29
+  baseline: 29
   catalog: 34
   expansions:
     - ids: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
@@ -37,7 +41,7 @@ roles:
       commits: [8e4a0de]
 
 references:
-  plan: 4
+  baseline: 4
   catalog: 5
   expansions:
     - ids: [tracker-of-record]
@@ -47,7 +51,7 @@ references:
       commits: [32863f4]
 
 schemas:
-  plan: 14
+  baseline: 14
   catalog: 27
   expansions:
     - ids: [case]
@@ -87,7 +91,7 @@ schemas:
       commits: [62e8dbb]
 
 profiles:
-  plan: 4
+  baseline: 4
   catalog: 5
   expansions:
     - ids: [learning]
@@ -96,7 +100,7 @@ profiles:
       commits: [8e4a0de]
 
 adapters:
-  plan: 4
+  baseline: 4
   catalog: 8
   expansions:
     - ids: [firstmate]
@@ -106,7 +110,9 @@ adapters:
       docs: [docs/decisions/0002-firstmate-integration.md]
     - ids: [tracker]
       reason: >-
-        Tickets go to a vendor-neutral tracker adapter with pluggable backends.
+        Tickets go to a vendor-neutral tracker adapter with pluggable backends. It realises the
+        arch plan's issue-tracker adapter, which the baseline catalog did not declare; it does not
+        expand past the plan.
       commits: [32863f4]
     - ids: [observation-source, review-source]
       reason: >-

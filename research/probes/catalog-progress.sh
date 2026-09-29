@@ -13,15 +13,19 @@
 #
 # WHAT IT COMPARES AGAINST
 #
-# The plan's count for each section -- 33 skills, 8 packs, 7 protocols, 29
-# roles, 4 reference packs, 14 schemas, 5 policies, 4 profiles and 4 adapters,
-# first declared in catalog.yaml at a185bd1 -- is duplicated below, which is
-# the one transcription this script cannot avoid. A section is allowed to grow
-# past it only through research/probes/catalog-expansions.yaml, which records
-# each added id with the reason and the commit or decision record that added
-# it. The target a section is compared against is the plan's count plus the
-# ids recorded there, so a recorded expansion reads clean and an unrecorded one
-# still flags.
+# The baseline: the count for each section that catalog.yaml first declared at
+# a185bd1 -- 33 skills, 8 packs, 7 protocols, 29 roles, 4 reference packs, 14
+# schemas, 5 policies, 4 profiles and 4 adapters. It is duplicated below, which
+# is the one transcription this script cannot avoid, and where the baseline
+# commit is reachable the script checks the duplicate against it. The baseline
+# is that commit, not the arch plan in research/sources/, whose own lists
+# differ (it names 11 schema files and 6 adapters).
+#
+# A section is allowed to grow past the baseline only through
+# research/probes/catalog-expansions.yaml, which records each added id with
+# the reason and the commit or decision record that added it. The target a
+# section is compared against is the baseline count plus the ids recorded
+# there, so a recorded expansion reads clean and an unrecorded one still flags.
 #
 # Recording rather than moving the numbers below is the deliberate part: a
 # permanent DISAGREEMENT row is a broken exit status that everyone learns to
@@ -29,13 +33,18 @@
 # once carried two such reasons in this comment (the case and rulings schemas);
 # they now live in the expansions file beside every other one.
 #
-# The probe also flags a recorded id missing from its catalog section, a
-# recorded `plan` that differs from the count below, and a recorded `catalog`
-# size that no longer matches -- so an entry added without a record, or a
-# record left behind by a removal, is a DISAGREEMENT and not a silent pass.
+# A record cannot explain a difference it did not cause. The probe flags a
+# recorded id missing from its catalog section, a recorded `baseline` or
+# `catalog` figure that no longer matches, a recorded id the baseline catalog
+# already had, and a cited commit that does not resolve or whose catalog.yaml
+# change does not add the ids it is cited for. The history checks need the
+# baseline and the cited commits; in a shallow clone that lacks them, they are
+# reported as skipped rather than guessed. CATALOG_BASELINE names another
+# baseline commit, which the tests use on fixture repositories.
 #
 # Output: the table on stdout, one `EXPANDED` line per section with recorded
-# expansions, and `DISAGREEMENT` lines on stderr with exit status 1.
+# expansions, a `SKIPPED` line when the history checks cannot run, and
+# `DISAGREEMENT <code> <section>` lines on stderr with exit status 1.
 #
 # WHAT IT DOES NOT TELL YOU
 #
@@ -77,10 +86,10 @@ else
   [ -n "$(git status --porcelain -- catalog.yaml)" ] && SUBJECT="working tree (catalog.yaml modified)"
 fi
 
-SUBJECT="$SUBJECT" python3 - "$SRC" "$EXP" <<'PY'
-import os, sys, yaml, collections
+SUBJECT="$SUBJECT" BASELINE_REV="${CATALOG_BASELINE:-a185bd1}" python3 - "$SRC" "$EXP" <<'PY'
+import os, subprocess, sys, yaml, collections
 
-PLAN = {
+BASELINE = {
     "skills": 33, "packs": 8, "protocols": 7, "roles": 29, "references": 4,
     "schemas": 14, "policies": 5, "profiles": 4, "adapters": 4,
 }
@@ -89,22 +98,85 @@ catalog = yaml.safe_load(open(sys.argv[1]))
 expansions = yaml.safe_load(open(sys.argv[2])) or {}
 mismatches = []
 expanded = []
-TARGETS = dict(PLAN)
+skipped = []
+
+def disagree(code, section, detail):
+    mismatches.append(f"{code}  {section}  {detail}")
+
+def git(*args):
+    r = subprocess.run(["git", *args], capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else None
+
+def ids_at(rev, section):
+    """The ids in one catalog section at a revision, or None when it cannot be read."""
+    text = git("show", f"{rev}:catalog.yaml")
+    if text is None:
+        return None
+    doc = yaml.safe_load(text) or {}
+    return {e.get("id") for e in doc.get(section) or [] if isinstance(e, dict)}
+
+def resolve(rev):
+    out = git("rev-parse", "--verify", "--quiet", f"{rev}^{{commit}}")
+    return out.strip() if out else None
+
+baseline_rev = os.environ["BASELINE_REV"]
+baseline_sha = resolve(baseline_rev)
+shallow = (git("rev-parse", "--is-shallow-repository") or "").strip() == "true"
+history = baseline_sha is not None
+if not history:
+    if shallow:
+        skipped.append(f"history checks: baseline {baseline_rev} is not in this shallow clone")
+    else:
+        disagree("baseline-unresolved", "-", f"baseline {baseline_rev} does not resolve to a commit")
+
+if history:
+    for section, n in BASELINE.items():
+        at = ids_at(baseline_sha, section)
+        if at is not None and len(at) != n:
+            disagree("baseline-count-differs", section, f"baseline {n} here, {len(at)} at {baseline_rev}")
+
+TARGETS = dict(BASELINE)
 for section, record in expansions.items():
-    if section not in PLAN:
-        mismatches.append(f"{section}: expansions recorded for a section the plan does not count")
+    if section not in BASELINE:
+        disagree("unknown-section", section, "expansions recorded for a section the baseline does not count")
         continue
-    if record.get("plan") != PLAN[section]:
-        mismatches.append(f"{section}: expansions record plan {record.get('plan')}, the probe's plan says {PLAN[section]}")
-    ids = [i for e in record.get("expansions") or [] for i in e.get("ids") or []]
+    if record.get("baseline") != BASELINE[section]:
+        disagree("baseline-figure-stale", section, f"record says baseline {record.get('baseline')}, the probe says {BASELINE[section]}")
+    entries = record.get("expansions") or []
+    ids = [i for e in entries for i in e.get("ids") or []]
     present = {e.get("id") for e in catalog.get(section) or [] if isinstance(e, dict)}
     for i in ids:
         if i not in present:
-            mismatches.append(f"{section}: recorded expansion {i} is not in catalog.yaml")
-    TARGETS[section] = PLAN[section] + len(ids)
+            disagree("id-absent", section, f"recorded expansion {i} is not in catalog.yaml")
+    TARGETS[section] = BASELINE[section] + len(ids)
     if record.get("catalog") != TARGETS[section]:
-        mismatches.append(f"{section}: expansions record catalog {record.get('catalog')}, plan {PLAN[section]} plus {len(ids)} recorded is {TARGETS[section]}")
-    expanded.append(f"{section}: plan {PLAN[section]} + {len(ids)} recorded = {TARGETS[section]}")
+        disagree("catalog-figure-stale", section, f"record says catalog {record.get('catalog')}, baseline {BASELINE[section]} plus {len(ids)} recorded is {TARGETS[section]}")
+    expanded.append(f"{section}  baseline {BASELINE[section]} + {len(ids)} recorded = {TARGETS[section]}")
+    if not history:
+        continue
+    before = ids_at(baseline_sha, section) or set()
+    for i in ids:
+        if i in before:
+            disagree("id-in-baseline", section, f"recorded expansion {i} is already in the baseline catalog at {baseline_rev}")
+    for e in entries:
+        added = set()
+        for c in e.get("commits") or []:
+            sha = resolve(str(c))
+            if sha is None:
+                if shallow:
+                    skipped.append(f"{section}: commit {c} is not in this shallow clone")
+                else:
+                    disagree("commit-unresolved", section, f"cited commit {c} does not resolve")
+                continue
+            after, prior = ids_at(sha, section), ids_at(f"{sha}^", section)
+            adds = (after or set()) - (prior or set())
+            mine = adds & set(e.get("ids") or [])
+            if not mine:
+                disagree("commit-does-not-add", section, f"cited commit {c} adds none of {', '.join(e.get('ids') or [])} to catalog.yaml")
+            added |= mine
+        for i in e.get("ids") or []:
+            if i not in added and not shallow:
+                disagree("id-not-added-by-cited-commit", section, f"no cited commit adds {i} to catalog.yaml")
 
 print(f"catalog progress at {os.environ['SUBJECT']}")
 print()
@@ -114,7 +186,7 @@ grand_a = grand_t = 0
 for section, target in TARGETS.items():
     entries = catalog.get(section)
     if not isinstance(entries, list):
-        mismatches.append(f"{section}: absent from catalog.yaml, target {target}")
+        disagree("section-absent", section, f"absent from catalog.yaml, target {target}")
         continue
     counts = collections.Counter(
         e.get("status") for e in entries if isinstance(e, dict)
@@ -122,10 +194,10 @@ for section, target in TARGETS.items():
     authored, contract, total = counts["authored"], counts["contract"], len(entries)
     grand_a += authored
     grand_t += total
-    flag = "" if total == target else "  <-- disagrees with the plan and its recorded expansions"
+    flag = "" if total == target else "  <-- disagrees with the baseline and its recorded expansions"
     print(f"  {section:12} {authored:>8} {contract:>9} {total:>6} {target:>7}{flag}")
     if total != target:
-        mismatches.append(f"{section}: catalog has {total}, plan {PLAN[section]} plus recorded expansions says {target}")
+        disagree("count-differs", section, f"catalog has {total}, baseline {BASELINE[section]} plus recorded expansions says {target}")
     unexpected = {s: n for s, n in counts.items() if s not in ("authored", "contract")}
     if unexpected:
         print(f"  {'':12} statuses that are neither: {unexpected}")
@@ -145,10 +217,12 @@ if batches:
         done = "landed" if set(row) == {"authored"} else "open"
         print(f"    batch {str(b):>4}  {row}  {done}")
 
-if expanded:
+if expanded or skipped:
     print()
     for e in expanded:
         print(f"  EXPANDED  {e}")
+    for s in skipped:
+        print(f"  SKIPPED  {s}")
 
 if mismatches:
     print()
