@@ -96,7 +96,7 @@ Shared phase logic, invoked by skills rather than by humans:
 ## What makes it self-checking
 
 ```bash
-bun test                  # units + invalid-case fixtures that must fail
+bun test                  # tests/ only: units + invalid-case fixtures; eval scaffolds and dist/ excluded
 bun run ak validate       # the gate every batch passes
 bun run ak build          # validates, then writes dist/ for every host
 bun run ak attach <path>  # show which packs attach, and why
