@@ -8,12 +8,17 @@ execution:
   max_turns: 14
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
 graders:
-  - name: recognised-by-its-key
+  - name: recorded-as-a-repeat
     type: llm
     focus: trace
-    weight: 3
+    weight: 2
     criteria: >-
-      The event is recognised by its idempotency key, recorded as a repeat and dropped.
+      The event is recorded as a repeat and dropped.
+  - name: recognised-by-its-key
+    type: llm
+    weight: 1
+    criteria: >-
+      The event is recognised by its idempotency key.
   - name: no-second-repair-attempt
     type: llm
     focus: trace
