@@ -4,13 +4,13 @@
  * home, binding or ledger anywhere.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runCli } from "../../src/cli.ts";
 import { loadCatalog } from "../../src/catalog/load.ts";
-import { PRE_SHIP_GATES, type Gate } from "../../src/lifecycle/gate.ts";
+import { defaultEvidenceDir, PRE_SHIP_GATES, type Gate, type GateRecord } from "../../src/lifecycle/gate.ts";
 import { GATE_FILE, planBundle } from "../../src/packaging/plan.ts";
 import { makeTree } from "../helpers/tree.ts";
 
@@ -80,6 +80,52 @@ describe("ak lifecycle check, standalone", () => {
     expect(r.err).not.toContain("gate build-checks");
   });
 
+  test("refusal messages name the latest record by recorded time", () => {
+    const dir = repo();
+    record(dir, "verify", "review-full");
+    writeFileSync(join(dir, "src/a.js"), "export const a = 3;\n");
+    record(dir, "verify", "review-full");
+
+    const latest: Partial<Record<Gate, GateRecord>> = {};
+    for (const gate of ["verify", "review-full"] as const) {
+      const evidence = join(defaultEvidenceDir(dir), "feature", gate);
+      const files = readdirSync(evidence).filter((name) => name.endsWith(".json")).sort();
+      expect(files).toHaveLength(2);
+      for (const [index, file] of files.entries()) {
+        const path = join(evidence, file);
+        const gateRecord = JSON.parse(readFileSync(path, "utf8")) as GateRecord;
+        gateRecord.recorded_at = index === 0 ? "2026-01-02T00:00:00.000Z" : "2026-01-01T00:00:00.000Z";
+        writeFileSync(path, `${JSON.stringify(gateRecord, null, 2)}\n`);
+        if (index === 0) latest[gate] = gateRecord;
+      }
+    }
+
+    writeFileSync(join(dir, "src/a.js"), "export const a = 4;\n");
+    const r = ak(dir, "check", "--gates", "verify,review-full");
+    expect(r.code).toBe(1);
+    for (const gate of ["verify", "review-full"] as const) {
+      const snapshot = latest[gate]!.snapshot;
+      const named = `${snapshot.revision.slice(0, 12)}/${snapshot.diff_hash.replace(/^sha256:/, "").slice(0, 12)}`;
+      expect(r.err).toContain(gate === "verify" ? `the latest record is for ${named}` : `the full review is for ${named}`);
+    }
+  });
+
+  test("a record without a recorded time is ignored, not trusted and not fatal", () => {
+    const dir = repo();
+    record(dir, ...PRE_SHIP_GATES);
+    const evidence = join(defaultEvidenceDir(dir), "feature", "verify");
+    const [file] = readdirSync(evidence).filter((name) => name.endsWith(".json"));
+    const good = JSON.parse(readFileSync(join(evidence, file!), "utf8")) as Partial<GateRecord>;
+    delete good.recorded_at;
+    writeFileSync(join(evidence, "zz-foreign.json"), `${JSON.stringify(good, null, 2)}\n`);
+    expect(ak(dir, "check").code).toBe(0);
+
+    writeFileSync(join(evidence, file!), `${JSON.stringify(good, null, 2)}\n`);
+    const r = ak(dir, "check");
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("refused: gate verify has no current evidence (no record for run feature");
+  });
+
   test("a fix cycle passes with verify again and a delta review, and fails without the delta", () => {
     const dir = repo();
     record(dir, "build-checks", "verify", "review-full");
@@ -120,6 +166,30 @@ describe("ak lifecycle check, standalone", () => {
     expect(r.err).toContain("refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor");
     expect(r.err).toContain("since it left main at");
     expect(r.err).toContain("refused: gate review-full has no current evidence");
+  });
+
+  test("a branch reused after a squash merge inherits records until run identity changes", () => {
+    const dir = repo();
+    record(dir, "build-checks");
+    git(dir, "commit", "-qam", "task one");
+    record(dir, ...PRE_SHIP_GATES);
+    expect(ak(dir, "check").code).toBe(0);
+
+    git(dir, "checkout", "-q", "main");
+    git(dir, "merge", "-q", "--squash", "feature");
+    git(dir, "commit", "-qm", "squash task one");
+    git(dir, "checkout", "-q", "feature");
+    git(dir, "merge", "-q", "--no-edit", "main");
+    writeFileSync(join(dir, "src/a.js"), "export const a = 7;\n");
+    record(dir, "verify", "review-delta", "review-readiness");
+
+    // Pin the known gate.ts:5-8 limitation so a later run-identity fix is a deliberate change.
+    expect(ak(dir, "check").code).toBe(0);
+    const freshRun = ak(dir, "check", "--run", "task-2");
+    expect(freshRun.code).toBe(1);
+    for (const gate of PRE_SHIP_GATES) {
+      expect(freshRun.err).toContain(`refused: gate ${gate} has no current evidence (no record for run task-2`);
+    }
   });
 
   test("work on the default branch itself keeps build-checks recorded before its commit", () => {

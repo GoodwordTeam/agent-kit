@@ -82,10 +82,11 @@ Shared phase logic, invoked by skills rather than by humans:
 `phase-operations` · `consensus-plan-gate` · `tdd` · `apply-findings` · `review-delta` ·
 `worktree-ownership` · `attach-pack`
 
-### Roles (29)
+### Roles (34)
 
 4 core (`supervisor`, `implementer`, `reviewer-spec`, `reviewer-standards`) · 15 code-review ·
-7 doc-review · 3 plan-review (`planner`, `architect`, `critic`).
+7 doc-review · 3 plan-review (`planner`, `architect`, `critic`) · 5 learn (`learn/pattern-maintainer`,
+`learn/reflector`, `learn/consolidator`, `learn/lesson-merger`, `learn/skill-scout`).
 
 ### References (5)
 
@@ -95,9 +96,9 @@ Shared phase logic, invoked by skills rather than by humans:
 ## What makes it self-checking
 
 ```bash
-bun test                  # units + invalid-case fixtures that must fail
+bun test                  # tests/ only: units + invalid-case fixtures; eval scaffolds and dist/ excluded
 bun run ak validate       # the gate every batch passes
-bun run ak build --check  # dist/ in sync with source
+bun run ak build          # validates, then writes dist/ for every host
 bun run ak attach <path>  # show which packs attach, and why
 bun run ak tracker check <project-dir>  # a project's tracker binding, and that its secret stays out of git
 ```

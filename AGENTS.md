@@ -229,6 +229,8 @@ change. Clone donors **without** `--depth`: a shallow clone is the common defaul
 donor paths for the tip while failing at the pin, which the validator reports as missing paths
 rather than as a broken instrument.
 
+`bunfig.toml` makes `tests/` the canonical test root: `bun test` runs every test there and excludes the `evals/super-build/_fixtures/**/*.test.js` scaffolds (the eval runner exercises them) and the `dist/` copies, so its population does not depend on whether the tree has been built.
+
 The install configuration is part of the instrument too: a skill's packaged mode depends on which
 adapters `ak.install.yaml` attaches and on whether it configures a tracker backend, so the summary
 line of `ak validate` and `ak build` ends with an `install:` clause naming the file or the default and
