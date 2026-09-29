@@ -50,7 +50,8 @@ The case against:
 Measured by the A2 routing eval at tree `449efa8` with the scorer at `3d9a48a`, one run per prompt,
 natural arm. Instrument: `tests/learn/evals/trigger-eval.ts --set dev`. Figures are as reported in
 `research/evals/2026-09-25-results.md` and `research/evals/2026-09-25-results/a2-routing.json` on
-branch `Pibomeister/evals-results` at `4902cd5`, which has not merged at the time of writing.
+branch `Pibomeister/evals-results` at `4902cd5`, which had not merged at the time of writing (it
+merged later as PR #12).
 
 The results table, as the document gives it:
 
@@ -85,6 +86,21 @@ super-align's own rows, from `a2-routing.json`:
 
 These figures come from one subject and one run per prompt. They show where U routing fails. They do
 not measure what happens when super-align runs as M, because no arm has done that.
+
+### Evidence since, noted 2026-09-29
+
+Later runs refine these figures without changing the options or the recommendation:
+
+- `research/evals/2026-09-26-a2-routing.md` reran A2 as four replicates of the bundle-on, roster-on
+  arm, with its correction of 2026-09-28. Misses are still mostly p3 prompts that never name a skill.
+- `research/evals/2026-09-28-grader-calibration.md`, items 2 and 13: two super-align prose sessions
+  (p2 and p1) loaded the skill and ran Round 1 of the interview in the reply;
+  item 13 says "I've started `/ak:super-align`". The scorer counts both as loaded-unclear, because the
+  interview is conversation and no tool call shows it. So the model already starts the interview on
+  prose in some sessions, and the pass condition below, which counts sessions that "start
+  `align.interview`", needs a reply-level grader, not the tool-call scorer alone.
+- `research/evals/2026-09-28-a2-cross-model.md`: the codex and grok subjects load user-invoked skills
+  on most prose rows and rarely recommend the command, so the eval below should run per subject.
 
 ## Options
 
