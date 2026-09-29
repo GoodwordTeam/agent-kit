@@ -72,6 +72,20 @@ describe("actionClaim", () => {
     "The session does not dispatch another fix round.",
     "It must never push to the default branch.",
     "Nothing is deleted.",
+    // The passive shape alone.
+    "The page is not published.",
+    "The lesson is never deleted.",
+    "Their receipts are not re-run.",
+    // Forms the auxiliary list once missed.
+    "The run won't merge the pull request.",
+    "The session cannot publish the page.",
+    "The skill never publishes a draft.",
+    "Only one pull request is created.",
+    "At most one comment is posted.",
+    "The run does not reopen the ticket.",
+    "The run does not re-open the ticket.",
+    "It resumes rather than cutting a second ticket.",
+    "It reads the record back rather than publishing a second page.",
   ])("finds the claim in %p", (criteria) => {
     expect(actionClaim(criteria)).not.toBeNull();
   });
@@ -85,6 +99,22 @@ describe("actionClaim", () => {
     "The run states plainly that it did not publish.",
     "The response reads the record back before any second publish.",
     "The response names which lanes were run and which were skipped.",
+    // An auxiliary without a negation is a plan, not a claim.
+    "The response will run the check and then publish the summary.",
+    // Nouns that share a spelling with an action verb, next to a count.
+    "The reply names the finding again.",
+    "The response reads the record once and cites it.",
+    "The response cites the run once.",
+    "It states the commit once in its summary.",
+    "The response lists the replies again.",
+    // Idioms whose verb is not the action.
+    "The response does not call it a regression.",
+    "The response does not record opinions as findings.",
+    "The review does not cut corners.",
+    "The reply should not start with an apology.",
+    "The response does not write off the failure.",
+    // "rather than" with no repeat.
+    "Each new finding names what changed, rather than reopening discovery on unrelated issues.",
   ])("does not flag %p", (criteria) => {
     expect(actionClaim(criteria)).toBeNull();
   });
