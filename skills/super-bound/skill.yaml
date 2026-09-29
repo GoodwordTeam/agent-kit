@@ -114,8 +114,8 @@ references:
 hard_gates:
   - A decision ticket is never emitted as executable work; a ticket that fails the zero-context
     check is reclassified, not shipped.
-  - Approval binds to the specification's artifact hash; a changed specification does not inherit
-    the old approval.
+  - Approval binds to the specification's hash, not the whole plan's; a changed specification does
+    not inherit the old approval.
   - No ticket ships with an unfinished-content marker, with a vague error-handling instruction in
     place of the specifics, or with a pointer to another ticket in place of the work.
   - Evidence that invalidates a decision settled earlier in the session stops the write and returns

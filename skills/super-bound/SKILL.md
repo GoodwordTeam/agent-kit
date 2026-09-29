@@ -76,7 +76,8 @@ which is model-invoked, and that direction is the legal one.
    renaming the same things here.
 5. Run `/ak:doc-review` on the specification and resolve everything it returns before cutting a
    ticket.
-6. Take the specification approval. The approval binds to the specification's artifact hash.
+6. Take the specification approval. The approval binds to the specification's own hash, which the
+   plan record carries as `specification_hash`, so slicing afterwards does not void it.
 7. Slice into tickets. Each slice cuts a narrow but complete path through every layer, is demoable
    or verifiable on its own, and is sized to fit one fresh context window.
 8. Give every ticket its interfaces: what it consumes from earlier tickets with exact signatures,
@@ -100,8 +101,8 @@ which is model-invoked, and that direction is the legal one.
 Gate: a decision ticket is never emitted as executable work. A ticket that fails the zero-context
 check is reclassified, never shipped as an implementation ticket because the deadline is close.
 
-Gate: approval binds to the specification's artifact hash. A changed specification does not inherit
-the old approval; take it again.
+Gate: approval binds to the specification's hash, not the whole plan's. A changed specification
+does not inherit the old approval; take it again.
 
 Gate: no ticket ships with an unfinished-content marker, with "add appropriate error handling" or
 "handle the edge cases" in place of the specifics, or with a pointer to another ticket in place of

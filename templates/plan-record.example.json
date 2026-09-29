@@ -52,6 +52,7 @@
       "Loading artifacts from remote storage."
     ]
   },
+  "specification_hash": "sha256:ffab1849ba829732cd3275ff94f8b69895652d4d22d6fba59614bb70b9e8a099",
   "slices": [
     {
       "ticket": {
@@ -85,5 +86,13 @@
         "blocked_by": "bound-loader-read-all"
       }
     ]
-  }
+  },
+  "approvals": [
+    {
+      "artifact_hash": "sha256:ffab1849ba829732cd3275ff94f8b69895652d4d22d6fba59614bb70b9e8a099",
+      "by": "human",
+      "authority": "explicit",
+      "at": "2026-09-19T08:30:00Z"
+    }
+  ]
 }
