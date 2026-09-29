@@ -169,6 +169,35 @@ export function checkSkillManifests(ctx: CheckContext): Issue[] {
       }
     }
 
+    /**
+     * An output bound to a run-artifact schema is a durable, hash-bound record
+     * (docs/decisions/0001-kb-document-vocabulary.md §3, run-artifact column),
+     * so the skill cannot run without `artifact-write`. `outputs[].schema` is
+     * typed `$defs/schema_id` by skill.schema.json, so any value here is a
+     * run-artifact schema; a value outside the enum is schemas.document-invalid.
+     *
+     * One direction only. research, source-driven, simplify and writing-skills
+     * write envelope artifacts that no schema_id names yet, so requiring a
+     * schema-bound output of every skill that needs the capability would report
+     * correct manifests.
+     */
+    const bound = arr(manifest.doc["outputs"])
+      .map((output) => {
+        const record = obj(output);
+        return record === null ? null : { id: str(record["id"]) ?? "?", schema: str(record["schema"]) };
+      })
+      .filter((output): output is { id: string; schema: string } => output !== null && output.schema !== null);
+    const requires = arr(manifest.doc["requires"]).map(str);
+    if (bound.length > 0 && !requires.includes("artifact-write")) {
+      issues.push(
+        error(
+          "capability.artifact-write-missing",
+          manifest.file,
+          `${id} emits run artifacts (${bound.map((o) => `${o.id}: ${o.schema}`).join(", ")}) but its requires does not list artifact-write; a host that cannot store and hash-bind them would expose the skill as if it could`,
+        ),
+      );
+    }
+
     const budget = obj(manifest.doc["budget"]);
     if (budget !== null) {
       const providedBy = str(budget["provided_by"]);

@@ -190,9 +190,9 @@ describe("the ceiling a skill's requires[] puts on its mode", () => {
 
   test("the statuses that cap autonomy are stated in one place and `partial` is not among them", () => {
     // Measured rather than assumed. Under the stricter reading -- anything not
-    // `satisfied` caps -- `artifact-write` is `partial` and §3's own Detail says
-    // every skill in the catalog requires it, so every ceiling in the tree would
-    // be guided by construction rather than by fact. Both readings give the
+    // `satisfied` caps -- `artifact-write` is `partial` and every skill that
+    // emits a run artifact requires it, so most ceilings in the tree would be
+    // guided by construction rather than by fact. Both readings give the
     // identical answer on all 26 skill-adapter rows in this repository today,
     // so the choice is not observable here; it is made on §4's own worked
     // example, which names `runner-grants` and `event-delivery`, both

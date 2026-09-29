@@ -49,6 +49,7 @@ requires:
   - process-exec
   - tracker-access
   - human-channel
+  - artifact-write
 
 inputs:
   - id: triage-policy
@@ -93,6 +94,7 @@ side_effects:
   - process-exec
   - scratch-write
   - tracker-write
+  - artifact-write
 
 references:
   - tracker-of-record

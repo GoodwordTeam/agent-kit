@@ -152,6 +152,37 @@ describe("skill manifest rules", () => {
     expect(rulesOf(checkSkillManifests(ctx))).toContain("skill.user-invoked-never-starts-user-invoked");
   });
 
+  test("capability.artifact-write-missing catches a schema-bound output without the capability", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": catalog,
+      "skills/diagnose/skill.yaml":
+        "id: diagnose\ninvocation: M\nrequires: [repository-read]\noutputs:\n  - id: report\n  - id: repro-ticket\n    schema: ticket\n",
+    });
+    const issues = checkSkillManifests(ctx).filter((i) => i.rule === "capability.artifact-write-missing");
+    expect(issues.map((i) => [i.severity, i.file])).toEqual([["error", "skills/diagnose/skill.yaml"]]);
+    expect(issues[0]?.message).toContain("repro-ticket: ticket");
+  });
+
+  test("capability.artifact-write-missing passes a schema-bound output that requires the capability", () => {
+    const ctx = ctxFor({
+      "catalog.yaml": catalog,
+      "skills/diagnose/skill.yaml":
+        "id: diagnose\ninvocation: M\nrequires: [repository-read, artifact-write]\noutputs:\n  - id: repro-ticket\n    schema: ticket\n",
+    });
+    expect(rulesOf(checkSkillManifests(ctx))).toEqual([]);
+  });
+
+  test("capability.artifact-write-missing leaves a skill with no schema-bound output alone in both directions", () => {
+    // The reverse direction is not enforced: a skill may write an envelope
+    // artifact that no schema_id names yet.
+    const ctx = ctxFor({
+      "catalog.yaml": catalog,
+      "skills/diagnose/skill.yaml": "id: diagnose\ninvocation: M\nrequires: [artifact-write]\noutputs:\n  - id: note\n",
+      "skills/super-ship/skill.yaml": "id: super-ship\ninvocation: U\nrequires: [repository-read]\noutputs:\n  - id: note\n",
+    });
+    expect(rulesOf(checkSkillManifests(ctx))).toEqual([]);
+  });
+
   test("skill.budget-enforces-only-declared-limits catches an undeclared limit", () => {
     const ctx = ctxFor({
       "catalog.yaml": catalog,
