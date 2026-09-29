@@ -36,8 +36,12 @@ The pack never starts a phase. It attaches constraints and review lenses to a ph
 **On ambiguous evidence this pack attaches.** If the selector cannot tell whether a boundary is
 externally consumed, as with a new export whose callers it cannot see, it attaches and says in the
 `attachment_record` rationale what it could not establish. API facts are never dropped because a
-classifier was uncertain (ruling `panel-composition-by-declared-risk`). `ak attach` has no switch
-that turns this pack off.
+classifier was uncertain (ruling `panel-composition-by-declared-risk`).
+
+`ak attach` does not implement this rule: it selects only on a sufficient built-in signal, so
+a subject whose only evidence is ambiguous is reported as not attached. The rule binds the
+selector a phase runs under `protocols/attach-pack/PROTOCOL.md`. Separately, `ak attach` has no
+switch that turns this pack off.
 
 ## Does not attach when
 

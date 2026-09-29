@@ -2606,9 +2606,11 @@ changes type", not "api". A classifier is optional for every pack (`classifier_o
 `const: true`), and what a pack does when the evidence is ambiguous is fixed by which pack it is:
 
 - `pack-api`, `pack-data` and `pack-secure` attach. Security, API and data facts are never dropped
-  because a classifier was uncertain (ruling `panel-composition-by-declared-risk`), and
-  `ak attach` has no switch that turns any pack off, because its signal table is code, not
-  configuration.
+  because a classifier was uncertain (ruling `panel-composition-by-declared-risk`). This binds the
+  selector a phase runs under `protocols/attach-pack/PROTOCOL.md`. `ak attach` does not implement
+  it: it selects only on a sufficient built-in signal, so a subject whose only evidence is
+  ambiguous is reported as not attached. Separately, `ak attach` has no switch that turns any pack
+  off, because its signal table is code, not configuration.
 - The other five may decline, and the decline is recorded with its reason in the
   `attachment_record`'s `rejected` list. A decline with no recorded reason is not a decline; it is a
   pack that silently failed to attach.
