@@ -80,7 +80,7 @@ import { candidateTokens, normalWords } from "../../../src/learn/memory/redact.t
 import { fetchNew, reflect, reflectPrompt } from "../../../src/learn/memory/reflect.ts";
 import { ClaudeMemSource } from "../../../src/learn/sources/claude-mem.ts";
 import { buildFixture, type BuiltFixture, loadFixtureSet } from "./reflect/fixtures.ts";
-import { option } from "./session.ts";
+import { evalInstrument, option } from "./session.ts";
 
 export const RECALL_AT = 0.8;
 export const PRECISION_AT = 0.8;
@@ -482,6 +482,7 @@ async function main(argv: string[]): Promise<number> {
   }
   const config = loadConfig(process.env);
   const judge = commandJudge(config);
+  const instrument = evalInstrument(PACKAGE_ROOT, revision());
   const results: FixtureResult[] = [];
   for (const { spec, set: which } of tagged) {
     const fresh = () => {
@@ -529,7 +530,7 @@ async function main(argv: string[]): Promise<number> {
     runs,
     judge_cost_usd: null,
     judge_cost_note: "not recorded: commandJudge returns the parsed reply and drops the host envelope that carries the cost",
-    revision: revision(),
+    ...instrument,
   };
   const summary = {
     dev: summariseSet(results.filter((r) => r.set === "dev")),

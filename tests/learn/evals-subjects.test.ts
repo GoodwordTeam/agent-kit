@@ -5,9 +5,10 @@
  * No host CLI runs here.
  */
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PACKAGE_ROOT } from "../../src/learn/core/roles.ts";
 import { skillLoads } from "./evals/trigger-eval.ts";
 import { claude } from "./evals/subjects/claude.ts";
 import { codex } from "./evals/subjects/codex.ts";
@@ -16,6 +17,7 @@ import { privateHome } from "./evals/subjects/home.ts";
 import { adapterFor, BUNDLE_FOR, runSubject, withoutParentSession } from "./evals/subjects/index.ts";
 import { readsOf, unwrap, words } from "./evals/subjects/shell.ts";
 import type { SessionRequest, SubjectAdapter, ToolEvent } from "./evals/subjects/types.ts";
+import { evalInstrument } from "./evals/session.ts";
 
 const FIXTURES = join(import.meta.dir, "evals", "fixtures", "transcripts");
 const fixture = (name: string) => readFileSync(join(FIXTURES, name), "utf8");
@@ -158,6 +160,38 @@ describe("grok", () => {
     expect(argv.slice(0, 3)).toEqual(["grok", "-p", "Load the greet skill."]);
     expect(argv.join(" ")).toContain("-m bound-c --max-turns 2 --permission-mode dontAsk --rules ROSTER");
   });
+
+  test("argv: observed read-only looks are allowed without blanket shell or mutation approval", () => {
+    const argv = grok.command(req, undefined);
+    const allow = argv.flatMap((value, index) => (value === "--allow" ? [argv[index + 1]] : []));
+    expect(allow).toEqual([
+      "Read",
+      "Grep",
+      "Bash(ls)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(head)",
+      "Bash(head *)",
+      "Bash(tail)",
+      "Bash(tail *)",
+      "Bash(cat *)",
+      "Bash(rg *)",
+      "Bash(grep *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git show)",
+      "Bash(git show *)",
+      "Bash(git rev-parse *)",
+    ]);
+    expect(argv).not.toContain("--always-approve");
+    expect(allow).not.toContain("Bash");
+    expect(allow.some((rule) => rule?.startsWith("Write") || rule?.startsWith("Edit"))).toBe(false);
+    expect(argv.slice(argv.indexOf("--permission-mode"), argv.indexOf("--permission-mode") + 2)).toEqual(["--permission-mode", "dontAsk"]);
+  });
 });
 
 describe("shell reads", () => {
@@ -255,5 +289,42 @@ describe("runSubject", () => {
     expect(adapterFor("claude").host).toBe("claude");
     expect(adapterFor("codex").host).toBe("codex");
     expect(adapterFor("grok").host).toBe("grok");
+  });
+});
+
+describe("eval receipt instrument", () => {
+  test("names the revision, donor availability, and the install clause with the tracker's state", () => {
+    const root = join(scratch, "instrument");
+    for (const rel of ["catalog.yaml", "adapters"]) cpSync(join(PACKAGE_ROOT, rel), join(root, rel), { recursive: true });
+    const bare = evalInstrument(root, "abc123");
+    expect(bare.revision).toBe("abc123");
+    expect(bare.donors_present).toBe(false);
+    expect(bare.install_config).toStartWith("no ak.install.yaml: default, all fail-closed adapters attached (");
+    expect(bare.install_config).toContain("tracker: no backend");
+
+    mkdirSync(join(root, ".donors"));
+    writeFileSync(join(root, "ak.install.yaml"), "attached: [tracker]\n");
+    const unconfigured = evalInstrument(root, "def456");
+    expect(unconfigured.revision).toBe("def456");
+    expect(unconfigured.donors_present).toBe(true);
+    expect(unconfigured.install_config).toStartWith("ak.install.yaml: attached tracker; tracker: no backend");
+
+    writeFileSync(join(root, "ak.install.yaml"), "attached: [tracker]\ntracker:\n  backend: some-tracker\n");
+    expect(evalInstrument(root, "def456").install_config).toBe("ak.install.yaml: attached tracker; tracker: backend some-tracker");
+  });
+
+  test("refuses to describe a root that has no catalog", () => {
+    const root = join(scratch, "no-catalog");
+    mkdirSync(root);
+    expect(() => evalInstrument(root, "abc123")).toThrow("catalog.yaml");
+  });
+
+  test("refuses an install file it cannot read rather than recording the host alone", () => {
+    const root = join(scratch, "bad-install");
+    for (const rel of ["catalog.yaml", "adapters"]) cpSync(join(PACKAGE_ROOT, rel), join(root, rel), { recursive: true });
+    writeFileSync(join(root, "ak.install.yaml"), "attached: tracker\n");
+    expect(() => evalInstrument(root, "abc123")).toThrow("ak.install.yaml: Declares no 'attached:' list");
+    writeFileSync(join(root, "ak.install.yaml"), "attached: [\n");
+    expect(() => evalInstrument(root, "abc123")).toThrow("ak.install.yaml: Not valid YAML");
   });
 });
