@@ -97,7 +97,7 @@ Shared phase logic, invoked by skills rather than by humans:
 ```bash
 bun test                  # units + invalid-case fixtures that must fail
 bun run ak validate       # the gate every batch passes
-bun run ak build --check  # dist/ in sync with source
+bun run ak build          # validates, then writes dist/ for every host
 bun run ak attach <path>  # show which packs attach, and why
 bun run ak tracker check <project-dir>  # a project's tracker binding, and that its secret stays out of git
 ```
