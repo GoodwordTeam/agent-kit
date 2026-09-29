@@ -234,13 +234,15 @@ describe("every signal cites a rule its pack states", () => {
     expect(del?.evidence.some((e) => e.weight === "supporting")).toBe(true);
   });
 
-  test("a ticket whose goal is a defect fix selects pack-test by rule bug-fix", () => {
-    const ticket = (goal: string) =>
-      JSON.stringify({ schema: "ticket", type: "implementation", goal, write_ownership: { paths: [], interfaces: [] } });
-    const ctx = ctxFor({ "work/fix.json": ticket("fix the regression in invoice totals"), "work/add.json": ticket("add an export button") });
-    const fix = attach(ctx, "work/fix.json").selections.find((s) => s.pack === "pack-test");
-    expect(fix?.matchedRules).toEqual(["bug-fix"]);
-    expect(packs(attach(ctx, "work/add.json"))).not.toContain("pack-test");
+  test("a goal that says fix does not select pack-test by itself", () => {
+    const ticket = JSON.stringify({
+      schema: "ticket",
+      type: "implementation",
+      goal: "fix typo in README",
+      write_ownership: { paths: [], interfaces: [] },
+    });
+    const ctx = ctxFor({ "work/typo.json": ticket });
+    expect(packs(attach(ctx, "work/typo.json"))).not.toContain("pack-test");
   });
 
   test("the printed result names the matched rules", () => {

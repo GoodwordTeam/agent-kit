@@ -58,6 +58,10 @@ export const SEMANTIC_ONLY_RULES: Readonly<Record<string, Readonly<Record<string
   "pack-secure": {
     "untrusted-input-sink": "whether untrusted data reaches a sink is data flow across code, not a pattern in one file",
   },
+  "pack-test": {
+    "bug-fix":
+      "the rule needs the fix and the reported defect it answers; a goal saying fix, bug or regression establishes neither, where a removal goal states the removal itself",
+  },
 };
 
 const SOURCE_FILE = String.raw`\.(ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|swift|scala|c|cc|cpp|h|hpp|cs|php|ex|exs)$`;
@@ -389,14 +393,6 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         weight: "sufficient",
         note: "source file: new or changed behavior needs named verification",
         rules: ["behavior-change"],
-      },
-      {
-        kind: "field-regex",
-        pattern: "goal",
-        value: String.raw`\b(fix|fixes|fixed|bug|defect|regression)\b`,
-        weight: "sufficient",
-        note: "artifact goal is a defect fix",
-        rules: ["bug-fix"],
       },
     ],
   },
