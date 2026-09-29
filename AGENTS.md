@@ -173,6 +173,8 @@ supplies wrongly if it is left out. Real constraints are set per project, and ex
 bun test                 # validator, selector and packager units, incl. invalid-case fixtures
 bun run ak validate      # catalog complete, schemas valid, links closed, no denylist hits
 bun run ak build         # the packager runs on this tree and writes dist/ for every host
+bun run lint             # oxlint through the ratchet: no violation beyond tools/oxlint/baseline.json
+bun run fmt:check        # oxfmt: code and JSON formatted; `bun run fmt` fixes it
 ```
 
 **The third line is `ak build`, not `ak build --check`, and restoring `--check` here would undo a
@@ -190,11 +192,29 @@ that nothing else in this block reaches. `--check` has a real job in the release
 `dist/` has just been built on purpose and the question is whether it matches; that is where it
 belongs.
 
-These three lines are a gate, not a report. The condition is that `ak build` exits 0 on a clean
+These lines are a gate, not a report. The condition is that `ak build` exits 0 on a clean
 `git archive` extract of the commit with `.donors/` copied in, writing `dist/claude-code` and
 `dist/codex`; how many errors some tree reports today is a figure about that tree and not evidence
 about the gate, so no count is kept here. `tools/hooks/pre-push` runs the same build against the
 exact commit being published, so a red build is refused at the wire rather than caught in review.
+
+## Lint and format
+
+After editing code, run `bun run fmt`, then `bun run lint`. The lint output is one line per
+violation, with the rule and a fix instruction. Fix the code. Don't add a cast, a `!`, or a
+disable comment just to quiet a rule; those are what the rules exist to catch.
+
+Every rule in `.oxlintrc.json` is an error. The violations that predate a rule are recorded per
+file and rule in `tools/oxlint/baseline.json`, and that file only shrinks. A count above the
+baseline fails. A count below it also fails until you record it with `bun run lint:baseline`,
+because a slot left unrecorded would be spent by the next change. Growth is refused unless
+`--allow-growth` is passed, which is only for adopting a new rule, and the baseline diff is what
+the reviewer reads.
+
+oxfmt owns whitespace, so anti-slop's `require-readable-spacing` is off. Markdown, YAML,
+fixtures, donor material and recorded eval evidence are never formatted (`.oxfmtrc.json`
+`ignorePatterns`). `tools/oxlint/anti-slop/` is vendored upstream code: update it from upstream
+as its `UPSTREAM.md` describes, and never edit it in place.
 
 ## Receipts name their instrument
 
@@ -202,8 +222,8 @@ A receipt that reports a check without naming what it ran the check *with* is no
 Measured on `origin/main` at `4e45481`: of the 9 commits whose message carries an `ak validate:`
 figure, 7 say nothing about the tree that figure came from, `ae061b2` names the donor half only,
 and `8798873` names its instrument outright — so the practice below is the exception becoming the
-rule, not a new obligation. The three lines above behave differently depending on how the tree was
-obtained, which is why the instrument is part of the result:
+rule, not a new obligation. The first three lines above behave differently depending on how the
+tree was obtained, which is why the instrument is part of the result:
 
 | Instrument | What it reports |
 |---|---|

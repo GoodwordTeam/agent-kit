@@ -10,9 +10,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { lint, readBaseline } from "../tools/oxlint/ratchet.ts";
 
 const REPO = resolve(import.meta.dir, "..");
 const RATCHET = join(REPO, "tools", "oxlint", "ratchet.ts");
@@ -34,7 +35,9 @@ function ratchet(root: string, ...flags: string[]) {
   return { status: run.status, out: `${run.stdout}${run.stderr}` };
 }
 
-const baseline = (root: string) => JSON.parse(readFileSync(join(root, "tools/oxlint/baseline.json"), "utf8"));
+/** The recorded baseline, read through the ratchet's own schema-checked parser. */
+const baseline = (root: string) =>
+  Object.fromEntries([...readBaseline(root)].map(([file, rules]) => [file, Object.fromEntries(rules)]));
 
 describe("lint ratchet", () => {
   test("a violation the baseline does not record fails, naming the file and line", () => {
@@ -114,8 +117,7 @@ describe("the repository's tool configs", () => {
     symlinkSync(join(REPO, "tools", "oxlint", "anti-slop"), join(root, "tools", "oxlint", "anti-slop"));
     // Type-aware rules look for tsgolint under the linted tree's own node_modules.
     symlinkSync(join(REPO, "node_modules"), join(root, "node_modules"));
-    const run = spawnSync(join(BIN, "oxlint"), ["--format=json", "src"], { cwd: root, encoding: "utf8" });
-    const codes = JSON.parse(run.stdout).diagnostics.map((d: { code: string }) => d.code);
+    const codes = lint(root, ["src"]).map((d) => d.rule);
     expect(codes).toContain("anti-slop(no-chained-type-assertions)");
   });
 });
