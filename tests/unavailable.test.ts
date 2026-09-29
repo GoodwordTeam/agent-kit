@@ -242,6 +242,9 @@ describe("every skip in the validator is classified, so a new one cannot default
     // missing is the vocabulary they are measured against. A row check whose
     // subject had gone missing would stay out of this table entirely.
     "rulings.discharge-vocabulary-unavailable": ["unavailable"],
+    // The same shape again: the profiles' capability lists are in the tree, and
+    // the vocabulary they are measured against is what could not be read.
+    "profile.capability-vocabulary-unavailable": ["unavailable"],
     // Both, and which one depends on whether any open entry went unexamined.
     "defects.contract-unreadable": ["skipped", "unavailable"],
   };

@@ -64,10 +64,11 @@ includes:
 
   capabilities:
     required: [repository-read, repository-write, artifact-write, process-exec]
-    commonly_added: [isolated-worktree, kb-read, kb-write, tracker-access, skill-source-write]
+    commonly_added: [isolated-worktree, kb-read, kb-write, tracker-access]
     note: >-
       `writing-skills` is the only skill in this package that writes skill source. That is a
-      distinct side effect (`skill-source-write`) precisely so a host can withhold it.
+      distinct side effect (`skill-source-write`), not a capability, precisely so a host can
+      withhold it.
 
 prerequisites:
   - compound-refresh needs an existing lesson corpus with provenance to refresh

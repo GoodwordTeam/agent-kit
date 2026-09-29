@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
-import { checkCatalogRules, checkPackManifests, checkSkillManifests } from "../src/validation/configrules.ts";
+import {
+  checkCatalogRules,
+  checkPackManifests,
+  checkProfileCapabilities,
+  checkSkillManifests,
+} from "../src/validation/configrules.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -289,5 +294,65 @@ describe("a manifest that will not parse", () => {
     expect(rulesOf(issues)).toEqual(["pack.activation-requires-artifact-and-semantics"]);
     expect(issues[0]?.file).toBe("packs/pack-secure/pack.yaml");
     carriesTheReason(issues[0]?.message);
+  });
+});
+
+describe("profile capabilities", () => {
+  const catalog = `${HEAD}profiles:
+  - id: core
+    status: contract
+    default: true
+  - id: maintainer
+    status: contract
+`;
+  const COMMON = JSON.stringify({
+    $defs: { capability: { enum: ["repository-read", "repository-write", "artifact-write", "kb-write"] } },
+  });
+  const profile = (required: string, added: string) =>
+    `id: maintainer\nincludes:\n  capabilities:\n    required: [${required}]\n    commonly_added: [${added}]\n    note: prose, not ids\n`;
+
+  test("a side-effect id under commonly_added is an error against that profile", () => {
+    const issues = checkProfileCapabilities(
+      ctxFor({
+        "catalog.yaml": catalog,
+        "schemas/common.schema.json": COMMON,
+        "profiles/core.yaml": profile("repository-read", "kb-write"),
+        "profiles/maintainer.yaml": profile("repository-read, artifact-write", "kb-write, skill-source-write"),
+      }),
+    );
+    expect(issues.map((i) => [i.rule, i.severity, i.file])).toEqual([
+      ["profile.unknown-capability", "error", "profiles/maintainer.yaml"],
+    ]);
+    expect(issues[0]?.message).toContain("commonly_added lists skill-source-write");
+  });
+
+  test("an unknown id under required is an error too", () => {
+    const issues = checkProfileCapabilities(
+      ctxFor({
+        "catalog.yaml": catalog,
+        "schemas/common.schema.json": COMMON,
+        "profiles/core.yaml": profile("repository-read, disk-write", "kb-write"),
+      }),
+    );
+    expect(issues.map((i) => i.message)).toEqual([expect.stringContaining("required lists disk-write")]);
+  });
+
+  test("profiles listing only capabilities pass", () => {
+    const issues = checkProfileCapabilities(
+      ctxFor({
+        "catalog.yaml": catalog,
+        "schemas/common.schema.json": COMMON,
+        "profiles/core.yaml": profile("repository-read", "kb-write"),
+        "profiles/maintainer.yaml": profile("repository-read, artifact-write", "repository-write"),
+      }),
+    );
+    expect(issues).toEqual([]);
+  });
+
+  test("with no readable capability vocabulary the lists are unexamined, and that blocks", () => {
+    const issues = checkProfileCapabilities(
+      ctxFor({ "catalog.yaml": catalog, "profiles/core.yaml": profile("repository-read", "skill-source-write") }),
+    );
+    expect(issues.map((i) => [i.rule, i.blocking])).toEqual([["profile.capability-vocabulary-unavailable", true]]);
   });
 });

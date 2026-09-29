@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { CheckContext } from "./context.ts";
-import { error, warning, type Issue } from "./types.ts";
+import { error, unavailable, warning, type Issue } from "./types.ts";
 import { loadArtifacts } from "./artifacts.ts";
 import { readTextIfPresent } from "../util/fs.ts";
 
@@ -105,6 +105,81 @@ export function checkCatalogRules(ctx: CheckContext): Issue[] {
     }
   }
 
+  return issues;
+}
+
+/** The keys of a profile's `includes.capabilities` that list capability ids; `note` is prose. */
+const PROFILE_CAPABILITY_LISTS = ["required", "commonly_added", "optional"] as const;
+
+/** `$defs/capability` from schemas/common.schema.json, or null when it cannot be read. */
+function capabilityVocabulary(root: string): Set<string> | null {
+  const text = readTextIfPresent(join(root, "schemas/common.schema.json"));
+  if (text === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const members = arr(obj(obj(obj(parsed)?.["$defs"])?.["capability"])?.["enum"])
+    .map(str)
+    .filter((value): value is string => value !== null);
+  return members.length === 0 ? null : new Set(members);
+}
+
+/**
+ * Every id a profile lists as a capability is a host capability.
+ *
+ * A profile is what an installer reads to decide what the host must supply, so
+ * a side-effect id there (`skill-source-write` was one) asks the host for a
+ * capability no adapter contract defines and no skill's `requires` can name.
+ * No schema is applied to profiles/, so the vocabulary is read from common
+ * rather than restated. Unreadable while a profile lists capabilities, the
+ * lists are present and unexamined, which blocks like
+ * rulings.discharge-vocabulary-unavailable does.
+ */
+export function checkProfileCapabilities(ctx: CheckContext): Issue[] {
+  const issues: Issue[] = [];
+  const vocabulary = capabilityVocabulary(ctx.root);
+  const unexamined: string[] = [];
+
+  for (const profile of ctx.catalog.bySection("profiles")) {
+    const file = `profiles/${profile.id}.yaml`;
+    const manifest = readManifest(ctx, file, "profile.unknown-capability", issues);
+    if (manifest === null) continue;
+    const capabilities = obj(obj(manifest.doc["includes"])?.["capabilities"]);
+    if (capabilities === null) continue;
+    for (const list of PROFILE_CAPABILITY_LISTS) {
+      for (const value of arr(capabilities[list])) {
+        const id = str(value);
+        if (id === null) continue;
+        if (vocabulary === null) {
+          if (!unexamined.includes(file)) unexamined.push(file);
+          continue;
+        }
+        if (!vocabulary.has(id)) {
+          issues.push(
+            error(
+              "profile.unknown-capability",
+              file,
+              `includes.capabilities.${list} lists ${id}, which is not in schemas/common.schema.json#/$defs/capability; a host is asked to supply only capabilities, never a side effect or a free-form name`,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  if (unexamined.length > 0) {
+    issues.push(
+      unavailable(
+        "profile.capability-vocabulary-unavailable",
+        "schemas/common.schema.json",
+        "profile capabilities",
+        `schemas/common.schema.json has no readable $defs/capability enum, so the capability lists in ${unexamined.join(", ")} were not checked.`,
+      ),
+    );
+  }
   return issues;
 }
 
