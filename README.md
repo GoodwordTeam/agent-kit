@@ -85,7 +85,8 @@ Shared phase logic, invoked by skills rather than by humans:
 ### Roles (34)
 
 4 core (`supervisor`, `implementer`, `reviewer-spec`, `reviewer-standards`) · 15 code-review ·
-7 doc-review · 3 plan-review (`planner`, `architect`, `critic`).
+7 doc-review · 3 plan-review (`planner`, `architect`, `critic`) · 5 learn (`learn/pattern-maintainer`,
+`learn/reflector`, `learn/consolidator`, `learn/lesson-merger`, `learn/skill-scout`).
 
 ### References (5)
 

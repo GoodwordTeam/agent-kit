@@ -214,6 +214,7 @@ export function readRecords(dir: string, run: string, gate: Gate): GateRecord[] 
       g.schema === "lifecycle-gate" &&
       g.run_id === run &&
       g.gate === gate &&
+      typeof g.recorded_at === "string" &&
       typeof g.snapshot?.revision === "string" &&
       typeof g.snapshot?.diff_hash === "string"
     ) {

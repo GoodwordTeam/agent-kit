@@ -110,6 +110,22 @@ describe("ak lifecycle check, standalone", () => {
     }
   });
 
+  test("a record without a recorded time is ignored, not trusted and not fatal", () => {
+    const dir = repo();
+    record(dir, ...PRE_SHIP_GATES);
+    const evidence = join(defaultEvidenceDir(dir), "feature", "verify");
+    const [file] = readdirSync(evidence).filter((name) => name.endsWith(".json"));
+    const good = JSON.parse(readFileSync(join(evidence, file!), "utf8")) as Partial<GateRecord>;
+    delete good.recorded_at;
+    writeFileSync(join(evidence, "zz-foreign.json"), `${JSON.stringify(good, null, 2)}\n`);
+    expect(ak(dir, "check").code).toBe(0);
+
+    writeFileSync(join(evidence, file!), `${JSON.stringify(good, null, 2)}\n`);
+    const r = ak(dir, "check");
+    expect(r.code).toBe(1);
+    expect(r.err).toContain("refused: gate verify has no current evidence (no record for run feature");
+  });
+
   test("a fix cycle passes with verify again and a delta review, and fails without the delta", () => {
     const dir = repo();
     record(dir, "build-checks", "verify", "review-full");
