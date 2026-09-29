@@ -359,7 +359,9 @@ An output is one of two durable classes, and `outputs[]` says which. A run artif
 because a curated page is not a schema-bound record. `schemas/skill.schema.json` enforces the pairing
 and the nine. It cannot tell that an untagged output is a page, so an output whose `## Outputs`
 prose publishes a `kb-document` placement is tagged by its author. Whether the kind is one ADR-0001
-§3 assigns to that skill is checked by nothing: the table is prose.
+§3 assigns to that skill is checked by nothing: the table is prose. ADR-0001 §3 also assigns a kind
+to compound, compound-refresh, diagnose, bakeoff and super-review that no output of theirs publishes
+today.
 
 The `description` is the activation surface. It carries the trigger and at least one explicit
 non-trigger clause, because on a host that cannot suppress model invocation the description is the
