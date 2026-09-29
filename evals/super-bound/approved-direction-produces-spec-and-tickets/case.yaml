@@ -16,6 +16,7 @@ graders:
     weight: 1
     criteria: >-
       The response produces a decision-level specification naming its test seams, has it reviewed
-      before tickets are cut, takes the specification approval against a stated artifact hash, and
-      then emits tickets that each carry the interfaces they consume and produce, their owned
-      files, acceptance criteria and a command that verifies them.
+      before tickets are cut, takes the specification approval against the specification's own
+      hash (specification_hash) rather than the whole plan's, and then emits tickets that each
+      carry the interfaces they consume and produce, their owned files, acceptance criteria and a
+      command that verifies them.
