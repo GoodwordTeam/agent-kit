@@ -93,7 +93,7 @@ schemas:
       reason: >-
         Run-record schemas the skill bodies already require, added in the follow-ups plan decision
         "Add real schemas".
-      commits: [24d8953]
+      commits: [09dd58d]
 
 profiles:
   baseline: 4
