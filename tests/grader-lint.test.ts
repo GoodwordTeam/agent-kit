@@ -145,6 +145,7 @@ describe("actionClaim", () => {
     // What a reporting verb introduces is what the reply says.
     "It explains that the record is not written by hand.",
     "It tells them that the branch is not merged.",
+    "It notes that the key matches and states that the comment is not posted again.",
   ])("does not flag %p", (criteria) => {
     expect(actionClaim(criteria)).toBeNull();
   });

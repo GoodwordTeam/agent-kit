@@ -205,7 +205,7 @@ export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
  * reads the second claim.
  */
 const REPORTED =
-  /\b(?:explains|says|states|notes|reports|tells\s+\w+)(?:\s+\w+ly)?\s+that\b.*?(?=,?\s+(?:and|then|so|but)\s|;|$)/i;
+  /\b(?:explains|says|states|notes|reports|tells\s+\w+)(?:\s+\w+ly)?\s+that\b.*?(?=,?\s+(?:and|then|so|but)\s|;|$)/gi;
 
 function unreported(sentence: string): string {
   return sentence.replace(REPORTED, "");
