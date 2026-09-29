@@ -123,9 +123,9 @@ Gate: every text written to the tracker opens with the disclaimer line.
 
 ## Side effects
 
-`external-fetch`, `process-exec`, `scratch-write`, `tracker-write`, `artifact-write`.
-`external-fetch` fetches a pull request's ref through the optional `vcs-remote`; without it that
-item stops with `needs-input`. No `workspace-write`: verification runs in a scratch worktree.
+`external-fetch`, `process-exec`, `scratch-write`, `tracker-write`, `artifact-write`. The fetch
+is a pull request's ref, through the optional `vcs-remote`; without it that item is not verified
+and stops with `needs-input`. No `workspace-write`: verification runs in a scratch worktree.
 
 `tracker-write` is a remote side effect. The idempotency key for each write derives from the run,
 the operation, the item's stable remote identity and the artifact's hash; the read-back is the

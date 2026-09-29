@@ -31,8 +31,8 @@ prerequisites:
     ref: The repository, for the redundancy check and for verifying the claim.
   - kind: capability
     ref: >-
-      vcs-remote, to fetch a pull request's ref for verification; without it a pull request cannot
-      be verified and the run stops with needs-input for it
+      vcs-remote, to fetch a pull request's ref for verification; without it that pull request
+      cannot be verified and that item stops with needs-input
     optional: true
 
 entrypoints:
