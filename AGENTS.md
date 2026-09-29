@@ -212,9 +212,14 @@ Every rule in `.oxlintrc.json` is an error. The violations that predate a rule a
 file and rule in `tools/oxlint/baseline.json`, and that file only shrinks. A count above the
 baseline fails. A count below it also fails until you record it with `bun run lint:baseline`,
 because a slot left unrecorded would be spent by the next change. Growth is refused unless
-`--allow-growth` is passed, which is only for adopting a new rule, and the baseline diff is what
-the reviewer reads. The ratchet counts per file and rule, so fixing one violation while adding
-another of the same rule in the same file leaves the count unchanged and passes.
+`--allow-growth` is passed, and the baseline diff is what the reviewer reads. The flag has two
+uses. Adopting a new rule: the diff adds that rule's counts and nothing else. Moving or renaming a
+file that has recorded violations: the baseline is keyed by path, so the new path reads as growth
+even though nothing grew, and `bun run lint:baseline -- --allow-growth` is how the entries follow
+the file. The reviewer checks that the counts moved with the file, with the old path removed and
+the new path added carrying the same counts, rather than any count rising. The ratchet counts per
+file and rule, so fixing one violation while adding another of the same rule in the same file
+leaves the count unchanged and passes.
 
 oxfmt owns whitespace, so anti-slop's `require-readable-spacing` is off. Markdown, YAML,
 fixtures, donor material, recorded eval evidence and the eval inputs that receipts pin by sha256
