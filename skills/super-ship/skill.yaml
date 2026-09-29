@@ -105,10 +105,10 @@ outputs:
       A run artifact with envelope schema ship-evidence holding three parts. The pull-request
       payload: title, description, linked ticket, the receipts and verdict it rests on, and the
       branch it would be opened from; in dry-run the record holds this payload and the pre-flight
-      record, and no remote effect. The pre-flight record: the sensitive-data scan, the dependency-audit triage and each
-      project release check, with its outcome against this head and a reason wherever it did not
-      run. The ship record: which remote effects were performed, the idempotency key each carried,
-      and the read-back result before and after.
+      record, and no remote effect. The pre-flight record: the sensitive-data scan, the
+      dependency-audit triage and each project release check, with its outcome against this head and
+      a reason wherever it did not run. The ship record: which remote effects were performed, the
+      idempotency key each carried, and the read-back result before and after.
   - id: declined-actions
     schema: decision
     summary: >-

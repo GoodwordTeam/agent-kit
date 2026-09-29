@@ -9,12 +9,13 @@ import { compileSchemas } from "../src/validation/schemas.ts";
 /**
  * The run records that ADR-0001 §3 assigned without a schema: the handoff
  * record, the evaluation record `bakeoff` and `prototype` share, the `wayfind`
- * map, and later the plan record, ship evidence and run ledger. Without an id in `common#/$defs/schema_id` none of them
- * could pass `publishArtifact`, which refuses an artifact that fails its own
- * schema before any write, so a skill that published one could never reach
- * `complete`. Each case below is a shipped example under templates/ plus the
- * one thing under test, exercised against the shipped schema rather than a
- * synthetic stand-in, so a rejection names the branch and not the fixture.
+ * map, and later the plan record, ship evidence and run ledger. Without an id in
+ * `common#/$defs/schema_id` none of them could pass `publishArtifact`, which
+ * refuses an artifact that fails its own schema before any write, so a skill
+ * that published one could never reach `complete`. Each case below is a
+ * shipped example under templates/ plus the one thing under test, exercised
+ * against the shipped schema rather than a synthetic stand-in, so a rejection
+ * names the branch and not the fixture.
  *
  * The last block holds the lists that must name the same ids: the enum, the
  * catalog and the schema files themselves. That disagreement is how the defect
