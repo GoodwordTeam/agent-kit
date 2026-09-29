@@ -1307,17 +1307,28 @@ The same trap holds for a claim about an action: "the run does not publish it a 
 passed by a run that republished and said it had not. `ak validate` raises
 `evals.llm-action-claim-without-focus` from the same function on an `llm` grader with no `focus`
 whose `criteria` contain one sentence in which a negation or a count governs an action verb
-(publish, post, reply, push, merge, reopen, create, commit, delete, write, call, run, execute,
-start, dispatch, send, cut, record, deploy, invoke, and "opened" as a participle). The shapes are
+(publish, post, reply, push, merge, open, close, resolve, create, commit, delete, write, call, run,
+execute, start, dispatch, send, cut, record, deploy, invoke). The shapes are
 a negated auxiliary ("does not publish", "won't merge", "cannot publish"), a bare "never" before a
 third-person verb ("never publishes"), a negated passive ("is not posted"), a clause opening with
-"no", "nothing", "only one" or "at most one" ("only one pull request is created"), a count after a
+"no", "nothing", "only one" or "at most one" ("only one pull request is created"), a repeat named
+outright ("no second pull request appears", "no duplicate record is produced"), a count after a
 governed verb ("is published at most once", "will post it again"), and "rather than" before a
 repeat ("rather than publishing a second page"). A count needs the verb governed, because record,
-reply, run, commit, call and post are nouns too: "cites the run once" is not a claim. Past tense is
-not read, because in criteria it describes the premise ("the seats it did not run"), not what the
-run must do, and idioms are not the action ("call it a regression", "cut corners", "write off",
-"start with", "record opinions as findings").
+reply, run, commit, call and post are nouns too: "cites the run once" is not a claim. A count also
+ends its clause, so "once the checks finish" and "again in its explanation" are not counts. Past
+tense is not read, because in criteria it describes the premise ("the seats it did not run"), not
+what the run must do. Idioms are not the action, and each is cut as narrowly as it is written:
+"call it a regression" but not "call them a second time", "write off the failure" but not "write
+off-by-one guards", "start with" but not "start by", "record opinions as findings" but not "record
+the finding as fixed", and "never runs through" or "never pushes back", where the particle changes
+the verb only in its active forms ("is not run through CI" is still a claim). What follows a
+reporting verb ("explains that", "states that") is what the reply says, and is not read.
+
+Each narrowing trades a false positive for a false negative, and the trade is written down here so
+it is made on purpose. A count mid-clause is lost ("posts it again to the thread" is not caught),
+and so is a real claim a criterion puts after "states that". Both are rarer in the corpus than the
+readings they remove, and an unflagged claim is still the author's to aim.
 
 Split a grader that mixes an action with reasoning or with what the reply says. The resumability
 cases are where this matters most: every one claims the resumed run reads the target back and does

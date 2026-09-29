@@ -35,16 +35,19 @@
  * a third-person verb ("never publishes"), a negated present passive ("is not
  * published"), a clause opening with "no", "nothing", "only one" or "at most
  * one" whose own verb is the passive ("only one pull request is created"), a
- * count after a governed verb ("is published at most once", "will post it
- * again"), and "rather than" before a repeat ("rather than publishing a second
- * page"). Governed means after an auxiliary or a passive, or a third-person
- * form that is not also a noun, so "cites the run once" and "names the reply
- * again" are not counts. Past tense is left out, because in criteria it
- * describes the premise ("the seats it did not run") rather than what the run
- * must do; bare "open" is left out because "does not open with a theory" is
- * about the reply; and each verb's idioms are cut out where it is written
- * ("call it a regression", "cut corners", "write off", "start with", "record
- * opinions as findings").
+ * repeat named outright ("no second pull request appears"), a count after a
+ * governed verb ("is published at most once", "will post it again"), and
+ * "rather than" before a repeat ("rather than publishing a second page").
+ * Governed means after an auxiliary or a passive, or a third-person form that
+ * is not also a noun, so "cites the run once" and "names the reply again" are
+ * not counts; and a count ends its clause, so "once the checks finish" is not
+ * one. Past tense is left out, because in criteria it describes the premise
+ * ("the seats it did not run") rather than what the run must do. Each verb's
+ * idioms and phrasal particles are cut out where it is written ("open with",
+ * "call it a regression", "write off", "record opinions as", "runs through",
+ * "pushes back"), and what follows a reporting verb ("explains that") is what
+ * the reply says, so it is not read. Each cut costs a false negative, which
+ * AUTHORING.md §9 names.
  */
 
 import { join } from "node:path";
@@ -84,8 +87,9 @@ export function fileClaim(criteria: string): string | null {
  * participle. `noun` marks a verb whose base and third-person forms are also
  * nouns ("the record", "the run", "a reply"), so they count only where an
  * auxiliary or a passive governs them. An idiom that is not the action is cut
- * out by a lookahead on every form: "call it a regression", "cut corners",
- * "write off", "start with", "record opinions as findings".
+ * out by a lookahead on every form (`not`): "call it a regression", "cut
+ * corners", "write off", "start with", "record opinions as findings". A
+ * phrasal particle is cut from the active forms only (`phrasal`).
  */
 interface ActionVerb {
   readonly base: string;
@@ -95,9 +99,20 @@ interface ActionVerb {
   readonly noun?: boolean;
 }
 
-function verb(forms: [string, string, string, string], opts: { noun?: boolean; not?: string } = {}): ActionVerb {
+function verb(
+  forms: [string, string, string, string],
+  opts: { noun?: boolean; not?: string; phrasal?: string } = {},
+): ActionVerb {
   const not = opts.not === undefined ? "" : `(?!${opts.not})`;
-  const [base, third, ing, participle] = forms.map((f) => `${f}\\b${not}`) as [string, string, string, string];
+  // A phrasal particle changes the verb only in its active forms: "never runs
+  // through the checklist" is not a run, but "is not run through CI" is.
+  const phrasal = opts.phrasal === undefined ? "" : `(?!${opts.phrasal})`;
+  const [base, third, ing, participle] = forms.map((f, i) => `${f}\\b${not}${i < 3 ? phrasal : ""}`) as [
+    string,
+    string,
+    string,
+    string,
+  ];
   return { base, third, ing, participle, ...(opts.noun === true ? { noun: true } : {}) };
 }
 
@@ -107,22 +122,28 @@ const ACTION_VERBS: ReadonlyArray<ActionVerb> = [
   verb([`${RE}publish`, `${RE}publishes`, `${RE}publishing`, `${RE}published`]),
   verb(["post", "posts", "posting", "posted"], { noun: true }),
   verb(["reply", "replies", "replying", "replied"], { noun: true }),
-  verb(["(?:force-)?push", "(?:force-)?pushes", "(?:force-)?pushing", "(?:force-)?pushed"]),
+  verb(["(?:force-)?push", "(?:force-)?pushes", "(?:force-)?pushing", "(?:force-)?pushed"], { phrasal: String.raw`\s+back\b` }),
   verb(["merge", "merges", "merging", "merged"]),
-  // Bare "open" is left out: "does not open with a theory" is about the reply.
-  verb(["re-?open", "re-?opens", "re-?opening", `${RE}opened`]),
+  // "open with" is left out: "does not open with a theory" is about the reply.
+  verb([`${RE}open`, `${RE}opens`, `${RE}opening`, `${RE}opened`], { not: String.raw`\s+with\b` }),
+  verb([`${RE}close`, `${RE}closes`, `${RE}closing`, `${RE}closed`]),
+  verb(["resolve", "resolves", "resolving", "resolved"]),
   verb([`${RE}create`, `${RE}creates`, `${RE}creating`, `${RE}created`]),
   verb(["commit", "commits", "committing", "committed"], { noun: true }),
   verb(["delete", "deletes", "deleting", "deleted"]),
-  verb([`${RE}write`, `${RE}writes`, `${RE}writing`, `${RE}written`], { not: String.raw`\s+off\b` }),
-  verb(["call", "calls", "calling", "called"], { noun: true, not: String.raw`\s+(?:it|them|this|that)\b` }),
-  verb([`${RE}run`, `${RE}runs`, `${RE}running`, `${RE}run`], { noun: true }),
+  verb([`${RE}write`, `${RE}writes`, `${RE}writing`, `${RE}written`], { not: String.raw`\s+off\b(?!-)` }),
+  verb(["call", "calls", "calling", "called"], {
+    noun: true,
+    // "call it a regression" names a thing; "call them a second time" is a call.
+    not: String.raw`\s+(?:it|them|this|that)\s+(?:an?|the)\s+(?!second\b|third\b)`,
+  }),
+  verb([`${RE}run`, `${RE}runs`, `${RE}running`, `${RE}run`], { noun: true, phrasal: String.raw`\s+(?:through|over|across|into)\b` }),
   verb([`${RE}execute`, `${RE}executes`, `${RE}executing`, `${RE}executed`]),
-  verb([`${RE}start`, `${RE}starts`, `${RE}starting`, `${RE}started`], { not: String.raw`\s+(?:with|by)\b` }),
+  verb([`${RE}start`, `${RE}starts`, `${RE}starting`, `${RE}started`], { not: String.raw`\s+with\b` }),
   verb([`${RE}dispatch`, `${RE}dispatches`, `${RE}dispatching`, `${RE}dispatched`]),
   verb([`${RE}send`, `${RE}sends`, `${RE}sending`, `${RE}sent`]),
   verb(["cut", "cuts", "cutting", "cut"], { not: String.raw`\s+corners\b` }),
-  verb(["record", "records", "recording", "recorded"], { noun: true, not: String.raw`(?:\s+[\w-]+){0,3}\s+as\b` }),
+  verb(["record", "records", "recording", "recorded"], { noun: true, not: String.raw`\s+opinions\s+as\b` }),
   verb(["deploy", "deploys", "deploying", "deployed"]),
   verb(["invoke", "invokes", "invoking", "invoked"]),
 ];
@@ -139,7 +160,9 @@ const ADVERB = String.raw`(?:\w+ly\s+)?`;
 const AUX = String.raw`(?:does|do|will|must|should|may|can|shall|would)`;
 const NEGATED_AUX = String.raw`(?:${AUX}(?:\s+(?:not|never)|n't)|cannot|won't|shan't)`;
 const PASSIVE = String.raw`(?:is|are|be|been|gets?)`;
-const COUNT = String.raw`(?:at most once|exactly once|only once|once|twice|a second time|again)`;
+// A count ends its clause, so the conjunction in "once the checks finish" and
+// the adverb in "again in its explanation" are not counts.
+const COUNT = String.raw`(?:at most once|exactly once|only once|once|twice|a second time|again)(?=\s*(?:[.,;:)]|$|\s(?:and|but|or)\b))`;
 
 /** The shapes of an action claim; any one in a sentence makes it one. */
 export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
@@ -159,7 +182,13 @@ export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
   // "is published at most once", "will post it again", "publishes it twice":
   // the verb must be governed, so "cites the run once" is not a count.
   new RegExp(
-    String.raw`\b(?:${AUX}(?:\s+(?:not|never)|n't)?\s+${ADVERB}${BASE}|${PASSIVE}\s+${ADVERB}${PARTICIPLE}|${VERBAL_THIRD})(?:\s+[\w-]+){0,4}?\s+${COUNT}\b`,
+    String.raw`\b(?:${AUX}(?:\s+(?:not|never)|n't)?\s+${ADVERB}${BASE}|${PASSIVE}\s+${ADVERB}${PARTICIPLE}|${VERBAL_THIRD})(?:\s+[\w-]+){0,4}?\s+${COUNT}`,
+    "i",
+  ),
+  // "No second pull request appears", "no duplicate record is produced": a
+  // repeat named outright takes any participle or a verb of existence.
+  new RegExp(
+    String.raw`(?:^|[,;:]\s*(?:and\s+|but\s+)?|\b(?:and|but)\s+)no\s+(?:second|duplicate)\b(?:\s+[\w-]+){0,3}?\s+(?:appears?|exists?|(?:is|are|gets?)\s+${ADVERB}\w+(?:ed|en)\b)`,
     "i",
   ),
   // "rather than publishing a second page", "rather than cutting another".
@@ -168,10 +197,21 @@ export const ACTION_CLAIM: ReadonlyArray<RegExp> = [
   new RegExp(String.raw`\brather than\s+${ADVERB}${ING}(?:\s+[\w-]+){0,3}?\s+(?:a second|another|again|twice)\b`, "i"),
 ];
 
+/**
+ * A sentence without the clause a reporting verb introduces: in "it explains
+ * that the record is not written by hand", what follows "explains that" is
+ * what the reply says, not what the run does.
+ */
+const REPORTED = /\b(?:explains|says|states|notes|reports|tells\s+\w+)(?:\s+\w+ly)?\s+that\b.*$/i;
+
+function unreported(sentence: string): string {
+  return sentence.replace(REPORTED, "");
+}
+
 /** The first sentence of `criteria` that makes an action claim, or null. */
 export function actionClaim(criteria: string): string | null {
   for (const sentence of sentences(criteria)) {
-    if (ACTION_CLAIM.some((shape) => shape.test(sentence))) return sentence;
+    if (ACTION_CLAIM.some((shape) => shape.test(unreported(sentence)))) return sentence;
   }
   return null;
 }

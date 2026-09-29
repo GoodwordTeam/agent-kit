@@ -86,6 +86,22 @@ describe("actionClaim", () => {
     "The run does not re-open the ticket.",
     "It resumes rather than cutting a second ticket.",
     "It reads the record back rather than publishing a second page.",
+    // "record … as" is an idiom only for opinions.
+    "The case is not recorded as passing.",
+    "The run does not record the finding as fixed.",
+    // Idiom lookaheads that must not swallow the action.
+    "The fix does not write off-by-one guards into the parser.",
+    "The run does not call them a second time.",
+    "The run does not start by pushing the branch.",
+    // open, close and resolve.
+    "It opens the pull request only once.",
+    "The ticket is closed only once.",
+    "The thread is resolved twice.",
+    // A repeat named outright.
+    "No second pull request appears.",
+    "No duplicate record is produced.",
+    // A phrasal particle is cut from the active forms only.
+    "The suite is not run through CI.",
   ])("finds the claim in %p", (criteria) => {
     expect(actionClaim(criteria)).not.toBeNull();
   });
@@ -115,6 +131,14 @@ describe("actionClaim", () => {
     "The response does not write off the failure.",
     // "rather than" with no repeat.
     "Each new finding names what changed, rather than reopening discovery on unrelated issues.",
+    // Phrasal verbs after "never".
+    "It never runs through the checklist.",
+    "It never pushes back on the reviewer.",
+    // A count must end its clause.
+    "It merges the two lists again in its explanation.",
+    "It creates a summary once the checks finish.",
+    // What a reporting verb introduces is what the reply says.
+    "It explains that the record is not written by hand.",
   ])("does not flag %p", (criteria) => {
     expect(actionClaim(criteria)).toBeNull();
   });
