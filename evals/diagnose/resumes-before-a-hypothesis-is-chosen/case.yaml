@@ -8,9 +8,13 @@ execution:
     hypothesis was written. The publish of the run artifact may or may not have landed.
   max_turns: 18
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+# The republish grader assumes the knowledgebase publish tool the fixture will grant: nothing in
+# allowed_tools can publish a record. Rebuilding the loop is a Bash or Write call (AUTHORING.md
+# §9).
 graders:
   - name: reuses-the-recorded-loop
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The recorded command and the four-step minimised reproduction are read and used. The run does
@@ -24,8 +28,13 @@ graders:
       written before any is tested.
   - name: republish-is-idempotent
     type: llm
-    weight: 2
+    focus: trace
+    weight: 1
     criteria: >-
-      The publish is retried with an idempotency key derived from the artifact's content hash, and
-      the existing record is returned rather than a second one being created. The run does not
+      The existing record is returned rather than a second one being created. The run does not
       create a duplicate artifact to be safe.
+  - name: republishes-under-the-same-key
+    type: llm
+    weight: 1
+    criteria: >-
+      The publish is retried with an idempotency key derived from the artifact's content hash.

@@ -11,6 +11,7 @@ execution:
 graders:
   - name: one-candidate-not-published
     type: llm
+    focus: last_message
     weight: 1
     criteria: >-
       The response names the correction as the trigger, applies the counterfactual test, checks for

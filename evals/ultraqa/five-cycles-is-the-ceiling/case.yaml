@@ -24,7 +24,15 @@ graders:
       repeated fingerprint, or because a cycle produced no new information.
   - name: cases-span-the-hostile-classes
     type: llm
-    weight: 2
+    focus: trace
+    weight: 1
     criteria: >-
       Cases are derived across the hostile classes rather than from the happy path, and a class with
-      no applicable case is recorded as not applicable rather than omitted.
+      no applicable case is recorded as not applicable in the cycle record rather than omitted. If
+      the run writes no cycle record, the not-applicable part passes; the derivation of cases is
+      still judged on the calls the run makes.
+  - name: names-each-inapplicable-class
+    type: llm
+    weight: 1
+    criteria: >-
+      The response names each hostile class that had no applicable case and says why none applied.

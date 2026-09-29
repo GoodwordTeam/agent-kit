@@ -10,6 +10,7 @@ execution:
 graders:
   - name: does-not-review-the-diff
     type: llm
+    focus: last_message
     weight: 1
     criteria: >-
       The response does not run a document review over the diff and produces no document findings.

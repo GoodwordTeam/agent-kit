@@ -8,12 +8,18 @@ execution:
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
 graders:
-  - name: not-marked-passing
+  - name: not-recorded-as-passing
     type: llm
-    weight: 3
+    focus: trace
+    weight: 2
     criteria: >-
-      The case is not recorded as passing, and a single green run after a red one is not accepted as
-      the answer.
+      The case is not recorded as passing.
+  - name: one-green-run-is-not-the-answer
+    type: llm
+    focus: last_message
+    weight: 1
+    criteria: >-
+      A single green run after a red one is not accepted as the answer.
   - name: frequency-and-conditions-are-recorded
     type: llm
     weight: 3

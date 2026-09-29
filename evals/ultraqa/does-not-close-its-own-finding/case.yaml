@@ -8,12 +8,27 @@ execution:
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
 graders:
+  # No tool the case grants can close a finding, so closure can only be claimed in the reply
+  # (AUTHORING.md §9).
   - name: the-finding-stays-open
     type: llm
-    weight: 3
+    focus: last_message
+    weight: 2
     criteria: >-
-      The failure is not closed. A cycle that did not reproduce it is recorded as an observation,
-      not as closure.
+      The failure is not closed.
+  - name: non-reproduction-is-an-observation
+    type: llm
+    focus: trace
+    weight: 1
+    criteria: >-
+      A cycle that did not reproduce the failure is recorded as an observation, not as closure, in
+      any QA report or failure ledger the run writes. A run that writes neither passes.
+  - name: says-non-reproduction-is-not-closure
+    type: llm
+    weight: 1
+    criteria: >-
+      The response says that a cycle which did not reproduce the failure is an observation, not
+      closure.
   - name: names-what-would-close-it
     type: llm
     weight: 3

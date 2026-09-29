@@ -1301,17 +1301,68 @@ it. Where the claim is about what the run did, write the deterministic form abov
 trace`; where it is about a file's contents, `focus: {source: file, path}`. `ak validate` raises
 `evals.llm-file-claim-without-focus` (`checkGraderSurfaces` in `src/validation/graders.ts`) on an
 `llm` grader with no `focus` whose `criteria` contain one sentence naming both a filesystem object
-and a write to it. The check is a heuristic with a narrow reach: a claim with no filesystem noun,
-such as "no ticket is cut", is not caught, and aiming it is the author's job. Writing `focus:
-last_message` explicitly clears the check, and is the author's statement that the default was
-chosen.
+and a write to it.
+
+The same trap holds for a claim about an action: "the run does not publish it a second time" is
+passed by a run that republished and said it had not. `ak validate` raises
+`evals.llm-action-claim-without-focus` from the same function on an `llm` grader with no `focus`
+whose `criteria` contain one sentence in which a negation or a count governs an action verb
+(publish, post, reply, push, merge, open, close, resolve, create, commit, delete, write, call, run,
+execute, start, dispatch, send, cut, record, deploy, invoke). The shapes are
+a negated auxiliary ("does not publish", "won't merge", "cannot publish"), a bare "never" before a
+third-person verb ("never publishes"), a negated passive ("is not posted"), a clause opening with
+"no", "nothing", "only one" or "at most one" ("only one pull request is created"), a repeat named
+outright ("no second pull request appears", "no duplicate record is produced"), a count after a
+governed verb ("is published at most once", "will post it again"), and "rather than" before a
+repeat ("rather than publishing a second page"). A count needs the verb governed, because record,
+reply, run, commit, call and post are nouns too: "cites the run once" is not a claim. A count also
+ends its clause, so "once the checks finish" and "again in its explanation" are not counts. Past
+tense is not read, because in criteria it describes the premise ("the seats it did not run"), not
+what the run must do. Idioms are not the action, and each is cut as narrowly as it is written:
+"call it a regression" but not "call them a second time", "write off the failure" but not "write
+off-by-one guards", "start with" but not "start by", "record opinions as findings" but not "record
+the finding as fixed", and "never runs through" or "never pushes back", where the particle changes
+the verb only in its active forms ("is not run through CI" is still a claim). What follows a
+reporting verb ("explains that", "states that") is what the reply says, and is not read; the
+exemption ends at the next conjunction or semicolon, so a claim joined after it ("states that the
+gate is closed, so no ticket is created") is still read.
+
+Each narrowing trades a false positive for a false negative, and the trade is written down here so
+it is made on purpose. A count mid-clause is lost ("posts it again to the thread" is not caught),
+and so is a real claim a criterion puts inside the clause "states that" introduces. Both are rarer in the corpus than the
+readings they remove, and an unflagged claim is still the author's to aim.
+
+Split a grader that mixes an action with reasoning or with what the reply says. The resumability
+cases are where this matters most: every one claims the resumed run reads the target back and does
+not repeat a remote effect, and most also claim how the idempotency key is derived. The read-back
+and the effect are actions; the key derivation is reasoning the reply states, since no tool input
+carries the key. Each goes in its own grader. The action goes in `tool_used` with `max` where the
+tool and its input are knowable from the case (`gh\s+pr\s+create` with `max: 1` on a resumed
+ship), or in an `llm` grader with `focus: trace`; the reasoning and the reply stay on the default
+surface. A split keeps the case's weight: halves sum to the original where integers allow, the
+heavier half on the action (2 becomes 1 and 1, 3 becomes 2 and 1), and a grader of weight 1 becomes
+two of weight 1.
+
+**Which surface an action claim takes is one rule.** `focus: trace` where a tool the case grants
+can perform the action, so the trace can show it happening. In a `needs-fixture` case the tool may
+be one the fixture will grant rather than one `allowed_tools` lists today, such as the
+knowledgebase's publish tool; the case then says so in a comment above `graders:`, naming the tool,
+so the grader's premise is written down where the fixture's author will find it. Where no tool the
+case grants, or its fixture will grant, can perform the action, the action cannot happen outside the
+reply, and the grader declares `focus: last_message`: a review round run inline in a case that
+grants no tool to dispatch one, or a page published in a case with no knowledgebase and no fixture.
+
+Both checks are heuristics with a narrow reach. A claim with no filesystem noun and no governed
+action verb, such as "exactly one ticket exists", is not caught, and aiming it is the author's job.
+Writing `focus: last_message` explicitly clears either check, and is the author's statement that
+the default was chosen.
 
 `tests/grader-lint.test.ts` covers the other direction for the deterministic types. For every
 deterministic grader in `evals/` it builds a transcript the grader must fail, and one it must pass
 where one can be built, and scores both with `evaluate` in `src/validation/grader-eval.ts`, a local
 copy of the host's scoring rules. A grader that no transcript can fail breaks the test. `llm`
 graders are judged by a model, so no local transcript can score them: they are covered by the
-surface check above and not by this test. `baseline` graders are covered by neither.
+surface checks above and not by this test. `baseline` graders are covered by neither.
 
 The field names are **measured against the host**, not derived here. `criteria`, `tool` and
 `pattern` are what `claude plugin eval` accepted at `claude 2.1.278`, loading the built bundle, and

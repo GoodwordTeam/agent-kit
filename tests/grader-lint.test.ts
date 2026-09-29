@@ -4,9 +4,11 @@
  * Two halves, one per kind of grader:
  *
  * - `llm` graders are judged by a model, so no local transcript can score
- *   them. They are covered by the surface lint (`graders.ts`, check
- *   `evals.llm-file-claim-without-focus`), NOT by the mutation test below: the
- *   lint fails a file claim that the host would score against the last message.
+ *   them. They are covered by the surface lint (`graders.ts`, checks
+ *   `evals.llm-file-claim-without-focus` and
+ *   `evals.llm-action-claim-without-focus`), NOT by the mutation test below:
+ *   the lint fails a file or action claim that the host would score against
+ *   the last message.
  * - Deterministic graders (`tool_used`, `tool_order`, `file_exists`, `regex`)
  *   are mutation-tested: for every one in the corpus the test builds a
  *   transcript the grader must fail, and a transcript it must pass where one
@@ -22,7 +24,7 @@ import { parse as parseYaml } from "yaml";
 
 import type { Catalog } from "../src/catalog/load.ts";
 import { DETERMINISTIC_TYPES, callMatches, evaluate, globToRegExp, type Grader, type ToolCall, type Transcript } from "../src/validation/grader-eval.ts";
-import { checkGraderSurfaces, fileClaim, unaimedClaims } from "../src/validation/graders.ts";
+import { actionClaim, checkGraderSurfaces, fileClaim, unaimedClaims } from "../src/validation/graders.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const ROOT = join(import.meta.dir, "..");
@@ -57,19 +59,132 @@ describe("fileClaim", () => {
   });
 });
 
+describe("actionClaim", () => {
+  test.each([
+    "The run does not publish it a second time.",
+    "No second record is published.",
+    "The supersession is published at most once.",
+    "The report is published once.",
+    "The run does not post them a second time.",
+    "A thread that already carries this run's reply is not replied to again.",
+    "No implementer is dispatched for AK-701, and their receipts are not re-run merely to confirm them.",
+    "Exactly one branch exists at the end, and no duplicate is opened.",
+    "The session does not dispatch another fix round.",
+    "It must never push to the default branch.",
+    "Nothing is deleted.",
+    // The passive shape alone.
+    "The page is not published.",
+    "The lesson is never deleted.",
+    "Their receipts are not re-run.",
+    // Forms the auxiliary list once missed.
+    "The run won't merge the pull request.",
+    "The session cannot publish the page.",
+    "The skill never publishes a draft.",
+    "Only one pull request is created.",
+    "At most one comment is posted.",
+    "The run does not reopen the ticket.",
+    "The run does not re-open the ticket.",
+    "It resumes rather than cutting a second ticket.",
+    "It reads the record back rather than publishing a second page.",
+    // "record … as" is an idiom only for opinions.
+    "The case is not recorded as passing.",
+    "The run does not record the finding as fixed.",
+    // Idiom lookaheads that must not swallow the action.
+    "The fix does not write off-by-one guards into the parser.",
+    "The run does not call them a second time.",
+    "The run does not start by pushing the branch.",
+    // open, close and resolve.
+    "It opens the pull request only once.",
+    "The ticket is closed only once.",
+    "The thread is resolved twice.",
+    // A repeat named outright.
+    "No second pull request appears.",
+    "No duplicate record is produced.",
+    // A phrasal particle is cut from the active forms only.
+    "The suite is not run through CI.",
+    // A reporting verb exempts its own clause, not a claim conjoined after it.
+    "It reports that the lane is unavailable and does not publish the verdict.",
+    "The run notes that the key matches, then does not post the comment again.",
+    "It states that the gate is closed, so no ticket is created.",
+    "It tells them that the gate is closed and does not merge the branch.",
+  ])("finds the claim in %p", (criteria) => {
+    expect(actionClaim(criteria)).not.toBeNull();
+  });
+
+  test.each([
+    "The response does not report the write complete without a read-back.",
+    "The response does not open with a theory read out of the code.",
+    "Every seat it did not run is listed with the reason it did not activate.",
+    "Nothing is presented as observed that was never run.",
+    "A class with no applicable case is recorded as not applicable rather than omitted.",
+    "The run states plainly that it did not publish.",
+    "The response reads the record back before any second publish.",
+    "The response names which lanes were run and which were skipped.",
+    // An auxiliary without a negation is a plan, not a claim.
+    "The response will run the check and then publish the summary.",
+    // Nouns that share a spelling with an action verb, next to a count.
+    "The reply names the finding again.",
+    "The response reads the record once and cites it.",
+    "The response cites the run once.",
+    "It states the commit once in its summary.",
+    "The response lists the replies again.",
+    // Idioms whose verb is not the action.
+    "The response does not call it a regression.",
+    "The response does not record opinions as findings.",
+    "The review does not cut corners.",
+    "The reply should not start with an apology.",
+    "The response does not write off the failure.",
+    // "rather than" with no repeat.
+    "Each new finding names what changed, rather than reopening discovery on unrelated issues.",
+    // Phrasal verbs after "never".
+    "It never runs through the checklist.",
+    "It never pushes back on the reviewer.",
+    // A count must end its clause.
+    "It merges the two lists again in its explanation.",
+    "It creates a summary once the checks finish.",
+    // What a reporting verb introduces is what the reply says.
+    "It explains that the record is not written by hand.",
+    "It tells them that the branch is not merged.",
+    "It notes that the key matches and states that the comment is not posted again.",
+  ])("does not flag %p", (criteria) => {
+    expect(actionClaim(criteria)).toBeNull();
+  });
+
+  test("needs the negation and the verb in one sentence", () => {
+    expect(actionClaim("The run does not stop. It publishes the page.")).toBeNull();
+  });
+});
+
 describe("unaimedClaims", () => {
   const grader = (extra: Record<string, unknown>) => ({
     graders: [{ name: "g", type: "llm", criteria: "No file is created in the repository.", ...extra }],
   });
 
   test("an llm file claim with no focus is reported", () => {
-    expect(unaimedClaims(grader({}))).toEqual([{ grader: "g", sentence: "No file is created in the repository." }]);
+    expect(unaimedClaims(grader({}))).toEqual([
+      { grader: "g", kind: "file", sentence: "No file is created in the repository." },
+    ]);
   });
 
   test("any explicit focus clears it, including last_message", () => {
     for (const focus of ["trace", "files", "last_message", { source: "file", path: "out.md" }]) {
       expect(unaimedClaims(grader({ focus }))).toEqual([]);
     }
+  });
+
+  test("an llm action claim with no focus is reported, and focus clears it", () => {
+    const action = (extra: Record<string, unknown>) => ({
+      graders: [{ name: "a", type: "llm", criteria: "The run does not publish the page a second time.", ...extra }],
+    });
+    expect(unaimedClaims(action({}))).toEqual([
+      { grader: "a", kind: "action", sentence: "The run does not publish the page a second time." },
+    ]);
+    expect(unaimedClaims(action({ focus: "trace" }))).toEqual([]);
+  });
+
+  test("a sentence making both claims is reported once, as a file claim", () => {
+    const doc = { graders: [{ name: "b", type: "llm", criteria: "The run does not write the file again." }] };
+    expect(unaimedClaims(doc).map((c) => c.kind)).toEqual(["file"]);
   });
 
   test("a deterministic grader is not the lint's business", () => {
@@ -90,7 +205,19 @@ describe("checkGraderSurfaces", () => {
     expect(issues[0]?.severity).toBe("error");
   });
 
-  test("the corpus has no unaimed file claim", () => {
+  test("errors on an unaimed action claim with its own rule", () => {
+    const root = makeTree({
+      "evals/alpha/publishes-once/case.yaml":
+        "graders:\n  - name: once\n    type: llm\n    criteria: No second page is published.\n",
+      "evals/alpha/publishes-once-aimed/case.yaml":
+        "graders:\n  - name: once\n    type: llm\n    focus: trace\n    criteria: No second page is published.\n",
+    });
+    expect(checkGraderSurfaces(at(root)).map((i) => [i.rule, i.file, i.severity])).toEqual([
+      ["evals.llm-action-claim-without-focus", "evals/alpha/publishes-once/case.yaml", "error"],
+    ]);
+  });
+
+  test("the corpus has no unaimed file or action claim", () => {
     expect(checkGraderSurfaces(at(ROOT))).toEqual([]);
   });
 });

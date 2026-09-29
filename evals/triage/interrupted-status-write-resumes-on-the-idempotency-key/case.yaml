@@ -7,16 +7,29 @@ execution:
     the session dropped after the update was sent but before the read-back came back. Finish it.
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Skill]
+# The trace graders assume the tracker read and write tools the fixture will grant: nothing in
+# allowed_tools can read a ticket back or write one (AUTHORING.md §9).
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      The response reads issue 42 back before writing, deriving the idempotency key from the run,
-      the operation, the item identity and the artifact hash to decide whether the update landed.
-  - name: no-duplicate-notes
+      The run reads issue 42 back before writing.
+  - name: derives-the-status-write-key
     type: llm
     weight: 1
     criteria: >-
-      The triage notes are on the issue once. The run does not post them a second time, and does not
-      report the update complete without a read-back.
+      The response derives the idempotency key from the run, the operation, the item identity
+      and the artifact hash to decide whether the update landed.
+  - name: no-duplicate-notes
+    type: llm
+    focus: trace
+    weight: 1
+    criteria: >-
+      The triage notes are on the issue once. The run does not post them a second time.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the update complete without a read-back.

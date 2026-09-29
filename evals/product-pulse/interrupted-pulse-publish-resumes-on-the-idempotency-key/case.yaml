@@ -7,17 +7,30 @@ execution:
     session dropped before the read-back came back. Finish the run.
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Skill]
+# The trace graders assume the knowledgebase read and publish tools the fixture will grant:
+# nothing in allowed_tools can read a record back or publish one (AUTHORING.md §9).
 graders:
   - name: reads-back-before-publishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      The response reads the pulse page back before publishing again, deriving the idempotency key
-      from the run, the operation, the page identity and the artifact hash to decide whether the
-      earlier publish landed.
-  - name: no-duplicate-revision
+      The run reads the pulse page back before publishing again.
+  - name: derives-the-pulse-page-key
     type: llm
     weight: 1
     criteria: >-
-      The report is published once. The run does not publish a second revision of the same report,
-      and does not report the run complete without a read-back.
+      The response derives the pulse page's idempotency key from the run, the operation, the
+      page identity and the artifact hash to decide whether the earlier publish landed.
+  - name: no-duplicate-revision
+    type: llm
+    focus: trace
+    weight: 1
+    criteria: >-
+      The report is published once. The run does not publish a second revision of the same
+      report.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the run complete without a read-back.

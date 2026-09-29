@@ -26,11 +26,19 @@ graders:
       ticket, rather than a summary of the change written by the run or by the implementer.
   - name: concerns-are-handled-not-forwarded
     type: llm
-    weight: 2
+    focus: trace
+    weight: 1
     criteria: >-
       Concerns in the report about correctness or scope are addressed before the check runs, or
-      recorded as observations. They are not passed to the seats as framing and not silently
-      dropped.
+      recorded as observations in the record the run writes. They are not passed to the seats as
+      framing and not silently dropped. If the run writes no such record, the recording part
+      passes; whether a concern reaches a seat's prompt as framing is still judged.
+  - name: says-how-each-concern-was-handled
+    type: llm
+    weight: 1
+    criteria: >-
+      The response says, for each concern in the implementer's report, whether it was addressed
+      before the check or kept as an observation.
   - name: skill-fired
     type: tool_used
     tool: Skill

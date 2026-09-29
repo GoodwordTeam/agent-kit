@@ -8,6 +8,7 @@ execution:
 graders:
   - name: reads-back-first
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing it again.

@@ -3,8 +3,11 @@ From: A Contributor <contributor@example.com>
 Date: Sat, 26 Sep 2026 10:02:00 +0000
 Subject: [PATCH] Serve responsive hero images on the landing page
 
-Refs WEB-418, which states the landing page's LCP budget from the project
-record; the hero image is the page's LCP element.
+Refs WEB-418. The budget it states, quoted from the project record:
+
+  Landing page: LCP <= 2.5 s at p75, mobile field data.
+
+The hero image is the page's LCP element.
 ---
  src/pages/Landing.tsx | 8 +++++++-
  1 file changed, 7 insertions(+), 1 deletion(-)

@@ -8,17 +8,30 @@ execution:
     back. Finish the run.
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Skill]
+# The trace graders assume the knowledgebase read and publish tools the fixture will grant:
+# nothing in allowed_tools can read a record back or publish one (AUTHORING.md §9).
 graders:
   - name: reads-back-before-publishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      The response reads the record back before publishing again, deriving the idempotency key from
-      the run, the operation, the record identity and the artifact hash to decide whether the
-      earlier publish landed.
-  - name: no-duplicate-adr
+      The run reads the record back before publishing again.
+  - name: derives-the-adr-key
     type: llm
     weight: 1
     criteria: >-
-      Exactly one proposed ADR exists for the order-intake decision. The run does not publish a
-      second one, and does not report the run complete without a read-back.
+      The response derives the idempotency key from the run, the operation, the record
+      identity and the artifact hash to decide whether the earlier publish landed.
+  - name: no-duplicate-adr
+    type: llm
+    focus: trace
+    weight: 1
+    criteria: >-
+      Exactly one proposed ADR exists for the order-intake decision. The run does not publish
+      a second one.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the run complete without a read-back.

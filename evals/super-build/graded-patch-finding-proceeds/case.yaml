@@ -22,11 +22,18 @@ graders:
       treating any finding-sourced ticket as suspect.
   - name: remaps-safe-auto-on-intake
     type: llm
-    weight: 3
+    focus: trace
+    weight: 2
     criteria: >-
-      The incoming safe_auto is recorded as gated_auto on intake. The finding is not dropped for its
-      action class, and the response says that what is restricted is which seat may emit the class,
-      not the class itself.
+      The incoming safe_auto is recorded as gated_auto on intake, in the ticket or finding record
+      the run writes, and a run that writes no such record passes this part. Either way the finding
+      is not dropped for its action class.
+  - name: says-the-seat-not-the-class-is-restricted
+    type: llm
+    weight: 1
+    criteria: >-
+      The response says that what is restricted is which seat may emit the safe_auto class, not
+      the class itself.
   - name: ordinary-gates-still-apply
     type: llm
     weight: 2

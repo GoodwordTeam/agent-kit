@@ -11,6 +11,7 @@ execution:
 graders:
   - name: no-bare-closure
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The ticket is not closed with an unexplained out-of-scope note. Either the gist and a real

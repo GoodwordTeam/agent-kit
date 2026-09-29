@@ -22,9 +22,10 @@ code, do not attach it on their own.
   ticket or the project record states a performance budget and the change touches the surface that
   budget measures. The selector must observe both the stated budget and the changed surface.
 - `measured-problem` — artifact kinds `source`, `query`, `ticket`, `change-description`. Fires when
-  a measured regression, profile, trace or benchmark result for a surface is linked from the ticket
-  or the change, and the change touches that surface. The selector must observe the measurement
-  itself, not a description of one, and the changed surface it measured.
+  the ticket or the change carries a measured regression, profile, trace or benchmark result for a
+  surface, and the change touches that surface. The selector must observe the measurement itself in
+  the ticket or the change, and the changed surface it measured. A reference to a measurement held
+  elsewhere, such as a ticket the selector cannot read, is not the measurement.
 
 **On ambiguous evidence this pack may decline.** If the selector cannot tell whether a measurement
 covers the surface the change touches, or sees only a claim of improvement or an anti-pattern with
@@ -40,6 +41,9 @@ failed to attach.
 - A query inside a loop or another anti-pattern appears with no budget or measured problem. Once
   the pack is attached, `no-known-anti-pattern` applies to it.
 - A cache or memoization is added, or async code changes, with no budget and no measured problem.
+- A ticket or commit refers to a measurement that the subject does not carry, such as "the profile
+  is on PAY-77". That is a description of a measurement, and `measured-problem` needs the
+  measurement itself.
 
 ## Constraints
 
@@ -84,8 +88,10 @@ or a measured problem, which is exactly what this pack attaches on, so an attach
 ## Project facts
 
 This pack names no budget, threshold, noise band, sample count or metric target. Budgets and
-measured problems are a project's own facts, stated in the ticket or read from the knowledgebase
-through `readContext` (ruling `central-kb-owns-project-artifacts`). Every number among them is a
+measured problems are a project's own facts. A budget is stated in the ticket or read from the
+knowledgebase through `readContext` (ruling `central-kb-owns-project-artifacts`). A measured problem
+attaches the pack only as the ticket or the change carries it; one read through `readContext` after
+attachment informs the work and never attaches the pack. Every number among them is a
 project fact, never a value this pack supplies (ruling `numeric-heuristics-are-guidance`). The
 `kb_rules` entries in `pack.yaml` name the kinds to read, and prior attempts are read the same way
 before a new one is proposed.

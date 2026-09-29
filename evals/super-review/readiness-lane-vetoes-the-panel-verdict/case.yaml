@@ -16,8 +16,11 @@ graders:
     criteria: >-
       The blocking readiness lane vetoes approval no matter what the panel concluded, and the clean
       panel is not treated as outweighing it.
+  # The classification is what the response states; no tool the case grants writes the record it
+  # would go in (AUTHORING.md §9).
   - name: the-unseated-lane-is-unavailable-not-empty
     type: llm
+    focus: last_message
     weight: 3
     criteria: >-
       The lane that could not be seated is recorded as unavailable with its reason, not as an empty

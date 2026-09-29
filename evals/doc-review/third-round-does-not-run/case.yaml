@@ -11,6 +11,7 @@ execution:
 graders:
   - name: no-third-round
     type: llm
+    focus: last_message
     weight: 1
     criteria: >-
       No third review round is run. No further findings are produced for that fork.

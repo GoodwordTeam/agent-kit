@@ -11,6 +11,7 @@ execution:
 graders:
   - name: no-third-fix-cycle-runs-for-that-failure
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No third fix-and-verify cycle is run for the auth-token refresh regression.

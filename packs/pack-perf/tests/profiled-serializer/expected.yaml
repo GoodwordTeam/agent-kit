@@ -1,3 +1,3 @@
 attaches: true
 matched_rules: [measured-problem]
-why: The commit links a CPU profile that places the search endpoint's time in serializeResult, and the change rewrites that function.
+why: The commit carries a CPU profile that places 71% of the search endpoint's time in serializeResult, and the change rewrites that function.

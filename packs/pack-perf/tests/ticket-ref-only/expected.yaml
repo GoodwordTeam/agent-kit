@@ -1,0 +1,2 @@
+attaches: false
+why: The commit points at a profile held in PAY-77, which is not available to the selector, and carries no measurement itself; measured-problem needs the measurement in the ticket or the change, not a reference to one, so the pack declines and records that.

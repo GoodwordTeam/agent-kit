@@ -1,0 +1,121 @@
+# Catalog entries beyond the baseline's count, each with the change that added it.
+#
+# research/probes/catalog-progress.sh compares each catalog.yaml section with the
+# baseline: the counts catalog.yaml first declared at a185bd1 ("catalog.yaml:
+# declare the full catalog"). The baseline is that commit, not the arch plan in
+# research/sources/, whose lists differ from it (11 schema files, 4 policies and
+# 6 adapters, among them issue-tracker and repository-events). A section that
+# grew for a recorded reason is not a disagreement: the probe adds the ids
+# recorded here to the baseline count, and flags the section when the catalog
+# differs from that sum, when a recorded id is not in the catalog or was already
+# in the baseline, or when `baseline` or `catalog` below no longer matches.
+#
+# `catalog` is the section's size once these expansions are in. It is written
+# down so a change that adds an entry has to touch this file too; the probe
+# fails when the figure goes stale rather than letting it drift.
+#
+# Every `commits` sha is a commit whose catalog.yaml change adds the ids it is
+# cited for, found with `git log -- catalog.yaml`; the probe checks that it
+# resolves and adds them. `docs` names a decision record where one exists. The
+# plan itself (research/sources/) is never edited.
+
+protocols:
+  baseline: 7
+  catalog: 8
+  expansions:
+    - ids: [evidence-gate]
+      reason: >-
+        The opt-in learning runtime admits a judge's output only on counted evidence: cited ids
+        must be in the input and thresholds are counted by the runtime, never by the judge. The
+        learn roles share that rule, so it is a protocol.
+      commits: [8e4a0de]
+
+roles:
+  baseline: 29
+  catalog: 34
+  expansions:
+    - ids: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
+      reason: >-
+        The review, memory and skill loops ported from the learning-stack reference each run
+        under a role prompt of their own.
+      commits: [8e4a0de]
+
+references:
+  baseline: 4
+  catalog: 5
+  expansions:
+    - ids: [tracker-of-record]
+      reason: >-
+        The vendor-neutral tracker adapter needs one reference that says which ticket system is
+        the record, the rules every tracker binding obeys, and how its first backend is set up.
+      commits: [32863f4]
+
+schemas:
+  baseline: 14
+  catalog: 27
+  expansions:
+    - ids: [case]
+      reason: >-
+        Every evals case.yaml declared schema_version "1.1" and nothing checked it, so a case
+        cut down to its tags line validated like a full one.
+      commits: [7db25a7]
+    - ids: [rulings]
+      reason: >-
+        policies/resolved-conflicts.yaml is the file every skill cites for a ruling id and had
+        no declared shape, so a malformed binds field bound nothing while reading as bound.
+      commits: [62c1f0d]
+    - ids: [install]
+      reason: >-
+        Autonomy became per-install configuration in ak.install.yaml, which needed a shape.
+      commits: [3e7ec14]
+    - ids: [firstmate-binding]
+      reason: >-
+        The Firstmate integration writes a binding outside the worker's reach (run ids, pinned
+        bundle, charter, gates, budget and permitted delivery), and that record needs a shape.
+      commits: [e81daeb]
+      docs: [docs/decisions/0002-firstmate-integration.md, docs/decisions/0004-firstmate-grants.md]
+    - ids: [tracker-binding]
+      reason: >-
+        The project-scoped tracker binding, ak.tracker.yaml, needed a shape.
+      commits: [32863f4]
+    - ids: [review-event, review-pattern, episode, memory-run, learn-state]
+      reason: >-
+        The opt-in learning runtime persists review events, patterns, episodes, memory runs and
+        its own state, each with a declared shape.
+      commits: [8e4a0de]
+    - ids: [handoff-record, evaluation, map]
+      reason: >-
+        A run record with no artifact schema had no lawful way through publishArtifact, which
+        carries only schema_id values; the ruling was to add real schemas rather than widen the
+        contract.
+      commits: [62e8dbb]
+
+profiles:
+  baseline: 4
+  catalog: 5
+  expansions:
+    - ids: [learning]
+      reason: >-
+        The learning runtime is opt-in, so it installs through a profile of its own.
+      commits: [8e4a0de]
+
+adapters:
+  baseline: 4
+  catalog: 8
+  expansions:
+    - ids: [firstmate]
+      reason: >-
+        Firstmate runs agent crews over the catalog: agent-kit judges and no-mistakes delivers.
+      commits: [e81daeb]
+      docs: [docs/decisions/0002-firstmate-integration.md]
+    - ids: [tracker]
+      reason: >-
+        Tickets go to a vendor-neutral tracker adapter with pluggable backends. It realises the
+        arch plan's issue-tracker adapter, which the baseline catalog did not declare; it does not
+        expand past the plan.
+      commits: [32863f4]
+    - ids: [observation-source, review-source]
+      reason: >-
+        The learning runtime reads recorded session observations and pull-request review
+        threads, both read-only, through adapters rather than binding to one source.
+      commits: [8e4a0de]

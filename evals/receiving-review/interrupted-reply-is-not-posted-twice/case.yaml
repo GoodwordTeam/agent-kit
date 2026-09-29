@@ -10,6 +10,7 @@ execution:
 graders:
   - name: reads-back-before-posting
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       Existing replies are read back before any post, and a thread that already carries this run's

@@ -13,6 +13,7 @@ context:
 graders:
   - name: update-with-evidence
     type: llm
+    focus: last_message
     weight: 1
     criteria: >-
       A lesson whose statement still holds but whose path drifted is classified as Update, the

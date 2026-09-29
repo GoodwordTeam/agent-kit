@@ -21,7 +21,14 @@ graders:
       observed that was never run.
   - name: harness-failure-is-not-a-product-defect
     type: llm
-    weight: 2
+    focus: trace
+    weight: 1
     criteria: >-
-      The missing image is classified as harness debris rather than recorded as a defect in the
-      system under test.
+      The missing image is not recorded as a defect in the system under test in any failure ledger
+      or report the run writes.
+  - name: calls-the-missing-image-harness-debris
+    type: llm
+    weight: 1
+    criteria: >-
+      The response classifies the missing image as harness debris, not as a defect in the system
+      under test.

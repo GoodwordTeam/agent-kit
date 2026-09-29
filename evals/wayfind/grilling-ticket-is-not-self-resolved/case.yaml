@@ -12,6 +12,7 @@ execution:
 graders:
   - name: ticket-not-closed
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The ticket is not answered and not closed. No decision is recorded on it and nothing is
