@@ -64,13 +64,15 @@ export function formatEvent(event: ReviewEvent): string {
     "ts",
   ] as const;
   const head = keys
+    .values()
     .filter((key) => event[key] !== null && event[key] !== undefined)
     .map((key) => `${key}=${String(event[key])}`)
+    .toArray()
     .join(" ");
-  const text = (event.text ?? "").slice(0, 1500);
-  const longest = Math.max(2, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const body = (event.text ?? "").slice(0, 1500);
+  const longest = Math.max(2, ...(body.match(/`+/g) ?? []).map((run) => run.length));
   const fence = "`".repeat(longest + 1);
-  return `${fence}event ${head}\n${text}\n${fence}`;
+  return `${fence}event ${head}\n${body}\n${fence}`;
 }
 
 export function maintainerPrompt(
@@ -142,6 +144,7 @@ function strings(value: unknown): string[] {
 }
 
 /** Any C0 control character or DEL: a line break in a single-line field could forge a frontmatter key. */
+// oxlint-disable-next-line eslint/no-control-regex -- matching control characters is this pattern's whole purpose
 const CONTROL = /[\u0000-\u001f\u007f]/;
 
 /** A repo-relative path, or null. Absolute paths, parent traversal and control characters are refused. */

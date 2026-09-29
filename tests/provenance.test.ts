@@ -983,12 +983,12 @@ describe("a section cited in a rationale names its document", () => {
   }
 
   function issuesFor(files: Record<string, string>, plan: string | null = PLAN_TEXT) {
-    const ctx = ctxFor({
-      "provenance/upstream.lock.yaml": lockFor("a".repeat(40)),
-      "provenance/conversation-map.yaml": CONVERSATION_MAP,
-      ...(plan === null ? {} : { [PLAN_FILE]: plan }),
-      ...files,
-    });
+    const tree: [string, string][] = [
+      ["provenance/upstream.lock.yaml", lockFor("a".repeat(40))],
+      ["provenance/conversation-map.yaml", CONVERSATION_MAP],
+    ];
+    if (plan !== null) tree.push([PLAN_FILE, plan]);
+    const ctx = ctxFor({ ...Object.fromEntries(tree), ...files });
     return checkProvenance(ctx).filter((i) => i.rule.startsWith("provenance.rationale-"));
   }
 

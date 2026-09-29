@@ -55,7 +55,14 @@ function skillTexts(id: string): string[] {
 }
 
 describe("trigger prompt sets", () => {
-  const skillsOf = (cls: "U" | "M") => [...new Set(all.filter((c) => c.invocation === cls).map((c) => c.skill))];
+  const skillsOf = (cls: "U" | "M") => [
+    ...new Set(
+      all
+        .values()
+        .filter((c) => c.invocation === cls)
+        .map((c) => c.skill),
+    ),
+  ];
   const tally = (cases: Case[], skill: string) => {
     const mine = cases.filter((c) => c.skill === skill);
     return {

@@ -28,7 +28,7 @@ export function extractJson(stdout: string): Record<string, unknown> | null {
     const wrapper = JSON.parse(trimmed) as unknown;
     content =
       wrapper !== null && typeof wrapper === "object" && !Array.isArray(wrapper) && "result" in wrapper
-        ? (wrapper as { result: unknown }).result
+        ? wrapper.result
         : wrapper;
   } catch {
     content = trimmed;

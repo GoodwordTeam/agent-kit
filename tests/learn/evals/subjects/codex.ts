@@ -146,7 +146,7 @@ export const codex: SubjectAdapter = {
     return {
       env: { CODEX_HOME: home.dir, HOME: join(scratch, "home") },
       leaks: ["the host's built-in system skills"],
-      release: home.release,
+      release: () => home.release(),
     };
   },
 };

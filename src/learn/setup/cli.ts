@@ -5,7 +5,7 @@
 import { flag, type LearnArea, type LearnContext } from "../core/context.ts";
 import { doctor } from "./doctor.ts";
 import { parseInterval, schedule } from "./schedule.ts";
-import { seed } from "./seed.ts";
+import { type SeedOptions, seed } from "./seed.ts";
 import { uninstall } from "./uninstall.ts";
 import { verify } from "./verify.ts";
 import { defaultDeps, type SetupDeps, wire } from "./wire.ts";
@@ -56,10 +56,10 @@ export function createSetupArea(depsFor: (ctx: LearnContext) => SetupDeps = defa
             return 2;
           }
           const since = flag(args, "since");
-          return seed(ctx, repo, {
-            ...(since === undefined ? {} : { since }),
-            skipGithub: args.flags.has("no-github"),
-          });
+          const options: SeedOptions = {};
+          if (since !== undefined) options.since = since;
+          options.skipGithub = args.flags.has("no-github");
+          return seed(ctx, repo, options);
         },
       },
       verify: {

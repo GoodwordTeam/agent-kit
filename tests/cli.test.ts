@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
@@ -375,7 +375,7 @@ describe("ak build", () => {
   test("--check fails once the source moves ahead of dist", () => {
     const root = cleanTree();
     runCli(["build"], { cwd: root, io: capture().io });
-    Bun.write(join(root, "skills/triage/SKILL.md"), `${SKILL}\nOne more line.\n`);
+    writeFileSync(join(root, "skills/triage/SKILL.md"), `${SKILL}\nOne more line.\n`);
     const io = capture();
     expect(runCli(["build", "--check"], { cwd: root, io: io.io })).not.toBe(0);
     expect(io.stdout()).toContain("packaging.dist-stale");
@@ -435,7 +435,7 @@ describe("ak build", () => {
     test("a generated file edited away from its fragments fails", () => {
       const root = adaptedTree();
       runCli(["build"], { cwd: root, io: capture().io });
-      Bun.write(join(root, ADAPTATIONS_FILE), "adaptations: []\n");
+      writeFileSync(join(root, ADAPTATIONS_FILE), "adaptations: []\n");
       const io = capture();
       expect(runCli(["build", "--check"], { cwd: root, io: io.io })).not.toBe(0);
       expect(io.stdout()).toContain("provenance.adaptations-out-of-sync");
@@ -444,7 +444,7 @@ describe("ak build", () => {
     test("a fragment added after the last build fails, which is the batch case", () => {
       const root = adaptedTree();
       runCli(["build"], { cwd: root, io: capture().io });
-      Bun.write(
+      writeFileSync(
         join(root, `${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`),
         `adaptations:\n  - path: references/guide/REFERENCE.md\n    source: ${SOURCE}\n`,
       );

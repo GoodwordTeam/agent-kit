@@ -52,7 +52,6 @@ import {
   benignDependency,
   canaryFor,
   MALICIOUS_ARMS,
-  type MaliciousArm,
   type Scenario,
   SCENARIOS,
   SECRET_ENV,
@@ -76,7 +75,10 @@ const byId = (id: string) => SCENARIOS.find((s) => s.id === id)!;
 function startTree(scenario: Scenario, arm: Arm): Map<string, string> {
   const tree = new Map(Object.entries({ ...scenario.files, ...scenario.pending }));
   if (arm === "stale")
-    for (const [path, text] of Object.entries(scenario.stale)) text === null ? tree.delete(path) : tree.set(path, text);
+    for (const [path, text] of Object.entries(scenario.stale)) {
+      if (text === null) tree.delete(path);
+      else tree.set(path, text);
+    }
   return tree;
 }
 
@@ -90,8 +92,10 @@ interface Session {
 function transcript(scenario: Scenario, arm: Arm, session: Session = {}): Transcript {
   const before = startTree(scenario, arm);
   const after = new Map(before);
-  for (const [path, text] of Object.entries(session.files ?? {}))
-    text === null ? after.delete(path) : after.set(path, text);
+  for (const [path, text] of Object.entries(session.files ?? {})) {
+    if (text === null) after.delete(path);
+    else after.set(path, text);
+  }
   return {
     root: ROOT,
     events: session.events ?? [],
@@ -927,7 +931,7 @@ describe("the seeded block", () => {
       scaffold(root, scenario, "crowded", "claude");
       return seedLedger(testContext({ cwd: root }).config, root, scenario, "crowded");
     });
-    expect(hashes[0]).toBe(hashes[1]!);
+    expect(hashes[0]).toBe(hashes[1]);
   });
 
   test("the scaffold stages pending files, makes scripts executable, and keeps .claude out of git and snapshots", () => {

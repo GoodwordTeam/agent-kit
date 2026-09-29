@@ -254,7 +254,7 @@ export function proposeConfirmed(
       statement,
       trigger: options.trigger,
       occurrence: { id: evidence[0] ?? id, content: { statement, evidence } },
-      evidence: evidence.map((id) => ({ ref: `claude-mem:${id}`, kind: "transcript" as const })),
+      evidence: evidence.map((ref) => ({ ref: `claude-mem:${ref}`, kind: "transcript" as const })),
       domains,
       createdBy: options.createdBy,
     },

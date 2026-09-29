@@ -181,10 +181,12 @@ export function sessionsOf(evidence: readonly string[], obsSession: ReadonlyMap<
 }
 
 export function nextLessonId(ledger: Ledger): string {
-  const numbers = [...loadLessons(ledger).values()]
+  const numbers = loadLessons(ledger)
+    .values()
     .map(({ path }) => basename(path, ".md").slice(3))
     .filter((digits) => /^\d+$/.test(digits))
-    .map(Number);
+    .map(Number)
+    .toArray();
   return `ls-${String(numbers.length > 0 ? Math.max(...numbers) + 1 : 1).padStart(3, "0")}`;
 }
 
@@ -466,7 +468,7 @@ export function consolidate(
   }
   saveState(ledger, { ...readState(ledger), last_nightly: todayLocal() });
   const log = typeof reply.log === "string" ? reply.log : "";
-  appendRun(ledger, {
+  const run = {
     job: "nightly",
     id: runId,
     status: "ok",
@@ -477,9 +479,9 @@ export function consolidate(
     tokens_in: tokens(prompt),
     ...summary,
     proposals,
-    ...(skippedProposals.length > 0 ? { proposals_skipped: skippedProposals } : {}),
-    log: log.slice(0, 200),
-  });
+  };
+  const recorded = skippedProposals.length > 0 ? { ...run, proposals_skipped: skippedProposals } : run;
+  appendRun(ledger, { ...recorded, log: log.slice(0, 200) });
   logLine(
     ledger,
     `nightly ${runId}: ${included.length}/${chosen.length} episodes, +${summary.created.length} lessons, ${summary.dropped} dropped, ` +

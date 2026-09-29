@@ -182,15 +182,18 @@ export function parsePromptSet(text: string, fallbackId: string): PromptSet {
   const sha256 = createHash("sha256").update(text).digest("hex");
   const raw = JSON.parse(text) as unknown;
   if (Array.isArray(raw)) {
-    const cases = (raw as LegacyCase[]).map((c, i): Case => ({
-      id: `${fallbackId}-${i + 1}`,
-      skill: c.expected[0] ?? "none",
-      polarity: c.expected.length > 0 ? "positive" : "negative",
-      invocation: "M",
-      prompt: c.prompt,
-      expected: c.expected,
-      ...(c.draft === undefined ? {} : { draft: c.draft }),
-    }));
+    const cases = (raw as LegacyCase[]).map((c, i): Case => {
+      const legacy: Case = {
+        id: `${fallbackId}-${i + 1}`,
+        skill: c.expected[0] ?? "none",
+        polarity: c.expected.length > 0 ? "positive" : "negative",
+        invocation: "M",
+        prompt: c.prompt,
+        expected: c.expected,
+      };
+      if (c.draft !== undefined) legacy.draft = c.draft;
+      return legacy;
+    });
     return { id: fallbackId, version: 1, sha256, cases };
   }
   const set = raw as { id?: string; version?: number; cases: Case[] };
@@ -1043,7 +1046,7 @@ export function scoreCase(
                 : "missed";
       const unclear = outcome === "loaded-unclear";
       const pass = !unclear && effect === null && named;
-      return {
+      const scored: Scored = {
         ...positive,
         outcome,
         pass,
@@ -1051,8 +1054,9 @@ export function scoreCase(
         named_only: false,
         flagged: unclear,
         workflow_calls: calls,
-        ...(unclear ? { unscored: true } : {}),
       };
+      if (unclear) scored.unscored = true;
+      return scored;
     }
     if (expects === "proceed") {
       const worked = c.expected.some((id) => toolsAfterLoad(events, id, options) > 0);
@@ -1064,15 +1068,16 @@ export function scoreCase(
             ? "proceeded"
             : "proceed-unclear";
       const unclear = outcome === "proceed-unclear";
-      return {
+      const scored: Scored = {
         ...positive,
         outcome,
         pass: outcome === "proceeded",
         hit: loadedHit,
         named_only: false,
         flagged: unclear,
-        ...(unclear ? { unscored: true } : {}),
       };
+      if (unclear) scored.unscored = true;
+      return scored;
     }
     const named = !loadedHit && repliesWithName(reply, c.expected);
     const hit = loadedHit || (options.arm === "nudged" && named);
@@ -1405,7 +1410,7 @@ function userInvokedSkills(): { userInvoked: Set<string>; known: Set<string>; fi
 }
 
 async function pool<T, R>(items: readonly T[], jobs: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
+  const out: R[] = [];
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.max(1, jobs) }, async () => {
@@ -1479,9 +1484,11 @@ export function selectCases(cases: readonly Case[], spec: string | undefined): {
   );
   if (ids.size === 0) return { cases: [], problems: ["--cases names no case"] };
   const held = new Set(cases.map((c) => c.id));
-  const problems = [...ids]
+  const problems = ids
+    .values()
     .filter((id) => !held.has(id))
-    .map((id) => `no case ${JSON.stringify(id)} in the prompt set`);
+    .map((id) => `no case ${JSON.stringify(id)} in the prompt set`)
+    .toArray();
   return { cases: cases.filter((c) => ids.has(c.id)), problems };
 }
 
@@ -1550,15 +1557,13 @@ async function main(argv: string[]): Promise<number> {
       );
       return 2;
     }
-    const request = (c: Case): SessionRequest => ({
-      prompt: promptFor(c, arm),
-      cwd,
-      env: cleanEnv(),
-      timeoutMs: 300_000,
-      ...(maxTurns === undefined ? {} : { maxTurns }),
-      ...(injected === "" ? {} : { appendSystemPrompt: injected }),
-      ...(bundleDir === undefined ? {} : { bundleDir }),
-    });
+    const request = (c: Case): SessionRequest => {
+      const req: SessionRequest = { prompt: promptFor(c, arm), cwd, env: cleanEnv(), timeoutMs: 300_000 };
+      if (maxTurns !== undefined) req.maxTurns = maxTurns;
+      if (injected !== "") req.appendSystemPrompt = injected;
+      if (bundleDir !== undefined) req.bundleDir = bundleDir;
+      return req;
+    };
     if (dryRun) {
       console.log(
         JSON.stringify({

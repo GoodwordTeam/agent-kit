@@ -438,13 +438,13 @@ function gitOut(root: string, donor: Donor, args: ReadonlyArray<string>): string
 function modeAtPin(root: string, donor: Donor, commit: string, path: string): string | null {
   const out = gitOut(root, donor, ["ls-tree", "--full-tree", "-z", commit, "--", path]);
   if (out === null) return null;
-  for (const record of out.split("\0")) {
-    if (record === "") continue;
-    const tab = record.indexOf("\t");
+  for (const entry of out.split("\0")) {
+    if (entry === "") continue;
+    const tab = entry.indexOf("\t");
     if (tab === -1) continue;
     // A pathspec can match more than the literal path; take the entry that is it.
-    if (record.slice(tab + 1) !== path) continue;
-    const mode = record.slice(0, tab).split(" ")[0] ?? "";
+    if (entry.slice(tab + 1) !== path) continue;
+    const mode = entry.slice(0, tab).split(" ")[0] ?? "";
     return mode === "" ? null : mode;
   }
   return null;
@@ -734,6 +734,7 @@ function checkScenarioReferences(root: string, scenarios: Set<number> | null): I
 
   const known = [...scenarios].sort((a, b) => a - b);
   return cited
+    .values()
     .filter((c) => !scenarios.has(c.value))
     .map((c) =>
       error(
@@ -742,7 +743,8 @@ function checkScenarioReferences(root: string, scenarios: Set<number> | null): I
         `Release scenario ${c.value} is not one of the ${known.length} numbered in §10 of ${PLAN} (${known[0]}-${known[known.length - 1]}). A row naming a scenario that does not exist asserts coverage nothing can satisfy, and it counts as coverage in every tally taken from this file. Cite the scenario the capability actually tests, or drop the reference if it tests none.`,
         c.line,
       ),
-    );
+    )
+    .toArray();
 }
 
 /**
@@ -884,7 +886,7 @@ function checkAdaptationRationales(root: string, rows: ReadonlyArray<Adaptation>
 }
 
 export function checkProvenance(ctx: CheckContext): Issue[] {
-  const { root, catalog } = ctx;
+  const { root } = ctx;
   const issues: Issue[] = [];
 
   const { donors, issues: donorIssues } = loadDonors(root);
@@ -1120,7 +1122,7 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
         error(
           "provenance.fabricated-source",
           CONVERSATION_MAP,
-          `'${id}' has origin: ${String(origin)} but carries a donor source '${row["source"]}'. A capability absent upstream carries a locator, never a source path.`,
+          `'${id}' has origin: ${origin} but carries a donor source '${row["source"]}'. A capability absent upstream carries a locator, never a source path.`,
         ),
       );
     }

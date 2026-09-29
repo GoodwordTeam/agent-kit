@@ -187,9 +187,10 @@ export const UNIVERSAL_NEVER_ROWS: ReadonlyArray<GovernedNeverRow> = [
 ];
 
 /** Kept for the callers that only need the citations. */
-export const MANDATORY_NEVER_RULINGS: ReadonlyArray<string> = UNIVERSAL_NEVER_ROWS.map((row) => row.ruling).filter(
-  (ruling): ruling is string => ruling !== null,
-);
+export const MANDATORY_NEVER_RULINGS: ReadonlyArray<string> = UNIVERSAL_NEVER_ROWS.values()
+  .map((row) => row.ruling)
+  .filter((ruling): ruling is string => ruling !== null)
+  .toArray();
 
 /** What twenty-seven seats say: they judge, and judging is all they do. */
 export const AUTHORSHIP_PLAIN_ROW: GovernedNeverRow = {
@@ -288,7 +289,7 @@ export function splitSections(text: string): Section[] {
   for (const [i, raw] of lines.entries()) {
     const line = raw ?? "";
     if (/^\s*```/.test(line)) fenced = !fenced;
-    if (!fenced && /^## /.test(line)) {
+    if (!fenced && line.startsWith("## ")) {
       if (current !== null) out.push({ heading: current.heading, line: current.line, text: current.body.join("\n") });
       current = { heading: line.trimEnd(), line: i + 1, body: [] };
       continue;
@@ -360,7 +361,11 @@ export function listItems(text: string): string[] {
     if (current !== null) current.push(line);
   }
   if (current !== null) rows.push(current.join(" "));
-  return rows.map((row) => row.replace(/\s+/g, " ").trim()).filter((row) => row.length > 0);
+  return rows
+    .values()
+    .map((row) => row.replace(/\s+/g, " ").trim())
+    .filter((row) => row.length > 0)
+    .toArray();
 }
 
 function normalizeRow(text: string): string {
@@ -672,7 +677,7 @@ function rowPopulationNote(population: RowPopulation): Issue {
       population.bodies === 1 ? "body" : "bodies"
     }: ${population.universal} for each universal row, ${population.plain} for the plain authorship row, ${
       population.converse
-    } for the converse, ${population.standards} for standards grounding. A seat short of its population carried no ${"## Never"} row this could find and is reported above. The converse is the one row §12.2 describes in prose instead of setting, so those ${population.converse} are held to its clauses and to no verbatim form; everything else counted here was compared with §12.2's own text.`,
+    } for the converse, ${population.standards} for standards grounding. A seat short of its population carried no ## Never row this could find and is reported above. The converse is the one row §12.2 describes in prose instead of setting, so those ${population.converse} are held to its clauses and to no verbatim form; everything else counted here was compared with §12.2's own text.`,
   );
 }
 
@@ -719,7 +724,11 @@ function checkSections(
   // Order is checked over the required headings that are actually present, so a
   // missing heading is reported once as missing rather than again as misplaced.
   const expected = required.filter((h) => present.has(h));
-  const actual = sections.filter((s) => expected.includes(s.heading)).map((s) => s.heading);
+  const actual = sections
+    .values()
+    .filter((s) => expected.includes(s.heading))
+    .map((s) => s.heading)
+    .toArray();
   for (const [i, heading] of actual.entries()) {
     if (expected[i] === heading) continue;
     const at = present.get(heading);

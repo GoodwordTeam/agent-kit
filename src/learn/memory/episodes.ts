@@ -166,7 +166,12 @@ export function consolidatedSids(ledger: Ledger): Set<string> {
     ),
     ...readJsonl<ConsolidationMark>(ledger.path(CONSOLIDATED_FILE)),
   ];
-  return new Set(marks.filter((mark) => !undone.has(mark.run)).map((mark) => mark.sid));
+  return new Set(
+    marks
+      .values()
+      .filter((mark) => !undone.has(mark.run))
+      .map((mark) => mark.sid),
+  );
 }
 
 /** Episodes no standing run has consolidated, in file order. */

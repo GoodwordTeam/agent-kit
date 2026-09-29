@@ -266,9 +266,7 @@ describe("claude-mem source", () => {
     expect(mem.editedFiles("s-1")).toEqual(["b.ts"]);
     expect(mem.toolUseCwds(0)[0]!.cwd).toBe(repo);
     expect(jsonList(mem.sessionObservations("s-1")[0]!.files_modified)).toEqual(["a.ts"]);
-    expect(() =>
-      (mem as unknown as { db: { exec: (s: string) => void } }).db.exec("delete from observations"),
-    ).toThrow();
+    expect(() => mem["db"].exec("delete from observations")).toThrow();
     mem.close();
   });
 });

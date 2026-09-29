@@ -241,20 +241,30 @@ describe("the fixture can host a refused closure", () => {
   });
 });
 
+interface EvidenceEntry {
+  location: { path: string; line_range: { start: number } };
+  excerpt: string;
+}
+
+interface Fingerprint {
+  inputs: { evidence_digest: string };
+  value: string;
+}
+
 describe("the findings point at what they say they point at", () => {
   const findings = artifactNames.filter((n) => n.startsWith("finding."));
 
   test("every excerpt is at the line its evidence claims, in the materialized repository", () => {
     const wrong: string[] = [];
     for (const name of findings) {
-      const evidence = artifacts[name]!["evidence"] as Array<Record<string, any>>;
+      const evidence = artifacts[name]!["evidence"] as EvidenceEntry[];
       for (const [i, entry] of evidence.entries()) {
-        const { path, line_range } = entry["location"];
+        const { path, line_range } = entry.location;
         const lines = readFileSync(join(repo, path), "utf8").split("\n");
         const actual = lines[line_range.start - 1];
-        if (actual !== entry["excerpt"]) {
+        if (actual !== entry.excerpt) {
           wrong.push(
-            `${name} evidence[${i}] claims ${path}:${line_range.start} is ${JSON.stringify(entry["excerpt"])}, found ${JSON.stringify(actual)}`,
+            `${name} evidence[${i}] claims ${path}:${line_range.start} is ${JSON.stringify(entry.excerpt)}, found ${JSON.stringify(actual)}`,
           );
         }
       }
@@ -265,10 +275,10 @@ describe("the findings point at what they say they point at", () => {
   test("every excerpt occurs exactly once in its file, so the line is not what identifies it", () => {
     const ambiguous: string[] = [];
     for (const name of findings) {
-      for (const entry of artifacts[name]!["evidence"] as Array<Record<string, any>>) {
-        const lines = readFileSync(join(repo, entry["location"]["path"]), "utf8").split("\n");
-        const hits = lines.filter((l) => l === entry["excerpt"]).length;
-        if (hits !== 1) ambiguous.push(`${name}: ${JSON.stringify(entry["excerpt"])} occurs ${hits} times`);
+      for (const entry of artifacts[name]!["evidence"] as EvidenceEntry[]) {
+        const lines = readFileSync(join(repo, entry.location.path), "utf8").split("\n");
+        const hits = lines.filter((l) => l === entry.excerpt).length;
+        if (hits !== 1) ambiguous.push(`${name}: ${JSON.stringify(entry.excerpt)} occurs ${hits} times`);
       }
     }
     expect(ambiguous).toEqual([]);
@@ -283,8 +293,9 @@ describe("the findings point at what they say they point at", () => {
     // itself, and that copy went stale the moment the domain gained a member,
     // which is the whole argument for there being one of them.
     const finding = artifacts["finding.tenant-isolation.json"]!;
-    const inputs = (finding["fingerprint"] as Record<string, any>)["inputs"];
-    const excerpt = (finding["evidence"] as Array<Record<string, any>>)[0]!["excerpt"];
+    const fingerprint = finding["fingerprint"] as Fingerprint;
+    const inputs = fingerprint.inputs;
+    const excerpt = (finding["evidence"] as EvidenceEntry[])[0]!.excerpt;
 
     const moved = readFileSync(join(FIXTURE, "stages", "line-move", "report.ts"), "utf8").split("\n");
     const before = readFileSync(join(repo, "src/report.ts"), "utf8").split("\n");
@@ -298,8 +309,8 @@ describe("the findings point at what they say they point at", () => {
     const domain = digestDomain(join(import.meta.dir, ".."));
     expect(domain).not.toBeNull();
     expect(domain!.fields.some((f) => /line|offset/i.test(f))).toBe(false);
-    expect(evidenceDigest(finding, domain!)).toBe(inputs["evidence_digest"]);
-    expect(`sha256:${sha256Hex(canonicalJson(inputs))}`).toBe((finding["fingerprint"] as Record<string, any>)["value"]);
+    expect(evidenceDigest(finding, domain!)).toBe(inputs.evidence_digest);
+    expect(`sha256:${sha256Hex(canonicalJson(inputs))}`).toBe(fingerprint.value);
   });
 });
 

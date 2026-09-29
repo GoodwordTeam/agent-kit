@@ -70,7 +70,7 @@ describe("stratifiedSample", () => {
 
   test("the same seed picks the same rows in the same order, whatever order the rows came in", () => {
     const once = stratifiedSample(rows, 20, 7).picked.map((r) => r.id);
-    expect(stratifiedSample([...rows].reverse(), 20, 7).picked.map((r) => r.id)).toEqual(once);
+    expect(stratifiedSample(rows.toReversed(), 20, 7).picked.map((r) => r.id)).toEqual(once);
     expect(stratifiedSample(rows, 20, 8).picked.map((r) => r.id)).not.toEqual(once);
   });
 
@@ -305,10 +305,10 @@ describe("loading stored runs and the label file", () => {
     const labels = buildLabels(loadRuns(sources, scoring), { n: 80, seed: 1, sources });
     expect(labels.criteria).toBe(CRITERIA);
     expect(labels.items).toHaveLength(3);
-    for (const item of labels.items) {
-      expect(item).toMatchObject({ label: null, note: "" });
-      expect(item.id).toMatch(/^[0-9a-f]{12}$/);
-      expect(item.transcript).toContain(`[prompt] ${item.prompt}`);
+    for (const labelled of labels.items) {
+      expect(labelled).toMatchObject({ label: null, note: "" });
+      expect(labelled.id).toMatch(/^[0-9a-f]{12}$/);
+      expect(labelled.transcript).toContain(`[prompt] ${labelled.prompt}`);
     }
     const violated = labels.items.find((i) => i.stratum.startsWith("violated/"))!;
     expect(violated).toMatchObject({
@@ -330,7 +330,7 @@ describe("loading stored runs and the label file", () => {
 
   test("a label other than PASS, FAIL or null is refused on read", () => {
     const file = join(scratch, "bad-label.json");
-    const labels: LabelFile = {
+    const labels = {
       version: 1,
       criteria: CRITERIA,
       seed: 1,
@@ -338,7 +338,7 @@ describe("loading stored runs and the label file", () => {
       sources: [],
       strata: {},
       skipped: {},
-      items: [item("a", { label: "pass" as unknown as "PASS" })],
+      items: [{ ...item("a"), label: "pass" }],
     };
     writeFileSync(file, JSON.stringify(labels));
     expect(() => readLabels(file)).toThrow(/label must be PASS, FAIL or null/);

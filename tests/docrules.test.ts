@@ -567,19 +567,20 @@ describe("finding.evidence-digest-domain", () => {
     return out;
   }
 
+  interface MovableEvidence {
+    location: { line_range: { start: number; end: number } };
+  }
+
   function moved(doc: Record<string, unknown>, start: number, end: number): Record<string, unknown> {
     const out = clone(doc);
-    (out["evidence"] as Array<Record<string, any>>)[0]!["location"]["line_range"] = { start, end };
+    (out["evidence"] as MovableEvidence[])[0]!.location.line_range = { start, end };
     return out;
   }
 
   function issuesFor(doc: Record<string, unknown>, schemaText?: string) {
-    const root = makeTree({
-      "catalog.yaml": CATALOG,
-      ...shippedSchemas(),
-      ...(schemaText === undefined ? {} : { "schemas/finding.schema.json": schemaText }),
-      "templates/finding.json": JSON.stringify(doc),
-    });
+    const shipped = { "catalog.yaml": CATALOG, ...shippedSchemas() };
+    const schemas = schemaText === undefined ? shipped : { ...shipped, "schemas/finding.schema.json": schemaText };
+    const root = makeTree({ ...schemas, "templates/finding.json": JSON.stringify(doc) });
     const { catalog } = loadCatalog(root);
     return checkDocumentRules({ root, catalog: catalog! }).filter((i) => i.file === "templates/finding.json");
   }

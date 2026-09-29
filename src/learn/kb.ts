@@ -73,7 +73,7 @@ export function lessonDraft(
   const projectId = kebab(basename(project.root));
   const repoName = project.repo ?? projectId;
   const created = nowIso(at);
-  return {
+  const draft = {
     schema: "lesson",
     schema_version: 1,
     id: `learn-${projectId}-${input.localId}`,
@@ -98,8 +98,8 @@ export function lessonDraft(
       input.paths && input.paths.length > 0
         ? { domains: input.domains, paths: input.paths }
         : { domains: input.domains },
-    ...(input.guidance && input.guidance.length > 0 ? { guidance: input.guidance } : {}),
   };
+  return input.guidance && input.guidance.length > 0 ? { ...draft, guidance: input.guidance } : draft;
 }
 
 export interface ProposalResult {

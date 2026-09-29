@@ -95,8 +95,8 @@ function vocabularies(root: string): { authority: Set<string>; covers: Set<strin
     if (values.length === 0) return;
     if (name === "authority" || name === "remote_side_effect") into.clear();
     for (const value of values) {
-      const text = str(value);
-      if (text !== null) into.add(text);
+      const member = str(value);
+      if (member !== null) into.add(member);
     }
   };
   readEnum("authority", authority);

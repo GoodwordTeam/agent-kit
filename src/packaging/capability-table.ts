@@ -287,13 +287,11 @@ export function ceilingFor(requires: readonly string[], table: CapabilityTable, 
     const borrowed = attached
       .map((adapter) => supply.fallbacks?.get(capability)?.get(adapter))
       .find((c) => c !== undefined);
-    detached.push({
-      capability,
-      adapters: [...suppliers],
-      ...(borrowed === undefined
-        ? {}
-        : { fallsBackOn: { capability: borrowed, adapters: [...(supply.suppliers.get(borrowed) ?? [])] } }),
-    });
+    const row: Ceiling["detached"][number] = { capability, adapters: [...suppliers] };
+    if (borrowed !== undefined) {
+      row.fallsBackOn = { capability: borrowed, adapters: [...(supply.suppliers.get(borrowed) ?? [])] };
+    }
+    detached.push(row);
   }
 
   const capped = blocking.length > 0 || unknown.length > 0 || detached.length > 0;

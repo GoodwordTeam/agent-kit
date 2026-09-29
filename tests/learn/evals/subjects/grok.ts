@@ -142,14 +142,12 @@ export const grok: SubjectAdapter = {
     flush();
     const last = events.at(-1);
     const reply = last?.kind === "message" ? last.text.trim() : "";
-    return {
-      events,
-      reply,
-      ...(costUsd === undefined ? {} : { costUsd }),
-      ...(turns === undefined ? {} : { turns }),
-      ...(model === undefined ? {} : { model }),
-      ...(stopReason === undefined ? {} : { stopReason }),
-    };
+    const parsed: ReturnType<SubjectAdapter["parse"]> = { events, reply };
+    if (costUsd !== undefined) parsed.costUsd = costUsd;
+    if (turns !== undefined) parsed.turns = turns;
+    if (model !== undefined) parsed.model = model;
+    if (stopReason !== undefined) parsed.stopReason = stopReason;
+    return parsed;
   },
   isolate(scratch: string, req: SessionRequest): Isolation {
     const callerHome = req.env.GROK_HOME ?? join(req.env.HOME ?? homedir(), ".grok");
@@ -171,7 +169,7 @@ export const grok: SubjectAdapter = {
       leaks: [
         "the host's bundled platform skills, fetched into the private home at start and advertised beside the bundle's",
       ],
-      release: home.release,
+      release: () => home.release(),
     };
   },
 };

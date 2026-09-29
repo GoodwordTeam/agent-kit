@@ -152,10 +152,12 @@ export function decayLessons(ledger: Ledger, today = todayLocal()): string[] {
 
 /** `obs:N` to the session it came from, for every observation cited by a lesson, as nightly consolidation maps them. */
 export function lessonObsSessions(ctx: LearnContext, ledger: Ledger): Map<string, string> {
-  const ids = [...loadLessons(ledger).values()]
+  const ids = loadLessons(ledger)
+    .values()
     .flatMap(({ meta }) => list(meta.evidence))
     .filter((id) => /^obs:\d+$/.test(id))
-    .map((id) => Number(id.slice(4)));
+    .map((id) => Number(id.slice(4)))
+    .toArray();
   const mem = ClaudeMemSource.open(ctx.config.memDb);
   if (mem === null || ids.length === 0) {
     mem?.close();
@@ -277,7 +279,7 @@ export function deep(ctx: LearnContext, ledger: Ledger, root: string, review: Le
     else skippedProposals.push(proposal.skipped);
   }
   saveState(ledger, { ...readState(ledger), last_weekly: nowMs() });
-  appendRun(ledger, {
+  const run = {
     job: "weekly",
     id: runId,
     status: "ok",
@@ -287,8 +289,8 @@ export function deep(ctx: LearnContext, ledger: Ledger, root: string, review: Le
     merged: pairs.merged,
     conflicts: pairs.conflicts,
     proposals,
-    ...(skippedProposals.length > 0 ? { proposals_skipped: skippedProposals } : {}),
-  });
+  };
+  appendRun(ledger, skippedProposals.length > 0 ? { ...run, proposals_skipped: skippedProposals } : run);
   const compactNote =
     compacted === -1
       ? "evidence compaction skipped (review ledger locked, retries next week)"

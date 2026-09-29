@@ -102,14 +102,12 @@ export const claude: SubjectAdapter = {
         turns = line.num_turns;
       }
     }
-    return {
-      events,
-      reply,
-      ...(costUsd === undefined ? {} : { costUsd }),
-      ...(turns === undefined ? {} : { turns }),
-      ...(model === undefined ? {} : { model }),
-      ...(slashCommands === undefined ? {} : { slashCommands }),
-    };
+    const parsed: ReturnType<SubjectAdapter["parse"]> = { events, reply };
+    if (costUsd !== undefined) parsed.costUsd = costUsd;
+    if (turns !== undefined) parsed.turns = turns;
+    if (model !== undefined) parsed.model = model;
+    if (slashCommands !== undefined) parsed.slashCommands = slashCommands;
+    return parsed;
   },
   isolate(): Isolation {
     return {

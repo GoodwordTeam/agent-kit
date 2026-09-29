@@ -149,9 +149,11 @@ const STOPWORDS = new Set(
 
 function contentWords(text: string): string[] {
   const flattened = text.toLowerCase().replace(/[`_]/g, " ");
-  return [...flattened.matchAll(/[a-z][a-z-]*/g)]
+  return flattened
+    .matchAll(/[a-z][a-z-]*/g)
     .map((m) => m[0])
-    .filter((word) => word.length > 2 && !STOPWORDS.has(word));
+    .filter((word) => word.length > 2 && !STOPWORDS.has(word))
+    .toArray();
 }
 
 interface Sentence {
@@ -459,7 +461,7 @@ function citationScope(file: string, lines: ReadonlyArray<string>, startLine: nu
   // from reaching its siblings and keeps a parent from borrowing a citation
   // written on a nested child.
   const [itemFirst, itemLast] = scalarItem(lines, startLine, endLine);
-  const parts: string[] = [...lines.slice(itemFirst, itemLast + 1)];
+  const parts: string[] = lines.slice(itemFirst, itemLast + 1);
   const first = startLine - 1;
   const last = endLine - 1;
 

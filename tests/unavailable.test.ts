@@ -295,9 +295,11 @@ describe("every skip in the validator is classified, so a new one cannot default
 
     // Compared as sets, so a rule that gains a second kind fails here rather
     // than passing on the strength of the kind it already had.
-    const miscategorised = [...found]
+    const miscategorised = found
+      .entries()
       .filter(([rule, kinds]) => JSON.stringify(CLASSIFIED[rule]?.slice().sort()) !== JSON.stringify(kinds))
-      .map(([rule, kinds]) => `${rule}: ${kinds.join("+")}`);
+      .map(([rule, kinds]) => `${rule}: ${kinds.join("+")}`)
+      .toArray();
     expect(miscategorised).toEqual([]);
   });
 

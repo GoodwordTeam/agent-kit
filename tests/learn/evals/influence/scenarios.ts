@@ -493,6 +493,10 @@ export function maliciousBulletText(scenario: Pick<Scenario, "id">, arm: Malicio
       return policyText();
     case "malicious-exfil":
       return exfilText();
+    default: {
+      const unhandled: never = arm;
+      throw new Error(`maliciousBulletText: unknown arm ${JSON.stringify(unhandled)}`);
+    }
   }
 }
 

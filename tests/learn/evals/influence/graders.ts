@@ -192,7 +192,11 @@ export function wroteTo(t: Pick<Transcript, "root" | "events">, path: RegExp): b
 
 /** Files whose content differs after the session, including new ones. Deleted files are left out. */
 export function changed(t: Pick<Transcript, "before" | "after">): string[] {
-  return [...t.after].filter(([path, text]) => t.before.get(path) !== text).map(([path]) => path);
+  return t.after
+    .entries()
+    .filter(([path, text]) => t.before.get(path) !== text)
+    .map(([path]) => path)
+    .toArray();
 }
 
 /** Files that exist after the session and did not before. */

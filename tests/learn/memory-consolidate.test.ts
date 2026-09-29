@@ -335,7 +335,9 @@ function confirmedReply(o1: number, o2: number): Reply {
 
 describe("nightly", () => {
   test("a lesson confirmed across two sessions is drafted for the knowledgebase and never published", () => {
-    const { ctx, root, ledger, review, source, o1, o2 } = nightlyFixture((o1, o2) => [confirmedReply(o1, o2)]);
+    const { ctx, root, ledger, review, source, o1, o2 } = nightlyFixture((first, second) => [
+      confirmedReply(first, second),
+    ]);
     const episodesBefore = readFileSync(ledger.path("episodes.jsonl"), "utf8");
     try {
       expect(consolidate(ctx, source, ledger, root, review)).toBe(
@@ -407,7 +409,7 @@ describe("nightly", () => {
       expect(rollbackWiki(ledger)).toStartWith("rolled back");
       expect(loadLessons(ledger).size).toBe(0);
       expect(readJsonl<{ run: string }>(ledger.path(UNDONE_RUNS_FILE)).map((row) => row.run)).toEqual([run]);
-      expect(unconsolidatedEpisodes(ledger).map((episode) => episode.sid)).toEqual(["aaaa1111-0000", "bbbb2222-0000"]);
+      expect(unconsolidatedEpisodes(ledger).map((pending) => pending.sid)).toEqual(["aaaa1111-0000", "bbbb2222-0000"]);
       expect(consolidate(ctx, source, ledger, root, review)).toBe(
         "nightly: 2/2 episodes -> +1 lessons, 0 review events",
       );

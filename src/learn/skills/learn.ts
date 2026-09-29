@@ -91,13 +91,14 @@ export function skillsLedger(ctx: LearnContext, root: string): Ledger {
 
 export function loadRegistry(ledger: Ledger): SkillRegistry {
   const raw = readJson<Partial<SkillRegistry>>(ledger.path("registry.json"), {});
-  return {
+  const registry: SkillRegistry = {
     next: typeof raw.next === "number" ? raw.next : 1,
     candidates: raw.candidates ?? {},
     rejected: raw.rejected ?? [],
     seen_sessions: raw.seen_sessions ?? {},
-    ...(raw.last_discover === undefined ? {} : { last_discover: raw.last_discover }),
   };
+  if (raw.last_discover !== undefined) registry.last_discover = raw.last_discover;
+  return registry;
 }
 
 function saveRegistry(ledger: Ledger, registry: SkillRegistry): void {

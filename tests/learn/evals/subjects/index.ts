@@ -18,7 +18,7 @@ export const BUNDLE_FOR: Record<HostKind, string> = { claude: "claude-code", cod
 
 export function adapterFor(host: HostKind): SubjectAdapter {
   const adapter = ADAPTERS[host];
-  if (adapter === undefined) throw new Error(`no subject adapter for host '${String(host)}'`);
+  if (adapter === undefined) throw new Error(`no subject adapter for host '${host}'`);
   return adapter;
 }
 
@@ -54,21 +54,24 @@ export async function runSubject(
       timeoutMs: req.timeoutMs,
     });
     const parsed = adapter.parse(result.stdout);
-    return {
+    const reported: Pick<SessionResult, "costUsd" | "turns" | "model" | "slashCommands" | "stopReason"> = {};
+    if (parsed.costUsd !== undefined) reported.costUsd = parsed.costUsd;
+    if (parsed.turns !== undefined) reported.turns = parsed.turns;
+    if (parsed.model !== undefined) reported.model = parsed.model;
+    if (parsed.slashCommands !== undefined) reported.slashCommands = parsed.slashCommands;
+    if (parsed.stopReason !== undefined) reported.stopReason = parsed.stopReason;
+    const session: SessionResult = {
       subject: subjectId,
       host: adapter.host,
       events: parsed.events,
       reply: result.timedOut && parsed.reply === "" ? "TIMEOUT" : parsed.reply,
       exitCode: result.code,
       timedOut: result.timedOut,
-      ...(parsed.costUsd === undefined ? {} : { costUsd: parsed.costUsd }),
-      ...(parsed.turns === undefined ? {} : { turns: parsed.turns }),
-      ...(parsed.model === undefined ? {} : { model: parsed.model }),
-      ...(parsed.slashCommands === undefined ? {} : { slashCommands: parsed.slashCommands }),
-      ...(parsed.stopReason === undefined ? {} : { stopReason: parsed.stopReason }),
+      ...reported,
       durationMs: Date.now() - started,
-      ...(isolation === undefined ? {} : { leaks: isolation.leaks }),
     };
+    if (isolation !== undefined) session.leaks = isolation.leaks;
+    return session;
   } finally {
     isolation?.release();
     rmSync(scratch, { recursive: true, force: true });

@@ -65,13 +65,13 @@ export interface PackageInfo {
 
 export class Catalog {
   constructor(
-    readonly package_: PackageInfo,
+    readonly packageInfo: PackageInfo,
     readonly entries: ReadonlyArray<CatalogEntry>,
     readonly raw: Record<string, unknown>,
   ) {}
 
   get package(): PackageInfo {
-    return this.package_;
+    return this.packageInfo;
   }
 
   bySection(section: Section): CatalogEntry[] {
@@ -143,13 +143,13 @@ export function loadCatalog(root: string): LoadResult {
     };
   }
 
-  const root_ = asRecord(doc);
-  if (Object.keys(root_).length === 0) {
+  const rootDoc = asRecord(doc);
+  if (Object.keys(rootDoc).length === 0) {
     return { catalog: null, issues: [error("catalog.unparseable", "catalog.yaml", "catalog.yaml is not a mapping.")] };
   }
 
   const issues: Issue[] = [];
-  const pkg = asRecord(root_["package"]);
+  const pkg = asRecord(rootDoc["package"]);
   const packageInfo: PackageInfo = {
     id: typeof pkg["id"] === "string" ? pkg["id"] : "",
     name: typeof pkg["name"] === "string" ? pkg["name"] : "",
@@ -165,7 +165,7 @@ export function loadCatalog(root: string): LoadResult {
 
   const entries: CatalogEntry[] = [];
   for (const section of ALL_SECTIONS) {
-    const list = root_[section];
+    const list = rootDoc[section];
     if (list === undefined || list === null) continue;
     if (!Array.isArray(list)) {
       issues.push(error("catalog.section-not-a-list", "catalog.yaml", `Section '${section}' must be a list.`));
@@ -223,7 +223,7 @@ export function loadCatalog(root: string): LoadResult {
 
   issues.push(...idsInTwoAddressableSections(entries));
 
-  return { catalog: new Catalog(packageInfo, entries, root_), issues };
+  return { catalog: new Catalog(packageInfo, entries, rootDoc), issues };
 }
 
 /**

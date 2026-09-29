@@ -113,7 +113,7 @@ function verb(
     string,
     string,
   ];
-  return { base, third, ing, participle, ...(opts.noun === true ? { noun: true } : {}) };
+  return opts.noun === true ? { base, third, ing, participle, noun: true } : { base, third, ing, participle };
 }
 
 const RE = "(?:re-?)?";
@@ -154,7 +154,7 @@ const ACTION_VERBS: ReadonlyArray<ActionVerb> = [
 ];
 
 const any = (pick: (v: ActionVerb) => string, keep: (v: ActionVerb) => boolean = () => true): string =>
-  `(?:${ACTION_VERBS.filter(keep).map(pick).join("|")})`;
+  `(?:${ACTION_VERBS.values().filter(keep).map(pick).toArray().join("|")})`;
 
 const BASE = any((v) => v.base);
 const THIRD = any((v) => v.third);

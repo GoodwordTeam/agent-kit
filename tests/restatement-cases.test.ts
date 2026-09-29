@@ -59,7 +59,7 @@ function longestSharedRun(caseText: string, rulingText: string): number {
   const a = caseText.replace(/\s+/g, " ").trim();
   const b = rulingText.replace(/\s+/g, " ").trim();
   let best = 0;
-  const row = new Array<number>(b.length + 1).fill(0);
+  const row = Array.from({ length: b.length + 1 }, () => 0);
   for (let i = 1; i <= a.length; i++) {
     let diagonal = 0;
     for (let j = 1; j <= b.length; j++) {

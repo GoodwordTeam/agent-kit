@@ -71,7 +71,7 @@ import { loadCatalog } from "../../../src/catalog/load.ts";
 import { run } from "../../../src/learn/core/proc.ts";
 import { PACKAGE_ROOT } from "../../../src/learn/core/roles.ts";
 import { loadMatrix, MATRIX_FILE, type Matrix, type Seat, type Subject } from "./matrix.ts";
-import { buildPanel, grade, type Grade, type Judge, type Panel, type Vote } from "./panel.ts";
+import { buildPanel, grade, type Grade, type GradeOptions, type Judge, type Panel, type Vote } from "./panel.ts";
 import { type KappaRow, kappaTable, rng } from "./stats.ts";
 import type { HostKind, SessionEvent } from "./subjects/types.ts";
 import {
@@ -391,12 +391,14 @@ function receiptPaths(path: string, receipt: Receipt["receipt"]): { runId: strin
   const jsonArg = argOf(receipt.argv, "--json");
   const dumpArg = argOf(receipt.argv, "--dump-transcripts");
   let root: string | undefined;
-  for (let dir = dirname(path); jsonArg !== undefined; dir = dirname(dir)) {
-    if (existsSync(resolve(dir, jsonArg))) {
-      root = dir;
-      break;
+  if (jsonArg !== undefined) {
+    for (let dir = dirname(path); ; dir = dirname(dir)) {
+      if (existsSync(resolve(dir, jsonArg))) {
+        root = dir;
+        break;
+      }
+      if (dirname(dir) === dir) break;
     }
-    if (dirname(dir) === dir) break;
   }
   return {
     runId: root !== undefined && jsonArg !== undefined ? resolve(root, jsonArg) : path,
@@ -434,12 +436,15 @@ export function loadRuns(paths: readonly string[], scoring: ScoreOptions): Loade
   };
   const fromDump = (subject: string, host: HostKind | null, file: string, arm: ScoreOptions["arm"]) => {
     const dump = JSON.parse(readFileSync(file, "utf8")) as Dump;
-    const invalid = invalidRow({
-      ...(dump.scored?.invalid === undefined ? {} : { invalid: dump.scored.invalid }),
-      reply: dump.reply,
-    });
-    if (invalid !== null) return skip(file, `invalid session (${invalid})`);
-    if (kindOf(dump.case) === null) return skip(file, "not decided by the heuristic graders");
+    const invalid = invalidRow({ invalid: dump.scored?.invalid, reply: dump.reply });
+    if (invalid !== null) {
+      skip(file, `invalid session (${invalid})`);
+      return;
+    }
+    if (kindOf(dump.case) === null) {
+      skip(file, "not decided by the heuristic graders");
+      return;
+    }
     add({
       source: file,
       subject,
@@ -766,11 +771,9 @@ export async function gradeLabels(
         continue;
       }
       const retry = seats.length < panel.members.length;
-      const result = await grade({ ...panel, members: seats }, item.transcript, labels.criteria, {
-        item: id,
-        queue,
-        ...(options.judge === undefined ? {} : { judge: options.judge }),
-      });
+      const gradeOptions: GradeOptions = { item: id, queue };
+      if (options.judge !== undefined) gradeOptions.judge = options.judge;
+      const result = await grade({ ...panel, members: seats }, item.transcript, labels.criteria, gradeOptions);
       calls += seats.length;
       graded++;
       const fresh = readLabels(file);
@@ -973,13 +976,14 @@ export async function main(argv: string[], labelsFile = LABELS_FILE): Promise<nu
       console.error(`calibrate: no subject ${subject} in ${matrixFile}`);
       return 2;
     }
-    const result = await gradeLabels(file, {
+    const gradeOptions: Parameters<typeof gradeLabels>[1] = {
       matrix,
       spend,
       retryInvalid: args.switches.has("--retry-invalid"),
-      ...(subject === undefined ? {} : { subject }),
-      ...(maxCalls === undefined ? {} : { maxCalls: Number(maxCalls) }),
-    });
+    };
+    if (subject !== undefined) gradeOptions.subject = subject;
+    if (maxCalls !== undefined) gradeOptions.maxCalls = Number(maxCalls);
+    const result = await gradeLabels(file, gradeOptions);
     console.log(`matrix: ${existsSync(matrixFile) ? matrixFile : "absent, default matrix"}`);
     printPlan(result.plan);
     if (!spend) {

@@ -111,9 +111,9 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
 
-function pick(raw: Record<string, unknown>, ...keys: string[]): unknown {
-  for (const key of keys) if (raw[key] !== undefined) return raw[key];
-  return undefined;
+function pick<V, T>(raw: Record<string, V>, parse: (value: V | undefined) => T, ...keys: string[]): T {
+  for (const key of keys) if (raw[key] !== undefined) return parse(raw[key]);
+  return parse(undefined);
 }
 
 export const EMPTY_MANIFEST: SkillManifest = {
@@ -168,15 +168,15 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
   }
 
   const raw = record(parsed);
-  const modelOperations = strings(pick(raw, "model_operations", "model-operations"));
+  const modelOperations = pick(raw, strings, "model_operations", "model-operations");
   const delegatedCalls = [
-    ...strings(pick(raw, "calls")),
-    ...strings(pick(raw, "child_operations", "child-operations")),
-    ...strings(pick(raw, "invokes")),
+    ...pick(raw, strings, "calls"),
+    ...pick(raw, strings, "child_operations", "child-operations"),
+    ...pick(raw, strings, "invokes"),
   ];
   const manifest: SkillManifest = {
-    ...hostRows(record(pick(raw, "packaging"))),
-    requires: strings(pick(raw, "requires")),
+    ...hostRows(pick(raw, record, "packaging")),
+    requires: pick(raw, strings, "requires"),
     calls: [...delegatedCalls, ...modelOperations],
     delegatedCalls,
     modelOperations,
@@ -185,9 +185,9 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
 
   if (typeof raw["id"] === "string") manifest.id = raw["id"];
   if (raw["invocation"] === "U" || raw["invocation"] === "M") manifest.invocation = raw["invocation"];
-  const hint = pick(raw, "argument_hint", "argument-hint");
-  if (typeof hint === "string") manifest.argumentHint = hint;
-  const tools = strings(pick(raw, "allowed_tools", "allowed-tools"));
+  const hint = pick(raw, (value) => (typeof value === "string" ? value : undefined), "argument_hint", "argument-hint");
+  if (hint !== undefined) manifest.argumentHint = hint;
+  const tools = pick(raw, strings, "allowed_tools", "allowed-tools");
   if (tools.length > 0) manifest.allowedTools = tools;
 
   return manifest;

@@ -83,6 +83,10 @@ export function entryFilePath(section: FileSection, id: string): string {
       return `profiles/${id}.yaml`;
     case "adapters":
       return `adapters/${id}/CONTRACT.md`;
+    default: {
+      const unhandled: never = section;
+      throw new Error(`entryFilePath: unknown file section ${JSON.stringify(unhandled)}`);
+    }
   }
 }
 

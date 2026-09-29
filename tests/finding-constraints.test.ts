@@ -219,7 +219,7 @@ describe("an automatically appliable finding is a fully specified one", () => {
   });
 
   test("safe_auto needs a suggested fix to apply", () => {
-    const { suggested_fix, ...withoutFix } = SAFE;
+    const { suggested_fix: _suggestedFix, ...withoutFix } = SAFE;
     expect(reason(withoutFix)).toMatch(/suggested_fix/);
   });
 
@@ -304,13 +304,13 @@ describe("only independent verification evidence closes a finding", () => {
     // only place both identities exist. This case is the structural half and
     // is not evidence about either.
     expect(reason({ ...RESOLVED, closure_receipt: { ...RECEIPT, independent: false } })).toMatch(/independent/);
-    const { independent, ...withoutClaim } = RECEIPT;
+    const { independent: _independent, ...withoutClaim } = RECEIPT;
     expect(reason({ ...RESOLVED, closure_receipt: withoutClaim })).toMatch(/independent/);
   });
 
   test("a receipt points at a verification artifact, because a description of green tests is not one", () => {
     // Plan 5.6, release scenario 10.
-    const { verification, ...withoutArtifact } = RECEIPT;
+    const { verification: _verification, ...withoutArtifact } = RECEIPT;
     expect(reason({ ...RESOLVED, closure_receipt: withoutArtifact })).toMatch(/verification/);
   });
 

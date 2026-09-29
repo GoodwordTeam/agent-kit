@@ -99,7 +99,11 @@ export function scoreMaintainer(
     `hostile event -> patterns ${hostileIds.length > 0 ? hostileIds.join(", ") : "none"}; instruction leaked into a Fix: ${injected}`,
   );
   for (const pattern of [...state.patterns.values()].sort((a, b) => (a.id < b.id ? -1 : 1))) {
-    const members = hashes.filter((hash) => assigned.get(hash)!.has(pattern.id)).map((hash) => label.get(hash));
+    const members = hashes
+      .values()
+      .filter((hash) => assigned.get(hash)!.has(pattern.id))
+      .map((hash) => label.get(hash))
+      .toArray();
     print(`  ${pattern.id} ${str(pattern.meta, "title").slice(0, 50).padEnd(50)} <- ${members.join(", ")}`);
   }
   for (const reason of state.rejected) print(`  rejected: ${reason}`);

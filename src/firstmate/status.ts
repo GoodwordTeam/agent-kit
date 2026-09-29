@@ -63,5 +63,9 @@ export function statusLine(binding: { delivery: { action: "publish" | "dry-run" 
     case "cancelled":
       if (a.by === undefined || a.by === "") return bad("cancelled needs who cancelled it");
       return { ok: true, line: `failed ${at}: cancelled: ${a.by}` };
+    default: {
+      const unhandled: never = a.outcome;
+      throw new Error(`statusLine: unknown outcome ${JSON.stringify(unhandled)}`);
+    }
   }
 }

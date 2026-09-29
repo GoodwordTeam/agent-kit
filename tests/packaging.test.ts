@@ -152,8 +152,7 @@ const BASE: Record<string, string> = {
 };
 
 function ctxFor(overrides: Record<string, string> = {}, drop: string[] = []) {
-  const files = { ...BASE, ...overrides };
-  for (const key of drop) delete files[key];
+  const files = Object.fromEntries(Object.entries({ ...BASE, ...overrides }).filter(([key]) => !drop.includes(key)));
   const root = makeTree(files);
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
@@ -669,8 +668,7 @@ describe("the identity fields the manifests are obliged to carry", () => {
 describe("the two fields package.json is a party to, and the two it is not", () => {
   /** A package.json built from the agreeing one, with fields changed or dropped. */
   const PKG = (over: Record<string, unknown> = {}, drop: ReadonlyArray<string> = []) => {
-    const doc = { ...PACKAGE_JSON, ...over };
-    for (const key of drop) delete doc[key];
+    const doc = Object.fromEntries(Object.entries({ ...PACKAGE_JSON, ...over }).filter(([key]) => !drop.includes(key)));
     return { "package.json": packageJson(doc) };
   };
 
@@ -1998,13 +1996,11 @@ describe("the adapters an install attaches, and what they lift", () => {
       )}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
   });
 
-  const ctxWith = (caps: string[], install?: string, extra: Record<string, string> = {}) =>
-    ctxFor({
-      ...ADAPTERS,
-      ...requiring(caps),
-      ...(install === undefined ? {} : { [INSTALL_FILE]: install }),
-      ...extra,
-    });
+  const ctxWith = (caps: string[], install?: string, extra: Record<string, string> = {}) => {
+    const files = { ...ADAPTERS, ...requiring(caps) };
+    const installed = install === undefined ? files : { ...files, [INSTALL_FILE]: install };
+    return ctxFor({ ...installed, ...extra });
+  };
 
   const modeOf = (plan: ReturnType<typeof planBundle>) => plan.decisions.find((d) => d.skill === "beta")?.mode;
   const rules = (plan: ReturnType<typeof planBundle>) => plan.issues.map((i) => i.rule);
@@ -2191,13 +2187,11 @@ describe("tracker-access follows the system-of-record chain", () => {
         "",
       )}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
   });
-  const ctxWith = (install?: string, extra: Record<string, string> = {}) =>
-    ctxFor({
-      ...TREE_FILES,
-      ...requiring(["repository-read", "tracker-access"]),
-      ...(install === undefined ? {} : { [INSTALL_FILE]: install }),
-      ...extra,
-    });
+  const ctxWith = (install?: string, extra: Record<string, string> = {}) => {
+    const files = { ...TREE_FILES, ...requiring(["repository-read", "tracker-access"]) };
+    const installed = install === undefined ? files : { ...files, [INSTALL_FILE]: install };
+    return ctxFor({ ...installed, ...extra });
+  };
   const modeOf = (plan: ReturnType<typeof planBundle>) => plan.decisions.find((d) => d.skill === "beta")?.mode;
   const capped = (plan: ReturnType<typeof planBundle>) => plan.issues.find((i) => i.rule === "packaging.mode-capped");
 
@@ -2280,19 +2274,19 @@ describe("tracker-access follows the system-of-record chain", () => {
   });
 
   test("the summary names the tracker's state in each configuration", () => {
-    const describe_ = (install?: string) => {
+    const summaryFor = (install?: string) => {
       const ctx = ctxWith(install);
       return describeInstall(loadInstallConfig(ctx.root, ctx.catalog));
     };
-    expect(describe_()).toBe(
+    expect(summaryFor()).toBe(
       "no ak.install.yaml: default, all fail-closed adapters attached (knowledgebase, tracker); tracker: no backend, kb-write fallback (knowledgebase)",
     );
-    expect(describe_("attached: [tracker]\n")).toBe(
+    expect(summaryFor("attached: [tracker]\n")).toBe(
       "ak.install.yaml: attached tracker; tracker: no backend, kb-write fallback, which no attached adapter supplies",
     );
-    expect(describe_("attached: [tracker]\ntracker:\n  backend: some-tracker\n")).toBe(
+    expect(summaryFor("attached: [tracker]\ntracker:\n  backend: some-tracker\n")).toBe(
       "ak.install.yaml: attached tracker; tracker: backend some-tracker",
     );
-    expect(describe_("attached: [knowledgebase]\n")).toBe("ak.install.yaml: attached knowledgebase");
+    expect(summaryFor("attached: [knowledgebase]\n")).toBe("ak.install.yaml: attached knowledgebase");
   });
 });

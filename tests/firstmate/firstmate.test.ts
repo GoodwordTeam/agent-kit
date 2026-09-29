@@ -38,7 +38,11 @@ function env(over: Partial<Parameters<typeof bind>[1]> = {}) {
 }
 
 function failed(checks: { id: string; ok: boolean }[]): string[] {
-  return checks.filter((c) => !c.ok).map((c) => c.id);
+  return checks
+    .values()
+    .filter((c) => !c.ok)
+    .map((c) => c.id)
+    .toArray();
 }
 
 describe("preflight", () => {

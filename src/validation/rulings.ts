@@ -294,7 +294,7 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
       );
     }
 
-    const text = typeof row["ruling"] === "string" ? row["ruling"] : "";
+    const rulingText = typeof row["ruling"] === "string" ? row["ruling"] : "";
 
     // `discharged_in` names the SKILL.md sections in which a bound skill may
     // legitimately discharge this row. Required, and a missing value is an error
@@ -371,7 +371,7 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
       ];
     }
 
-    rows.push({ id, binds, universal, text, scenario, dischargedIn });
+    rows.push({ id, binds, universal, text: rulingText, scenario, dischargedIn });
   }
 
   const declared = doc["rows"];

@@ -60,15 +60,11 @@ const pos = (id: string, sk: string, invocation: "U" | "M" = "M", prompt = "p"):
   expected: [sk],
 });
 /** `forbidden: null` makes a pure negative, one that no skill may fire on. */
-const neg = (id: string, sk: string, invocation: "U" | "M" = "M", forbidden: string[] | null = [sk]): Case => ({
-  id,
-  skill: sk,
-  polarity: "negative",
-  invocation,
-  prompt: "p",
-  expected: [],
-  ...(forbidden === null ? {} : { forbidden }),
-});
+const neg = (id: string, sk: string, invocation: "U" | "M" = "M", forbidden: string[] | null = [sk]): Case => {
+  const negative: Case = { id, skill: sk, polarity: "negative", invocation, prompt: "p", expected: [] };
+  if (forbidden !== null) negative.forbidden = forbidden;
+  return negative;
+};
 
 describe("skillLoads", () => {
   test("reads a Skill call, a Read of a SKILL.md, and a shell cat of one, in order", () => {
@@ -1545,9 +1541,9 @@ describe("bundleMissing", () => {
     }
     return dir;
   };
-  const c = (id: string, skill: string, expected: string[]): Case => ({
+  const c = (id: string, target: string, expected: string[]): Case => ({
     id,
-    skill,
+    skill: target,
     polarity: expected.length > 0 ? "positive" : "negative",
     invocation: "U",
     prompt: "p",

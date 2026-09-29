@@ -114,15 +114,15 @@ export function loadTemplateDocuments(root: string): TemplateDocument[] {
   return out;
 }
 
-function shapeIssue(file: string, shape: DocumentShape): Issue | null {
-  switch (shape.kind) {
+function shapeIssue(file: string, form: DocumentShape): Issue | null {
+  switch (form.kind) {
     case "document":
       return null;
     case "not-a-mapping":
       return error(
         "schemas.document-not-a-mapping",
         file,
-        `${file} is ${shape.found} at the top level, not a document. A document is a mapping whose 'schema' member names the schema it validates against; a list of documents is not one. Unwrap it, split it into one file per document, or move it out of templates/.`,
+        `${file} is ${form.found} at the top level, not a document. A document is a mapping whose 'schema' member names the schema it validates against; a list of documents is not one. Unwrap it, split it into one file per document, or move it out of templates/.`,
       );
     case "no-schema-member":
       return error(
@@ -134,8 +134,12 @@ function shapeIssue(file: string, shape: DocumentShape): Issue | null {
       return error(
         "schemas.document-schema-not-a-string",
         file,
-        `${file} has a 'schema' member that is ${shape.found}, not a string naming a catalog schema, so every check under templates/ skips it. A quoted schema id -- 'ticket', 'finding' -- is what makes this file a document.`,
+        `${file} has a 'schema' member that is ${form.found}, not a string naming a catalog schema, so every check under templates/ skips it. A quoted schema id -- 'ticket', 'finding' -- is what makes this file a document.`,
       );
+    default: {
+      const unhandled: never = form;
+      throw new Error(`shapeIssue: unknown document form ${JSON.stringify(unhandled)}`);
+    }
   }
 }
 

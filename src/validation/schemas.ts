@@ -5,12 +5,12 @@ import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
 
 import { INSTALL_FILE } from "../packaging/install.ts";
-import { listDirs, listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
+import { listDirs, listFiles, readTextIfPresent } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
 import { documentFiles, documentShape } from "./documents.ts";
 import { CASE_FILE, EVALS_DIR } from "./evals.ts";
 import { RULINGS_FILE } from "./rulings.ts";
-import { error, note, skipped, type Issue } from "./types.ts";
+import { error, skipped, type Issue } from "./types.ts";
 
 type AjvInstance = InstanceType<typeof Ajv2020>;
 
@@ -97,7 +97,7 @@ export function compileSchemas(root: string): SchemaSet {
     const $id = typeof schema["$id"] === "string" ? schema["$id"] : undefined;
     try {
       const validate = $id === undefined ? ajv.compile(schema) : ajv.getSchema($id);
-      if (validate !== undefined) validators.set(id, validate as ValidateFunction);
+      if (validate !== undefined) validators.set(id, validate);
       else issues.push(error("schemas.uncompilable", file, `No compiled validator for $id ${$id}.`));
     } catch (cause) {
       issues.push(

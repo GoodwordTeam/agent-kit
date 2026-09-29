@@ -102,14 +102,18 @@ export function pairedBootstrap(
   const iterations = options.iterations ?? 10_000;
   const seed = options.seed ?? 1;
   const level = options.level ?? 0.95;
-  const diffs = cases.filter((c) => c.a.length > 0 && c.b.length > 0).map((c) => mean(c.a) - mean(c.b));
+  const diffs = cases
+    .values()
+    .filter((c) => c.a.length > 0 && c.b.length > 0)
+    .map((c) => mean(c.a) - mean(c.b))
+    .toArray();
   if (diffs.length === 0) return { estimate: 0, lo: 0, hi: 0, clusters: 0, iterations, seed };
   const next = rng(seed);
-  const stats: number[] = new Array(iterations);
+  const stats: number[] = [];
   for (let i = 0; i < iterations; i++) {
     let sum = 0;
     for (let j = 0; j < diffs.length; j++) sum += diffs[Math.floor(next() * diffs.length)]!;
-    stats[i] = sum / diffs.length;
+    stats.push(sum / diffs.length);
   }
   stats.sort((x, y) => x - y);
   const at = (q: number) => stats[Math.min(iterations - 1, Math.max(0, Math.floor(q * iterations)))]!;

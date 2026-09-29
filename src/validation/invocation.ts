@@ -2,7 +2,6 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { entryBodyPath } from "../catalog/layout.ts";
-import { generateHostFrontmatter } from "../packaging/frontmatter.ts";
 import { loadSkillManifest } from "../packaging/manifest.ts";
 import { readTextIfPresent } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
@@ -178,13 +177,14 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
       ...manifest.modelOperations.map((call) => ({ call, model: true })),
     ];
     for (const { call, model } of edges) {
-      refs.push({
+      const ref: SkillNode["refs"][number] = {
         target: call,
         line: 0,
         kind: call.includes(".") ? "operation" : "skill",
         file: `skills/${entry.id}/skill.yaml`,
-        ...(model ? { model: true } : {}),
-      });
+      };
+      if (model) ref.model = true;
+      refs.push(ref);
     }
 
     nodes.push({ id: entry.id, invocation: entry.invocation ?? "M", refs });

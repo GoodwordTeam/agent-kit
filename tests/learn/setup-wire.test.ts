@@ -138,7 +138,7 @@ describe("hook merge", () => {
   });
 
   test("every hook command points at the one ak command line", () => {
-    const all = Object.values(hookCommands(fakeDeps()));
+    const all = Object.values({ ...hookCommands(fakeDeps()) });
     expect(all).toHaveLength(4);
     expect(all.every((command) => command.startsWith(`${AK} `))).toBe(true);
   });

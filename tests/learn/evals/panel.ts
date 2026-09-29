@@ -161,7 +161,7 @@ export function judgePrompt(transcript: string, criteria: string): string {
 /** The verdict in a judge reply: the last JSON object carrying one, else `invalid`. */
 export function parseVote(reply: string): { vote: Vote; reason: string } {
   const objects = reply.match(/\{[^{}]*\}/g) ?? [];
-  for (const text of objects.reverse()) {
+  for (const text of objects.toReversed()) {
     try {
       const value = JSON.parse(text) as { verdict?: unknown; reason?: unknown };
       const verdict = typeof value.verdict === "string" ? value.verdict.toUpperCase() : "";
@@ -238,20 +238,11 @@ export async function grade(
     mkdirSync(dirname(options.queue), { recursive: true });
     appendFileSync(options.queue, `${JSON.stringify(row)}\n`);
   }
-  return {
-    ...base,
-    verdict,
-    votes,
-    reasons,
-    ...(verdict === "needs-human"
-      ? {
-          reason:
-            only === "invalid" || distinct.has("invalid")
-              ? "a reviewer gave no readable verdict"
-              : "reviewers disagree",
-        }
-      : {}),
-  };
+  const result: Grade = { ...base, verdict, votes, reasons };
+  if (verdict === "needs-human")
+    result.reason =
+      only === "invalid" || distinct.has("invalid") ? "a reviewer gave no readable verdict" : "reviewers disagree";
+  return result;
 }
 
 export function readQueue(queue: string): QueueRow[] {

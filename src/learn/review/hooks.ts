@@ -228,7 +228,10 @@ export function detectPatterns(text: string): Detection {
   if (FALSE_POSITIVE.some((pattern) => search(pattern, text))) return NONE();
   if (NON_CORRECTION.some((pattern) => search(pattern, text))) return NONE();
 
-  const positive = POSITIVE.filter(([pattern]) => search(pattern, text)).map(([, name]) => name);
+  const positive = POSITIVE.values()
+    .filter(([pattern]) => search(pattern, text))
+    .map(([, name]) => name)
+    .toArray();
   if (positive.length > 0) {
     if (stripped.length < MIN_POSITIVE_CONTEXT_LENGTH) return NONE("positive");
     if (FORWARD_PIVOT.some((pattern) => search(pattern, text))) return NONE();

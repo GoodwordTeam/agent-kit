@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -20,6 +21,11 @@ import { makeTree } from "./helpers/tree.ts";
 
 /** This repository, for the tests that measure against the real contract. */
 const REPO = join(import.meta.dir, "..");
+
+/** The default sort's order: each value as a string, compared by UTF-16 code unit. */
+function byString(a: string | null, b: string | null): number {
+  return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
+}
 
 const HEADER = `# claude-code
 
@@ -131,7 +137,7 @@ describe("the capability table §3 states once for both hosts", () => {
     const table = loadCapabilityTable(REPO);
     expect(table.available).toBe(true);
     expect(table.issues).toEqual([]);
-    const schema = JSON.parse(require("node:fs").readFileSync(join(REPO, "schemas/common.schema.json"), "utf8")) as {
+    const schema = JSON.parse(readFileSync(join(REPO, "schemas/common.schema.json"), "utf8")) as {
       $defs: { capability: { enum: string[] } };
     };
     expect([...table.status.keys()].sort()).toEqual([...schema.$defs.capability.enum].sort());
@@ -217,7 +223,7 @@ describe("the ceiling a skill's requires[] puts on its mode", () => {
         (requires) => ceilingFor(requires, table).mode,
       ),
     );
-    expect([...reachable].sort()).toEqual(["autonomous", "guided"]);
+    expect([...reachable].sort(byString)).toEqual(["autonomous", "guided"]);
   });
 });
 

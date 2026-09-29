@@ -55,7 +55,13 @@ describe("fixture set", () => {
       "h06-subtle",
     ]);
     expect(new Set(all.map((f) => f.id)).size).toBe(17);
-    expect(all.filter((f) => f.injection === undefined).map((f) => f.id)).toEqual(["h05-controls"]);
+    expect(
+      all
+        .values()
+        .filter((f) => f.injection === undefined)
+        .map((f) => f.id)
+        .toArray(),
+    ).toEqual(["h05-controls"]);
     for (const f of all) {
       expect(f.facts).toHaveLength(5);
       expect(new Set(f.facts.map((x) => x.key)).size).toBe(5);

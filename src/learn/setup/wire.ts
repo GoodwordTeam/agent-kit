@@ -115,6 +115,7 @@ export function ensureHook(
 /** Remove every hook of ours. An entry left with no hooks goes, and so does an event left with no entries. Returns entries touched. */
 export function dropHooks(doc: HookDoc): number {
   let touched = 0;
+  const emptied = new Set<string>();
   for (const [event, entries] of Object.entries(doc.hooks ?? {})) {
     const keep: HookEntry[] = [];
     for (const entry of entries) {
@@ -125,8 +126,11 @@ export function dropHooks(doc: HookDoc): number {
       entry.hooks = foreign;
       keep.push(entry);
     }
-    if (keep.length === 0) delete doc.hooks![event];
+    if (keep.length === 0) emptied.add(event);
     else doc.hooks![event] = keep;
+  }
+  if (emptied.size > 0) {
+    doc.hooks = Object.fromEntries(Object.entries(doc.hooks ?? {}).filter(([event]) => !emptied.has(event)));
   }
   return touched;
 }
@@ -143,8 +147,8 @@ export function countHook(doc: HookDoc, event: string, verb: string): number {
  * exists but is not a JSON object. A lenient read would turn a hand-edit typo
  * into an empty document and the next write would erase the user's settings.
  */
-export function readJsonObject<T extends object>(path: string): T | null {
-  if (!existsSync(path)) return {} as T;
+export function readJsonObject<T extends object>(path: string, empty: T): T | null {
+  if (!existsSync(path)) return empty;
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
     return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as T) : null;
@@ -225,7 +229,7 @@ export interface WireOptions {
 
 function wireClaude(ctx: LearnContext, commands: HookCommands): void {
   const path = claudeSettingsPath(ctx);
-  const doc = readJsonObject<HookDoc>(path) ?? {};
+  const doc = readJsonObject<HookDoc>(path, {}) ?? {};
   let changed = 0;
   if (ensureHook(doc, "SessionStart", commands.sessionStart, { matcher: SESSION_MATCHER })) changed += 1;
   if (ensureHook(doc, "Stop", commands.claudeStop, { timeout: 120 })) changed += 1;
@@ -240,7 +244,7 @@ function wireCodex(ctx: LearnContext, deps: SetupDeps, commands: HookCommands, e
     return;
   }
   const path = join(home, "hooks.json");
-  const doc = readJsonObject<HookDoc>(path) ?? {};
+  const doc = readJsonObject<HookDoc>(path, {}) ?? {};
   let changed = 0;
   if (ensureHook(doc, "SessionStart", commands.sessionStart)) changed += 1;
   if (ensureHook(doc, "UserPromptSubmit", commands.codexPrompt)) changed += 1;
@@ -268,7 +272,7 @@ export function wireMem(ctx: LearnContext, deps: SetupDeps): boolean {
     modeReady = true;
   }
   const settingsPath = join(dir, "settings.json");
-  const doc = readJsonObject<Record<string, unknown>>(settingsPath) ?? {};
+  const doc = readJsonObject<Record<string, unknown>>(settingsPath, {}) ?? {};
   const before = JSON.stringify(doc);
   const previous = memPreviousPath(ctx);
   if (!existsSync(previous)) {
@@ -320,7 +324,7 @@ export function wire(ctx: LearnContext, deps: SetupDeps, options: WireOptions = 
     ...(codex ? [join(codexHome(ctx, deps), "hooks.json")] : []),
     ...(mem ? [join(memDir(ctx, deps), "settings.json")] : []),
   ];
-  const invalid = targets.filter((path) => readJsonObject(path) === null);
+  const invalid = targets.filter((path) => readJsonObject(path, {}) === null);
   if (invalid.length > 0) {
     for (const path of invalid) ctx.io.err(invalidJsonMessage(path));
     return 1;

@@ -74,7 +74,7 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
     const binding = bound.binding!;
     expect(binding.delivery.action).toBe("dry-run");
     expect(binding.evidence.label).toBe(MOCK_LABEL);
-    const project_ = { id: binding.project.id, repo: binding.source_snapshot.repo };
+    const projectRef = { id: binding.project.id, repo: binding.source_snapshot.repo };
 
     // Build: the implementer's ticket, uncommitted in the worktree.
     writeFileSync(join(project, "src/parse.ts"), "export const parse = (p: string) => p;\n");
@@ -86,7 +86,7 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
     const receipt = {
       ...template("verification.example.json"),
       id: "demo-verification-1",
-      project: project_,
+      project: projectRef,
       run_id: binding.run_id,
       source_revision: built,
     };
@@ -101,10 +101,10 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
       "raw-correctness-1.txt",
       "parse('') returns '' instead of rejecting the empty path\n",
     );
-    const review = template("review.example.json");
-    Object.assign(review, {
+    const reviewDoc = template("review.example.json");
+    Object.assign(reviewDoc, {
       id: "demo-review-1",
-      project: project_,
+      project: projectRef,
       run_id: binding.run_id,
       source_revision: built,
       comparison_base: binding.source_snapshot,
@@ -112,10 +112,11 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
       mode: "full",
       verdict: "changes-requested",
     });
+    reviewDoc.lanes[0].raw_output = raw;
+    reviewDoc.lanes[0].verdict = "request-changes";
     // A first pass: no delta packet, prior head or continuity to carry.
-    for (const key of ["packet", "last_head_verified", "delta_scope", "continuity"]) delete review[key];
-    review.lanes[0].raw_output = raw;
-    review.lanes[0].verdict = "request-changes";
+    const deltaOnly = new Set(["packet", "last_head_verified", "delta_scope", "continuity"]);
+    const review = Object.fromEntries(Object.entries(reviewDoc).filter(([key]) => !deltaOnly.has(key)));
     expect(valid("review", review)).toEqual([]);
     store(evidenceDir, "demo-review-1.json", JSON.stringify(review));
 
@@ -138,7 +139,7 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
     const delta = template("review.example.json");
     Object.assign(delta, {
       id: "demo-review-2",
-      project: project_,
+      project: projectRef,
       run_id: binding.run_id,
       source_revision: fixed,
       comparison_base: binding.source_snapshot,
