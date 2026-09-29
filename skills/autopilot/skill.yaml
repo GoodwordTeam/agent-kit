@@ -123,9 +123,9 @@ child_operations:
   - pr.watch
   - ci.repair
   - qa.cycle
-  # lesson.capture is callable_by autopilot in policies/invocation.yaml but is left out of this list:
-  # its authority is `model`, so it needs no grant, and listing it raises
-  # invocation.operation-not-delegated. The run reaches it as a model-authority draft step.
+
+model_operations:
+  - lesson.capture
 
 child_skills:
   - super-scout

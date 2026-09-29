@@ -123,6 +123,7 @@ export const SCHEMA_RULE_IMPLEMENTATIONS: Readonly<Record<string, RuleImplementa
   // skill.schema.json
   "skill.user-invoked-never-starts-user-invoked": ["skill.user-invoked-never-starts-user-invoked"],
   "skill.budget-enforces-only-declared-limits": ["skill.budget-enforces-only-declared-limits"],
+  "skill.model-operation-is-model-authority-and-callable": ["invocation.model-operation-not-model", "invocation.model-operation-not-callable", "invocation.undeclared-operation"],
   "skill.host-frontmatter-generated-never-authored": ["frontmatter.host-key-in-canonical"],
   "skill.body-within-line-budget": ["budget.skill-over-target", "budget.skill-over-cap"],
   "skill.provenance-donor-path-exists-at-pin": ["provenance.source-not-at-pin", "provenance.unknown-donor", "provenance.commit-not-pinned", "provenance.malformed-source"],

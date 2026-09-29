@@ -115,9 +115,10 @@ migration has a tested down path.
 
 ## Side effects
 
-`workspace-write`, `process-exec`, `scratch-write`, `kb-draft`, `kb-publish`, `tracker-write`. The
-removal step is `public-contract-change` or `destructive-data`, and happens only under an approved
-charter entry naming it (ruling `sensitive-actions-need-approved-charter-entry`).
+`workspace-write`, `process-exec`, `scratch-write`, `kb-draft`, `kb-publish`, `tracker-write`,
+`artifact-write`. `artifact-write` is the migration `ticket`s, run artifacts bound to their hash.
+The removal step is `public-contract-change` or `destructive-data`, and happens only under an
+approved charter entry naming it (ruling `sensitive-actions-need-approved-charter-entry`).
 
 `kb-publish` and `tracker-write` are remote side effects. The idempotency key for each derives from
 the run, the operation, the record's stable remote identity and the artifact's hash; the read-back is

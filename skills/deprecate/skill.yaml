@@ -50,6 +50,7 @@ requires:
   - kb-write
   - tracker-access
   - human-channel
+  - artifact-write
 
 inputs:
   - id: retiring-surface
@@ -105,6 +106,7 @@ side_effects:
   - kb-draft
   - kb-publish
   - tracker-write
+  - artifact-write
 
 packs:
   - pack-delete

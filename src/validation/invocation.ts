@@ -67,6 +67,7 @@ export function extractSkillReferences(text: string, namespace: string): SkillRe
 interface PhaseOperation {
   id: string;
   authority: string;
+  callableBy: string[];
 }
 
 interface InvocationPolicy {
@@ -103,9 +104,11 @@ function loadInvocationPolicy(root: string): InvocationPolicy {
       if (item === null || typeof item !== "object" || Array.isArray(item)) continue;
       const entry = item as Record<string, unknown>;
       if (typeof entry["id"] !== "string") continue;
+      const callableBy = entry["callable_by"];
       const op: PhaseOperation = {
         id: entry["id"],
         authority: typeof entry["authority"] === "string" ? entry["authority"] : "",
+        callableBy: Array.isArray(callableBy) ? callableBy.filter((c): c is string => typeof c === "string") : [],
       };
       operations.set(op.id, op);
     }
@@ -116,7 +119,7 @@ function loadInvocationPolicy(root: string): InvocationPolicy {
 interface SkillNode {
   id: string;
   invocation: "U" | "M";
-  refs: Array<SkillReference & { file: string }>;
+  refs: Array<SkillReference & { file: string; model?: boolean }>;
 }
 
 export function checkInvocation(ctx: CheckContext): Issue[] {
@@ -155,7 +158,7 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
       );
     }
 
-    const refs: Array<SkillReference & { file: string }> = [];
+    const refs: SkillNode["refs"] = [];
     if (body !== null) {
       const parsed = parseFrontmatter(body);
       // Body line numbers are relative to the body; report them against the file.
@@ -164,12 +167,19 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
         refs.push({ ...ref, line: ref.line + offset, file: bodyPath });
       }
     }
-    for (const call of manifest.calls) {
+    // Each edge is tagged by the key that declared it, so an id listed under
+    // both child_operations and model_operations is judged twice, once per key.
+    const edges = [
+      ...manifest.delegatedCalls.map((call) => ({ call, model: false })),
+      ...manifest.modelOperations.map((call) => ({ call, model: true })),
+    ];
+    for (const { call, model } of edges) {
       refs.push({
         target: call,
         line: 0,
         kind: call.includes(".") ? "operation" : "skill",
         file: `skills/${entry.id}/skill.yaml`,
+        ...(model ? { model: true } : {}),
       });
     }
 
@@ -191,6 +201,34 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
               line,
             ),
           );
+          continue;
+        }
+        /**
+         * A `model_operations` edge runs on no grant, so the delegated-grant
+         * rule does not apply to it. What does: the operation really is
+         * model-authority, and the policy names this skill among its callers.
+         * Without the second, the key would be a way to reach any draft step
+         * the policy never offered this skill.
+         */
+        if (ref.model === true) {
+          if (op.authority !== "model") {
+            issues.push(
+              error(
+                "invocation.model-operation-not-model",
+                ref.file,
+                `'${node.id}' lists '${ref.target}' under model_operations, but its authority is '${op.authority}'. An operation that needs a grant or an explicit start belongs under child_operations, where the runner validates it.`,
+              ),
+            );
+          }
+          if (!op.callableBy.includes(node.id)) {
+            issues.push(
+              error(
+                "invocation.model-operation-not-callable",
+                ref.file,
+                `'${node.id}' lists '${ref.target}' under model_operations, but policies/invocation.yaml's callable_by for it is [${op.callableBy.join(", ")}].`,
+              ),
+            );
+          }
           continue;
         }
         if (!DELEGATED_AUTHORITIES.has(op.authority)) {

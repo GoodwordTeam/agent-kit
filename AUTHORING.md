@@ -2606,8 +2606,11 @@ changes type", not "api". A classifier is optional for every pack (`classifier_o
 `const: true`), and what a pack does when the evidence is ambiguous is fixed by which pack it is:
 
 - `pack-api`, `pack-data` and `pack-secure` attach. Security, API and data facts are never dropped
-  because a classifier was uncertain (ruling `panel-composition-by-declared-risk`), and
-  `NEVER_DROPPED_PACKS` in `src/attach/signals.ts` holds the same three for `ak attach`.
+  because a classifier was uncertain (ruling `panel-composition-by-declared-risk`). This binds the
+  selector a phase runs under `protocols/attach-pack/PROTOCOL.md`. `ak attach` does not implement
+  it: it selects only on a sufficient built-in signal, so a subject whose only evidence is
+  ambiguous is reported as not attached. Separately, `ak attach` has no switch that turns any pack
+  off, because its signal table is code, not configuration.
 - The other five may decline, and the decline is recorded with its reason in the
   `attachment_record`'s `rejected` list. A decline with no recorded reason is not a decline; it is a
   pack that silently failed to attach.
@@ -2630,10 +2633,17 @@ any of them fails `schemas.document-invalid`. Three things are this contract's:
    `## Attaches when`, and every `constraints[].id` under `## Constraints`. An `attachment_record`
    cites rule ids and a finding cites a constraint, and a reader holding either has to land on the
    sentence that states it. Nothing checks this.
-3. **Two keys `ak attach` reads are not available to you.** `src/attach/index.ts` reads a top-level
-   `enabled` and an `activation.signals` list, and the schema admits neither, so a manifest carrying
-   either fails validation. The classifier-free lookup `ak attach` runs is its built-in signal table
-   in `src/attach/signals.ts`, which is code and is not edited from a pack batch.
+3. **A manifest carries no signals and no switch.** The schema admits neither an `enabled` key nor an
+   `activation.signals` list, so a manifest carrying either fails validation, and `ak attach` reads
+   neither. Its classifier-free lookup is the built-in signal table in `src/attach/signals.ts`,
+   which is code and is not edited from a pack batch. Each signal names every
+   `activation.rules[].id` its observation is evidence for, and a selection cites the union of the
+   ids its sufficient evidence names. A rule no signal can observe is listed in
+   `SEMANTIC_ONLY_RULES` there, with the reason. `tests/attach.test.ts` fails when a rule has
+   neither a sufficient signal nor an exemption, or when a signal names a rule the pack does not
+   state, so adding or renaming a rule id needs a change to that table too. The `matched_rules` in
+   a pack's `expected.yaml` are a phase selector's reading of the whole change, semantic rules
+   included, and are not `ak attach` output.
 
 **Required sections, in this order, at `##`.** §12.5 declined a heading set because reference packs
 share no shape. Domain packs do: the schema requires the same members of all eight, and each member

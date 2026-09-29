@@ -14,7 +14,7 @@ import { checkArtifacts } from "./artifacts.ts";
 import { checkBodyShapes } from "./bodies.ts";
 import { checkBudget } from "./budget.ts";
 import { checkCompleteness } from "./completeness.ts";
-import { checkCatalogRules, checkPackManifests, checkSkillManifests } from "./configrules.ts";
+import { checkCatalogRules, checkPackManifests, checkProfileCapabilities, checkSkillManifests } from "./configrules.ts";
 import type { CheckContext } from "./context.ts";
 import { checkContent } from "./content.ts";
 import { checkContractDefects } from "./defects.ts";
@@ -75,6 +75,7 @@ export const CHECKS: readonly Check[] = [
   { name: "side-effects", run: checkSideEffects },
   { name: "skill-manifests", run: checkSkillManifests },
   { name: "pack-manifests", run: checkPackManifests },
+  { name: "profile-capabilities", run: checkProfileCapabilities },
   { name: "links-source", run: checkSourceLinks },
   { name: "links-loader", run: checkLoaderLinks },
   { name: "install-config", run: checkInstallConfig },

@@ -4,16 +4,8 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { CheckContext } from "../validation/context.ts";
-import { error, warning, type Issue } from "../validation/types.ts";
 import { toPosix } from "../util/fs.ts";
-import {
-  builtinSignalsFor,
-  NEVER_DROPPED_PACKS,
-  SIGNAL_KINDS,
-  type Signal,
-  type SignalKind,
-  type SignalWeight,
-} from "./signals.ts";
+import { builtinSignalsFor, type Signal, type SignalKind, type SignalWeight } from "./signals.ts";
 
 const MAX_CONTENT_BYTES = 512 * 1024;
 const MAX_MATCH_CHARS = 120;
@@ -37,12 +29,15 @@ export interface Evidence {
   readonly weight: SignalWeight;
   readonly matched: string;
   readonly note: string;
-  readonly origin: string;
+  /** The pack's `activation.rules[].id`s the observation is evidence for. */
+  readonly rules: readonly string[];
   readonly line?: number;
 }
 
 export interface PackSelection {
   readonly pack: string;
+  /** The activation rules a sufficient signal matched, sorted: what an attachment_record cites. */
+  readonly matchedRules: readonly string[];
   readonly evidence: readonly Evidence[];
   readonly rationale: string;
 }
@@ -57,7 +52,6 @@ export interface AttachResult {
   readonly subject: AttachSubject;
   readonly selections: readonly PackSelection[];
   readonly skipped: readonly PackSkipped[];
-  readonly issues: readonly Issue[];
 }
 
 interface LoadedSubject {
@@ -167,13 +161,12 @@ function loadSubject(root: string, input: string): LoadedSubject {
 }
 
 function evaluate(signal: Signal, loaded: LoadedSubject): Evidence | null {
-  const origin = signal.origin ?? "built-in";
   const base = {
     kind: signal.kind,
     pattern: signal.pattern,
     weight: signal.weight,
     note: signal.note,
-    origin,
+    rules: signal.rules,
   };
 
   if (signal.kind === "path-regex") {
@@ -209,99 +202,7 @@ function evaluate(signal: Signal, loaded: LoadedSubject): Evidence | null {
   return null;
 }
 
-interface Manifest {
-  readonly signals: readonly Signal[];
-  readonly enabled: boolean;
-}
-
-function loadManifest(root: string, pack: string, issues: Issue[]): Manifest {
-  const file = `packs/${pack}/pack.yaml`;
-  let raw: string;
-  try {
-    raw = readFileSync(resolve(root, file), "utf8");
-  } catch {
-    return { signals: [], enabled: true };
-  }
-
-  let document: unknown;
-  try {
-    document = parseYaml(raw);
-  } catch (cause) {
-    issues.push(
-      warning(
-        "attach.manifest-unparseable",
-        file,
-        `pack manifest could not be parsed (${
-          cause instanceof Error ? cause.message : String(cause)
-        }); built-in signals for ${pack} still apply`,
-      ),
-    );
-    return { signals: [], enabled: true };
-  }
-  if (document === null || typeof document !== "object" || Array.isArray(document)) {
-    return { signals: [], enabled: true };
-  }
-
-  const record = document as Record<string, unknown>;
-  const enabled = record["enabled"] !== false;
-  const activation = record["activation"];
-  const declared =
-    activation !== null && typeof activation === "object" && !Array.isArray(activation)
-      ? (activation as Record<string, unknown>)["signals"]
-      : undefined;
-
-  const signals: Signal[] = [];
-  if (Array.isArray(declared)) {
-    declared.forEach((entry, index) => {
-      const at = `${file} activation.signals[${index}]`;
-      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
-        issues.push(error("attach.malformed-signal", file, `${at} is not a mapping`));
-        return;
-      }
-      const row = entry as Record<string, unknown>;
-      const kind = row["kind"];
-      const pattern = row["pattern"];
-      if (typeof kind !== "string" || !SIGNAL_KINDS.includes(kind as SignalKind)) {
-        issues.push(
-          error(
-            "attach.unknown-signal-kind",
-            file,
-            `${at} declares kind ${JSON.stringify(kind)}; expected one of ${SIGNAL_KINDS.join(", ")}`,
-          ),
-        );
-        return;
-      }
-      if (typeof pattern !== "string" || pattern.length === 0) {
-        issues.push(error("attach.malformed-signal", file, `${at} has no pattern`));
-        return;
-      }
-      const weight = row["weight"] === "supporting" ? "supporting" : "sufficient";
-      const note = typeof row["note"] === "string" ? row["note"] : `declared in ${file}`;
-      const value = typeof row["value"] === "string" ? row["value"] : undefined;
-      if ((kind === "path-regex" || kind === "content-regex") && compile(pattern) === null) {
-        issues.push(error("attach.malformed-signal", file, `${at} pattern is not a valid regular expression`));
-        return;
-      }
-      signals.push({ kind: kind as SignalKind, pattern, value, weight, note, origin: file });
-    });
-  }
-
-  if (!enabled && NEVER_DROPPED_PACKS.has(pack)) {
-    issues.push(
-      error(
-        "attach.protected-pack-disabled",
-        file,
-        `${pack} cannot be disabled: security, API and data facts must never be dropped for want of a classifier; the built-in signals stay active`,
-      ),
-    );
-    return { signals, enabled: true };
-  }
-
-  return { signals, enabled };
-}
-
 export function attach(ctx: CheckContext, input: string): AttachResult {
-  const issues: Issue[] = [];
   const loaded = loadSubject(ctx.root, input);
 
   const packs = ctx.catalog.bySection("packs").map((entry) => entry.id);
@@ -309,16 +210,9 @@ export function attach(ctx: CheckContext, input: string): AttachResult {
   const skipped: PackSkipped[] = [];
 
   for (const pack of [...packs].sort()) {
-    const manifest = loadManifest(ctx.root, pack, issues);
-    const builtin = builtinSignalsFor(pack);
-    const signals = [...builtin, ...manifest.signals];
-
-    if (!manifest.enabled) {
-      skipped.push({ pack, reason: `disabled by packs/${pack}/pack.yaml`, supporting: [] });
-      continue;
-    }
+    const signals = builtinSignalsFor(pack);
     if (signals.length === 0) {
-      skipped.push({ pack, reason: "no activation signals declared and no built-in signals", supporting: [] });
+      skipped.push({ pack, reason: "no built-in activation signals", supporting: [] });
       continue;
     }
 
@@ -343,15 +237,17 @@ export function attach(ctx: CheckContext, input: string): AttachResult {
     }
 
     const evidence = [...sufficient, ...supporting];
+    const matchedRules = [...new Set(sufficient.flatMap((e) => e.rules))].sort();
     const reasons = sufficient.map((e) => e.note).join("; ");
     selections.push({
       pack,
+      matchedRules,
       evidence,
-      rationale: `${pack} selected on ${loaded.subject.kind} ${loaded.subject.path}: ${reasons}`,
+      rationale: `${pack} selected on ${loaded.subject.kind} ${loaded.subject.path} by rules ${matchedRules.join(", ")}: ${reasons}`,
     });
   }
 
-  return { subject: loaded.subject, selections, skipped, issues };
+  return { subject: loaded.subject, selections, skipped };
 }
 
 export function formatAttachResult(result: AttachResult): string[] {
@@ -364,10 +260,11 @@ export function formatAttachResult(result: AttachResult): string[] {
   }
   for (const selection of result.selections) {
     lines.push(`  ${selection.pack}`);
+    lines.push(`    rules: ${selection.matchedRules.join(", ")}`);
     lines.push(`    why: ${selection.rationale}`);
     for (const e of selection.evidence) {
       const where = e.line === undefined ? "" : `:${e.line}`;
-      lines.push(`    - ${e.weight} ${e.kind}${where} [${e.origin}] ${e.note} -- matched ${JSON.stringify(e.matched)}`);
+      lines.push(`    - ${e.weight} ${e.kind}${where} [${e.rules.join(", ")}] ${e.note} -- matched ${JSON.stringify(e.matched)}`);
     }
   }
   for (const entry of result.skipped) {

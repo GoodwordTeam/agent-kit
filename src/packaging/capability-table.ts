@@ -51,10 +51,10 @@ function isStatus(value: string): value is CapabilityStatus {
  * One set, in one place, because the alternative reading is defensible and the
  * choice between them has to be visible rather than spread across an
  * expression. Under the strict reading anything short of `satisfied` caps, and
- * `partial` would then cap: §3 gives `artifact-write` that status and its
- * Detail says "every skill in the catalog requires this capability", so every
- * ceiling in this tree would come out `guided` by construction rather than
- * because any host withheld anything. A ceiling that is `guided` for everything
+ * `partial` would then cap: §3 gives `artifact-write` that status, and every
+ * skill that emits a run artifact requires it, so most ceilings in this tree
+ * would come out `guided` by construction rather than because any host
+ * withheld anything. A ceiling that is `guided` for everything
  * is an instrument returning the same answer under both hypotheses.
  *
  * `not-provided` is what §4's own worked example uses. It names `runner-grants`

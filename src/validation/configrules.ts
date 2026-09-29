@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { CheckContext } from "./context.ts";
-import { error, warning, type Issue } from "./types.ts";
+import { error, unavailable, warning, type Issue } from "./types.ts";
 import { loadArtifacts } from "./artifacts.ts";
 import { readTextIfPresent } from "../util/fs.ts";
 
@@ -108,6 +108,82 @@ export function checkCatalogRules(ctx: CheckContext): Issue[] {
   return issues;
 }
 
+/** `$defs/capability` from schemas/common.schema.json, or null when it cannot be read. */
+function capabilityVocabulary(root: string): Set<string> | null {
+  const text = readTextIfPresent(join(root, "schemas/common.schema.json"));
+  if (text === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  const members = arr(obj(obj(obj(parsed)?.["$defs"])?.["capability"])?.["enum"])
+    .map(str)
+    .filter((value): value is string => value !== null);
+  return members.length === 0 ? null : new Set(members);
+}
+
+/**
+ * Every id a profile lists as a capability is a host capability.
+ *
+ * A profile is what an installer reads to decide what the host must supply, so
+ * a side-effect id there (`skill-source-write` was one) asks the host for a
+ * capability no adapter contract defines and no skill's `requires` can name.
+ * No schema is applied to profiles/, so the vocabulary is read from common
+ * rather than restated. Unreadable while a profile lists capabilities, the
+ * lists are present and unexamined, which blocks like
+ * rulings.discharge-vocabulary-unavailable does.
+ */
+export function checkProfileCapabilities(ctx: CheckContext): Issue[] {
+  const issues: Issue[] = [];
+  const vocabulary = capabilityVocabulary(ctx.root);
+  const unexamined: string[] = [];
+
+  for (const profile of ctx.catalog.bySection("profiles")) {
+    const file = `profiles/${profile.id}.yaml`;
+    const manifest = readManifest(ctx, file, "profile.unparseable", issues);
+    if (manifest === null) continue;
+    const capabilities = obj(obj(manifest.doc["includes"])?.["capabilities"]);
+    if (capabilities === null) continue;
+    // Every list under includes.capabilities names capabilities, whatever it
+    // is called; only `note` is prose. A fixed list of keys would pass a new
+    // one unexamined.
+    for (const [list, values] of Object.entries(capabilities)) {
+      if (list === "note" || !Array.isArray(values)) continue;
+      for (const value of values) {
+        const id = str(value);
+        if (id === null) continue;
+        if (vocabulary === null) {
+          if (!unexamined.includes(file)) unexamined.push(file);
+          continue;
+        }
+        if (!vocabulary.has(id)) {
+          issues.push(
+            error(
+              "profile.unknown-capability",
+              file,
+              `includes.capabilities.${list} lists ${id}, which is not in schemas/common.schema.json#/$defs/capability; a host is asked to supply only capabilities, never a side effect or a free-form name`,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  if (unexamined.length > 0) {
+    issues.push(
+      unavailable(
+        "profile.capability-vocabulary-unavailable",
+        "schemas/common.schema.json",
+        "profile capabilities",
+        `schemas/common.schema.json has no readable $defs/capability enum, so the capability lists in ${unexamined.join(", ")} were not checked.`,
+      ),
+    );
+  }
+  return issues;
+}
+
 interface ManifestFile {
   readonly file: string;
   readonly doc: Record<string, unknown>;
@@ -167,6 +243,35 @@ export function checkSkillManifests(ctx: CheckContext): Issue[] {
           );
         }
       }
+    }
+
+    /**
+     * An output bound to a run-artifact schema is a durable, hash-bound record
+     * (docs/decisions/0001-kb-document-vocabulary.md §3, run-artifact column),
+     * so the skill cannot run without `artifact-write`. `outputs[].schema` is
+     * typed `$defs/schema_id` by skill.schema.json, so any value here is a
+     * run-artifact schema; a value outside the enum is schemas.document-invalid.
+     *
+     * One direction only. research, source-driven, simplify and writing-skills
+     * write envelope artifacts that no schema_id names yet, so requiring a
+     * schema-bound output of every skill that needs the capability would report
+     * correct manifests.
+     */
+    const bound = arr(manifest.doc["outputs"])
+      .map((output) => {
+        const record = obj(output);
+        return record === null ? null : { id: str(record["id"]) ?? "?", schema: str(record["schema"]) };
+      })
+      .filter((output): output is { id: string; schema: string } => output !== null && output.schema !== null);
+    const requires = arr(manifest.doc["requires"]).map(str);
+    if (bound.length > 0 && !requires.includes("artifact-write")) {
+      issues.push(
+        error(
+          "capability.artifact-write-missing",
+          manifest.file,
+          `${id} emits run artifacts (${bound.map((o) => `${o.id}: ${o.schema}`).join(", ")}) but its requires does not list artifact-write; a host that cannot store and hash-bind them would expose the skill as if it could`,
+        ),
+      );
     }
 
     const budget = obj(manifest.doc["budget"]);
