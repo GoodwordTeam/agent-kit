@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, realpathSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
@@ -138,7 +139,7 @@ export function findProjectRoot(start: string): string {
 function git(root: string, args: string[], options: { input?: string; timeout?: number; literal?: boolean } = {}) {
   const { literal = true, ...spawn } = options;
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
-  return spawnSync("git", [...(literal ? ["--literal-pathspecs"] : []), "-C", root, ...args], { encoding: "utf8", env, ...spawn });
+  return spawnSync("git", [...(literal ? ["--literal-pathspecs"] : []), "-C", root, ...args], { encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, ...spawn });
 }
 
 /** How long the history scan may run before it is reported as not run. */
@@ -159,6 +160,42 @@ function ignoringRule(root: string, file: string): { source: string; pattern: st
   const [source = "", , pattern = ""] = verbose.stdout.split("\0");
   if (pattern.startsWith("!")) return null;
   return { source, pattern };
+}
+
+/**
+ * Whether the .gitignore files committed at HEAD ignore `file`, decided by git
+ * itself: the committed .gitignore of each directory above the file -- the only
+ * ones that can reach it -- is written at its own path into a scratch
+ * repository, which has no other rules -- no template, no info/exclude, no
+ * global excludes file -- and check-ignore runs there on the path from the
+ * repository top. So a negation committed after the rule, or a rule present
+ * only in the working tree, counts exactly as it would in a fresh clone.
+ */
+function ignoredAtHead(root: string, file: string): boolean {
+  const prefix = git(root, ["rev-parse", "--show-prefix"]);
+  if (prefix.status !== 0) return false;
+  const path = `${prefix.stdout.trim()}${file}`;
+  const segments = path.split("/").filter((segment) => segment !== "" && segment !== ".");
+  const scratch = mkdtempSync(join(tmpdir(), "ak-ignore-"));
+  try {
+    if (git(scratch, ["init", "-q", "--template="]).status !== 0) return false;
+    for (let depth = 0; depth < segments.length; depth++) {
+      const rules = [...segments.slice(0, depth), ".gitignore"].join("/");
+      const listed = git(root, ["ls-tree", "-z", "--full-tree", "HEAD", "--", rules]);
+      if (listed.status !== 0) return false;
+      const entry = listed.stdout.split("\0")[0] ?? "";
+      const [mode, type, object] = entry.slice(0, entry.indexOf("\t")).split(" ");
+      if (type !== "blob" || mode === "120000") continue;
+      const blob = git(root, ["cat-file", "blob", object ?? ""]);
+      if (blob.status !== 0) return false;
+      mkdirSync(join(scratch, ...segments.slice(0, depth)), { recursive: true });
+      writeFileSync(join(scratch, rules), blob.stdout);
+    }
+    const excludes = `core.excludesFile=${join(scratch, ".git", "no-excludes")}`;
+    return git(scratch, ["-c", excludes, "check-ignore", "-q", "-z", "--stdin", "--no-index"], { input: `./${path}\0`, literal: false }).status === 0;
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -209,6 +246,10 @@ export function checkTrackerSecret(projectRoot: string, binding: TrackerBinding,
   const source = ignoringRule(projectRoot, file)?.source ?? "";
   if (source === "" || isAbsolute(source) || basename(source) !== ".gitignore") {
     issues.push(error("tracker.secret-not-ignored", file, "token_file is not ignored by a .gitignore in this repository. Add it to the project's .gitignore, so no operator following this binding can stage it."));
+  } else if (!ignoredAtHead(projectRoot, file)) {
+    // An untracked .gitignore, or a rule not yet committed to a tracked one, is
+    // machine-local in the same way: the next clone has no rule.
+    issues.push(error("tracker.secret-not-ignored", file, `token_file is ignored only by an uncommitted rule in ${source}. Commit that .gitignore rule, so every clone of the project ignores it.`));
   }
 
   const history = git(projectRoot, ["log", "--all", "--full-history", "--format=%h", "-1", "--", file], { timeout: historyTimeoutMs });

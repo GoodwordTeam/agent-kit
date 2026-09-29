@@ -302,7 +302,8 @@ and `project`). No schema inspects values, so a token pasted as a value under `d
 6. **Credentials are the operator's.** Nothing in this package stores, prints or echoes one, and
    nothing token-bearing is committed. `ak tracker check [<project-dir>]` verifies the last half:
    the binding's shape and backend, and that `token_file` is non-blank, inside the folder, ignored
-   by a `.gitignore` there (a later `!` rule that un-ignores it does not count), untracked and
+   by a `.gitignore` there (a later `!` rule that un-ignores it does not count) whose rule is
+   committed at `HEAD` (a rule only in the working tree or only staged does not count), untracked and
    absent from every commit reachable from a ref. It warns when the file is readable by others and
    when the history scan did not finish. It reports only the secret's path and size, never its
    contents. It does not read the project record, which lives in the knowledgebase, so the

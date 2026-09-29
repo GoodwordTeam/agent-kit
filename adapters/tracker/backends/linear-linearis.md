@@ -199,8 +199,10 @@ performs these steps in order and stops at the first that fails:
    The agent never asks for the token in the conversation, never prints the file, and never runs
    `linearis auth login`, whose store is the global one §3 exists to avoid.
 5. **Write the binding**, `ak.tracker.yaml`, with the team and optional project the human names.
-6. **Gitignore the secret**: add the token file's path to the project's `.gitignore`, then confirm
-   with `ak tracker check`, or with `git check-ignore` and `git ls-files` where `ak` is not on hand.
+6. **Gitignore the secret**: add the token file's path to the project's `.gitignore` and commit
+   that rule, since an uncommitted rule protects only this checkout. Then confirm with
+   `ak tracker check`, or where `ak` is not on hand with the plain-git checks in
+   [the tracker-of-record reference](../../../references/tracker-of-record/REFERENCE.md).
    A token file already tracked or found in history stops setup, and the human is told to rotate
    the token: untracking it does not remove it from history.
 7. **Verify with a read-only call**, `teams read <team>`, through the guarded form in §3. Exit `0` with the
