@@ -577,15 +577,4 @@ describe("ak attach", () => {
     expect(parsed.selections.some((s) => s.pack === "pack-secure" && s.rationale.length > 0)).toBe(true);
     expect(parsed.skipped.length).toBeGreaterThan(0);
   });
-
-  test("a manifest error is reported and exits non-zero", () => {
-    const root = makeTree({
-      ...TREE,
-      "skills/triage/SKILL.md": SKILL,
-      "packs/pack-secure/pack.yaml": "id: pack-secure\nactivation:\n  signals:\n    - kind: vibes\n      pattern: x\n",
-    });
-    const io = capture();
-    expect(runCli(["attach", "src/auth/session.ts"], { cwd: root, io: io.io })).not.toBe(0);
-    expect(io.stdout()).toContain("attach.unknown-signal-kind");
-  });
 });

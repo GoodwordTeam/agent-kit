@@ -38,7 +38,7 @@ attacker-controlled, or whether an existing guard elsewhere covers the new path,
 names the specific pattern it could not rule out in the `attachment_record` rationale, such as
 "server-side fetch of a partly user-supplied URL", not "touches network code". Security facts are
 never dropped because a classifier was uncertain (ruling `panel-composition-by-declared-risk`).
-`NEVER_DROPPED_PACKS` in `src/attach/signals.ts` holds the same rule for `ak attach`.
+`ak attach` has no switch that turns this pack off.
 
 ## Does not attach when
 

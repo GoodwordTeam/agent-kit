@@ -250,8 +250,7 @@ function attachCommand(parsed: Parsed, options: CliOptions): number {
   } else {
     for (const line of formatAttachResult(result)) options.io.out(line);
   }
-  for (const issue of sortIssues(result.issues)) options.io.out(formatIssue(issue));
-  return hasErrors(result.issues) ? 1 : 0;
+  return 0;
 }
 
 /**

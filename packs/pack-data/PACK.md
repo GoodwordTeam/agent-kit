@@ -31,7 +31,7 @@ The pack never starts a phase. It attaches constraints and review lenses to a ph
 stored data, or whether a file outside the migration directory is run against production, it
 attaches and says in the `attachment_record` rationale what it could not establish. Data facts are
 never dropped because a classifier was uncertain (ruling `panel-composition-by-declared-risk`).
-`NEVER_DROPPED_PACKS` in `src/attach/signals.ts` holds the same rule for `ak attach`.
+`ak attach` has no switch that turns this pack off.
 
 ## Does not attach when
 

@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 
-import { attach } from "../src/attach/index.ts";
-import { BUILTIN_SIGNALS, NEVER_DROPPED_PACKS } from "../src/attach/signals.ts";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { parse as parseYaml } from "yaml";
+
+import { attach, formatAttachResult } from "../src/attach/index.ts";
+import { BUILTIN_SIGNALS, builtinSignalsFor, SEMANTIC_ONLY_RULES } from "../src/attach/signals.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -56,10 +61,6 @@ describe("built-in signals", () => {
       "pack-secure",
       "pack-test",
     ]);
-  });
-
-  test("security, API and data are the packs a manifest may extend but never remove", () => {
-    expect([...NEVER_DROPPED_PACKS].sort()).toEqual(["pack-api", "pack-data", "pack-secure"]);
   });
 });
 
@@ -162,55 +163,62 @@ describe("selection is recorded and deterministic", () => {
   });
 });
 
-describe("pack manifests extend the lookup, never weaken it", () => {
-  test("a manifest signal adds a selection path", () => {
+describe("pack.yaml is not a signal source", () => {
+  test("a manifest carrying the keys the schema forbids changes nothing", () => {
+    // `enabled` and `activation.signals` fail schemas.document-invalid, and
+    // the selector no longer reads either: the built-in table is the lookup.
     const ctx = ctxFor({
+      "packs/pack-deps/pack.yaml": "id: pack-deps\nenabled: false\n",
       "packs/pack-secure/pack.yaml":
-        "id: pack-secure\nactivation:\n  signals:\n    - kind: path-regex\n      pattern: \"(^|/)vault/\"\n      weight: sufficient\n      note: project vault directory\n",
+        "id: pack-secure\nactivation:\n  signals:\n    - kind: path-regex\n      pattern: \"(^|/)vault/\"\n      weight: sufficient\n      note: vault\n",
     });
-    const result = attach(ctx, "infra/vault/config.hcl");
-    expect(packs(result)).toContain("pack-secure");
-    expect(result.selections.find((s) => s.pack === "pack-secure")?.evidence[0]?.note).toContain("vault");
+    expect(packs(attach(ctx, "bun.lock"))).toContain("pack-deps");
+    expect(packs(attach(ctx, "infra/vault/config.hcl"))).not.toContain("pack-secure");
+  });
+});
+
+describe("every signal cites a rule its pack states", () => {
+  const PACKS_DIR = join(import.meta.dir, "..", "packs");
+
+  function ruleIdsOf(pack: string): string[] {
+    const doc = parseYaml(readFileSync(join(PACKS_DIR, pack, "pack.yaml"), "utf8")) as {
+      activation: { rules: Array<{ id: string }> };
+    };
+    return doc.activation.rules.map((r) => r.id);
+  }
+
+  const packIds = readdirSync(PACKS_DIR).filter((name) => existsSync(join(PACKS_DIR, name, "pack.yaml")));
+
+  test("the signal table and the packs on disk name the same packs", () => {
+    expect(BUILTIN_SIGNALS.map((p) => p.pack).sort()).toEqual([...packIds].sort());
+    expect(Object.keys(SEMANTIC_ONLY_RULES).every((pack) => packIds.includes(pack))).toBe(true);
   });
 
-  test("an empty manifest cannot switch off the built-in security lookup", () => {
-    const ctx = ctxFor({ "packs/pack-secure/pack.yaml": "id: pack-secure\nactivation:\n  signals: []\n" });
-    expect(packs(attach(ctx, "src/auth/session.ts"))).toContain("pack-secure");
-  });
-
-  test("an unparseable manifest is reported and the built-in lookup still runs", () => {
-    const ctx = ctxFor({ "packs/pack-secure/pack.yaml": "id: [unclosed\n" });
-    const result = attach(ctx, "src/auth/session.ts");
-    const issue = result.issues.find((i) => i.rule === "attach.manifest-unparseable");
-    expect(issue?.file).toBe("packs/pack-secure/pack.yaml");
-    // `line N, column N` can only have come from the parser, so requiring it
-    // rules out a message that dropped the cause and kept the template. It does
-    // not rule out a mis-narrowed cause: `yaml` throws only Error subclasses for
-    // a string input, so every way of reading `.message` off it agrees here.
-    expect(issue?.message ?? "").toMatch(/line \d+, column \d+/);
-    expect(issue?.message ?? "").not.toContain("undefined");
-    expect(packs(result)).toContain("pack-secure");
-  });
-
-  test("a manifest cannot switch off a never-dropped pack", () => {
-    const ctx = ctxFor({ "packs/pack-data/pack.yaml": "id: pack-data\nenabled: false\n" });
-    const result = attach(ctx, "db/migrations/001_add_column.sql");
-    expect(result.issues.some((i) => i.rule === "attach.protected-pack-disabled")).toBe(true);
-    expect(packs(result)).toContain("pack-data");
-  });
-
-  test("a manifest may switch off a pack that is not protected", () => {
-    const ctx = ctxFor({ "packs/pack-deps/pack.yaml": "id: pack-deps\nenabled: false\n" });
-    const result = attach(ctx, "bun.lock");
-    expect(packs(result)).not.toContain("pack-deps");
-    expect(result.skipped.some((s) => s.pack === "pack-deps" && s.reason.includes("disabled"))).toBe(true);
-  });
-
-  test("an unknown signal kind is reported rather than silently ignored", () => {
-    const ctx = ctxFor({
-      "packs/pack-api/pack.yaml": "id: pack-api\nactivation:\n  signals:\n    - kind: vibes\n      pattern: x\n",
+  for (const pack of packIds) {
+    test(`${pack}: each signal's rule exists, and each rule has a signal or a stated exemption`, () => {
+      const rules = ruleIdsOf(pack);
+      const cited = builtinSignalsFor(pack).map((s) => s.rule);
+      const exempt = Object.keys(SEMANTIC_ONLY_RULES[pack] ?? {});
+      expect(cited.filter((rule) => !rules.includes(rule))).toEqual([]);
+      expect(exempt.filter((rule) => !rules.includes(rule))).toEqual([]);
+      // An exemption is for a rule no signal can reach; one that also has a
+      // signal is a stale exemption.
+      expect(exempt.filter((rule) => cited.includes(rule))).toEqual([]);
+      expect(rules.filter((rule) => !cited.includes(rule) && !exempt.includes(rule))).toEqual([]);
     });
-    expect(attach(ctx, "src/x.ts").issues.some((i) => i.rule === "attach.unknown-signal-kind")).toBe(true);
+  }
+
+  test("a selection cites the rules its sufficient evidence matched", () => {
+    const ctx = ctxFor({ "db/migrations/002_drop.sql": "ALTER TABLE t DROP COLUMN legacy;\n" });
+    const data = attach(ctx, "db/migrations/002_drop.sql").selections.find((s) => s.pack === "pack-data");
+    expect(data?.matchedRules).toEqual(["destructive-schema-step", "migration-artifact"]);
+    expect(data?.rationale).toContain("destructive-schema-step");
+    expect(data?.evidence.every((e) => data.matchedRules.includes(e.rule))).toBe(true);
+  });
+
+  test("the printed result names the matched rules", () => {
+    const lines = formatAttachResult(attach(ctxFor(), "src/auth/session.ts"));
+    expect(lines).toContain("    rules: authn-authz-change");
   });
 });
 
