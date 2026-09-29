@@ -1307,21 +1307,42 @@ The same trap holds for a claim about an action: "the run does not publish it a 
 passed by a run that republished and said it had not. `ak validate` raises
 `evals.llm-action-claim-without-focus` from the same function on an `llm` grader with no `focus`
 whose `criteria` contain one sentence in which a negation or a count governs an action verb
-(publish, post, reply, push, merge, create, commit, delete, write, call, run, execute, start,
-dispatch, send, cut, record, deploy, invoke, and "opened" as a participle): "does not publish", "is
-not posted", "no second record is published", "published at most once", "posted again". Past tense
-is not read, because in criteria it describes the premise ("the seats it did not run"), not what the
-run must do. The resumability cases are where this matters most: every one claims the resumed run
-does not repeat a remote effect. Split a grader that mixes the two claims, as they do: the action
-goes in an `llm` grader with `focus: trace`, or in `tool_used` with `max` where the tool and its
-input are knowable from the case (`gh\s+pr\s+create` with `max: 1` on a resumed ship), and what the
-reply must say stays in its own grader on the default surface.
+(publish, post, reply, push, merge, reopen, create, commit, delete, write, call, run, execute,
+start, dispatch, send, cut, record, deploy, invoke, and "opened" as a participle). The shapes are
+a negated auxiliary ("does not publish", "won't merge", "cannot publish"), a bare "never" before a
+third-person verb ("never publishes"), a negated passive ("is not posted"), a clause opening with
+"no", "nothing", "only one" or "at most one" ("only one pull request is created"), a count after a
+governed verb ("is published at most once", "will post it again"), and "rather than" before a
+repeat ("rather than publishing a second page"). A count needs the verb governed, because record,
+reply, run, commit, call and post are nouns too: "cites the run once" is not a claim. Past tense is
+not read, because in criteria it describes the premise ("the seats it did not run"), not what the
+run must do, and idioms are not the action ("call it a regression", "cut corners", "write off",
+"start with", "record opinions as findings").
+
+Split a grader that mixes an action with reasoning or with what the reply says. The resumability
+cases are where this matters most: every one claims the resumed run reads the target back and does
+not repeat a remote effect, and most also claim how the idempotency key is derived. The read-back
+and the effect are actions; the key derivation is reasoning the reply states, since no tool input
+carries the key. Each goes in its own grader. The action goes in `tool_used` with `max` where the
+tool and its input are knowable from the case (`gh\s+pr\s+create` with `max: 1` on a resumed
+ship), or in an `llm` grader with `focus: trace`; the reasoning and the reply stay on the default
+surface. A split keeps the case's weight: halves sum to the original where integers allow, the
+heavier half on the action (2 becomes 1 and 1, 3 becomes 2 and 1), and a grader of weight 1 becomes
+two of weight 1.
+
+**Which surface an action claim takes is one rule.** `focus: trace` where a tool the case grants
+can perform the action, so the trace can show it happening. In a `needs-fixture` case the tool may
+be one the fixture will grant rather than one `allowed_tools` lists today, such as the
+knowledgebase's publish tool; the case then says so in a comment above `graders:`, naming the tool,
+so the grader's premise is written down where the fixture's author will find it. Where no tool the
+case grants, or its fixture will grant, can perform the action, the action cannot happen outside the
+reply, and the grader declares `focus: last_message`: a review round run inline in a case that
+grants no tool to dispatch one, or a page published in a case with no knowledgebase and no fixture.
 
 Both checks are heuristics with a narrow reach. A claim with no filesystem noun and no governed
 action verb, such as "exactly one ticket exists", is not caught, and aiming it is the author's job.
 Writing `focus: last_message` explicitly clears either check, and is the author's statement that
-the default was chosen: it is the right surface where the action could only happen in the reply,
-such as a review round run inline in a case that grants no tool to dispatch one.
+the default was chosen.
 
 `tests/grader-lint.test.ts` covers the other direction for the deterministic types. For every
 deterministic grader in `evals/` it builds a transcript the grader must fail, and one it must pass

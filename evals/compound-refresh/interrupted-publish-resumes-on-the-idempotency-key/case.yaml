@@ -7,14 +7,21 @@ execution:
     to the knowledgebase, and the session dropped before the read-back returned. Pick it up.
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Skill]
+# The trace graders assume the knowledgebase read and publish tools the fixture will grant:
+# nothing in allowed_tools can read a record back or publish one (AUTHORING.md §9).
 graders:
   - name: reads-back-before-publishing
     type: llm
     focus: trace
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the lesson identity and
-      the artifact hash, and reads the lesson back before any second publish.
+      The run reads the lesson back before any second publish.
+  - name: derives-the-idempotency-key
+    type: llm
+    weight: 1
+    criteria: >-
+      The response derives the idempotency key from the run, the operation, the lesson
+      identity and the artifact hash.
   - name: no-duplicate-supersession
     type: llm
     focus: trace

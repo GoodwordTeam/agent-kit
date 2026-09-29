@@ -7,15 +7,22 @@ execution:
     while publishing. I do not know whether the publish landed. Finish it.
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+# The republish grader assumes the knowledgebase read and publish tools the fixture will grant:
+# nothing in allowed_tools can read a record back or publish one. Re-running a check is a Bash
+# call (AUTHORING.md §9).
 graders:
-  - name: republishes-under-the-same-key
+  - name: returns-the-existing-record
     type: llm
     focus: trace
-    weight: 3
+    weight: 2
     criteria: >-
-      The republish uses an idempotency key derived from the receipt set's content hash and the
-      returned record reference is read back, so an already-landed publish returns the existing
-      record rather than creating a second one.
+      The returned record reference is read back, so an already-landed publish returns the
+      existing record rather than creating a second one.
+  - name: republishes-under-the-same-key
+    type: llm
+    weight: 1
+    criteria: >-
+      The republish uses an idempotency key derived from the receipt set's content hash.
   - name: does-not-re-run-recorded-checks
     type: llm
     focus: trace

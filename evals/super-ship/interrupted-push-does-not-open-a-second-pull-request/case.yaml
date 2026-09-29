@@ -10,7 +10,6 @@ execution:
 graders:
   - name: re-derives-the-same-idempotency-key
     type: llm
-    focus: trace
     weight: 3
     criteria: >-
       The key is re-derived from the run id, the operation id, the target identity and the input
@@ -26,7 +25,7 @@ graders:
   - name: no-second-pull-request
     type: llm
     focus: trace
-    weight: 3
+    weight: 2
     criteria: >-
       Exactly one branch and at most one pull request exist at the end. No duplicate is
       opened.

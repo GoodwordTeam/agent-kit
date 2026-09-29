@@ -7,15 +7,22 @@ execution:
     then the session dropped before the read-back came back. Finish the handoff.
   max_turns: 10
   allowed_tools: [Read, Glob, Grep, Skill]
+# The trace graders assume the knowledgebase read and publish tools the fixture will grant:
+# nothing in allowed_tools can read a record back or publish one (AUTHORING.md §9).
 graders:
   - name: reads-back-before-publishing
     type: llm
     focus: trace
     weight: 1
     criteria: >-
-      The response reuses the idempotency key the runner contract derives, with the input artifact
-      hash taken over the draft already persisted in scratch rather than a recomposed record, and
-      reads the record back from the knowledgebase before any second publish.
+      The run reads the record back from the knowledgebase before any second publish.
+  - name: reuses-the-idempotency-key
+    type: llm
+    weight: 1
+    criteria: >-
+      The response reuses the idempotency key the runner contract derives, with the input
+      artifact hash taken over the draft already persisted in scratch rather than a recomposed
+      record.
   - name: no-duplicate-record
     type: llm
     focus: trace

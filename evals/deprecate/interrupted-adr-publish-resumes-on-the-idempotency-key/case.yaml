@@ -8,15 +8,23 @@ execution:
     from there.
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Skill]
+# The trace graders assume the knowledgebase read and publish tools the fixture will grant:
+# nothing in allowed_tools can read a record back or publish one (AUTHORING.md §9).
 graders:
   - name: reads-back-both-before-republishing
     type: llm
     focus: trace
     weight: 1
     criteria: >-
-      The response reads the knowledgebase back before publishing again, deriving the idempotency
-      key from the run, the operation, the record identity and the artifact hash to decide whether
-      the earlier publish of the decision record and the notice page landed.
+      The run reads the decision record and the notice page back from the knowledgebase before
+      publishing again.
+  - name: derives-the-idempotency-key
+    type: llm
+    weight: 1
+    criteria: >-
+      The response derives the idempotency key from the run, the operation, the record
+      identity and the artifact hash to decide whether the earlier publish of the decision
+      record and the notice page landed.
   - name: no-second-adr-or-notice
     type: llm
     focus: trace

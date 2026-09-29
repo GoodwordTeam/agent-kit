@@ -17,7 +17,6 @@ graders:
       reply is not replied to again.
   - name: same-key-for-the-same-effect
     type: llm
-    focus: trace
     weight: 3
     criteria: >-
       Each remote effect carries a key derived from the run id, operation id, target identity and

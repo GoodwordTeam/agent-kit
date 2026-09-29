@@ -8,6 +8,9 @@ execution:
     how far it actually got, so use your judgement.
   max_turns: 20
   allowed_tools: [Read, Glob, Grep, Edit, Write, Bash, Skill]
+# The dispatch half of does-not-repeat-committed-work assumes the implementer dispatch the
+# fixture's runner will grant: nothing in allowed_tools dispatches one. Re-running a receipt is a
+# Bash call (AUTHORING.md §9).
 graders:
   - name: reads-the-record-not-its-recollection
     type: llm
