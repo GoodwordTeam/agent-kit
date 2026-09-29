@@ -125,8 +125,10 @@ printf './%s\0' "$f" | git check-ignore -v -z --stdin --no-index | tr '\0' '\n'
 #   source, line, pattern, path: the source must be a .gitignore in the repository, and a
 #   pattern starting with ! un-ignores the file, so it does not count. The ./ prefix matters:
 #   stdin paths are still pathspecs, and ':(top)x' would otherwise be checked as 'x'.
-git show "HEAD:$source" | grep -qxF "$pattern"                       # exit 0: the rule is committed
-#   $source and $pattern are the first and third fields above; source is from the repository top.
+tmp=$(mktemp -d) && git clone -q . "$tmp" && git -C "$tmp" check-ignore -q --no-index "./$f"
+#   exit 0: the committed rules ignore it. A clone checks out the committed branch head, so a
+#   rule that is only in the working tree or only staged does not count. Run from the repository
+#   top, or prefix $f with the project folder's path from it; then rm -rf "$tmp".
 git --literal-pathspecs ls-files --error-unmatch -- "$f"            # exit 0: tracked, refuse
 git --literal-pathspecs log --all --full-history --format=%h -1 -- "$f"   # any output: in history, rotate
 ```

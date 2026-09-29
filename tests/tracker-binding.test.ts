@@ -186,6 +186,35 @@ describe("the secret stays in the folder and out of git", () => {
     expect(rules(dir)).toEqual([]);
   });
 
+  test("a negation committed after the rule still counts once deleted only from the working tree", () => {
+    const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": ".linear-token\n!.linear-token\n" });
+    writeFileSync(join(dir, ".gitignore"), ".linear-token\n");
+    writeToken(join(dir, ".linear-token"));
+    expect(rules(dir)).toEqual(["error tracker.secret-not-ignored"]);
+  });
+
+  test("an uncommitted later rule that also matches does not hide the committed one", () => {
+    const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": ".linear-token\n" });
+    writeFileSync(join(dir, ".gitignore"), ".linear-token\n*-token\n");
+    writeToken(join(dir, ".linear-token"));
+    expect(rules(dir)).toEqual([]);
+  });
+
+  test("an untracked nested .gitignore that also matches does not hide the committed rule", () => {
+    const binding = BINDING.replace(".linear-token", "keys/.linear-token");
+    const dir = project({ [BINDING_FILE]: binding, ".gitignore": ".linear-token\n" });
+    mkdirSync(join(dir, "keys"));
+    writeFileSync(join(dir, "keys", ".gitignore"), ".linear-token\n");
+    writeToken(join(dir, "keys", ".linear-token"));
+    expect(rules(dir)).toEqual([]);
+  });
+
+  test("a project in a subdirectory of the repository is checked against its own committed .gitignore", () => {
+    const dir = project({ [`app/${BINDING_FILE}`]: BINDING, "app/.gitignore": ".linear-token\n" });
+    writeToken(join(dir, "app", ".linear-token"));
+    expect(rules(join(dir, "app"))).toEqual([]);
+  });
+
   test("a token path holding ':' is still matched to its .gitignore", () => {
     const binding = BINDING.replace(".linear-token", "keys/a:b");
     const dir = project({ [BINDING_FILE]: binding, "keys/.gitignore": "a:b\n" });

@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, realpathSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
@@ -161,10 +162,36 @@ function ignoringRule(root: string, file: string): { source: string; pattern: st
   return { source, pattern };
 }
 
-/** Whether `pattern` is a line of the committed `source`, a path from the repository top as check-ignore reports it. */
-function committedRule(root: string, source: string, pattern: string): boolean {
-  const shown = git(root, ["show", `HEAD:${source}`]);
-  return shown.status === 0 && shown.stdout.split("\n").some((line) => line.trim() === pattern);
+/**
+ * Whether the .gitignore files committed at HEAD ignore `file`, decided by git
+ * itself: each committed .gitignore is written at its own path into a scratch
+ * repository, which has no other rules -- no template, no info/exclude, no
+ * global excludes file -- and check-ignore runs there on the path from the
+ * repository top. So a negation committed after the rule, or a rule present
+ * only in the working tree, counts exactly as it would in a fresh clone.
+ */
+function ignoredAtHead(root: string, file: string): boolean {
+  const listed = git(root, ["ls-tree", "-r", "-z", "--full-tree", "HEAD"]);
+  const prefix = git(root, ["rev-parse", "--show-prefix"]);
+  if (listed.status !== 0 || prefix.status !== 0) return false;
+  const scratch = mkdtempSync(join(tmpdir(), "ak-ignore-"));
+  try {
+    if (git(scratch, ["init", "-q", "--template="]).status !== 0) return false;
+    for (const entry of listed.stdout.split("\0")) {
+      const [meta = "", path = ""] = entry.split("\t");
+      const [mode, type, object] = meta.split(" ");
+      if (type !== "blob" || mode === "120000" || basename(path) !== ".gitignore") continue;
+      const blob = git(root, ["cat-file", "blob", object ?? ""]);
+      if (blob.status !== 0) return false;
+      mkdirSync(join(scratch, dirname(path)), { recursive: true });
+      writeFileSync(join(scratch, path), blob.stdout);
+    }
+    const input = `./${prefix.stdout.trim()}${file}\0`;
+    const excludes = `core.excludesFile=${join(scratch, ".git", "no-excludes")}`;
+    return git(scratch, ["-c", excludes, "check-ignore", "-q", "-z", "--stdin", "--no-index"], { input, literal: false }).status === 0;
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 }
 
 /**
@@ -212,11 +239,10 @@ export function checkTrackerSecret(projectRoot: string, binding: TrackerBinding,
   // A project .gitignore, specifically: it protects every operator who follows
   // the binding's path, where a global excludes file protects only the one
   // machine that has it.
-  const rule = ignoringRule(projectRoot, file);
-  const source = rule?.source ?? "";
+  const source = ignoringRule(projectRoot, file)?.source ?? "";
   if (source === "" || isAbsolute(source) || basename(source) !== ".gitignore") {
     issues.push(error("tracker.secret-not-ignored", file, "token_file is not ignored by a .gitignore in this repository. Add it to the project's .gitignore, so no operator following this binding can stage it."));
-  } else if (!committedRule(projectRoot, source, rule!.pattern)) {
+  } else if (!ignoredAtHead(projectRoot, file)) {
     // An untracked .gitignore, or a rule not yet committed to a tracked one, is
     // machine-local in the same way: the next clone has no rule.
     issues.push(error("tracker.secret-not-ignored", file, `token_file is ignored only by an uncommitted rule in ${source}. Commit that .gitignore rule, so every clone of the project ignores it.`));
