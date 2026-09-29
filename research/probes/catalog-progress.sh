@@ -40,12 +40,13 @@
 # change does not add the ids it is cited for. The history checks need the
 # baseline and the cited commits; in a shallow clone that lacks them, they are
 # reported as skipped rather than guessed. A clone that has the baseline but
-# not every cited commit skips only what depends on the missing ones. CATALOG_BASELINE names another
-# baseline commit, which the tests use on fixture repositories.
+# not every cited commit skips only what depends on the missing ones.
+# CATALOG_BASELINE names another baseline commit, which the tests use on
+# fixture repositories.
 #
 # Output: the table on stdout, one `EXPANDED` line per section with recorded
-# expansions, a `SKIPPED` line when the history checks cannot run, and
-# `DISAGREEMENT <code> <section>` lines on stderr with exit status 1.
+# expansions, one `SKIPPED` line per history check a shallow clone cannot run,
+# and `DISAGREEMENT <code> <section>` lines on stderr with exit status 1.
 #
 # WHAT IT DOES NOT TELL YOU
 #
