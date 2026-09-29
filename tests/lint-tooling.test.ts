@@ -100,6 +100,22 @@ describe("lint ratchet", () => {
     expect(run.out).toContain("oxlint produced no report");
     expect(run.out).toContain("Failed to load JS plugin: ./missing/index.ts");
   });
+
+  test("an oxlint binary that cannot be started names the missing path rather than printing null", () => {
+    const home = tree({ "tools/oxlint/ratchet.ts": "" });
+    copyFileSync(RATCHET, join(home, "tools", "oxlint", "ratchet.ts"));
+    mkdirSync(join(home, "node_modules"));
+    symlinkSync(join(REPO, "node_modules", "ajv"), join(home, "node_modules", "ajv"));
+    const root = tree({ ".oxlintrc.json": ONE_RULE, "src/a.ts": "export {};\n" });
+    const run = spawnSync("bun", [join(home, "tools", "oxlint", "ratchet.ts"), "--root", root, "src"], {
+      encoding: "utf8",
+    });
+    const out = `${run.stdout}${run.stderr}`;
+    expect(run.status).not.toBe(0);
+    expect(out).toContain("oxlint produced no report");
+    expect(out).toContain(join(home, "node_modules", ".bin", "oxlint"));
+    expect(out).not.toContain("nullnull");
+  });
 });
 
 describe("the repository's tool configs", () => {

@@ -108,7 +108,8 @@ export function lint(root: string, paths: readonly string[]): Diagnostic[] {
     report = undefined;
   }
   if (report === undefined) {
-    throw new Error(`oxlint produced no report (exit ${run.status}):\n${run.stdout}${run.stderr}`);
+    const detail = [run.error?.message ?? "", run.stdout ?? "", run.stderr ?? ""].filter((part) => part !== "");
+    throw new Error(`oxlint produced no report (exit ${run.status}):\n${detail.join("\n")}`);
   }
   return report.diagnostics.map((d) => ({
     file: d.filename,
