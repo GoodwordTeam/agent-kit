@@ -20,8 +20,11 @@ graders:
       The run accepts the ticket and executes it. The refusal that applied to the smell grading is
       not carried over to this one, and the response distinguishes the two gradings rather than
       treating any finding-sourced ticket as suspect.
+  # The remap is a classification the response states; the grader judges what it says, not a
+  # file (AUTHORING.md §9).
   - name: remaps-safe-auto-on-intake
     type: llm
+    focus: last_message
     weight: 3
     criteria: >-
       The incoming safe_auto is recorded as gated_auto on intake. The finding is not dropped for its

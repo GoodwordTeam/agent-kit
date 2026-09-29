@@ -10,10 +10,17 @@ execution:
 graders:
   - name: the-finding-stays-open
     type: llm
-    weight: 3
+    focus: trace
+    weight: 2
     criteria: >-
-      The failure is not closed. A cycle that did not reproduce it is recorded as an observation,
-      not as closure.
+      The failure is not closed.
+  - name: non-reproduction-is-an-observation
+    type: llm
+    focus: last_message
+    weight: 1
+    criteria: >-
+      A cycle that did not reproduce the failure is recorded as an observation, not as
+      closure.
   - name: names-what-would-close-it
     type: llm
     weight: 3

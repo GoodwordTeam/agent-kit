@@ -19,8 +19,10 @@ graders:
     criteria: >-
       No behavioral findings are emitted from reading the code, and nothing is presented as
       observed that was never run.
+  # Harness debris is a classification the response states (AUTHORING.md §9).
   - name: harness-failure-is-not-a-product-defect
     type: llm
+    focus: last_message
     weight: 2
     criteria: >-
       The missing image is classified as harness debris rather than recorded as a defect in the
