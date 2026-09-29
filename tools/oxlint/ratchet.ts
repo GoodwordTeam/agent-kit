@@ -3,7 +3,8 @@
  * are recorded per file and rule in `tools/oxlint/baseline.json`. A run fails when any file holds more
  * violations of a rule than the baseline records, and when it holds fewer, because a count that went
  * down has to be written down or the room it leaves could be spent again. The baseline only shrinks:
- * `--update` refuses to record growth unless `--allow-growth` says a new rule is being adopted.
+ * `--update` refuses to record growth unless `--allow-growth` says a new rule is being adopted or a
+ * file with recorded violations was moved or renamed, so its entries follow it to the new path.
  *
  *   bun tools/oxlint/ratchet.ts [--root <dir>] [--update [--allow-growth]] <path>...
  */
@@ -199,7 +200,9 @@ export function main(argv: readonly string[]): number {
   if (update) {
     if (result.over.length > 0 && !allowGrowth) {
       for (const o of result.over) console.error(`${o.file}: ${o.rule} ${o.recorded} -> ${o.actual}`);
-      console.error("The baseline only shrinks. Fix the violations above; --allow-growth is for adopting a new rule.");
+      console.error(
+        "The baseline only shrinks. Fix the violations above; --allow-growth is for adopting a new rule or moving or renaming a file that has recorded violations.",
+      );
       return 1;
     }
     mkdirSync(dirname(join(root, BASELINE)), { recursive: true });
