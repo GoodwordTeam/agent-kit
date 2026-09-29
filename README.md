@@ -82,7 +82,7 @@ Shared phase logic, invoked by skills rather than by humans:
 `phase-operations` · `consensus-plan-gate` · `tdd` · `apply-findings` · `review-delta` ·
 `worktree-ownership` · `attach-pack`
 
-### Roles (29)
+### Roles (34)
 
 4 core (`supervisor`, `implementer`, `reviewer-spec`, `reviewer-standards`) · 15 code-review ·
 7 doc-review · 3 plan-review (`planner`, `architect`, `critic`).
