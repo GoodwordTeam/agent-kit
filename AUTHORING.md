@@ -1950,7 +1950,7 @@ made on the kind-1 count or not at all.
 ```bash
 bun test                 # units, plus the invalid-case fixtures that must fail
 bun run ak validate      # catalog, schemas, frontmatter, links, provenance, denylist
-bun run ak build --check # dist/ in sync
+bun run ak build         # validates, then writes dist/ for every host
 ```
 
 Then confirm by reading the file, not by remembering that you wrote it. The list is in two parts
