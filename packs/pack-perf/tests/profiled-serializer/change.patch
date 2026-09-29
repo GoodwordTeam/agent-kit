@@ -18,7 +18,7 @@ diff --git a/src/search/serialize.ts b/src/search/serialize.ts
 index 7a8b9c0..1d2e3f4 100644
 --- a/src/search/serialize.ts
 +++ b/src/search/serialize.ts
-@@ -4,6 +4,6 @@ import type { SearchRow, SearchResult } from "./types";
+@@ -4,7 +4,7 @@ import type { SearchRow, SearchResult } from "./types";
  export function serializeResult(row: SearchRow): SearchResult {
    return {
      id: row.id,

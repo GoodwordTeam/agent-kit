@@ -4,7 +4,7 @@ Date: Sat, 26 Sep 2026 12:15:00 +0000
 Subject: [PATCH] Simplify author loading on the feed
 
 Refs FEED-203. The feed endpoint's p95 regression, from the service
-dashboard, and the slowest trace attached to the ticket:
+dashboard, and a representative trace attached to the ticket:
 
   GET /feed p95, 7-day window: 210 ms before 2026-09-18, 640 ms since
 

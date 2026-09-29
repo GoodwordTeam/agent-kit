@@ -19,9 +19,9 @@ activation:
     - id: measured-problem
       artifact_kinds: [source, query, ticket, change-description]
       semantics:
-        - a measured regression, profile, trace or benchmark result for a surface is linked and the change touches that surface
+        - the ticket or the change carries a measured regression, profile, trace or benchmark result for a surface, and the change touches that surface; a reference to a measurement held elsewhere is not the measurement
       evidence_required:
-        - the measurement itself, not a description of one
+        - the measurement itself, as the ticket or the change carries it, not a description of or a reference to one
         - the changed surface it measured
   examples:
     - artifact: The ticket states an LCP budget and the change swaps hero images and splits the bundle.
@@ -93,7 +93,8 @@ reviewer_guidance:
     guidance: >-
       Check the optimized path still does all the work the product needs.
 kb_rules:
-  - "Performance budgets and measured problems for the affected surface, from the ticket or read through readContext; never assumed here."
+  - "Performance budgets for the affected surface, from the ticket or read through readContext; never assumed here."
+  - "Measured problems attach the pack only as the ticket or the change carries them; one read through readContext after attachment informs the work and never attaches it."
   - "Prior kept and reverted performance attempts, read through readContext before a new one is proposed."
 provenance:
   origin: donor
@@ -145,7 +146,7 @@ tests:
     fixture: packs/pack-perf/tests/query-in-loop
   - id: ticket-ref-only
     kind: negative
-    given: The commit refers to a profile held in a ticket for the surface it changes, and carries no measurement itself.
+    given: The commit refers to a profile held in PAY-77, a ticket not available to the selector, for the surface it changes, and carries no measurement itself.
     expect: Declines, recording that a reference to a measurement is not the measurement.
     fixture: packs/pack-perf/tests/ticket-ref-only
   - id: speedup-no-numbers
