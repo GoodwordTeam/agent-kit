@@ -201,18 +201,24 @@ exact commit being published, so a red build is refused at the wire rather than 
 ## Lint and format
 
 After editing code, run `bun run fmt`, then `bun run lint`. The lint output is one line per
-violation, with the rule and a fix instruction. Fix the code. Don't add a cast, a `!`, or a
-disable comment just to quiet a rule; those are what the rules exist to catch.
+violation with its rule, followed by the rule's fix instruction when it has one. `bun run lint`
+needs Node 22.18 or later on the `PATH`: oxlint loads the vendored plugin's TypeScript through
+Node's type stripping.
+
+Fix the code. Don't add a cast, a `!`, or a disable comment just to quiet a rule; those are what
+the rules exist to catch.
 
 Every rule in `.oxlintrc.json` is an error. The violations that predate a rule are recorded per
 file and rule in `tools/oxlint/baseline.json`, and that file only shrinks. A count above the
 baseline fails. A count below it also fails until you record it with `bun run lint:baseline`,
 because a slot left unrecorded would be spent by the next change. Growth is refused unless
 `--allow-growth` is passed, which is only for adopting a new rule, and the baseline diff is what
-the reviewer reads.
+the reviewer reads. The ratchet counts per file and rule, so fixing one violation while adding
+another of the same rule in the same file leaves the count unchanged and passes.
 
 oxfmt owns whitespace, so anti-slop's `require-readable-spacing` is off. Markdown, YAML,
-fixtures, donor material and recorded eval evidence are never formatted (`.oxfmtrc.json`
+fixtures, donor material, recorded eval evidence and the eval inputs that receipts pin by sha256
+(`tests/learn/evals/**/*.json`) are never formatted (`.oxfmtrc.json`
 `ignorePatterns`). `tools/oxlint/anti-slop/` is vendored upstream code: update it from upstream
 as its `UPSTREAM.md` describes, and never edit it in place.
 

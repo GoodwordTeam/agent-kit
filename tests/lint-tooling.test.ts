@@ -46,6 +46,7 @@ describe("lint ratchet", () => {
     expect(run.status).toBe(1);
     expect(run.out).toContain("src/a.ts:2:");
     expect(run.out).toContain("eslint(no-debugger)");
+    expect(run.out).toContain("help: Remove the debugger statement");
   });
 
   test("--update refuses to record growth; --allow-growth records it and the next check passes", () => {
@@ -88,6 +89,17 @@ describe("lint ratchet", () => {
     expect(run.status).not.toBe(0);
     expect(run.out).toContain("baseline.json is malformed");
   });
+
+  test("a plugin that fails to load stops the run and says why, rather than reading as a clean tree", () => {
+    const root = tree({
+      ".oxlintrc.json": JSON.stringify({ jsPlugins: ["./missing/index.ts"], rules: {} }),
+      "src/a.ts": "export {};\n",
+    });
+    const run = ratchet(root);
+    expect(run.status).not.toBe(0);
+    expect(run.out).toContain("oxlint produced no report");
+    expect(run.out).toContain("Failed to load JS plugin: ./missing/index.ts");
+  });
 });
 
 describe("the repository's tool configs", () => {
@@ -103,6 +115,9 @@ describe("the repository's tool configs", () => {
       "evals/demo/_fixtures/repo/e.js": unformatted,
       "skills/alpha/SKILL.md": "*   item\n",
       "catalog.yaml": "a:   1\n",
+      // Eval inputs are pinned by sha256 in recorded receipts; reformatting one invalidates them.
+      "tests/learn/evals/prompts/dev.json": '{"a":1}',
+      "tests/learn/evals/reflect/fixtures.json": '{"a":1}',
     });
     copyFileSync(join(REPO, ".oxfmtrc.json"), join(root, ".oxfmtrc.json"));
     const run = spawnSync(join(BIN, "oxfmt"), ["--list-different", "."], { cwd: root, encoding: "utf8" });
@@ -119,5 +134,18 @@ describe("the repository's tool configs", () => {
     symlinkSync(join(REPO, "node_modules"), join(root, "node_modules"));
     const codes = lint(root, ["src"]).map((d) => d.rule);
     expect(codes).toContain("anti-slop(no-chained-type-assertions)");
+  });
+
+  test("oxlint runs the type-aware rules against the tree's tsconfig", () => {
+    const root = tree({
+      "src/a.ts": "const load = async (): Promise<number> => 1;\nload();\n",
+      "tsconfig.json": JSON.stringify({ compilerOptions: { strict: true, target: "ES2022" }, include: ["src"] }),
+    });
+    copyFileSync(join(REPO, ".oxlintrc.json"), join(root, ".oxlintrc.json"));
+    mkdirSync(join(root, "tools", "oxlint"), { recursive: true });
+    symlinkSync(join(REPO, "tools", "oxlint", "anti-slop"), join(root, "tools", "oxlint", "anti-slop"));
+    symlinkSync(join(REPO, "node_modules"), join(root, "node_modules"));
+    const floating = lint(root, ["src"]).filter((d) => d.rule === "typescript(no-floating-promises)");
+    expect(floating.map((d) => d.line)).toEqual([2]);
   });
 });

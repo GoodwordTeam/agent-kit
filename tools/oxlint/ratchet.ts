@@ -21,6 +21,8 @@ interface Diagnostic {
   line: number;
   column: number;
   message: string;
+  /** oxlint's fix instruction, when the rule gives one. */
+  help?: string;
 }
 
 export interface RatchetResult {
@@ -37,6 +39,7 @@ interface Report {
     filename: string;
     code: string;
     message: string;
+    help?: string;
     labels: { span: { line: number; column: number } }[];
   }[];
 }
@@ -56,6 +59,7 @@ const REPORT_SCHEMA: JSONSchemaType<Report> = {
           filename: { type: "string" },
           code: { type: "string" },
           message: { type: "string" },
+          help: { type: "string", nullable: true },
           labels: {
             type: "array",
             items: {
@@ -103,13 +107,16 @@ export function lint(root: string, paths: readonly string[]): Diagnostic[] {
   } catch {
     report = undefined;
   }
-  if (report === undefined) throw new Error(`oxlint produced no report (exit ${run.status}):\n${run.stderr}`);
+  if (report === undefined) {
+    throw new Error(`oxlint produced no report (exit ${run.status}):\n${run.stdout}${run.stderr}`);
+  }
   return report.diagnostics.map((d) => ({
     file: d.filename,
     rule: d.code,
     line: d.labels[0]?.span.line ?? 0,
     column: d.labels[0]?.span.column ?? 0,
     message: d.message,
+    help: d.help,
   }));
 }
 
@@ -134,12 +141,15 @@ export function readBaseline(root: string): Counts {
   return new Map(Object.entries(parsed).map(([path, rules]) => [path, new Map(Object.entries(rules))]));
 }
 
+/** Code-unit order, so the baseline's key order never depends on the machine's locale. */
+const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
+
 /** Sorted by file, then rule, so a shrink shows in review as removed or lowered lines and nothing else. */
 function serialize(counts: Counts): string {
   const out: BaselineFile = {};
-  for (const file of [...counts.keys()].toSorted()) {
+  for (const file of [...counts.keys()].toSorted(byCodeUnit)) {
     const rules = counts.get(file) ?? new Map<string, number>();
-    out[file] = Object.fromEntries([...rules.entries()].toSorted(([a], [b]) => a.localeCompare(b)));
+    out[file] = Object.fromEntries([...rules.entries()].toSorted(([a], [b]) => byCodeUnit(a, b)));
   }
   return `${JSON.stringify(out, null, 2)}\n`;
 }
@@ -198,7 +208,10 @@ export function main(argv: readonly string[]): number {
   }
 
   for (const o of result.over) {
-    for (const d of o.diagnostics) console.log(`${d.file}:${d.line}:${d.column} ${d.rule} ${d.message}`);
+    for (const d of o.diagnostics) {
+      console.log(`${d.file}:${d.line}:${d.column} ${d.rule} ${d.message}`);
+      if (d.help !== undefined) console.log(`  help: ${d.help}`);
+    }
     console.log(`  ${o.file}: ${o.actual} ${o.rule}, baseline allows ${o.recorded}.`);
   }
   for (const s of result.stale) {

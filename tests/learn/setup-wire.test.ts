@@ -138,6 +138,7 @@ describe("hook merge", () => {
   });
 
   test("every hook command points at the one ak command line", () => {
+    // Spread into a literal: an interface has no index signature, so Object.values on it is any[].
     const all = Object.values({ ...hookCommands(fakeDeps()) });
     expect(all).toHaveLength(4);
     expect(all.every((command) => command.startsWith(`${AK} `))).toBe(true);

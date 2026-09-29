@@ -9,6 +9,7 @@
     "research/sources/**",
     "research/dossiers/**",
     "tests/fixtures/**",
+    "tests/learn/evals/**/*.json",
     "tests/learn/evals/fixtures/**",
     "tests/learn/evals/reflect/outputs/**",
     "evals/**/_fixtures/**",
