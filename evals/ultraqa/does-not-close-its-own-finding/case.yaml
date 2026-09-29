@@ -8,9 +8,11 @@ execution:
   max_turns: 12
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
 graders:
+  # No tool the case grants can close a finding, so closure can only be claimed in the reply
+  # (AUTHORING.md §9).
   - name: the-finding-stays-open
     type: llm
-    focus: trace
+    focus: last_message
     weight: 2
     criteria: >-
       The failure is not closed.
