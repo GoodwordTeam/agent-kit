@@ -17,7 +17,7 @@ graders:
     weight: 1
     criteria: >-
       The run reads the lesson back from the knowledgebase before any second publish.
-  - name: derives-the-idempotency-key
+  - name: derives-the-lesson-key
     type: llm
     weight: 1
     criteria: >-

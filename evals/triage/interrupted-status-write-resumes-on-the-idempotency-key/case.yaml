@@ -16,7 +16,7 @@ graders:
     weight: 1
     criteria: >-
       The run reads issue 42 back before writing.
-  - name: derives-the-idempotency-key
+  - name: derives-the-status-write-key
     type: llm
     weight: 1
     criteria: >-

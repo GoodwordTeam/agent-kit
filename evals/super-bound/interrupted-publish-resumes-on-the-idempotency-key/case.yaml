@@ -16,13 +16,14 @@ graders:
     focus: trace
     weight: 1
     criteria: >-
-      The run reads the record back before writing.
-  - name: derives-the-idempotency-key
+      The run reads the requirements page back before writing.
+  - name: derives-the-requirements-page-key
     type: llm
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the record
-      identity and the artifact hash to decide whether the earlier write landed.
+      The response derives the requirements page's idempotency key from the run, the
+      operation, the record identity and the artifact hash to decide whether the earlier write
+      landed.
   - name: no-duplicate-requirements-page
     type: llm
     focus: trace

@@ -16,13 +16,13 @@ graders:
     focus: trace
     weight: 1
     criteria: >-
-      The run reads the record back before writing.
-  - name: derives-the-idempotency-key
+      The run reads the round-one review record back before writing.
+  - name: derives-the-review-record-key
     type: llm
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the record
-      identity and the artifact hash to decide whether the earlier write landed.
+      The response derives the review record's idempotency key from the run, the operation,
+      the record identity and the artifact hash to decide whether the earlier write landed.
   - name: one-review-record-for-the-round
     type: llm
     focus: trace

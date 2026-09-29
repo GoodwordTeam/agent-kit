@@ -16,12 +16,12 @@ graders:
     weight: 1
     criteria: >-
       The run reads the strategy page back before publishing again.
-  - name: derives-the-idempotency-key
+  - name: derives-the-strategy-page-key
     type: llm
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the page identity
-      and the artifact hash to decide whether the earlier publish landed.
+      The response derives the strategy page's idempotency key from the run, the operation,
+      the page identity and the artifact hash to decide whether the earlier publish landed.
   - name: no-duplicate-revision
     type: llm
     focus: trace

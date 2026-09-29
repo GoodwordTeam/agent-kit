@@ -17,7 +17,7 @@ graders:
     weight: 1
     criteria: >-
       The run reads the evaluation record back before publishing again.
-  - name: derives-the-idempotency-key
+  - name: derives-the-evaluation-key
     type: llm
     weight: 1
     criteria: >-

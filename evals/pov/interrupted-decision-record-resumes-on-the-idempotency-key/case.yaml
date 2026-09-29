@@ -16,13 +16,13 @@ graders:
     focus: trace
     weight: 1
     criteria: >-
-      The run reads the record back before writing again.
-  - name: derives-the-idempotency-key
+      The run reads the verdict's decision record back before writing again.
+  - name: derives-the-verdict-key
     type: llm
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the decision's
-      identity and its content hash.
+      The response derives the verdict's idempotency key from the run, the operation, the
+      decision's identity and its content hash.
   - name: no-duplicate-decision
     type: llm
     focus: trace

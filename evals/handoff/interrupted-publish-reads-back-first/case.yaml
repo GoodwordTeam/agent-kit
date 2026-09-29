@@ -15,14 +15,14 @@ graders:
     focus: trace
     weight: 1
     criteria: >-
-      The run reads the record back from the knowledgebase before any second publish.
+      The run reads the handoff record back from the knowledgebase before any second publish.
   - name: reuses-the-idempotency-key
     type: llm
     weight: 1
     criteria: >-
       The response reuses the idempotency key the runner contract derives, with the input
-      artifact hash taken over the draft already persisted in scratch rather than a recomposed
-      record.
+      artifact hash taken over the handoff draft already persisted in scratch rather than a
+      recomposed record.
   - name: no-duplicate-record
     type: llm
     focus: trace

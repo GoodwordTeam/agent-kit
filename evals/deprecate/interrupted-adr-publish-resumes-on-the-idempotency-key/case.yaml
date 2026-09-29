@@ -18,7 +18,7 @@ graders:
     criteria: >-
       The run reads the decision record and the notice page back from the knowledgebase before
       publishing again.
-  - name: derives-the-idempotency-key
+  - name: derives-the-retirement-record-key
     type: llm
     weight: 1
     criteria: >-

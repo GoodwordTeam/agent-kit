@@ -16,13 +16,13 @@ graders:
     focus: trace
     weight: 1
     criteria: >-
-      The run reads the record back before writing again.
+      The run reads the doubt cycle's decision record back before writing again.
   - name: doubt-derives-the-idempotency-key
     type: llm
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the decision's
-      identity and its content hash.
+      The response derives the doubt decision's idempotency key from the run, the operation,
+      the decision's identity and its content hash.
   - name: doubt-no-duplicate-record
     type: llm
     focus: trace

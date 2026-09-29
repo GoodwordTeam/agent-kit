@@ -16,13 +16,13 @@ graders:
     focus: trace
     weight: 1
     criteria: >-
-      The run reads the ticket back before writing.
-  - name: derives-the-idempotency-key
+      The run reads the question's ticket back before writing.
+  - name: derives-the-question-ticket-key
     type: llm
     weight: 1
     criteria: >-
-      The response derives the idempotency key from the run, the operation, the record
-      identity and the artifact hash to decide whether the earlier write landed.
+      The response derives the question ticket's idempotency key from the run, the operation,
+      the record identity and the artifact hash to decide whether the earlier write landed.
   - name: no-duplicate-ticket
     type: llm
     focus: trace
