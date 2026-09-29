@@ -222,6 +222,15 @@ describe("model_operations", () => {
     expect(rules).not.toContain("invocation.operation-not-delegated");
   });
 
+  test("listing it under model_operations too does not excuse the child_operations edge", () => {
+    const ctx = ctxFor({
+      ...bodies,
+      "skills/ship/skill.yaml": "id: ship\nchild_operations: [compound.draft]\nmodel_operations: [compound.draft]\n",
+    });
+    const issues = checkInvocation(ctx).filter((i) => i.severity === "error");
+    expect(issues.map((i) => [i.rule, i.file])).toEqual([["invocation.operation-not-delegated", "skills/ship/skill.yaml"]]);
+  });
+
   test("an undeclared operation fails under model_operations too", () => {
     const ctx = ctxFor({ ...bodies, "skills/ship/skill.yaml": "id: ship\nmodel_operations: [compound.invent]\n" });
     expect(checkInvocation(ctx).map((i) => i.rule)).toContain("invocation.undeclared-operation");

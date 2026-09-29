@@ -72,7 +72,14 @@ export interface SkillManifest {
    */
   calls: string[];
   /**
-   * The subset of `calls` declared under `model_operations`: model-authority
+   * The entries of `calls` declared under `calls`, `child_operations` or
+   * `invokes`, by source key. An id listed there and under `model_operations`
+   * appears in both this and `modelOperations`, so each edge is judged by the
+   * key that declared it.
+   */
+  delegatedCalls: string[];
+  /**
+   * The entries of `calls` declared under `model_operations`: model-authority
    * phase operations, which run on no grant and so are judged against their
    * `callable_by` rather than against the delegated-grant rule.
    */
@@ -114,6 +121,7 @@ export const EMPTY_MANIFEST: SkillManifest = {
   hosts: {},
   duplicateHosts: [],
   calls: [],
+  delegatedCalls: [],
   modelOperations: [],
   raw: {},
 };
@@ -158,15 +166,16 @@ export function loadSkillManifest(root: string, skillId: string): SkillManifest 
 
   const raw = record(parsed);
   const modelOperations = strings(pick(raw, "model_operations", "model-operations"));
+  const delegatedCalls = [
+    ...strings(pick(raw, "calls")),
+    ...strings(pick(raw, "child_operations", "child-operations")),
+    ...strings(pick(raw, "invokes")),
+  ];
   const manifest: SkillManifest = {
     ...hostRows(record(pick(raw, "packaging"))),
     requires: strings(pick(raw, "requires")),
-    calls: [
-      ...strings(pick(raw, "calls")),
-      ...strings(pick(raw, "child_operations", "child-operations")),
-      ...strings(pick(raw, "invokes")),
-      ...modelOperations,
-    ],
+    calls: [...delegatedCalls, ...modelOperations],
+    delegatedCalls,
     modelOperations,
     raw,
   };

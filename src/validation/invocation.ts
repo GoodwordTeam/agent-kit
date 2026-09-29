@@ -167,14 +167,19 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
         refs.push({ ...ref, line: ref.line + offset, file: bodyPath });
       }
     }
-    const modelOperations = new Set(manifest.modelOperations);
-    for (const call of manifest.calls) {
+    // Each edge is tagged by the key that declared it, so an id listed under
+    // both child_operations and model_operations is judged twice, once per key.
+    const edges = [
+      ...manifest.delegatedCalls.map((call) => ({ call, model: false })),
+      ...manifest.modelOperations.map((call) => ({ call, model: true })),
+    ];
+    for (const { call, model } of edges) {
       refs.push({
         target: call,
         line: 0,
         kind: call.includes(".") ? "operation" : "skill",
         file: `skills/${entry.id}/skill.yaml`,
-        ...(modelOperations.has(call) ? { model: true } : {}),
+        ...(model ? { model: true } : {}),
       });
     }
 
