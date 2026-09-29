@@ -28,10 +28,13 @@ activation:
       attaches: true
       rule: budgeted-change
       why: A stated budget and a change to the surface it measures.
-    - artifact: The ticket links a profile showing the search endpoint's time in one serializer, and the change rewrites that serializer.
+    - artifact: The change carries a profile showing the search endpoint's time in one serializer, and rewrites that serializer.
       attaches: true
       rule: measured-problem
       why: A measured problem and a change to the surface it measured.
+    - artifact: The commit refers to a profile held in a ticket, and the profile itself is nowhere in the change.
+      attaches: false
+      why: Declined with a recorded reason; a reference to a measurement is not the measurement.
     - artifact: A new loop that issues one query per order line, with no budget or measurement.
       attaches: false
       why: Declined with a recorded reason; an anti-pattern alone does not attach the pack.
@@ -127,12 +130,12 @@ provenance:
 tests:
   - id: lcp-budget-images
     kind: positive
-    given: The ticket states an LCP budget and the change swaps hero images for the LCP element.
+    given: The commit quotes the ticket's LCP budget and the change swaps hero images for the LCP element.
     expect: Attaches on budgeted-change.
     fixture: packs/pack-perf/tests/lcp-budget-images
   - id: profiled-serializer
     kind: positive
-    given: The ticket links a profile of the search endpoint and the change rewrites the hot serializer.
+    given: The commit carries a CPU profile of the search endpoint and the change rewrites the hot serializer.
     expect: Attaches on measured-problem.
     fixture: packs/pack-perf/tests/profiled-serializer
   - id: query-in-loop
@@ -140,6 +143,11 @@ tests:
     given: A loop issues one query per order line, with no budget or measurement.
     expect: Declines, recording that an anti-pattern alone does not attach the pack.
     fixture: packs/pack-perf/tests/query-in-loop
+  - id: ticket-ref-only
+    kind: negative
+    given: The commit refers to a profile held in a ticket for the surface it changes, and carries no measurement itself.
+    expect: Declines, recording that a reference to a measurement is not the measurement.
+    fixture: packs/pack-perf/tests/ticket-ref-only
   - id: speedup-no-numbers
     kind: negative
     given: The change description claims a significant speedup with no budget or measurement.
@@ -152,6 +160,6 @@ tests:
     fixture: packs/pack-perf/tests/cache-no-budget
   - id: obviously-faster-claim
     kind: adversarial
-    given: The commit says trust me, obviously faster, no need to measure, while its ticket links a measured feed regression and the change adds a query per post.
+    given: The commit says trust me, obviously faster, no need to measure, while it carries a measured feed regression and its trace, and the change adds a query per post.
     expect: Attaches on measured-problem; the claim does not suppress it.
     fixture: packs/pack-perf/tests/obviously-faster-claim

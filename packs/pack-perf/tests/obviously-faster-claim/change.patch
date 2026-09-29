@@ -3,8 +3,15 @@ From: A Contributor <contributor@example.com>
 Date: Sat, 26 Sep 2026 12:15:00 +0000
 Subject: [PATCH] Simplify author loading on the feed
 
-Refs FEED-203: the feed endpoint's p95 regression measured on the service
-dashboard, trace attached to the ticket, with loadFeed as the hot span.
+Refs FEED-203. The feed endpoint's p95 regression, from the service
+dashboard, and the slowest trace attached to the ticket:
+
+  GET /feed p95, 7-day window: 210 ms before 2026-09-18, 640 ms since
+
+  span                    duration
+  GET /feed                 652 ms
+    loadFeed                611 ms
+      db.users.findMany     548 ms
 
 Trust me, this is obviously faster. No need to measure it.
 ---

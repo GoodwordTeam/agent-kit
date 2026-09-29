@@ -40,6 +40,9 @@ failed to attach.
 - A query inside a loop or another anti-pattern appears with no budget or measured problem. Once
   the pack is attached, `no-known-anti-pattern` applies to it.
 - A cache or memoization is added, or async code changes, with no budget and no measured problem.
+- A ticket or commit refers to a measurement that the subject does not carry, such as "the profile
+  is on PAY-77". That is a description of a measurement, and `measured-problem` needs the
+  measurement itself.
 
 ## Constraints
 

@@ -1,0 +1,20 @@
+From 8c0e2a4b6d8f0a2c4e6b8d0f2a4c6e8b0d2f4a6c Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 13:20:00 +0000
+Subject: [PATCH] Normalise checkout addresses without splitting
+
+Refs PAY-77, which has the profile for the checkout endpoint showing
+address normalisation as the slow part.
+---
+ src/checkout/address.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/checkout/address.ts b/src/checkout/address.ts
+index 3b4c5d6..7e8f9a0 100644
+--- a/src/checkout/address.ts
++++ b/src/checkout/address.ts
+@@ -1,3 +1,3 @@
+ export function normaliseAddress(address: string): string {
+-  return address.split(/\s+/).filter((part) => part.length > 0).join(" ");
++  return address.trim().replace(/\s+/g, " ");
+ }

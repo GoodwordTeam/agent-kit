@@ -1,3 +1,3 @@
 attaches: true
 matched_rules: [measured-problem]
-why: The commit says it is obviously faster and asks not to measure, but its ticket links a measured feed regression whose hot span is the function the change rewrites.
+why: The commit says it is obviously faster and asks not to measure, but it carries a measured feed regression and a trace whose hot span is the function the change rewrites.
