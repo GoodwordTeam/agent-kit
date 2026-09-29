@@ -125,7 +125,7 @@ printf './%s\0' "$f" | git check-ignore -v -z --stdin --no-index | tr '\0' '\n'
 #   source, line, pattern, path: the source must be a .gitignore in the repository, and a
 #   pattern starting with ! un-ignores the file, so it does not count. The ./ prefix matters:
 #   stdin paths are still pathspecs, and ':(top)x' would otherwise be checked as 'x'.
-tmp=$(mktemp -d) && git clone -q . "$tmp" && git -C "$tmp" check-ignore -q --no-index "./$f"
+tmp=$(mktemp -d) && git clone -q --template= . "$tmp" && git -C "$tmp" -c core.excludesFile=/dev/null check-ignore -q --no-index "./$f"
 #   exit 0: the committed rules ignore it. A clone checks out the committed branch head, so a
 #   rule that is only in the working tree or only staged does not count. Run from the repository
 #   top, or prefix $f with the project folder's path from it; then rm -rf "$tmp".

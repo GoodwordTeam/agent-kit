@@ -139,7 +139,7 @@ export function findProjectRoot(start: string): string {
 function git(root: string, args: string[], options: { input?: string; timeout?: number; literal?: boolean } = {}) {
   const { literal = true, ...spawn } = options;
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
-  return spawnSync("git", [...(literal ? ["--literal-pathspecs"] : []), "-C", root, ...args], { encoding: "utf8", env, ...spawn });
+  return spawnSync("git", [...(literal ? ["--literal-pathspecs"] : []), "-C", root, ...args], { encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, ...spawn });
 }
 
 /** How long the history scan may run before it is reported as not run. */

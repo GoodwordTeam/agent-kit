@@ -209,6 +209,12 @@ describe("the secret stays in the folder and out of git", () => {
     expect(rules(dir)).toEqual([]);
   });
 
+  test("a committed .gitignore larger than the default output buffer is still read", () => {
+    const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": `${"# padding\n".repeat(200_000)}.linear-token\n` });
+    writeToken(join(dir, ".linear-token"));
+    expect(rules(dir)).toEqual([]);
+  });
+
   test("a project in a subdirectory of the repository is checked against its own committed .gitignore", () => {
     const dir = project({ [`app/${BINDING_FILE}`]: BINDING, "app/.gitignore": ".linear-token\n" });
     writeToken(join(dir, "app", ".linear-token"));
