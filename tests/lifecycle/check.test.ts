@@ -122,6 +122,30 @@ describe("ak lifecycle check, standalone", () => {
     expect(r.err).toContain("refused: gate review-full has no current evidence");
   });
 
+  test("a branch reused after a squash merge inherits records until run identity changes", () => {
+    const dir = repo();
+    record(dir, "build-checks");
+    git(dir, "commit", "-qam", "task one");
+    record(dir, ...PRE_SHIP_GATES);
+    expect(ak(dir, "check").code).toBe(0);
+
+    git(dir, "checkout", "-q", "main");
+    git(dir, "merge", "-q", "--squash", "feature");
+    git(dir, "commit", "-qm", "squash task one");
+    git(dir, "checkout", "-q", "feature");
+    git(dir, "merge", "-q", "--no-edit", "main");
+    writeFileSync(join(dir, "src/a.js"), "export const a = 7;\n");
+    record(dir, "verify", "review-delta", "review-readiness");
+
+    // Pin the known gate.ts:5-8 limitation so a later run-identity fix is a deliberate change.
+    expect(ak(dir, "check").code).toBe(0);
+    const freshRun = ak(dir, "check", "--run", "task-2");
+    expect(freshRun.code).toBe(1);
+    for (const gate of PRE_SHIP_GATES) {
+      expect(freshRun.err).toContain(`refused: gate ${gate} has no current evidence (no record for run task-2`);
+    }
+  });
+
   test("work on the default branch itself keeps build-checks recorded before its commit", () => {
     const dir = repo();
     git(dir, "checkout", "-q", "main");
