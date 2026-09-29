@@ -1,0 +1,25 @@
+From 6a0b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f4a6b Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 12:40:00 +0000
+Subject: [PATCH] Stop re-parsing tags in the search result serializer
+
+Refs SRCH-91: the attached CPU profile of the search endpoint shows most
+request time in serializeResult, spent re-parsing each row's tag JSON.
+---
+ src/search/serialize.ts | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/search/serialize.ts b/src/search/serialize.ts
+index 7a8b9c0..1d2e3f4 100644
+--- a/src/search/serialize.ts
++++ b/src/search/serialize.ts
+@@ -4,6 +4,6 @@ import type { SearchRow, SearchResult } from "./types";
+ export function serializeResult(row: SearchRow): SearchResult {
+   return {
+     id: row.id,
+     title: row.title,
+-    tags: JSON.parse(row.tagsJson).map((t: { name: string }) => t.name),
+-    score: JSON.parse(row.tagsJson).length > 0 ? row.score : 0,
++    tags: row.tagNames,
++    score: row.tagNames.length > 0 ? row.score : 0,
+   };

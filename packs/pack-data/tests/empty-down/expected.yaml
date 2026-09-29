@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [migration-artifact]
+why: An Alembic migration is added whose downgrade does nothing, so the deploy cannot be reversed.

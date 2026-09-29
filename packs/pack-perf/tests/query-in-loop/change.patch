@@ -1,0 +1,24 @@
+From 2c4e6a8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 10:20:00 +0000
+Subject: [PATCH] Include product names on the invoice view
+
+---
+ src/invoices/view.ts | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/src/invoices/view.ts b/src/invoices/view.ts
+index 3b4c5d6..7e8f9a0 100644
+--- a/src/invoices/view.ts
++++ b/src/invoices/view.ts
+@@ -8,4 +8,9 @@ export async function invoiceView(db: Db, invoiceId: string) {
+   const invoice = await db.invoices.findById(invoiceId);
+   const lines = await db.invoiceLines.findByInvoice(invoiceId);
+-  return { invoice, lines };
++  const detailed = [];
++  for (const line of lines) {
++    const product = await db.products.findById(line.productId);
++    detailed.push({ ...line, productName: product.name });
++  }
++  return { invoice, lines: detailed };
+ }

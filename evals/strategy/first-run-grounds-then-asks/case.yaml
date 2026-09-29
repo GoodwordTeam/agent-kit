@@ -1,0 +1,32 @@
+schema_version: "1.1"
+name: strategy-first-run-grounds-then-asks
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:strategy We have never written down a strategy for this product. The README describes what
+    it does. Let's get one on record.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill, Bash, Write, Edit]
+graders:
+  - name: grounding-shown-with-sources
+    type: llm
+    weight: 1
+    criteria: >-
+      Before its first interview question, the response shows a short model of the product (what it
+      seems to be, who it seems to serve, where recent attention has gone) in about three to five
+      lines, each naming the source it came from, and invites correction.
+  - name: asks-purpose-alone
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response ends by asking one question, about the core problem the product solves and what
+      makes it hard. It does not ask several sections' questions at once and does not present a
+      filled-in strategy.
+  - name: nothing-written-yet
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      No tool call publishes a strategy page or writes a strategy file. No Write or Edit call
+      creates or changes a file inside the repository.

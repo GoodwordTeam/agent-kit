@@ -1,0 +1,163 @@
+id: pack-data
+version: 0.1.0
+summary: >-
+  Constraints on changes to stored data and its shape: expand, migrate, contract; no rename in
+  place; destructive steps last and alone; a tested down path; batched backfills; and a separate
+  destructive-data authorization that reviewer approval does not supply.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: migration-artifact
+      artifact_kinds: [migration, schema-dump]
+      semantics:
+        - a schema migration is added or edited
+        - a checked-in schema dump changes
+      evidence_required:
+        - a migration file under the project's migration directory, or a schema dump file, in the change
+    - id: data-transform-script
+      artifact_kinds: [backfill, data-script]
+      semantics:
+        - a backfill or data-repair job rewrites stored rows
+        - a one-off script updates or deletes stored data
+      evidence_required:
+        - the statement or job in the change that writes to stored data
+    - id: destructive-schema-step
+      artifact_kinds: [migration, data-script]
+      semantics:
+        - a table or column is dropped or renamed in place
+        - a column type is narrowed or NOT NULL is added without a default to a populated table
+        - stored rows are deleted
+      evidence_required:
+        - the destructive statement itself
+  examples:
+    - artifact: A migration adds a NOT NULL column with no default to an existing table.
+      attaches: true
+      rule: destructive-schema-step
+      why: Adding NOT NULL without a default to a populated table fails or locks on deploy.
+    - artifact: A migration whose down method is empty.
+      attaches: true
+      rule: migration-artifact
+      why: A migration with no down path cannot be reversed.
+    - artifact: A script in scripts/ runs an UPDATE over the orders table outside any migration directory.
+      attaches: true
+      rule: data-transform-script
+      why: The script rewrites stored rows; whether it runs against production is ambiguous, and data facts are never dropped on ambiguity.
+    - artifact: A repository class rewrites a SELECT to use a join, with no migration in the change.
+      attaches: false
+      why: Query-only change with no migration, schema dump or data script.
+    - artifact: A serializer exposes a column that a previously merged migration added.
+      attaches: false
+      why: The migration is not in this change, and exposing the column does not change stored data.
+constraints:
+  - id: expand-migrate-contract
+    kind: must
+    requirement: >-
+      A shape change ships as expand, migrate, contract, with old and new code both valid against
+      the schema at every deploy step. Most permissive autofix_class gated_auto for an expand step,
+      manual otherwise.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: no-rename-in-place
+    kind: must-not
+    requirement: >-
+      A column or table is never renamed or re-typed in place. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: destructive-last-and-alone
+    kind: must
+    requirement: >-
+      Drops and renames ship in their own deploy after nothing reads the old shape, never with the
+      additive step. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: tested-down-path
+    kind: evidence-required
+    requirement: >-
+      Every migration has a down path that the change shows was run; an irreversible step states
+      its recovery path instead. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: batched-backfill
+    kind: must
+    requirement: >-
+      Backfills run in bounded batches off the hot path, and large indexes are built without
+      blocking writes where the database supports it. Most permissive autofix_class gated_auto.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+  - id: destructive-step-authorized
+    kind: authorization-required
+    authorization: destructive-data
+    requirement: >-
+      Executing a drop, an in-place rename, a row deletion or a backfill needs an approved charter
+      entry naming that step. Reviewer approval is necessary and not sufficient, and the pack does
+      not supply the authorization. Most permissive autofix_class manual.
+reviewer_guidance:
+  - lane: code-review/data-migration
+    required_when_attached: true
+    guidance: >-
+      Check every constraint against the migration, schema dump and backfill: the down path, the
+      deploy sequencing, and the lock behavior of each statement.
+  - lane: code-review/correctness
+    guidance: >-
+      Check application code reads and writes correctly at every expand, migrate and contract step,
+      including dual writes.
+kb_rules:
+  - "The project's migration tool, migration directories and deploy sequencing practice, read through readContext."
+  - "Table-size, batch-size and lock-timeout limits, read through readContext as project facts; never assumed here."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/deprecation-and-migration/SKILL.md
+      license: MIT
+      adaptation: >-
+        The expand/contract section, its rules, the schema red flags and the schema rationalization
+        rows became constraints and table rows; the deprecation half of the file went to pack-delete.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/persona-catalog.md
+      license: MIT
+      adaptation: >-
+        The data-migration selection rule and its model-only or query-only non-trigger became the
+        activation rules and the first non-trigger.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - sensitive-actions-need-approved-charter-entry
+    - safe-auto-restricted-per-seat
+    - required-lane-failure-is-unavailable
+    - central-kb-owns-project-artifacts
+    - numeric-heuristics-are-guidance
+tests:
+  - id: not-null-no-default
+    kind: positive
+    given: A migration adds a NOT NULL column with no default to an existing table.
+    expect: Attaches on migration-artifact and destructive-schema-step.
+    fixture: packs/pack-data/tests/not-null-no-default
+  - id: empty-down
+    kind: positive
+    given: A migration whose down method is empty.
+    expect: Attaches on migration-artifact.
+    fixture: packs/pack-data/tests/empty-down
+  - id: adhoc-update-script
+    kind: positive
+    given: A script outside any migration directory runs an UPDATE over a table.
+    expect: Attaches on data-transform-script, recording the ambiguity in the rationale.
+    fixture: packs/pack-data/tests/adhoc-update-script
+  - id: query-only-dao
+    kind: negative
+    given: A repository query changes with no migration, schema dump or data script.
+    expect: Does not attach.
+    fixture: packs/pack-data/tests/query-only-dao
+  - id: serializer-prior-column
+    kind: negative
+    given: A serializer exposes a column added by an earlier, merged migration.
+    expect: Does not attach.
+    fixture: packs/pack-data/tests/serializer-prior-column
+  - id: safe-rename-claim
+    kind: adversarial
+    given: The commit message says safe and backwards compatible, while the migration renames a column in place.
+    expect: Attaches on migration-artifact and destructive-schema-step; the claim does not suppress it.
+    fixture: packs/pack-data/tests/safe-rename-claim

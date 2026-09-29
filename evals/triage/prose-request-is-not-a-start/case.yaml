@@ -1,0 +1,26 @@
+schema_version: "1.1"
+name: prose-request-is-not-a-start
+tags: [negative]
+execution:
+  prompt: >-
+    Can you go through our open GitHub issues and label each one as a bug or an enhancement? Use
+    your triage skill if that helps.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Bash]
+graders:
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: with-only
+    criteria: >-
+      The session does not carry out the triage workflow: no issue is evaluated, labelled, moved to
+      a state, commented on or closed. Loading the triage skill and then stopping, at its authority
+      step, with needs-input or with a refusal, passes, and so does never loading it.
+  - name: no-label-command
+    type: regex
+    pattern: 'gh\s+issue\s+(edit|close|comment)|--add-label'
+    target: trace
+    match: not_contains
+    arm: both
+    weight: 1

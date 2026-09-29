@@ -1,0 +1,118 @@
+{
+  "schema": "handoff-record",
+  "schema_version": 1,
+  "id": "example-handoff-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "handoff"
+  },
+  "inputs": [
+    {
+      "id": "example-ticket-1",
+      "schema": "ticket",
+      "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "published",
+  "intent": {
+    "kind": "human-request",
+    "statement": "Write a handoff so tomorrow's session can finish the loader fix."
+  },
+  "anchor": {
+    "readable": true,
+    "branch": "fix/loader-partial-set"
+  },
+  "objective": "The loader returns every configured source, not only the first.",
+  "decisions": [
+    {
+      "text": "Keep the public signature of loadSources unchanged.",
+      "source": "user"
+    },
+    {
+      "text": "Collect into a list and return after the loop rather than yielding.",
+      "source": "own-call"
+    }
+  ],
+  "references": [
+    {
+      "what": "The early return inside the loop that truncates the set.",
+      "location": {
+        "repo": "example-org/example-service",
+        "revision": "1111111111111111111111111111111111111111",
+        "path": "src/loader/index.ts",
+        "symbol": "loadSources",
+        "line_range": {
+          "start": 40,
+          "end": 52
+        }
+      }
+    },
+    {
+      "what": "The ticket's acceptance criteria AC-1 and AC-2.",
+      "artifact": {
+        "id": "example-ticket-1",
+        "schema": "ticket",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "The loader suite passed at the anchor.",
+      "kind": "receipt",
+      "receipt": {
+        "id": "example-verification-1",
+        "schema": "verification",
+        "hash": "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      "reverified": true
+    },
+    {
+      "claim": "The integration suite was green yesterday.",
+      "kind": "statement",
+      "reverified": false,
+      "stale": {
+        "bound_to": "a revision before the anchor, not re-run this session"
+      }
+    }
+  ],
+  "pieces": [
+    {
+      "piece": "Loader fix",
+      "state": "complete"
+    },
+    {
+      "piece": "Regression test for three sources",
+      "state": "in-progress",
+      "remaining": "The third-source assertion."
+    }
+  ],
+  "outstanding": [
+    {
+      "work": "Run the integration suite at the anchor.",
+      "blocked_by": "The shared test environment is down."
+    }
+  ],
+  "failed_approaches": [
+    {
+      "approach": "Converting the loop to a generator.",
+      "why": "Callers index the result, so a generator broke them."
+    }
+  ],
+  "next_steps": [
+    "Finish the three-source test, then re-run both suites at the anchor."
+  ],
+  "skills": [
+    "super-verify"
+  ]
+}

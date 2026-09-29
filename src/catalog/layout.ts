@@ -44,14 +44,16 @@ const PREFERRED_BODY: Record<DirectorySection, string> = {
  * written under the enforced rule -- tightening it afterwards would have put the
  * cost on a writer who had already handed work back.
  *
- * `packs` is deliberately absent and is not an oversight. §12.5 states that
- * domain packs are the fifth shape and the contract does not govern them yet:
- * nothing says what a `PACK.md` contains. Mandating a filename for a body with
- * no specification would be inventing a shape for an artifact nobody has
- * designed, from the validator's side, which is the failure §10 exists to catch.
- * It waits for its section.
+ * `packs` joined last, once §12.6 gave a domain pack exactly one body file,
+ * `packs/<id>/PACK.md`, beside a manifest and a fixtures tree. It was held out
+ * while the contract said nothing about what a `PACK.md` contains, because
+ * mandating a filename for an unspecified body would have invented the shape
+ * from the validator's side. With the section written it meets the same
+ * criterion as the other four, and like `references` it was promoted while all
+ * eight entries were still `status: contract`, so no authored pack was
+ * grandfathered.
  */
-export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills", "protocols", "roles", "references"];
+export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills", "packs", "protocols", "roles", "references"];
 
 export function entryDir(section: DirectorySection, id: string): string {
   return `${section}/${id}`;

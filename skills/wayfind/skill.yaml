@@ -83,10 +83,11 @@ inputs:
 
 outputs:
   - id: map-record
+    schema: map
     summary: >-
-      Destination, Notes, Decisions so far, Not yet specified and Out of scope, published through
-      publishArtifact under a run-artifact placement or written to the external tracker. The
-      knowledgebase resolves the location; no path is supplied.
+      Destination, Notes, Decisions so far, Not yet specified and Out of scope, plus the ticket set
+      by id, published through publishArtifact under a run-artifact placement or written to the
+      external tracker. The knowledgebase resolves the location; no path is supplied.
   - id: decision-ticket
     schema: ticket
     summary: >-

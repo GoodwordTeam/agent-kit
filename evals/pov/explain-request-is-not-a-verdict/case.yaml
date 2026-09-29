@@ -1,0 +1,39 @@
+schema_version: "1.1"
+name: explain-request-is-not-a-verdict
+tags: [negative]
+execution:
+  prompt: >-
+    Walk me through why the login flow in this project was built on session cookies instead of
+    bearer tokens. I am new here and just want to understand the reasoning, not change anything.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill, Write, Edit]
+graders:
+  - name: no-verdict
+    type: llm
+    weight: 1
+    criteria: >-
+      The response explains or says what it could not find. It gives no adoption grade, no Adopt,
+      Trial, Hold, Reject or Not-our-problem, and no recommendation to switch approaches.
+  - name: no-write-call
+    type: tool_used
+    tool: Write
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: no-edit-call
+    type: tool_used
+    tool: Edit
+    min: 0
+    max: 0
+    arm: both
+    weight: 1
+  - name: workflow-not-carried-out
+    type: llm
+    weight: 1
+    focus: trace
+    arm: both
+    criteria: >-
+      The session does not carry out the pov workflow: no floors are applied, no grade is formed
+      and no point of view is returned. Loading the pov skill and then stopping, at its authority
+      step, with needs-input or with a refusal, passes, and so does never loading it.

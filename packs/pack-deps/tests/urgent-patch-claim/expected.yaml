@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [version-bump]
+why: The commit calls it an urgent patch, but the change crosses a major version, and urgency does not stand in for the audit or the authorization.

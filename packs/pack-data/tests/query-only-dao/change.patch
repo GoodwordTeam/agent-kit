@@ -1,0 +1,14 @@
+diff --git a/src/repositories/order_repository.ts b/src/repositories/order_repository.ts
+index 1b2c3d4..5e6f7a8 100644
+--- a/src/repositories/order_repository.ts
++++ b/src/repositories/order_repository.ts
+@@ -20,7 +20,8 @@ export class OrderRepository {
+   async recentForCustomer(customerId: string) {
+     return this.db.query(
+-      "SELECT * FROM orders WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 20",
++      "SELECT o.*, c.email FROM orders o JOIN customers c ON c.id = o.customer_id " +
++        "WHERE o.customer_id = $1 ORDER BY o.created_at DESC LIMIT 20",
+       [customerId],
+     );
+   }
+ }

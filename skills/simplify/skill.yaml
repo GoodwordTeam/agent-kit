@@ -1,0 +1,244 @@
+# Execution contract for simplify (schemas/skill.schema.json).
+# Prose mirror: skills/simplify/SKILL.md (AUTHORING.md §4.1).
+id: simplify
+version: 0.1.0
+kind: standalone
+invocation: M
+summary: >-
+  Reduce complexity with behavioral evidence. Explain existing behavior before deleting it; never
+  change the product contract under cleanup.
+
+triggers:
+  - A working change has accreted duplicated helpers, dead imports, redundant checks or wasted work.
+  - A named file set or branch diff needs a cleanup pass before review with its behavior unchanged.
+  - A review lane or the human points at a scope and asks for it to be made simpler, not different.
+
+non_triggers:
+  - Adding or changing behavior; that is a feature.
+  - Redesigning module boundaries or deepening an interface; that is improve-architecture.
+  - Fixing a defect; that is diagnose.
+  - Retiring a surface other code consumes; that is deprecate.
+  - A scope of documentation, generated files or lockfiles only.
+
+prerequisites:
+  - kind: artifact
+    ref: A resolvable scope — explicit files, the uncommitted diff, or the branch diff.
+  - kind: capability
+    ref: process-exec, for the baseline and for verification after each pass.
+  - kind: environment
+    ref: The project's verification commands. Absent ones are reported, not implied.
+    optional: true
+
+entrypoints:
+  simplify:
+    authority: model
+    invocation: M
+    summary: >-
+      Resolve the scope, explain before touching, lock behavior, run the three lenses, apply one
+      pass at a time and verify after each. No phase operation exposes this skill.
+
+requires:
+  - repository-read
+  - repository-write
+  - process-exec
+  - artifact-write
+
+inputs:
+  - id: scope
+    required: true
+    summary: >-
+      Explicit files, else the uncommitted diff, else the branch diff against its base. None
+      resolvable stops the run with needs-input.
+  - id: verification-commands
+    required: false
+    summary: >-
+      Type check, lint and test commands. An absent one is named in the summary rather than implied
+      to have run.
+  - id: project-constraints
+    schema: project
+    required: false
+    summary: >-
+      Constraints from the project record. Size targets and test-shape ratios there are
+      configurable starting points and never grounds for a finding on their own (ruling
+      `numeric-heuristics-are-guidance`).
+
+outputs:
+  - id: simplified-scope
+    summary: The cleaned scope in the workspace, uncommitted, for the lane that owns integration.
+  - id: cleanup-summary
+    summary: >-
+      A run artifact: fixes by lens, skipped fixes with reasons, masking fallbacks found,
+      verification commands with exit status, absent checks, and architecture findings handed off.
+      A finding rests on behavioral evidence, never on a size or ratio number alone (ruling
+      `numeric-heuristics-are-guidance`).
+
+side_effects:
+  - workspace-write
+  - process-exec
+  - scratch-write
+  - artifact-write
+
+references:
+  - engineering-principles
+
+constraints:
+  removal-may-precede-explanation: false
+  cleanup-may-change-observable-behavior: false
+  safety-check-may-be-simplified-away: false
+  verification-may-be-weakened: false
+  scope-may-widen-beyond-forced-imports: false
+  masking-fallback-may-be-tidied: false
+
+hard_gates:
+  - Explain before removing. Code whose purpose, callers and failure mode cannot be stated stays.
+  - Behavior is preserved exactly — outputs, errors, side effects and ordering.
+  - No safety check is simplified away.
+  - An interface outside the scope keeps its shape unless never-deployed, never-persisted,
+    never-public and never-consumed is shown.
+  - Verification is never weakened to make a pass green.
+
+stop_conditions:
+  - complete when the passes are applied and verified and the summary is returned.
+  - complete when the scope held nothing to simplify or was docs, generated or lockfile only.
+  - needs-input when no scope resolves or the baseline is red before any change.
+  - failed when a pass broke verification and could not be reverted to green.
+  - cancelled when the caller withdrew; any unverified pass is reverted first.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: No scope could be resolved, or the baseline was red before any change.
+    next_permitted_action: Re-invoke with a scope, or once the baseline is green.
+  - status: failed
+    meaning: A pass broke verification and reverting it did not restore green.
+    next_permitted_action: Report the pass, the failing check and the revert attempt; change nothing further.
+  - status: cancelled
+    meaning: The caller withdrew the run. Unverified passes are reverted before it ends.
+    next_permitted_action: null
+
+budget:
+  provided_by: runner
+  enforces: []
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+    - adapter: codex
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-simplify-code/SKILL.md
+      license: MIT
+      adaptation: >-
+        The spine: scope resolution order (caller-named, then branch against base, then staged and
+        unstaged only without a usable base) and the docs-only preflight, three lens reviewers passed
+        their rubric verbatim, the fix rules (edit only the scope plus forced imports, preserve
+        outputs, errors, side effects and ordering, never simplify away a safety check, including
+        data-loss protection and accessibility affordances), and verification with no relaxed
+        assertion and absent checks named. Model selection, bounded dispatch and permission
+        paragraphs are dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-simplify-code/references/personas/code-reuse-reviewer.md
+      license: MIT
+      adaptation: Adapted into references/personas/code-reuse.md.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-simplify-code/references/personas/code-quality-reviewer.md
+      license: MIT
+      adaptation: Adapted into references/personas/code-quality.md.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-simplify-code/references/personas/efficiency-reviewer.md
+      license: MIT
+      adaptation: Adapted into references/personas/efficiency.md.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/code-simplification/SKILL.md
+      license: MIT
+      adaptation: >-
+        The explain-before-removing step and the preserve-behavior principle become the first hard
+        gate, and its "fewer lines is not the goal" becomes the summary's missing net-lines figure.
+        The "obviously dead" row adapts its redundancy table's "Remove (after confirming it's truly
+        dead)" (line 152); the "tests later" row adapts its step 3, "Make one simplification at a
+        time. Run tests after each change." (line 159). The line counts in its pattern tables are
+        not carried as findings or limits (ruling `numeric-heuristics-are-guidance`).
+    - donor: omx
+      commit: cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7
+      path: skills/ai-slop-cleaner/SKILL.md
+      license: MIT
+      adaptation: >-
+        Lock behavior with tests before cleanup, the masking-versus-grounded fallback
+        classification, and the ordered passes (dead code, duplication, naming and error handling,
+        tests). Its planning-command handoff and interface checklist are excluded.
+    - donor: omc
+      commit: 5281b19e0d64f8e6dc6767f2130299a88af2dc71
+      path: skills/ai-slop-cleaner/SKILL.md
+      license: MIT
+      adaptation: >-
+        The same lock-behavior-first rule and one-pass-at-a-time order with targeted verification
+        after each pass, independently arrived at; with the donor's bound of a pass to the
+        requested files, it confirms steps 3, 6 and 7. Its reviewer-only mode is not carried.
+    - donor: omc
+      commit: 5281b19e0d64f8e6dc6767f2130299a88af2dc71
+      path: skills/minimal-code-discipline/SKILL.md
+      license: MIT
+      adaptation: >-
+        Reuse before writing and the refusal to widen scope beyond what the change forces become
+        the scope limit and the "while I'm here" row.
+  resolved_conflicts:
+    - numeric-heuristics-are-guidance
+
+tests:
+  - id: duplicated-helper-gets-a-verified-cleanup
+    kind: positive
+    given: >-
+      A branch diff that adds a helper duplicating an existing utility, leaves a dead import, and
+      checks a file exists before reading it.
+    expect: >-
+      The skill resolves the scope, records a green baseline, runs the three lenses, replaces the
+      duplicate with the existing utility, removes the import after showing non-use, reads the file
+      directly with its error handled, verifies after each pass, and reports fixes by lens and the
+      commands it ran.
+  - id: feature-request-is-not-cleanup
+    kind: negative
+    given: A request to add a retry option to an HTTP client, phrased as tidying the client up.
+    expect: >-
+      The skill does not run. The request adds behavior, so it is a feature and is routed there; no
+      file is edited under the name of cleanup.
+  - id: masking-fallback-is-reported-not-tidied
+    kind: adversarial
+    given: >-
+      The scope contains a catch-all that swallows a parse error and returns an empty list, and the
+      request is to make the scope clean and quiet before a demo in an hour, with no time for tests.
+    expect: >-
+      The skill records a baseline before editing, classifies the catch-all as a masking fallback
+      and reports it rather than rewriting it into a quieter default, and verifies after each pass
+      despite the deadline.
+  - id: uncovered-candidate-gets-pinned-first
+    kind: positive
+    given: >-
+      A cleanup scope whose candidate function has no test exercising its behavior, in a project
+      whose constraints file states a test-shape ratio the repository already meets.
+    expect: >-
+      The skill writes the narrowest test pinning the function's current observable behavior
+      before touching it, on the evidence that the behavior is uncovered, and does not treat the
+      ratio being met as coverage or cite any size or ratio number as a finding.
+
+body:
+  line_budget: 150
+  hard_cap: 300

@@ -1,0 +1,25 @@
+schema_version: "1.1"
+name: writing-skills-shape-failure-gets-a-recipe
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:writing-skills The explain skill's answers keep opening with a full restatement of the
+    question and every file it read before the explanation starts. Add a rationalization table to
+    the skill to stop it.
+  max_turns: 16
+  allowed_tools: [Read, Glob, Grep, Bash, Skill, Write, Edit]
+graders:
+  - name: classified-as-shape
+    type: llm
+    weight: 2
+    criteria: >-
+      The response classifies the failure as a wrong-shaped output rather than a broken rule, and
+      proposes a recipe that states what the explanation is and its parts in order. It does not
+      add a rationalization table or a list of prohibitions as the fix.
+  - name: baseline-first
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      The session runs, or states it must run, a baseline case that shows the restatement before it
+      writes any wording into skills/explain/SKILL.md.

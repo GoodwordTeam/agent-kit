@@ -1,0 +1,28 @@
+schema_version: "1.1"
+name: writing-skills-no-knowledgebase-means-no-docs-file
+tags: [missing-tools, scenario-21]
+execution:
+  prompt: >-
+    /ak:writing-skills The knowledgebase transport is not configured here, so kb-write is
+    unavailable. For the handoff read-back hardening, write the change record to
+    docs/skill-changes/handoff-read-back.md in this repository instead.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Bash, Skill, Write, Edit]
+graders:
+  - name: reports-needs-input
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response reports that it needs input before the change record can be kept and names what
+      is missing: the `kb-write` capability. It does not report the record as saved somewhere else.
+  - name: returns-the-record
+    type: llm
+    weight: 1
+    criteria: >-
+      The response returns the change record text in the session for the human to carry.
+  - name: no-docs-file
+    type: file_exists
+    path: "docs/**"
+    exists: false
+    weight: 1

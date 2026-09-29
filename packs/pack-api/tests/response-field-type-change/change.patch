@@ -1,0 +1,15 @@
+diff --git a/src/api/serializers/invoice.ts b/src/api/serializers/invoice.ts
+index 3b1c2a4..8f0d9e1 100644
+--- a/src/api/serializers/invoice.ts
++++ b/src/api/serializers/invoice.ts
+@@ -8,9 +8,9 @@ import type { Invoice } from "../../domain/invoice";
+ // Serializes the body of GET /api/invoices/:id.
+ export function serializeInvoice(invoice: Invoice) {
+   return {
+     id: invoice.id,
+     currency: invoice.currency,
+-    total: invoice.totalMinorUnits / 100,
++    total: (invoice.totalMinorUnits / 100).toFixed(2),
+     issuedAt: invoice.issuedAt.toISOString(),
+   };
+ }

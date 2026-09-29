@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [budgeted-change]
+why: The ticket states the landing page's LCP budget and the change replaces the hero image that is the LCP element.

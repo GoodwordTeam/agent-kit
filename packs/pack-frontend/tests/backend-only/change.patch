@@ -1,0 +1,12 @@
+diff --git a/src/jobs/sendDigest.ts b/src/jobs/sendDigest.ts
+index 3d4e5f6..7a8b9c0 100644
+--- a/src/jobs/sendDigest.ts
++++ b/src/jobs/sendDigest.ts
+@@ -4,5 +4,5 @@ import { queue } from "../queue";
+ export const sendDigest = queue.define("send-digest", {
+-  retries: 3,
+-  backoff: { type: "fixed", delayMs: 60000 },
++  retries: 5,
++  backoff: { type: "exponential", delayMs: 30000 },
+   handler: async (job) => deliverDigest(job.data.userId),
+ });

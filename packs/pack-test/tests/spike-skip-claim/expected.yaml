@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [behavior-change, test-change]
+why: The ticket calls it a spike and says to skip tests, but the change replaces a flat rate with tiered branching and skips the one existing test for it.

@@ -1,0 +1,2 @@
+attaches: false
+why: A private helper is renamed inside one module and the exported function's signature and output are unchanged.

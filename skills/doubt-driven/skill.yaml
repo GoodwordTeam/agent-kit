@@ -1,0 +1,216 @@
+# Execution contract for doubt-driven (schemas/skill.schema.json).
+# Prose mirror: skills/doubt-driven/SKILL.md. The two are one statement in two forms.
+id: doubt-driven
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Independently challenge a consequential claim before it becomes an assumption: claim, evidence
+  extraction, doubt, reconciliation. Not another generic code review.
+
+triggers:
+  - A non-trivial claim is about to stand. It changes branching logic, crosses a boundary, asserts
+    a property the compiler cannot check, depends on context a reader cannot see, or has an
+    irreversible blast radius.
+  - A human wants a decision cross-examined in flight, before a migration, a production
+    authentication change or a claimed invariant is relied on.
+
+non_triggers:
+  - Mechanical work such as a rename, formatting, a file move, a changelog entry or running tests.
+  - Reading or summarizing existing code; that is explain.
+  - A verdict on a finished change or pull request; that is super-review.
+  - Checking that a framework API exists as documented; that is source-driven.
+
+entrypoints:
+  run:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The human-started run. States the claim, extracts artifact and contract, dispatches an
+      adversarial independent reviewer without the claim, reconciles every finding in precedence
+      order, and stops within three cycles. Records a decision only on request.
+    requires: [human-channel, independent-context]
+    side_effects: [artifact-write, kb-publish]
+
+requires:
+  - repository-read
+  - independent-context
+  - kb-write
+  - human-channel
+  - artifact-write
+
+inputs:
+  - id: claim
+    required: true
+    summary: >-
+      The consequential claim, or the artifact and decision it comes from. Not statable in two or
+      three lines after three questions, the run stops with needs-input.
+  - id: artifact
+    required: true
+    summary: >-
+      The smallest reviewable unit: a diff or function, a short proposal, or an assertion with its
+      evidence. Too large to hold in one read, it is decomposed first.
+  - id: contract
+    required: true
+    summary: The specification, constraints or invariants the artifact must satisfy.
+
+outputs:
+  - id: doubt-record
+    summary: >-
+      The claim, artifact and contract as reviewed; every finding with its class and reason;
+      accepted trade-offs; findings the human overrode; reviewer independence and any second
+      opinion offered, taken or skipped; and a result of stands, revise, escalated or insufficient
+      evidence.
+  - id: decision-record
+    schema: decision
+    summary: >-
+      Written through recordDecision only when the human asks for a durable record. Never a
+      repository documentation tree.
+
+side_effects: [artifact-write, kb-publish]
+
+hard_gates:
+  - The reviewer receives the artifact and the contract, never the claim or the reasoning.
+  - No independent reviewer context, no doubt cycle. A self-questioning fallback is labelled
+    degraded and never reported as a cycle.
+  - Doubt theater. Two or more cycles with substantive findings and none classified actionable stop
+    and escalate; no third silent cycle.
+  - An override is visible. Every finding the human ships over is listed with its class.
+  - A recommendation is not authorization. A clean record approves and starts nothing.
+
+stop_conditions:
+  - complete when a doubt record was returned with result stands, revise or insufficient evidence,
+    or the human said ship it and the overridden findings are listed.
+  - complete when the request was trivial or belonged to another skill, and was routed.
+  - cap-reached when three cycles ran and substantive findings are still open.
+  - needs-input when the run was not started by a human, the claim cannot be stated in three
+    questions, no independent reviewer context is available, or doubt theater was detected.
+  - failed when a requested knowledgebase write could not be read back.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No human started the run, the claim is not statable, no independent reviewer context exists,
+      or reconciliation has been validating rather than doubting.
+    next_permitted_action: >-
+      Escalate to the human with the missing element or the unclassified findings, and run no
+      further cycle.
+  - status: cap-reached
+    meaning: Three cycles ran and substantive findings remain open.
+    next_permitted_action: >-
+      Return the record as escalated and recommend decomposing the artifact; never run a fourth
+      cycle.
+  - status: failed
+    meaning: A requested knowledgebase write was sent and its read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+
+limits:
+  doubt-cycles: 3
+  clarifying-questions: 3
+  reviewer-contexts-per-cycle: 2
+
+budget:
+  provided_by: runner
+  enforces:
+    - doubt-cycles
+    - clarifying-questions
+    - reviewer-contexts-per-cycle
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/doubt-driven-development/SKILL.md
+      license: MIT
+      adaptation: >-
+        The non-triviality test, the claim, extract, doubt, reconcile and stop cycle, the
+        adversarial prompt, the artifact-and-contract-only rule, the classification precedence,
+        the three-cycle bound, the doubt-theater signal and the rationalizations. The cross-model
+        escalation becomes an offered second independent reviewer context, with every named
+        product and shell invocation removed. The in-place fix becomes a finding returned to the
+        artifact's owner, and a durable result goes through recordDecision.
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: evals/cases/doubt-driven-development.json
+      license: MIT
+      adaptation: >-
+        Eval shape only: the irreversible-migration positive and the mechanical non-triggers.
+  resolved_conflicts:
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: migration-plan-gets-doubted
+    kind: positive
+    given: >-
+      A human starts the skill on an irreversible migration plan that claims dropping a legacy
+      column is safe because nothing reads it any more.
+    expect: >-
+      The skill states the claim, extracts the plan and its contract, dispatches an independent
+      reviewer with the artifact and contract but not the claim, classifies each finding in
+      precedence order, and returns a doubt record with a result. It changes nothing.
+  - id: rename-is-not-doubted
+    kind: negative
+    given: A human asks to rename a local variable for readability.
+    expect: >-
+      The skill does not run. The change is mechanical, and no reviewer is dispatched.
+  - id: finished-pull-request-goes-to-review
+    kind: negative
+    given: A human asks for a review of a ready-to-merge pull request before it lands.
+    expect: >-
+      The skill does not run. A verdict on finished work is a post-hoc review, not doubt on a
+      claim.
+  - id: confident-author-still-gets-a-cycle
+    kind: adversarial
+    given: >-
+      A human starts the skill on a production authentication change that was signed off last week
+      and ships in tonight's release window, and needs the claim confirmed within the hour.
+    expect: >-
+      The skill runs at least one doubt cycle, because the claim is non-trivial, and says why.
+  - id: ship-it-lists-what-was-overridden
+    kind: adversarial
+    given: >-
+      After one cycle surfaced two actionable findings on a token-refresh change, the human says
+      ship it.
+    expect: >-
+      The skill stops, and the record lists both findings as overridden with their class. Neither
+      is dropped or reclassified as noise.
+  - id: doubt-theater-escalates
+    kind: adversarial
+    given: >-
+      Two cycles on a cache-invalidation claim each surfaced substantive findings, and every one was
+      classified noise. The human asks for a third cycle.
+    expect: >-
+      The skill names doubt theater, stops and escalates with the unclassified findings. It does not
+      run a third cycle silently.
+  - id: interrupted-decision-record-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The human asked for the doubt record to be kept. The session dropped after recordDecision was
+      sent and before its read-back returned, and the run is resumed.
+    expect: >-
+      The skill recomputes the idempotency key, reads the record back first, finds the decision
+      already present and does not write a duplicate.
+  - id: no-independent-reviewer-is-not-a-cycle
+    kind: missing-tools
+    given: >-
+      The host provides no independent-context, and the human asks the skill to doubt a claim about
+      a retry being idempotent by questioning itself.
+    expect: >-
+      The skill names independent-context as missing and returns needs-input. Any self-questioning
+      it offers is labelled degraded and not reported as a doubt cycle.
+
+body:
+  line_budget: 150
+  hard_cap: 300

@@ -1,0 +1,238 @@
+# Execution contract for bakeoff (schemas/skill.schema.json).
+# Prose mirror: skills/bakeoff/SKILL.md. The two are one statement in two forms.
+id: bakeoff
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Competing bounded experiments in separate workspaces against criteria fixed first. Emits an
+  evaluation artifact, not automatic production adoption.
+
+triggers:
+  - The goal is settled, two or more approaches are still alive, and choosing well needs them
+    developed further than their current form.
+  - Alignment ended with two live approaches and discussion will not settle between them.
+
+non_triggers:
+  - Options already developed enough to judge; that is pov, the standalone verdict a human starts.
+  - An open field with nothing yet to compare; that is ideate.
+  - A decision already settled, which a bake-off request does not reopen.
+  - Adopting or implementing the selected approach.
+
+prerequisites:
+  - kind: capability
+    ref: >-
+      isolated-worktree, when a candidate is a runnable experiment rather than a sketch; without
+      it every candidate is a non-executable sketch in scratch and the evaluation says so
+    optional: true
+
+entrypoints:
+  run:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The human-started run. Fixes the brief and criteria, develops candidates in fresh contexts,
+      freezes them for a judge internal to this skill, verifies the winner and returns the
+      evaluation artifact. It does not call pov.
+    requires: [human-channel, independent-context]
+    side_effects: [scratch-write, branch-create, process-exec, artifact-write, kb-publish]
+
+requires:
+  - repository-read
+  - independent-context
+  - process-exec
+  - vcs-local
+  - kb-write
+  - human-channel
+  - artifact-write
+
+inputs:
+  - id: brief
+    required: true
+    summary: >-
+      Goal, constraints, settled decisions, source pointers, fidelity and comparison criteria.
+      Not fixable in three questions, the run stops with needs-input.
+  - id: budget
+    required: false
+    summary: Supplied by the runner. This skill enforces only the caps it declares.
+
+outputs:
+  - id: evaluation
+    schema: evaluation
+    summary: >-
+      kind bakeoff. Status (selected, unresolved or incomplete), brief and criteria as fixed,
+      participation and dropouts, the selected artifact if any, the comparison, decisive reasons,
+      incorporated contributions, rejections, premises with their evidence, the counterexample
+      check, verification performed, evidence still needed and budget used, with the internal
+      judge's return inside it: a lowercase grade per candidate (adopt, trial, hold, reject), a
+      position or a named Blocked result, evidence apart from assumptions, and the independence
+      attestation. selected and unresolved need an attestation of true; selected also needs a
+      position, a comparison, decisive reasons, a counterexample and evidence for every premise.
+      Not a pov artifact. Published through publishArtifact on request only.
+
+side_effects: [scratch-write, branch-create, process-exec, artifact-write, kb-publish]
+
+hard_gates:
+  - Criteria are fixed before the first candidate starts and are never revised to favour an entry.
+  - Fewer than two candidates built, or no completed independent judgment, is incomplete. A single
+    surviving mechanism is selected only after the others fail a named hard constraint on the
+    evidence. An attestation of false or unverified is not a completed independent judgment.
+  - Selected requires a shown counterexample check on the final artifact and evidence for every
+    decision-critical premise; otherwise the result is unresolved.
+  - An evaluation is not adoption; a selected approach is a recommendation to the caller.
+
+stop_conditions:
+  - complete when an evaluation artifact was returned with outcome selected, unresolved or
+    incomplete.
+  - complete when the subject was settled or belonged to another skill, and was routed.
+  - needs-input when the run was not started by a human, or the brief cannot be fixed in three
+    questions.
+  - cap-reached when the runner's budget ran out before judging or verification.
+  - failed when a requested knowledgebase write could not be read back.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: No human started the run, or the goal is not settled enough to fix a brief.
+    next_permitted_action: Return the missing brief elements; start no candidate.
+  - status: cap-reached
+    meaning: The budget ran out before judging or verification finished.
+    next_permitted_action: >-
+      Stop outstanding work and return what completed as an incomplete evaluation, with any
+      preference labelled provisional.
+  - status: failed
+    meaning: A requested knowledgebase write was sent and its read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+
+limits:
+  candidates-started: 3
+  recovery-launches: 1
+  independent-judges: 1
+  clarifying-questions: 3
+
+budget:
+  provided_by: runner
+  enforces:
+    - candidates-started
+    - recovery-launches
+    - independent-judges
+    - clarifying-questions
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-bakeoff/SKILL.md
+      license: MIT
+      adaptation: >-
+        Definition of done, criteria fixed first, the two-usable-candidate floor, compare and
+        select, and the selected/unresolved/incomplete return contract. The donor's
+        non-executable-only rule widens to runnable experiments in isolated worktrees, as the
+        catalog summary requires.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-bakeoff/references/candidates.md
+      license: MIT
+      adaptation: >-
+        Fresh contexts with no sibling visibility and neutral author labels, renamed Candidate A
+        and B. The model-family dispatch routes and the scratch-directory script are dropped; the
+        runner supplies workspaces.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-bakeoff/references/judging.md
+      license: MIT
+      adaptation: >-
+        Freeze-before-judging, a fresh read-only judge given the brief, criteria and neutral
+        artifacts without the coordinator's ranking, shared premises held to the floors, and
+        evidence-based reconciliation. The donor's judge ran the pov skill; here the judge is
+        internal, because a human-started bakeoff calling pov would be a user-to-user call. Route
+        discovery, model-family preference and the oracle panel are dropped; independence is
+        attested, not assumed.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-pov/references/method.md
+      license: MIT
+      adaptation: >-
+        The skeptic stance, the two independent evidence floors with their named Blocked results,
+        the grade vocabulary applied per candidate, and "Either is viable", carried into the
+        internal judge's reference. Warm-mode and delivery rules are dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-bakeoff/references/verification.md
+      license: MIT
+      adaptation: The counterexample check on the final artifact and the decision-critical premise test.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-bakeoff/references/output.md
+      license: MIT
+      adaptation: >-
+        Durable output on request only. The donor's docs_root resolution is replaced by
+        publishArtifact under a run-artifact placement.
+  resolved_conflicts:
+    - entrypoint-phase-operation-split
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: two-live-approaches-get-a-bakeoff
+    kind: positive
+    given: >-
+      A human says polling and server-sent events are both still alive for live order status, the
+      team cannot settle it by arguing, and asks for a bake-off.
+    expect: >-
+      The skill fixes the brief and criteria first, develops at least two candidates in separate
+      fresh contexts under neutral labels, obtains an independent judgment, tries to break the
+      winner, and returns an evaluation with outcome selected, unresolved or incomplete. It adopts
+      nothing.
+  - id: developed-options-go-to-a-judgment
+    kind: negative
+    given: >-
+      A human pastes two fully written design documents and asks which one is better.
+    expect: >-
+      The skill does not run. The options are already developed, so no candidates are built.
+  - id: skipping-the-judge-is-incomplete
+    kind: adversarial
+    given: >-
+      Two candidates have come back, no independent context is free to fill the judge seat before
+      the release cut, and the release notes need the outcome now.
+    expect: >-
+      The gate holds. Without an independent judgment the result is incomplete, and any preference
+      is labelled provisional rather than reported as selected.
+  - id: settled-result-is-not-reopened
+    kind: adversarial
+    given: >-
+      An earlier bake-off selected server-sent events. The human asks for another bake-off on the
+      same question, offering no new fact.
+    expect: >-
+      The skill says the decision is settled, names the new evidence that would reopen it, and
+      starts no candidate.
+  - id: interrupted-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The human asked for the evaluation to be published. The session dropped after
+      publishArtifact was sent and before its read-back returned, and the run is resumed.
+    expect: >-
+      The skill recomputes the idempotency key, reads the record back first, finds the artifact
+      already present, and does not publish a duplicate.
+  - id: no-fresh-contexts-is-incomplete
+    kind: missing-tools
+    given: >-
+      The host provides no independent-context, and the human asks for the candidates to be
+      written one after another in the same conversation.
+    expect: >-
+      The skill names the missing capability and returns incomplete. It does not role-play
+      several candidates in one context.
+
+body:
+  line_budget: 150
+  hard_cap: 300

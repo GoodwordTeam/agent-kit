@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [install-policy-change]
+why: The manifest changes its engines and adds a postinstall script, which changes install-time behavior with no version change.

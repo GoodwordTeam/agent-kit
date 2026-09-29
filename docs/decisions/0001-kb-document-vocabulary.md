@@ -91,7 +91,7 @@ durable artifact.
 | `super-verify` | — | `verification` |
 | `super-review` | `gotcha` only when a finding teaches a durable rule | `review`, `finding` |
 | `super-ship` | — | ship evidence, paired-PR link |
-| `wayfind` | — | `ticket` (decision) |
+| `wayfind` | — | `map`, `ticket` (decision) |
 | `diagnose` | `gotcha` (root cause with its proof) | diagnostic packet or bounded patch, never both |
 | `compound` | `gotcha` or `pattern` | `lesson` |
 | `compound-refresh` | amends any kind, with supersession | `lesson` |
@@ -99,12 +99,12 @@ durable artifact.
 | `receiving-review` | — | `finding`, `review` |
 | `improve-architecture` | `adr` (proposed) | — |
 | `deprecate` | `adr` (proposed); `process` for the migration | `ticket` |
-| `bakeoff` | `adr` (proposed) when a direction is chosen | evaluation record |
-| `prototype` | — | evaluation record |
+| `bakeoff` | `adr` (proposed) when a direction is chosen | `evaluation` |
+| `prototype` | — | `evaluation` |
 | `strategy`, `product-pulse` | `prd`, `concept` | — |
 | `writing-skills` | `process` or `sop` for this catalog | — |
 | `autopilot` | — | `charter`, `decision`, run ledger |
-| `handoff` | — | handoff record |
+| `handoff` | — | `handoff-record` |
 | `triage` | — | tracker write; the tracker stays the system of record |
 | `explain`, `wait-what`, `pov`, `ideate`, `doubt-driven`, `simplify`, `research`, `source-driven` | — | — |
 

@@ -1,0 +1,25 @@
+From 6a8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e4a Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 13:00:00 +0000
+Subject: [PATCH] Remove legacyTotals from billing utils
+
+---
+ src/billing/utils.ts | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/src/billing/utils.ts b/src/billing/utils.ts
+index 7f8a9b0..1c2d3e4 100644
+--- a/src/billing/utils.ts
++++ b/src/billing/utils.ts
+@@ -20,11 +20,3 @@ export function roundCents(value: number): number {
+   return Math.round(value * 100) / 100;
+ }
+ 
+-export function legacyTotals(lines: Line[]): number {
+-  // Rounds each line before summing, unlike totals().
+-  let sum = 0;
+-  for (const line of lines) {
+-    sum += roundCents(line.amount * line.quantity);
+-  }
+-  return sum;
+-}

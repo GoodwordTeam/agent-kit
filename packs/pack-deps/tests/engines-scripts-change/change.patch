@@ -1,0 +1,17 @@
+diff --git a/package.json b/package.json
+index 4d5e6f7..8a9b0c1 100644
+--- a/package.json
++++ b/package.json
+@@ -3,9 +3,10 @@
+   "private": true,
+   "engines": {
+-    "node": ">=20"
++    "node": ">=22"
+   },
+   "scripts": {
+     "build": "tsc -p .",
+-    "test": "vitest run"
++    "test": "vitest run",
++    "postinstall": "node scripts/fetch-binaries.js"
+   },
+   "dependencies": {

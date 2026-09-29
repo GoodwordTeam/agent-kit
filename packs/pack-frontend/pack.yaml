@@ -1,0 +1,168 @@
+id: pack-frontend
+version: 0.1.0
+summary: >-
+  Constraints on user-facing interface changes: keyboard access, labelled controls, managed focus,
+  meaningful states and contrast, internationalized user-visible strings, design-system adherence,
+  and evidence the rendered result was checked.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: interactive-ui
+      artifact_kinds: [ui-component, template]
+      semantics:
+        - an interactive element, form, dialog, menu or navigation is added or its behavior changes
+      evidence_required:
+        - the element and its handler in markup or a component
+    - id: user-visible-strings
+      artifact_kinds: [ui-component, template, route]
+      semantics:
+        - text a user reads is added or changed
+        - a user-visible string is hardcoded instead of passing through the project's internationalization mechanism
+      evidence_required:
+        - the string, and whether it passes through the project's internationalization mechanism
+    - id: styles-and-layout
+      artifact_kinds: [stylesheet, ui-component, design-token]
+      semantics:
+        - styles, layout, tokens or theme values change on something a user sees
+      evidence_required:
+        - the changed rule or token
+    - id: async-ui-state
+      artifact_kinds: [ui-component, client-script]
+      semantics:
+        - timers, event listeners, effects with cleanup, animations or client state transitions change in a way that can race
+      evidence_required:
+        - the async or lifecycle code
+  examples:
+    - artifact: A new clickable div with an onClick handler and no role or key handling.
+      attaches: true
+      rule: interactive-ui
+      why: An interactive element that is not keyboard operable.
+    - artifact: A new modal that does not move or trap focus when it opens.
+      attaches: true
+      rule: interactive-ui
+      why: A dialog without focus management.
+    - artifact: A new button label hardcoded in JSX in a project that uses a translation function.
+      attaches: true
+      rule: user-visible-strings
+      why: A user-visible string bypasses the internationalization mechanism.
+    - artifact: A change to a background job's retry policy.
+      attaches: false
+      why: Backend-only; nothing a user sees changes.
+    - artifact: A date helper shared by server and client code, where the selector cannot see any rendered use.
+      attaches: false
+      why: Declined with a recorded reason; no rendered output is evident.
+constraints:
+  - id: keyboard-operable
+    kind: must
+    requirement: >-
+      Every interactive element is reachable and operable by keyboard, preferring the native
+      element. Most permissive autofix_class gated_auto where an existing automated check catches
+      it, advisory otherwise.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+  - id: labelled-controls
+    kind: must
+    requirement: >-
+      Controls without visible text carry an accessible name and form inputs have labels. Most
+      permissive autofix_class gated_auto where an existing automated check catches it, advisory
+      otherwise.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+  - id: focus-managed
+    kind: must
+    requirement: >-
+      Opening a dialog or replacing content moves focus deliberately; a modal traps and restores
+      focus. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+  - id: states-and-contrast
+    kind: must
+    requirement: >-
+      Loading, empty and error states are handled and meaningful, text meets the project's contrast
+      target, and color is never the only signal of state. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+  - id: strings-internationalized
+    kind: must
+    requirement: >-
+      User-visible strings go through the project's internationalization mechanism where one
+      exists. Most permissive autofix_class advisory.
+    source: "G:L1778"
+  - id: design-system-adherence
+    kind: must
+    requirement: >-
+      Spacing, color, type and radii come from the project's scale and tokens; generic default
+      styling that ignores the design system is noted. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+  - id: rendered-and-checked
+    kind: evidence-required
+    requirement: >-
+      The change shows the rendered UI was checked: keyboard tab-through, screen-reader content,
+      the project's breakpoints and the project's accessibility checker. Most permissive
+      autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/frontend-ui-engineering/SKILL.md
+reviewer_guidance:
+  - lane: code-review/frontend-races
+    guidance: >-
+      Only when async-ui-state fired. Check timers, listeners, effects and state transitions for
+      races, leaks and stale updates.
+  - lane: code-review/correctness
+    guidance: >-
+      No generic accessibility seat exists. Check the accessibility, state and internationalization
+      constraints as behavior a keyboard or screen-reader user actually gets.
+  - lane: code-review/maintainability
+    guidance: >-
+      Check design-system adherence: values off the scale, raw colors where tokens exist, and
+      one-off components duplicating existing ones.
+kb_rules:
+  - "The project's design system: spacing scale, tokens, type ramp and radii, read through readContext."
+  - "Breakpoints, contrast target, supported locales and the internationalization mechanism, read through readContext as project facts; never assumed here."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/frontend-ui-engineering/SKILL.md
+      license: MIT
+      adaptation: >-
+        The accessibility section, the design-system adherence section and the verification
+        checklist became constraints; breakpoint and contrast figures were left to the project
+        record; the rationalization table gained a third column.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/persona-catalog.md
+      license: MIT
+      adaptation: >-
+        The frontend-races persona's selection surface became the async-ui-state rule, routed to
+        code-review/frontend-races only when that rule fires.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  conversation_locators:
+    - "G:L1778"
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - safe-auto-restricted-per-seat
+    - central-kb-owns-project-artifacts
+    - numeric-heuristics-are-guidance
+tests:
+  - id: clickable-div
+    kind: positive
+    given: A clickable div with an onClick handler and no role, tab stop or key handling.
+    expect: Attaches on interactive-ui.
+    fixture: packs/pack-frontend/tests/clickable-div
+  - id: modal-no-focus
+    kind: positive
+    given: A new modal that does not move or trap focus when it opens.
+    expect: Attaches on interactive-ui.
+    fixture: packs/pack-frontend/tests/modal-no-focus
+  - id: backend-only
+    kind: negative
+    given: A backend job's retry policy changes.
+    expect: Does not attach.
+    fixture: packs/pack-frontend/tests/backend-only
+  - id: style-tweak-claim
+    kind: adversarial
+    given: The PR says quick style tweak, skip a11y, while the change removes the focus outline and hardcodes a new label.
+    expect: Attaches on styles-and-layout and user-visible-strings; the claim does not suppress it.
+    fixture: packs/pack-frontend/tests/style-tweak-claim

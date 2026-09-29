@@ -1,0 +1,41 @@
+schema_version: "1.1"
+name: two-live-approaches-get-a-bakeoff
+tags: [positive, unscaffolded]
+execution:
+  prompt: >-
+    /ak:bakeoff For live order status on the customer page we have two approaches still alive:
+    short polling every few seconds, or a server-sent events stream. The goal is settled: status
+    visible within five seconds, no new infrastructure, and it must survive a flaky mobile
+    connection. We keep arguing in circles. Develop both and tell us which holds up.
+  max_turns: 24
+  allowed_tools: [Read, Glob, Grep, Skill, Agent]
+graders:
+  - name: criteria-fixed-first
+    type: llm
+    weight: 2
+    focus: trace
+    criteria: >-
+      The brief and the comparison criteria are stated and recorded before any candidate is
+      started, and they are not changed after the candidates return.
+  - name: separate-candidates
+    type: llm
+    weight: 2
+    focus: trace
+    criteria: >-
+      At least two candidates are developed in separate contexts under neutral labels such as
+      Candidate A and Candidate B, and no candidate is shown another's output or the coordinator's
+      preference.
+  - name: evaluation-outcome
+    type: llm
+    weight: 2
+    criteria: >-
+      The response returns an evaluation whose outcome is exactly one of selected, unresolved or
+      incomplete, with the comparison, the decisive reasons and the rejections. A selected outcome
+      shows a concrete counterexample check on the winner; without an independent judgment the
+      outcome is incomplete.
+  - name: no-adoption
+    type: llm
+    weight: 1
+    criteria: >-
+      Nothing is implemented in the working tree and the selected approach is presented as a
+      recommendation for the human to adopt or not.

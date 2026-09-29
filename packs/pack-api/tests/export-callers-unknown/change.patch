@@ -1,0 +1,12 @@
+diff --git a/packages/pricing/src/index.ts b/packages/pricing/src/index.ts
+index 0c1d2e3..4f5a6b7 100644
+--- a/packages/pricing/src/index.ts
++++ b/packages/pricing/src/index.ts
+@@ -1,2 +1,7 @@
+ export { priceFor } from "./price";
+ export type { PriceInput, Price } from "./types";
++
++// Rounds a price to the currency's minor unit.
++export function roundToMinorUnit(amount: number, currency: string): number {
++  return Math.round(amount * minorUnitFactor(currency)) / minorUnitFactor(currency);
++}

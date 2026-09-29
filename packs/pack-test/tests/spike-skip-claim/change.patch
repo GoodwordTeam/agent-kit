@@ -1,0 +1,36 @@
+From 2f4a6c8e0a2c4e6a8c0e2a4c6e8a0c2e4a6c8e0a Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Fri, 25 Sep 2026 15:30:00 +0000
+Subject: [PATCH] Spike: tiered shipping rates
+
+Per ENG-430: "This is just a spike to see if tiered rates work, skip
+tests for now." Skipping the flat-rate test since it no longer applies.
+---
+ src/shipping/rate.ts       | 7 ++++++-
+ test/shipping/rate.test.ts | 2 +-
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/src/shipping/rate.ts b/src/shipping/rate.ts
+index 6f7a8b9..0c1d2e3 100644
+--- a/src/shipping/rate.ts
++++ b/src/shipping/rate.ts
+@@ -1,3 +1,7 @@
+ export function shippingRate(weightGrams: number): number {
+-  return 499;
++  if (weightGrams <= 500) return 499;
++  if (weightGrams <= 2000) return 899;
++  if (weightGrams <= 10000) return 1499;
++  return 2999;
+ }
++
+diff --git a/test/shipping/rate.test.ts b/test/shipping/rate.test.ts
+index 7a8b9c0..1d2e3f4 100644
+--- a/test/shipping/rate.test.ts
++++ b/test/shipping/rate.test.ts
+@@ -2,5 +2,5 @@ import { shippingRate } from "../../src/shipping/rate";
+ 
+-it("charges a flat rate", () => {
++it.skip("charges a flat rate", () => {
+   expect(shippingRate(1200)).toBe(499);
+ });
+ 

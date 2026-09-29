@@ -1,0 +1,157 @@
+id: pack-perf
+version: 0.1.0
+summary: >-
+  Constraints on performance work and performance-shaped code: before-and-after measurement that
+  beats the noise, one change per measurement, neutral is a revert, correctness gates the metric,
+  no known anti-patterns, attempts recorded in the knowledgebase, and a regression guard.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: budgeted-change
+      artifact_kinds: [source, query, asset, bundle-config]
+      semantics:
+        - the ticket or project record states a performance budget and the change touches the surface it measures
+      evidence_required:
+        - the stated budget
+        - the changed surface that budget measures
+    - id: measured-problem
+      artifact_kinds: [source, query, ticket, change-description]
+      semantics:
+        - a measured regression, profile, trace or benchmark result for a surface is linked and the change touches that surface
+      evidence_required:
+        - the measurement itself, not a description of one
+        - the changed surface it measured
+  examples:
+    - artifact: The ticket states an LCP budget and the change swaps hero images and splits the bundle.
+      attaches: true
+      rule: budgeted-change
+      why: A stated budget and a change to the surface it measures.
+    - artifact: The ticket links a profile showing the search endpoint's time in one serializer, and the change rewrites that serializer.
+      attaches: true
+      rule: measured-problem
+      why: A measured problem and a change to the surface it measured.
+    - artifact: A new loop that issues one query per order line, with no budget or measurement.
+      attaches: false
+      why: Declined with a recorded reason; an anti-pattern alone does not attach the pack.
+    - artifact: A PR description claims a significant speedup with no numbers.
+      attaches: false
+      why: Declined with a recorded reason; an unmeasured claim does not attach the pack.
+constraints:
+  - id: measure-before-and-after
+    kind: evidence-required
+    requirement: >-
+      A claimed improvement carries a baseline and an after-measurement taken the same way, with the
+      delta compared against run-to-run variance. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+  - id: one-change-per-measurement
+    kind: must
+    requirement: >-
+      Optimizations are measured one at a time so each result can be attributed. Most permissive
+      autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+  - id: neutral-is-revert
+    kind: must
+    requirement: >-
+      Keep only past the threshold with tests green; within noise, worse, or improved with a red
+      test is a revert. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+  - id: correctness-gates-metric
+    kind: must-not
+    requirement: >-
+      No win by dropping needed work, caching data whose staleness is a bug, or changing, skipping
+      or deleting a test. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+  - id: no-known-anti-pattern
+    kind: must-not
+    requirement: >-
+      No query in a loop, unpaginated list endpoint, index without a before-and-after plan, or cache
+      key omitting an input the response depends on. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+  - id: attempts-recorded
+    kind: evidence-required
+    requirement: >-
+      Kept and reverted attempts are recorded in the knowledgebase through recordDecision, never a
+      repository-local ledger file. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+  - id: regression-guarded
+    kind: evidence-required
+    requirement: >-
+      The metric that justified the change has a budget check or monitor able to detect its
+      regression. Most permissive autofix_class advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/performance-optimization/SKILL.md
+reviewer_guidance:
+  - lane: code-review/performance
+    guidance: >-
+      Check the measurements and their variance, the keep-or-revert decision, the anti-patterns and
+      the regression guard.
+  - lane: code-review/correctness
+    guidance: >-
+      Check the optimized path still does all the work the product needs.
+kb_rules:
+  - "Performance budgets and measured problems for the affected surface, from the ticket or read through readContext; never assumed here."
+  - "Prior kept and reverted performance attempts, read through readContext before a new one is proposed."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/performance-optimization/SKILL.md
+      license: MIT
+      adaptation: >-
+        The five-step workflow, the keep-or-revert table, the attempt ledger and the red flags became
+        constraints, and its measure-first premise backs the measured-problem rule; the ledger moved
+        from a repository file to the knowledgebase; budget figures
+        and Web Vitals thresholds were left to the project; the rationalization table gained a third
+        column.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/persona-catalog.md
+      license: MIT
+      adaptation: >-
+        The performance persona's cache-alone and async-alone exclusions became non-triggers, and its
+        selection surface of queries, loops and fan-out became the no-known-anti-pattern constraint.
+        Its selection surface is not an attachment rule here: plan section 3 attaches the pack only
+        on a stated budget or a measured problem, and the plan outranks the persona.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - safe-auto-restricted-per-seat
+    - central-kb-owns-project-artifacts
+    - numeric-heuristics-are-guidance
+tests:
+  - id: lcp-budget-images
+    kind: positive
+    given: The ticket states an LCP budget and the change swaps hero images for the LCP element.
+    expect: Attaches on budgeted-change.
+    fixture: packs/pack-perf/tests/lcp-budget-images
+  - id: profiled-serializer
+    kind: positive
+    given: The ticket links a profile of the search endpoint and the change rewrites the hot serializer.
+    expect: Attaches on measured-problem.
+    fixture: packs/pack-perf/tests/profiled-serializer
+  - id: query-in-loop
+    kind: negative
+    given: A loop issues one query per order line, with no budget or measurement.
+    expect: Declines, recording that an anti-pattern alone does not attach the pack.
+    fixture: packs/pack-perf/tests/query-in-loop
+  - id: speedup-no-numbers
+    kind: negative
+    given: The change description claims a significant speedup with no budget or measurement.
+    expect: Declines, recording that an unmeasured claim does not attach the pack.
+    fixture: packs/pack-perf/tests/speedup-no-numbers
+  - id: cache-no-budget
+    kind: negative
+    given: An in-memory cache is added with no budget, measured problem or claim.
+    expect: Declines, recording that a cache alone does not attach the pack.
+    fixture: packs/pack-perf/tests/cache-no-budget
+  - id: obviously-faster-claim
+    kind: adversarial
+    given: The commit says trust me, obviously faster, no need to measure, while its ticket links a measured feed regression and the change adds a query per post.
+    expect: Attaches on measured-problem; the claim does not suppress it.
+    fixture: packs/pack-perf/tests/obviously-faster-claim

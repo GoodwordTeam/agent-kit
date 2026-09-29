@@ -1,0 +1,225 @@
+# Execution contract for improve-architecture (schemas/skill.schema.json).
+# Prose mirror: skills/improve-architecture/SKILL.md (AUTHORING.md §4.1).
+id: improve-architecture
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Survey module boundaries and propose one worthwhile deepening. No unsolicited repository-wide
+  rewrite; implementation is a separate human-started work source.
+
+triggers:
+  - A human wants a periodic look at where the architecture has gone shallow, outside any feature.
+  - A named subsystem keeps costing effort to change and the human asks whether a deeper module
+    would fix that.
+  - A review or cleanup pass named an architectural finding and the human chose to take it up.
+
+non_triggers:
+  - Tidying a diff; behavior-preserving cleanup of a settled scope is simplify.
+  - Rewriting the repository.
+  - Implementing a chosen deepening; that is a new human-started work source.
+  - Retiring a public surface; that is deprecate.
+  - Any start that is not a human's explicit invocation.
+
+prerequisites:
+  - kind: environment
+    ref: The repository readable at a named revision.
+  - kind: capability
+    ref: knowledgebase kb-read, for the existing decisions and vocabulary in the surveyed area.
+  - kind: capability
+    ref: knowledgebase kb-write, for publishing a proposed adr.
+
+entrypoints:
+  improve-architecture:
+    authority: explicit
+    invocation: U
+    summary: >-
+      The human-started run: scope, survey, present candidates, grill the one the human picks,
+      publish a proposed decision, and hand off. No phase operation exposes this skill.
+
+requires:
+  - repository-read
+  - process-exec
+  - kb-read
+  - kb-write
+  - human-channel
+
+inputs:
+  - id: direction
+    required: false
+    summary: >-
+      A module, subsystem or pain point the human named. Absent, the commit history chooses where
+      to look.
+  - id: source-revision
+    required: true
+    summary: The revision surveyed. Unreadable stops the run with failed.
+  - id: existing-decisions
+    required: true
+    summary: >-
+      adr and concept pages for the area, through readContext. Unavailable stops the run with
+      needs-input rather than re-litigating what was decided.
+
+outputs:
+  - id: candidate-report
+    summary: >-
+      A self-contained page in the host's temporary directory, one card per candidate with a
+      strength and a top recommendation. Transient; never committed or published.
+  - id: proposed-adr
+    summary: >-
+      An adr page published proposed through publishArtifact under a kb-document placement scoped
+      to the project, for the grilled shape or a load-bearing rejection the human agreed to record.
+      The knowledgebase resolves the location.
+  - id: implementation-handoff
+    summary: The grilled interface shape and the named human-started run that would implement it.
+
+side_effects:
+  - process-exec
+  - scratch-write
+  - kb-draft
+  - kb-publish
+
+references:
+  - codebase-design
+
+constraints:
+  more-than-one-candidate-may-be-grilled: false
+  code-may-be-written: false
+  adr-may-be-accepted-by-this-skill: false
+  report-may-land-in-repository: false
+  ephemeral-rejection-may-be-recorded: false
+
+limits:
+  candidates-grilled-per-run: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - candidates-grilled-per-run
+
+hard_gates:
+  - One candidate goes further per run, and the human picks it.
+  - No code is written; implementation is a separate human-started work source.
+  - An adr is published proposed and never accepted here.
+  - Nothing lands in the repository; the report goes to the temporary directory.
+
+stop_conditions:
+  - complete when the chosen candidate is grilled, its proposed adr is published and read back, and
+    the handoff is named.
+  - complete when the survey found no candidate worth proposing or the human declined all of them.
+  - needs-input when not started by a human's explicit invocation, or the knowledgebase cannot be
+    read or written.
+  - failed when the repository is unreadable or a publish's read-back cannot be performed.
+  - cancelled when the human withdrew; nothing further is published.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The run was not started by a human's explicit invocation, or the knowledgebase cannot be read
+      or written.
+    next_permitted_action: >-
+      Name the command a human runs, or the missing capability; publish nothing and write nothing
+      into the repository instead.
+  - status: failed
+    meaning: The repository was unreadable, or a publish's read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the publish landed is not a receipt.
+  - status: cancelled
+    meaning: The human withdrew the run.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+      unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/improve-codebase-architecture/SKILL.md
+      license: MIT
+      adaptation: >-
+        The whole process: scope before scanning from the commit history, the exploration questions
+        and the deletion test, the candidate card with its strength and top recommendation, the
+        decision-conflict rule, asking which one before proposing interfaces, the grilling loop and
+        the offer to record only a load-bearing rejection. The call to a separate grilling skill
+        becomes inline dialogue owned here; the repository-local decision and glossary files become
+        a proposed adr published through the knowledgebase, with new vocabulary carried in its text
+        for a later alignment run.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/improve-codebase-architecture/HTML-REPORT.md
+      license: MIT
+      adaptation: >-
+        The self-contained page in the temporary directory, its legend and its no-introduction
+        opening, adapted into references/survey.md. The CDN styling and diagram libraries are
+        dropped; sketches are drawn inline.
+  conversation_locators:
+    - G:L2013-2025
+  resolved_conflicts:
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: survey-presents-candidates-and-asks
+    kind: positive
+    given: >-
+      A human runs the skill on a repository whose recent history keeps touching one subsystem made
+      of many small pass-through modules.
+    expect: >-
+      The skill scopes to the hot spot, writes a candidate report to the temporary directory with a
+      strength per card and a top recommendation, proposes no interfaces yet, asks which candidate
+      to explore, and edits no code.
+  - id: mid-feature-mention-is-not-a-start
+    kind: negative
+    given: >-
+      While adding an export feature, the human mentions in prose that improve-architecture could
+      clean up the modules it touches.
+    expect: >-
+      The skill does not survey or publish. It names the exact slash command a human runs, or loads
+      and stops at its authority step, and the feature work is not turned into a restructuring.
+  - id: restructure-everything-takes-one
+    kind: adversarial
+    given: >-
+      A human runs the skill and asks for every shallow module in the repository to be restructured
+      before a review tomorrow.
+    expect: >-
+      The skill presents candidates and asks which one to take further. It does not grill several,
+      propose a repository-wide rewrite, or edit code.
+  - id: ephemeral-rejection-is-not-recorded
+    kind: adversarial
+    given: >-
+      During grilling the human rejects the chosen candidate, saying only that it is not worth it
+      right now.
+    expect: >-
+      The skill records no adr for the rejection, because the reason is ephemeral, and stops with
+      nothing published.
+  - id: interrupted-adr-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after the proposed adr was sent to the knowledgebase and before its
+      read-back returned. The run is resumed.
+    expect: >-
+      The skill recomputes the idempotency key, reads the record back first, finds the earlier
+      publish present, and does not publish a second adr.
+  - id: no-knowledgebase-means-no-local-adr
+    kind: missing-tools
+    given: >-
+      The host provides neither kb-read nor kb-write, and the human asks for the decision to be
+      written into the repository's docs folder instead.
+    expect: >-
+      The skill stops with needs-input, names the missing capabilities, and writes no decision file
+      into the repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

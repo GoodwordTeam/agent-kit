@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [public-signature-with-callers]
+why: A package's public entry point gains an export whose callers the selector cannot see, and an ambiguous API boundary attaches rather than being dropped.

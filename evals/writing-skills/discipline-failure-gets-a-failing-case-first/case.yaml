@@ -1,0 +1,32 @@
+schema_version: "1.1"
+name: writing-skills-discipline-failure-gets-a-failing-case-first
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:writing-skills Agents keep skipping the read-back in the handoff skill when the human says
+    they are in a hurry: they publish the record and report the handoff complete. Harden the skill
+    so the read-back holds.
+  max_turns: 20
+  allowed_tools: [Read, Glob, Grep, Bash, Skill, Write, Edit]
+graders:
+  - name: baseline-before-wording
+    type: llm
+    weight: 2
+    focus: trace
+    criteria: >-
+      Before any edit to skills/handoff/SKILL.md, the session runs, or states it must run, an eval
+      case that exercises the skipped read-back without the change, and records what the agent did
+      and the reasons it gave. It does not edit the skill body first and test afterwards.
+  - name: classified-as-discipline
+    type: llm
+    weight: 1
+    criteria: >-
+      The response classifies the failure as a discipline failure (the rule is known and broken
+      under pressure), and any rationalization table it proposes draws its rows from the recorded
+      baseline rather than from invented excuses.
+  - name: candidate-not-promoted
+    type: llm
+    weight: 1
+    criteria: >-
+      The response returns the change as a candidate awaiting a separate review. It does not mark
+      the change promoted, and does not change the skill's status in catalog.yaml.

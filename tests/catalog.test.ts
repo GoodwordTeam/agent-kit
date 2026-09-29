@@ -135,21 +135,20 @@ describe("catalog layout", () => {
     expect([...DIRECTORY_SECTIONS]).toEqual(["skills", "packs", "protocols", "roles", "references"]);
   });
 
-  test("the sections whose body file name is mandatory, including the ones left out", () => {
+  test("the sections whose body file name is mandatory are all five directory sections", () => {
     // Membership in this list is what makes `catalog.unexpected-body-name` an
-    // error rather than a warning, and bodies.test.ts covers four of the five
-    // directory sections by that consequence: drop any of `skills`,
-    // `protocols`, `roles` or `references` and its error-severity test fails.
+    // error rather than a warning, and bodies.test.ts covers each of the five
+    // directory sections by that consequence, so dropping any one fails a
+    // behavioural test there.
     //
-    // `packs` is the remaining gap, and the reason this pin exists. It has no
-    // body-name test of its own, so adding it here flips a severity for an
-    // entire section and the suite stays green -- measured. This assertion
-    // guards the section that is absent, which is the half no behavioural test
-    // can reach; it is deliberately not a second copy of the four that pass.
-    //
-    // This pin failed when `references` was promoted, which is the pin working:
-    // the list cannot change without someone deciding, here, that it should.
-    expect([...MANDATORY_BODY_SECTIONS]).toEqual(["skills", "protocols", "roles", "references"]);
+    // The pin stays for the direction no behavioural test reaches: a sixth
+    // directory section added to DIRECTORY_SECTIONS would be absent here with
+    // nothing failing, and its body name would silently be only preferred.
+    // This pin failed when `references` and then `packs` were promoted, which
+    // is the pin working: the list cannot change without someone deciding,
+    // here, that it should.
+    expect([...MANDATORY_BODY_SECTIONS]).toEqual(["skills", "packs", "protocols", "roles", "references"]);
+    expect([...MANDATORY_BODY_SECTIONS].sort()).toEqual([...DIRECTORY_SECTIONS].sort());
   });
 
   test("entryDir joins the section root and the id, including nested role ids", () => {

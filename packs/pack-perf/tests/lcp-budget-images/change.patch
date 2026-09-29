@@ -1,0 +1,28 @@
+From 1b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7a9b Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 10:02:00 +0000
+Subject: [PATCH] Serve responsive hero images on the landing page
+
+Refs WEB-418, which states the landing page's LCP budget from the project
+record; the hero image is the page's LCP element.
+---
+ src/pages/Landing.tsx | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/pages/Landing.tsx b/src/pages/Landing.tsx
+index 2a3b4c5..6d7e8f9 100644
+--- a/src/pages/Landing.tsx
++++ b/src/pages/Landing.tsx
+@@ -20,5 +20,11 @@ export function Landing() {
+   return (
+     <main>
+-      <img src="/img/hero-full.png" alt={t("landing.hero_alt")} />
++      <img
++        src="/img/hero-1200.webp"
++        srcSet="/img/hero-600.webp 600w, /img/hero-1200.webp 1200w"
++        sizes="100vw"
++        fetchPriority="high"
++        alt={t("landing.hero_alt")}
++      />
+       <Features />
+     </main>

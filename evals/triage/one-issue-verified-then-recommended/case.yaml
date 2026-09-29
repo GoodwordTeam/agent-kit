@@ -1,0 +1,30 @@
+schema_version: "1.1"
+name: one-issue-verified-then-recommended
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:triage Let's look at issue 42, the report that the CSV export drops rows with a trailing
+    comma in the notes field.
+  max_turns: 20
+  allowed_tools: [Read, Glob, Grep, Skill, Bash]
+graders:
+  - name: checks-and-verification
+    type: llm
+    weight: 1
+    criteria: >-
+      The response reports a redundancy check (searched by concept, saying where it looked) and a
+      prior-rejection check, and reports the result of trying to reproduce the bug as confirmed,
+      failed or insufficient detail.
+  - name: recommends-and-waits
+    type: llm
+    weight: 1
+    focus: last_message
+    criteria: >-
+      The response recommends one category and one state with reasoning, and waits for the
+      maintainer's direction rather than reporting a state change applied.
+  - name: no-tracker-write-before-direction
+    type: llm
+    weight: 1
+    focus: trace
+    criteria: >-
+      No tool call changes the issue's state, closes it, or posts a comment to the tracker.

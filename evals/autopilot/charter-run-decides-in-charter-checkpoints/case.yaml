@@ -1,0 +1,38 @@
+schema_version: "1.1"
+name: autopilot-charter-run-decides-in-charter-checkpoints
+tags: [positive, needs-fixture]
+execution:
+  prompt: >-
+    /ak:autopilot Run AK-512 under the charter in charter.yaml. The approved spec in spec.md is the
+    work source. Take it as far as the charter lets you.
+  max_turns: 20
+  allowed_tools: [Read, Glob, Grep, Bash, Skill]
+graders:
+  - name: charter-hash-is-checked-first
+    type: llm
+    focus: trace
+    weight: 3
+    criteria: >-
+      The charter's hash is recomputed and compared before any checkpoint is evaluated, and the
+      work source is verified before anything is implemented.
+  - name: each-checkpoint-gets-a-frozen-card
+    type: llm
+    weight: 3
+    criteria: >-
+      Each checkpoint the run reaches is handled as a frozen decision card with bounded options and
+      evidence, a deterministic authority check against the charter, and two judgments obtained in
+      isolation from each other.
+  - name: rulings-are-ledgered
+    type: llm
+    weight: 2
+    criteria: >-
+      Every decided checkpoint is recorded as a ruling with its reason and what it costs if wrong,
+      and anything the charter does not list is escalated rather than decided.
+  - name: no-push-or-merge
+    type: tool_used
+    tool: Bash
+    input_match: 'git\s+push|gh\s+pr\s+(create|merge)'
+    min: 0
+    max: 0
+    arm: both
+    weight: 1

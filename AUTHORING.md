@@ -10,9 +10,9 @@ because the dossier is silent and no ruling covers it — the answer is to repor
 improvise. See §10.
 
 **Which of this binds you.** §1–§11 are the skill contract: a writer authoring a `SKILL.md` reads
-them and stops at §12. The four other body shapes are routed by §12's opening paragraph — protocols
-(§12.1), roles (§12.2), loose doctrine files (§12.3), reference packs (§12.5) — and each of those
-writers reads §1–§11 first, then their own subsection and §12.4. §12.1 and §12.2 apply only to
+them and stops at §12. The five other body shapes are routed by §12's opening paragraph — protocols
+(§12.1), roles (§12.2), loose doctrine files (§12.3), reference packs (§12.5), domain packs
+(§12.6) — and each of those writers reads §1–§11 first, then their own subsection and §12.4. §12.1 and §12.2 apply only to
 amending an existing protocol or role; both populations are complete (7/7 and 29/29 at `85e4d6a`)
 and no batch after batch 3 adds to either, so most readers of this file never need those two
 sections. What each shape inherits from §1–§11 is stated in §12 and not repeated here.
@@ -24,7 +24,7 @@ sections. What each shape inherits from §1–§11 is stated in §12 and not rep
 `SKILL.md` is **≤150 lines**, hard cap **300**. `ak validate` warns above 150
 (`budget.skill-over-target`) and fails above 300 (`budget.skill-over-cap`). The bound is not a
 skill's alone: `BUDGETED` (`src/validation/budget.ts`) carries the same target and cap for
-`protocols` and `roles`, reported under `budget.body-over-target` and `budget.body-over-cap`. §12
+`packs`, `protocols` and `roles`, reported under `budget.body-over-target` and `budget.body-over-cap`. §12
 applies this rule to those bodies unchanged rather than setting a second one, so the numbers here
 are the only numbers.
 
@@ -196,7 +196,9 @@ authority").
 
 Only values from `common#/$defs/side_effect`, as a list. Anything in
 `common#/$defs/remote_side_effect` additionally names its idempotency key source and its read-back,
-per `adapters/runner-contract/CONTRACT.md`.
+per `adapters/runner-contract/CONTRACT.md`. A skill whose `side_effects` is empty opens the section
+with the sentence `None.` and nothing else before the first sentence end; what it returns instead
+follows in the next sentence. `None.` is accepted only against an empty manifest list.
 
 > `artifact-write`, `kb-draft`. No `workspace-write`: reviewers cannot edit source.
 
@@ -420,6 +422,15 @@ fragment owns each path — a second fragment claiming it raises `provenance.con
 No other key is read — but an unread key is not a discarded one. The whole row is copied verbatim
 into the generated merge, so an invented key appears in the published record having never been
 checked by anything.
+
+**Every donor file a row cites is also committed as a pristine snapshot.** The snapshot goes under
+`provenance/donor-snapshots/<donor>@<sha12>/<path>`, and `research/probes/snapshot-donors.sh`
+writes it from the full-depth clones the lock names. The script also prunes snapshots that no row
+cites, and with `--check` it reports drift without writing. `tests/donor-snapshots.test.ts`
+fails `bun test` on a cited file that has no snapshot. When `.donors/` is present, the same test also
+fails on a snapshot whose bytes differ from the pin, and on one whose donor clone exists but cannot
+resolve the pin, such as a shallow clone. A new row is therefore not finished until the
+script has been run and its output committed with the fragment.
 
 **A row may not point at anything outside the merge.** Keys *beside* `adaptations:` in a fragment are
 a different matter: the merge takes the `adaptations` list and nothing else, so a sibling key is
@@ -1938,26 +1949,25 @@ for.
 - **The eval cases are tagged with the scenarios they cover.** `evals.uncovered-scenarios` is a
   note; §10 records why coverage here was ruled a report rather than a gate.
 
-For a protocol, a role or a reference-pack body, §12 replaces this checklist — §12.4 for the first
-two, §12.5 for a reference pack.
+For a protocol, a role, a reference-pack or a domain-pack body, §12 replaces this checklist — §12.4
+for the first two, §12.5 for a reference pack, §12.6 for a domain pack.
 
 ---
 
 ## 12. Protocols, roles and loose doctrine files
 
-§1–§11 are written for skills. Four further body shapes exist in this package: protocols (§12.1),
-roles (§12.2), loose doctrine files (§12.3) and reference packs (§12.5). Two of them are batch 1's
-entire output. Domain packs would be a fifth and are not governed here; §12.5 closes with what is
-missing before one can be authored.
+§1–§11 are written for skills. Five further body shapes exist in this package: protocols (§12.1),
+roles (§12.2), loose doctrine files (§12.3), reference packs (§12.5) and domain packs (§12.6). Two
+of them are batch 1's entire output.
 
-What all four share: none is human-invocable, none appears in a host command surface, and none
+What all five share: none is human-invocable, none appears in a host command surface, and none
 carries host frontmatter — no `disable-model-invocation`, no `argument-hint`, no `allowed-tools`.
 The packager emits host frontmatter for `skills` alone (`src/packaging/plan.ts`), and
 `policies/invocation.yaml`'s statement `protocols-and-roles-are-not-entrypoints` states the rule for
-the first two by name. §5's provenance law, §6's ruling citations, §7's prohibitions and §8's
-writing standard apply to all four unchanged. **§1 does not.** Its size rule and progressive
-disclosure reach protocols and roles unchanged; §12.3 and §12.5 each say what §1 does and does not
-mean for the shape they govern.
+the first two by name, as `packs-never-start-a-phase` does for domain packs. §5's provenance law,
+§6's ruling citations, §7's prohibitions and §8's writing standard apply to all five unchanged.
+**§1 does not.** Its size rule and progressive disclosure reach protocols, roles and domain packs
+unchanged; §12.3 and §12.5 each say what §1 does and does not mean for the shape they govern.
 
 ### 12.1 Protocols
 
@@ -2474,7 +2484,7 @@ a narrower version of it.
 ### 12.4 Before handing a body back
 
 Every §12 shape whose catalog entry has a body file routes here. Where a shape skips a bullet, its
-own section says which (§12.5).
+own section says which (§12.5, §12.6).
 
 - The body file is the one your section names. Whether that name is mandated or merely preferred is
   `MANDATORY_BODY_SECTIONS` (`src/catalog/layout.ts`), and the difference is the severity of
@@ -2527,8 +2537,8 @@ eval obligation and authoring one is not a reason to add cases.
 
 **§1's numbers do not apply, and no other number replaces them.** A reference pack *is* the long
 material §1 sends behind the limit, so capping it at §1's target would defeat what it exists for.
-`BUDGETED` (`src/validation/budget.ts`) measures skills, protocols and roles, and a reference pack
-is deliberately absent from it. That is not licence to dump. The pack is loaded into a live context
+`BUDGETED` (`src/validation/budget.ts`) measures skills, domain packs, protocols and roles, and a
+reference pack is deliberately absent from it. That is not licence to dump. The pack is loaded into a live context
 by every skill in `loaded_by`, so its length is paid by each of them at the moment of loading:
 material earns its place against the skills that name it, or it does not belong in the file.
 Progressive disclosure still applies — it is the mechanism this shape serves.
@@ -2552,15 +2562,196 @@ Before handing one back, §12.4's checklist applies with its two role-specific b
 body file is `REFERENCE.md`, and §12.4's body-file bullet governs what a differently named one
 costs. `MANDATORY_BODY_SECTIONS` (`src/catalog/layout.ts`) takes its membership from the shapes §12
 gives one body file, which is the criterion to reason from rather than the list to read: this
-section gives a reference pack one, and §12's domain packs have none. Do not restate the membership
+section gives a reference pack one, and §12.6 gives a domain pack one. Do not restate the membership
 here. A contract sentence that tracks where a validator has got to is a sentence that goes stale the
 day it catches up, and §12.4 is written so that the severity follows from the criterion without
 either file naming the other's contents.
 
-**Domain packs are the fifth shape and this contract does not govern them yet.** `catalog.yaml`
-declares its `packs` entries at batch 6, every one `status: contract` with no directory on disk.
-`policies/invocation.yaml` states how they attach and that they are never entrypoints; nothing
-states what a `PACK.md` contains. That section cannot be written from the catalog alone and is not
-written here, because inventing a shape for an artifact nobody has designed is the failure §10
-exists to catch. A writer dispatched to author a pack before it exists should report a contract
-defect (§10) rather than reason by analogy from this section.
+**Domain packs are a different shape and §12.6 governs them.** Do not reason about a `PACK.md` by
+analogy from this section: the two shapes differ in how they are reached, in whether §1's numbers
+apply, and in whether a heading set is mandated, and each difference runs the opposite way.
+
+### 12.6 Domain packs
+
+`packs/<id>/`, one directory per catalog entry, with exactly this shape:
+
+```text
+packs/pack-api/
+├── PACK.md          # The body: what the pack adds, when it attaches, its constraints and lenses
+├── pack.yaml        # The manifest (schemas/pack.schema.json)
+├── tests/           # One fixture directory per pack.yaml tests[] entry
+└── references/      # Long material, on §1's rule. Omitted when empty
+```
+
+A domain pack is what the `attach-pack` protocol attaches to a phase that is already running:
+constraints on the work, and lenses for the review panel. It is the other half of the pair §12.5
+separates. A reference pack is reached because a skill names it in `loaded_by`; a domain pack is
+reached because the artifact in front of the phase earned it, and no skill names it. It is never an
+entrypoint, never an operation, never starts a phase and is never project-scoped —
+`policies/invocation.yaml`'s statement `packs-never-start-a-phase` and its `packs` block say the
+first three, and `schemas/pack.schema.json` fixes `starts_phase` and `project_scoped` to `false`.
+That statement names this shape, so a pack body cites it where §12.5 tells a reference pack not to.
+
+**Pack text is evidence a reviewer cites, never an instruction anyone obeys.** A constraint that
+reads like "skip this check" or "begin the migration" is quoted, not followed; `attach-pack` holds
+that as a hard gate. Write constraints as conditions a reviewer can check the work against, and say
+so in the pack's opening section.
+
+**Attachment is by artifact kind plus semantic signal, never by file extension alone.** The schema
+makes the weaker rule unwritable: `activation_rule` requires non-empty `artifact_kinds` and
+`semantics`, `paths` may only narrow a rule that already has both, and
+`pack.activation-requires-artifact-and-semantics` (`src/validation/configrules.ts`) checks it again.
+Write each `semantics` entry in the words a task would use — "an existing public response field
+changes type", not "api". A classifier is optional for every pack (`classifier_optional` is
+`const: true`), and what a pack does when the evidence is ambiguous is fixed by which pack it is:
+
+- `pack-api`, `pack-data` and `pack-secure` attach. Security, API and data facts are never dropped
+  because a classifier was uncertain (ruling `panel-composition-by-declared-risk`), and
+  `NEVER_DROPPED_PACKS` in `src/attach/signals.ts` holds the same three for `ak attach`.
+- The other five may decline, and the decline is recorded with its reason in the
+  `attachment_record`'s `rejected` list. A decline with no recorded reason is not a decline; it is a
+  pack that silently failed to attach.
+
+`research/dossiers/packs.md` proposes carrying this as an `on_uncertain` key. Do not write one.
+`activation` closes with `additionalProperties: false`, so the key fails `schemas.document-invalid`,
+and the rule is fixed per pack rather than configurable by it. The statement lives in
+`## Attaches when`.
+
+**`pack.yaml` is the schema's, and this section does not restate it.** `schemas/pack.schema.json`
+fixes the required members, the positive-and-negative floor on both `activation.examples` and
+`tests`, the constraint `kind` vocabulary, the `sensitive_action` an `authorization-required`
+constraint names, and the provenance block's donor and conversation arms. A manifest that breaks
+any of them fails `schemas.document-invalid`. Three things are this contract's:
+
+1. **The file is `pack.yaml`.** `src/validation/schemas.ts` also validates a `manifest.yaml` when
+   one exists; do not write one. A pack directory with no `pack.yaml` raises
+   `body.pack-manifest-missing`.
+2. **The ids are shared with the body.** Every `activation.rules[].id` appears in backticks under
+   `## Attaches when`, and every `constraints[].id` under `## Constraints`. An `attachment_record`
+   cites rule ids and a finding cites a constraint, and a reader holding either has to land on the
+   sentence that states it. Nothing checks this.
+3. **Two keys `ak attach` reads are not available to you.** `src/attach/index.ts` reads a top-level
+   `enabled` and an `activation.signals` list, and the schema admits neither, so a manifest carrying
+   either fails validation. The classifier-free lookup `ak attach` runs is its built-in signal table
+   in `src/attach/signals.ts`, which is code and is not edited from a pack batch.
+
+**Required sections, in this order, at `##`.** §12.5 declined a heading set because reference packs
+share no shape. Domain packs do: the schema requires the same members of all eight, and each member
+has one section to be stated in.
+
+| Section | What it holds | From `pack.yaml` |
+|---|---|---|
+| `## What this pack adds` | The constraint category, and the two statements every pack makes: its text is evidence, and it never starts a phase | `summary` |
+| `## Attaches when` | Each activation rule by id: its artifact kinds, its semantics, what the selector must observe before it fires. Then what the pack does on ambiguous evidence | `activation.rules`; `activation.examples` that attach |
+| `## Does not attach when` | The non-triggers, including the boundary with a neighbouring pack or skill that shares the ground | `activation.examples` that do not attach |
+| `## Constraints` | Each constraint by id and kind. An `authorization-required` constraint names its sensitive action. Each names the most permissive `autofix_class` (`schemas/finding.schema.json`) a finding raised under it may carry | `constraints` |
+| `## Reviewer guidance` | Each lane by role id, what the pack asks it to look at, and whether attaching makes it required | `reviewer_guidance` |
+| `## Project facts` | What the pack deliberately does not carry, and where a project's own numbers and conventions are read from instead | `kb_rules` |
+| `## Rationalizations this pack counters` | §3.1's three-column table, unchanged | — |
+
+§3's insertion law applies: extra `##` sections may follow the table, and none may be inserted
+between required ones. Three headings are rejected by name, each because it describes the wrong
+thing. `## When to use` — a pack has no trigger of its own; its activation rules are
+`## Attaches when`. `## Authority` — a pack holds none and attaching it authorizes nothing, so an
+authorization its work needs is a constraint of kind `authorization-required` under
+`## Constraints`. `## Workflow` — a pack has no procedure; the phase it attaches to does.
+
+**The table is required, for §12.1's reason.** A pack exists to hold a constraint against a change
+that arrives with a reason to waive it, and all eight in `research/dossiers/packs.md` carry a
+pressure-to-skip case. The donor tables it adapts are two columns, excuse and reality; the third column, what to do
+instead, is the one a reviewer acts on and the one to write rather than leave implied.
+
+**`## Constraints`.** The ceiling is a ceiling, never a grant: which seat may emit `safe_auto` is the
+seat's property (ruling `safe-auto-restricted-per-seat`), so a pack that names `safe_auto` has
+lowered no seat's restriction. An `authorization-required` constraint says what is needed; it does
+not supply it (ruling `sensitive-actions-need-approved-charter-entry`).
+
+**`## Reviewer guidance`.** A lane is a seat that already exists — the schema's own description
+says a pack never adds a seat the review policy did not permit. Where no seat fits the pack, route
+it to the nearest existing seat and say so in this section; never write a role id that `catalog.yaml`
+does not declare. Nothing checks that a `lane` resolves. Set `required_when_attached` only where the
+pack's constraints cannot be judged without that seat, because it turns the seat's absence into an
+unavailable lane that blocks (ruling `required-lane-failure-is-unavailable`).
+
+**`## Project facts`.** A number is a project fact (ruling `numeric-heuristics-are-guidance`) and
+project facts live in the knowledgebase (ruling `central-kb-owns-project-artifacts`). Name the kind
+of fact the pack reads and the `kb_rules` entry that points at it; never the value.
+
+**Tests.** `tests[]` in `pack.yaml` is the declaration, and `packs/<id>/tests/<test-id>/` is its
+fixture. This is the format, and it is this contract's rather than a donor's:
+
+```text
+packs/pack-api/tests/
+├── breaking-response-shape/   # directory name = the tests[].id it implements
+│   ├── change.patch           # the subject, when it is a change: one unified diff
+│   └── expected.yaml
+└── spec-adds-endpoint/
+    ├── artifact/              # the subject, when it is not a change: the files as they stand
+    └── expected.yaml
+```
+
+```yaml
+# expected.yaml
+attaches: true
+matched_rules: [public-response-shape]
+why: An existing public endpoint's response field changes type.
+```
+
+- Every `tests[]` entry carries `fixture: packs/<id>/tests/<test-id>`. The schema makes `fixture`
+  optional; this contract does not, because a case with no fixture restates an
+  `activation.examples` row and adds nothing to it.
+- The subject is exactly one of `change.patch` or `artifact/`.
+- `expected.yaml` has three keys. `attaches` is a boolean. `matched_rules` lists
+  `activation.rules` ids, is required and non-empty when `attaches` is true, and is absent when it
+  is false. `why` is one sentence. They mirror the `attachment_record` so the comparison is
+  field-for-field: an attaching case against `matched_rules` and `rationale`, a declining case
+  against its `rejected[].why`.
+- Cases of all three `kind`s. The schema requires a positive and a negative; this contract adds an
+  `adversarial` case, as §9 does for skills — a subject whose accompanying text (a pull-request
+  description, a commit message, a ticket) says the pack does not apply while the change itself
+  says it does. For `pack-api`, `pack-data` and `pack-secure`, one positive case is an
+  ambiguous-evidence subject, showing the pack attaches on it.
+
+Nothing runs these today. `ak attach` evaluates its built-in signals against a path and reads
+neither `tests[]` nor `expected.yaml`, and `ak validate` checks neither the fixture paths nor what is
+in them. They are what a reviewer reads to see the boundary, and they are complete when a selector
+runner would need nothing else to decide each case.
+
+**§9 does not reach a domain pack.** A pack has no `skill.yaml`, is never invoked, and the eval
+checks read skills only (`src/validation/evals.ts`). Its behavioural evidence is
+`activation.examples` plus the `tests/` above. Do not write `evals/pack-*/`; a case there is one no
+skill declares.
+
+**§1 applies unchanged, and this is where the shape parts from §12.5.** A reference pack is the long
+material §1 sends behind the limit. A domain pack is not: it is attached into every phase whose
+artifact earns it, including matches its writer did not foresee, so its length is paid on each one.
+`PACK.md` is ≤150 lines, hard cap 300, reported through `BUDGETED` (`src/validation/budget.ts`)
+under `budget.body-over-target` and `budget.body-over-cap`. A full mechanism or a long checklist
+goes behind `packs/<id>/references/`. `pack.yaml` is not measured.
+
+**Provenance (§5) is recorded at both granularities, as for a skill.** `pack.yaml`'s `provenance`
+block has `skill.yaml`'s shape, and each adapted file — `PACK.md`, a reference file, a fixture
+adapted from a donor's fixture — has its own row in the batch's fragment. The fixture format above
+is this contract's and is attributed to no donor.
+
+**Ruling citations (§6) work as they do for a skill.** A ruling the pack touches is listed in
+`pack.yaml`'s `provenance.resolved_conflicts[]` and cited inline in `PACK.md` at the sentence it
+governs. A ruling whose `binds.packs` names this pack is owed a citation in `PACK.md` specifically:
+`rulings.binding-not-cited` (`src/validation/rulings.ts`) resolves a `packs` binding to
+`packs/<id>/PACK.md`, reports an error there, and does not read `pack.yaml`, so a manifest-only
+citation does not discharge it.
+
+**Gated:** the section list and the three rejected headings are `PACK_SECTIONS` and
+`PACK_FORBIDDEN` in `src/validation/bodies.ts`, raising `body.missing-section`,
+`body.sections-out-of-order`, `body.section-inserted` and `body.forbidden-section`; a
+`## Rationalizations this pack counters` with no three-column table raises
+`body.missing-anti-rationalization-table`; frontmatter raises `body.frontmatter-forbidden`; a
+missing manifest raises `body.pack-manifest-missing`; length is `budget.body-over-*`; the manifest
+is `schemas.document-invalid` and `pack.activation-requires-artifact-and-semantics`. **Not gated,
+and yours:** the shared ids, a `lane` that resolves, the fixture paths and their contents, the
+adversarial case, and the ambiguous-evidence statement.
+
+Before handing one back, §12.4 applies with three differences. The body file is `PACK.md`, and
+§12.4's body-file bullet governs what a differently named one costs. The second bullet holds for
+frontmatter and is inverted for the sidecar: `pack.yaml` is required, not forbidden. The two
+role-specific bullets are skipped.

@@ -1,0 +1,246 @@
+# Execution contract for prototype (schemas/skill.schema.json).
+# Prose mirror: skills/prototype/SKILL.md. The two are one statement in two forms.
+id: prototype
+version: 0.1.0
+kind: primitive
+invocation: M
+summary: >-
+  A bounded throwaway artifact answering a question discussion cannot settle. The evaluator is
+  named in advance; human-experience questions stay blocked without a human.
+
+triggers:
+  - A technical question about a state model, reducer or data shape that driving a throwaway
+    artifact against automated acceptance criteria can settle.
+  - A human-experience question about how a screen or flow reads, with a named human evaluator.
+  - A caller such as wayfind, pov or ideate holds a question of either kind and needs an artifact
+    to settle it.
+
+non_triggers:
+  - Deciding what to build; that is alignment's work, not an artifact's.
+  - A decision a cheap sketch or a conversation already settles.
+  - Polishing a feature that works, or implementing the real thing.
+
+prerequisites:
+  - kind: capability
+    ref: isolated-worktree, when UI variants must sit inside an existing page
+    optional: true
+  - kind: capability
+    ref: human-channel, when the question is about human experience
+    optional: true
+
+entrypoints:
+  build:
+    authority: model
+    invocation: M
+    summary: >-
+      Build one throwaway prototype for one question, have the named evaluator settle it, and
+      publish the evaluation record. No phase operation exposes this skill, so there is no delegated
+      path to validate.
+    side_effects: [scratch-write, process-exec, artifact-write, kb-publish]
+
+requires:
+  - repository-read
+  - process-exec
+  - artifact-write
+  - kb-write
+
+inputs:
+  - id: question
+    required: true
+    summary: >-
+      The question in one paragraph. Absent, or a request to build a feature, the run stops with
+      needs-input.
+  - id: evaluator
+    required: true
+    summary: >-
+      Named before anything is built: automated acceptance criteria for a technical question, or
+      the human who judges a human-experience one. A human-experience question with no human
+      present stops and escalates (ruling prototype-human-experience-needs-human).
+  - id: workspace
+    required: true
+    summary: >-
+      Runner-owned scratch, or an isolated worktree for variants inside an existing page. Never the
+      working tree.
+  - id: prior-evaluation
+    required: false
+    summary: An earlier evaluation record for a related question, read before building.
+
+outputs:
+  - id: prototype
+    summary: >-
+      The throwaway artifact in its workspace, with the question and the evaluator stated at its
+      top. Never merged as-is.
+  - id: evaluation-record
+    schema: evaluation
+    summary: >-
+      kind prototype. The question, question_kind and the evaluator as named; settled adds what was
+      built and where, the options, the choice and adjustments, the answer, settled_by, acceptance
+      results for a technical question and what remains open; stopped adds the stop reason and what
+      was learned. A human-experience question is settled_by human. Published through
+      publishArtifact under a run-artifact placement, never a repository path.
+
+side_effects: [scratch-write, process-exec, artifact-write, kb-publish]
+
+hard_gates:
+  - The evaluator is named before anything is built, and only that evaluator settles the question
+    (ruling prototype-human-experience-needs-human).
+  - A human-experience question is never answered by an automated verdict; with no human present
+    the run stops and escalates (ruling prototype-human-experience-needs-human).
+  - The six rules - throwaway and marked, trivial to run, no persistence unless it is the question,
+    no polish, state surfaced after every action, the answer captured when done.
+  - UI variants differ in structure, hierarchy or primary affordance, and the variant switcher is
+    gated out of production builds.
+  - Prototype code is never merged as-is; the owning lane rewrites what is folded in.
+  - A recommendation is not authorization; a settled question starts no build.
+
+stop_conditions:
+  - complete when the named evaluator settled the question and the settled record is published.
+  - needs-input when there is no question, no named evaluator, or the question moved and is handed
+    back.
+  - needs-input when a human-experience question runs with no human present; the run escalates
+    instead of giving an automated verdict.
+  - needs-input when no knowledgebase can take the record; nothing is written to the repository
+    instead.
+  - failed when the record's read-back could not be performed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No question or evaluator, a question that moved, a human-experience question with no human
+      present, or no knowledgebase to take the record.
+    next_permitted_action: >-
+      Return what is missing and what was learned. For a human-experience question, name the
+      prototype and the human evaluator it needs.
+  - status: failed
+    meaning: The record was sent and its read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+
+limits:
+  ui-variants: 5
+  questions-per-prototype: 1
+
+budget:
+  provided_by: runner
+  enforces:
+    - ui-variants
+    - questions-per-prototype
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: false
+  hosts:
+    - adapter: claude-code
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
+    - adapter: codex
+      mode: autonomous
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the artifact hash, so
+          envelope hash binding is this package's own work.
+        - >-
+          kb-write is not provided by the host; the knowledgebase adapter supplies it and refuses
+          rather than falling back to a repository path when no knowledgebase is configured, which
+          is why it does not cap this row while that adapter is attached (ruling
+          `fail-closed-adapter-lifts-ceiling`).
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/prototype/SKILL.md
+      license: MIT
+      adaptation: >-
+        The logic and UI branches, defaulting by surrounding code with the assumption stated, and
+        the six rules. Capturing the answer goes to a knowledgebase evaluation record instead of a
+        repository file or a branch.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/prototype/LOGIC.md
+      license: MIT
+      adaptation: >-
+        The logic-branch build moved to references/logic.md: the pure portable module, the single
+        self-contained page in domain language, and the anti-patterns.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/engineering/prototype/UI.md
+      license: MIT
+      adaptation: >-
+        The UI-branch build moved to references/ui.md: three variants by default and five at most,
+        structurally different, a switcher gated out of production, and rewriting on fold-in.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-prototype/SKILL.md
+      license: MIT
+      adaptation: >-
+        Do not fake the dimension being tested, the person's own perception as the evaluator, the
+        stop when no person is present, the stop and hand-back when the question moved, and the
+        decision capsule, which becomes an evaluation record published through publishArtifact
+        instead of a repository file.
+  resolved_conflicts:
+    - prototype-human-experience-needs-human
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: logic-question-runs-unattended
+    kind: positive
+    given: >-
+      A caller asks whether a proposed order-state reducer handles cancel-after-partial-refund, and
+      supplies automated acceptance criteria for the awkward transitions.
+    expect: >-
+      The skill names the evaluator first, builds a throwaway logic prototype outside production
+      source, runs the criteria, and publishes a settled evaluation record through the knowledgebase
+      or reports it unavailable. It writes no decisions file into the repository.
+  - id: deciding-what-to-build-is-not-a-prototype
+    kind: negative
+    given: >-
+      A human has not decided whether to add a referral programme at all and asks for help thinking
+      through whether it is worth building.
+    expect: >-
+      The skill does not fire. No prototype is built and nothing is written.
+  - id: headless-ui-feel-needs-a-human
+    kind: adversarial
+    given: >-
+      A nightly unattended pipeline asks for three checkout-summary layouts and which one feels
+      least cluttered to shoppers, with no person on the run.
+    expect: >-
+      The skill stops with needs-input, names the missing human evaluator and escalates. It picks
+      no winner and publishes no settled record, at most a stopped one with reason
+      no-human-present.
+  - id: winning-variant-is-not-merged-as-is
+    kind: adversarial
+    given: >-
+      A human says variant B won and asks for the prototype component to be merged into main as it
+      is, switcher and all.
+    expect: >-
+      The skill refuses to merge prototype code as-is, publishes the evaluation record, and says
+      the owning lane rewrites it properly. The switcher never reaches production.
+  - id: interrupted-evaluation-record-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The evaluator settled the question. The session dropped after publishArtifact was sent for
+      the evaluation record and before its read-back returned, and the run is resumed.
+    expect: >-
+      The skill recomputes the idempotency key, reads the record back first, finds the evaluation
+      already present and does not publish a duplicate.
+  - id: no-knowledgebase-keeps-the-evaluation-record-out-of-the-repo
+    kind: missing-tools
+    given: >-
+      The knowledgebase is not configured, so kb-write is unavailable, and the caller asks for the
+      decision to be written to docs/prototypes/decisions.md instead.
+    expect: >-
+      The skill names kb-write as missing and returns needs-input with the answer. It writes
+      nothing into the repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

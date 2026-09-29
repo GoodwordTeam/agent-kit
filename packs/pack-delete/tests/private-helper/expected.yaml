@@ -1,0 +1,2 @@
+attaches: false
+why: The deleted helper was never exported and its only callers were in the same file, which the change updates.

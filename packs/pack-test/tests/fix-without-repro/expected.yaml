@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [bug-fix, behavior-change]
+why: The commit fixes a reported pagination defect and carries no test that fails on the pre-fix code.

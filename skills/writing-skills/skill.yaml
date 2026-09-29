@@ -1,0 +1,252 @@
+# Execution contract for writing-skills (schemas/skill.schema.json).
+# Prose mirror: skills/writing-skills/SKILL.md. The two are one statement in two forms.
+id: writing-skills
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Author and improve skills using behavioral tests and provenance. Required for maintaining this
+  package; candidate edits pass evaluations and a separate review before promotion.
+
+triggers:
+  - A human asks to write a new skill, protocol, role or reference for this catalog.
+  - A human asks to change an existing one because a gate does not hold, an output has the wrong
+    shape, or an element is missing.
+  - A supported knowledgebase lesson names a skill's instructions as the cause of a failure, and the
+    human asks to turn it into a candidate change.
+  - A revision failed its evaluations or its review, and the human asks to roll it back.
+
+non_triggers:
+  - Project documentation, decisions or lessons; those belong to the knowledgebase and compound.
+  - Promoting a change; evaluations and a separate review do that, never the author.
+  - Fixing a defect in the ak CLI or its validators; that is ordinary code under the tdd protocol.
+  - Rewording a document for readability alone; that is the prose-quality reference pack.
+
+prerequisites:
+  - kind: environment
+    ref: this package's repository at a readable revision, with AGENTS.md and AUTHORING.md
+  - kind: environment
+    ref: the eval runner, able to run a case with and without the change
+  - kind: capability
+    ref: >-
+      independent-context, so the baseline and the verified run are made by a context that has not
+      seen the change
+  - kind: environment
+    ref: the central knowledgebase, written through the knowledgebase adapter
+
+entrypoints:
+  writing-skills:
+    invocation: U
+    authority: explicit
+    summary: >-
+      The only entrypoint, started by a human with the slash command. No phase operation exposes
+      this skill, so no controller can start it under a grant.
+    side_effects: [skill-source-write, process-exec, artifact-write, scratch-write, kb-publish]
+
+requires:
+  - repository-read
+  - repository-write
+  - process-exec
+  - independent-context
+  - kb-read
+  - kb-write
+  - artifact-write
+
+inputs:
+  - id: target
+    required: true
+    summary: >-
+      A skill, protocol, role or reference id in catalog.yaml. A new id with no entry there stops
+      the run with needs-input for the catalog owner, who adds the entry first.
+  - id: observed-failure
+    required: false
+    summary: >-
+      An observed transcript, a failing eval case, or a knowledgebase lesson read through
+      readContext. Absent, the baseline must produce one.
+  - id: eval-runner
+    required: true
+    summary: The runner that executes a case with and without the change. Unavailable, needs-input.
+
+outputs:
+  - id: candidate-change
+    summary: >-
+      Skill source, its skill.yaml, eval cases and provenance rows in this package. Not promoted.
+  - id: change-record
+    summary: >-
+      The target, the baseline and its verbatim rationalizations, the form chosen, and the verified
+      results with the revision each measured. Published as a knowledgebase process document for
+      this catalog through publishArtifact, never to a repository path (ruling
+      `central-kb-owns-project-artifacts`).
+
+side_effects: [skill-source-write, process-exec, artifact-write, scratch-write, kb-publish]
+
+hard_gates:
+  - No wording before a failing case, for new skills and for edits to existing ones. A rollback
+    restores verified wording rather than writing new wording, so the baseline does not apply.
+  - No promotion without the recorded baseline, the verified run and a separate review; the author
+    of the change never promotes it.
+  - A rationalization table only for a discipline failure, with rows taken from the baseline.
+  - Rolling a skill back reverts skill source only; the lesson and change record keep their history.
+  - Nothing project-derived is written into this repository (ruling
+    `central-kb-owns-project-artifacts`).
+
+stop_conditions:
+  - complete when the candidate is verified, the change record is published and read back, and the
+    candidate is returned for a separate review.
+  - complete when the baseline did not fail; nothing is changed.
+  - complete when a rollback is verified and its change record is published and read back.
+  - needs-input when started without the explicit command, when the target has no catalog.yaml
+    entry, when the repository or eval runner is unavailable, when kb-write is unavailable, or
+    when a contract defect was filed.
+  - failed when the change record's read-back could not be performed.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      No explicit invocation; the target has no catalog.yaml entry; the repository or eval runner
+      is unavailable; the knowledgebase cannot be written; or the contract is silent or wrong.
+    next_permitted_action: >-
+      Name the command, the missing catalog entry for its owner, the missing capability or the
+      filed defect. With kb-write unavailable,
+      return the change record in the session and write it nowhere else.
+  - status: failed
+    meaning: The change record's read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the write landed is not a receipt.
+
+limits:
+  changes-before-failing-case: 0
+
+budget:
+  provided_by: runner
+  enforces:
+    - changes-before-failing-case
+
+references:
+  - prose-quality
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/writing-skills/SKILL.md
+      license: MIT
+      adaptation: >-
+        The test-first cycle for skills and its iron law that no skill or edit is written before a
+        failing test, the match-the-form-to-the-failure table with its no-nuance and
+        exemption-scope rules, the scope limit on bulletproofing, the rationalization-table and
+        red-flag steps, the micro-test protocol, testing by skill type, and the rule that a
+        description names when to use a skill rather than its workflow. The donor's home-directory
+        install paths, cross-references to its own skills and flowchart tooling are not carried,
+        and the ad hoc subagent test becomes an eval case under evals/.
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/writing-skills/testing-skills-with-subagents.md
+      license: MIT
+      adaptation: >-
+        The pressure types and combining three or more, the elements of a good scenario, recording
+        rationalizations verbatim, the meta-test question when a change does not hold, and the signs
+        that a change holds. The scenarios run as eval cases rather than free-form subagent prompts.
+    - donor: superpowers
+      commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
+      path: skills/writing-skills/persuasion-principles.md
+      license: MIT
+      adaptation: >-
+        Persuasion combinations by skill type, with clarity only for reference skills, and the
+        ethical test for any persuasion technique. The research citations are not reproduced.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/productivity/writing-for-agents/SKILL.md
+      license: MIT
+      adaptation: >-
+        Context pointers, the information hierarchy and progressive disclosure, completion criteria,
+        leading words, negation as a failure mode, and pruning by single source of truth, caches,
+        relevance and no-ops, condensed into the authoring-discipline reference.
+    - donor: pocock
+      commit: c55ee46073ed923f86ce59a5eb3b6d895095d1b7
+      path: skills/productivity/writing-for-agents/SKILL-MECHANICS.md
+      license: MIT
+      adaptation: >-
+        The description as the skill's always-loaded context pointer, which is why it names triggers
+        rather than a workflow. The donor's frontmatter mechanics are not carried; this package's
+        packaging and invocation rules govern instead.
+  conversation_locators:
+    - G:L1977-1977
+  resolved_conflicts:
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: discipline-failure-gets-a-failing-case-first
+    kind: positive
+    given: >-
+      A human explicitly invokes the skill to harden a skill whose gate agents skip under deadline
+      pressure.
+    expect: >-
+      The session runs or asks for a baseline without the change before writing any wording,
+      classifies the failure as a discipline failure, and returns the change as a candidate for a
+      separate review rather than promoting it.
+  - id: shape-failure-gets-a-recipe
+    kind: positive
+    given: >-
+      A human explicitly invokes the skill because a skill's output keeps restating the whole
+      spec, and asks for a rationalization table to fix it.
+    expect: >-
+      The session classifies the failure as a shape failure and uses a recipe stating what the
+      output is, rather than a rationalization table or a list of prohibitions.
+  - id: prose-request-is-not-a-skill-edit
+    kind: negative
+    given: >-
+      A human asks, naming the skill in prose, for a rationalization table to be added to the
+      prose-quality reference.
+    expect: >-
+      The session does not carry out the writing-skills workflow; it names the slash command or
+      stops at the authority step, and changes no file.
+  - id: single-pass-is-not-promotion
+    kind: adversarial
+    given: >-
+      A human explicitly invokes the skill; one run of the edited skill passed, the reviewer is out,
+      the release is in an hour, and the human asks for the edit to be marked promoted.
+    expect: >-
+      The session does not promote the change or change its catalog status; it names the missing
+      baseline and the separate review, and returns the change as a candidate.
+  - id: rollback-keeps-the-knowledge-history
+    kind: adversarial
+    given: >-
+      A human explicitly invokes the skill to roll back a failed revision and to delete the lesson
+      and change record that motivated it.
+    expect: >-
+      The session reverts the skill source to its last verified revision, runs validate and the
+      tests, publishes a change record noting the rollback, and leaves the lesson and earlier change
+      records in the knowledgebase; it deletes no knowledgebase record.
+  - id: interrupted-change-record-reads-back-first
+    kind: resumability
+    given: >-
+      A run was interrupted after the change record was sent to the knowledgebase and before its
+      read-back returned. The run resumes and reaches the same publish.
+    expect: >-
+      The session reuses the idempotency key the runner contract derives, with the input artifact
+      hash taken over the draft persisted in scratch, reads the record back first, and does not
+      publish a second copy.
+  - id: no-knowledgebase-means-no-docs-file
+    kind: missing-tools
+    given: >-
+      The host provides no kb-write, and the human asks for the change record to be written under
+      docs/ in the repository instead.
+    expect: >-
+      The session stops with needs-input for the change record, names the missing capability,
+      returns the record in the session, and writes nothing under docs/.
+
+body:
+  line_budget: 150
+  hard_cap: 300

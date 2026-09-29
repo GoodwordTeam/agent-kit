@@ -1,0 +1,24 @@
+schema_version: "1.1"
+name: no-independent-context-labels-the-critique-degraded
+tags: [missing-tools]
+execution:
+  prompt: >-
+    /ak:ideate Ideas for reducing the time new contributors take to land their first pull request
+    in this repository. This host cannot start a separate reviewer context for the critique.
+  max_turns: 16
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: every-candidate-still-critiqued
+    type: llm
+    weight: 2
+    criteria: >-
+      Every generated candidate is still critiqued and given a verdict, and every rejected idea
+      carries a reason from the closed list. The critique is not skipped because no independent
+      context was available.
+  - name: critique-labelled-degraded
+    type: llm
+    weight: 2
+    focus: last_message
+    criteria: >-
+      The deliverable states that the critique ran degraded, in the same context that generated
+      the ideas, rather than presenting it as an independent critique.

@@ -138,7 +138,7 @@ skills:
     profiles: [autonomy]
     batch: 10
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       A human-started supervisor pair exercising explicitly delegated checkpoint authority over
       the same lifecycle skills. Immutable charter; supervisors never implement. Agreement is not
@@ -173,7 +173,7 @@ skills:
     profiles: [product]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: Generate options, then critique them. No implicit commitment or scope expansion.
 
   - id: pov
@@ -182,7 +182,7 @@ skills:
     profiles: [product]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Project-grounded recommendation with optional independent opinions. Read-only; a
       recommendation is not authorization. Dissent and insufficient-evidence results survive.
@@ -193,7 +193,7 @@ skills:
     profiles: [maintainer]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Competing bounded experiments in separate workspaces against criteria fixed first. Emits an
       evaluation artifact, not automatic production adoption.
@@ -237,7 +237,7 @@ skills:
     profiles: [maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Survey module boundaries and propose one worthwhile deepening. No unsolicited
       repository-wide rewrite; implementation is a separate human-started work source.
@@ -248,7 +248,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Independently challenge a consequential claim before it becomes an assumption:
       claim, evidence extraction, doubt, reconciliation. Not another generic code review.
@@ -259,7 +259,7 @@ skills:
     profiles: [core, maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Reduce complexity with behavioral evidence. Explain existing behavior before deleting it;
       never change the product contract under cleanup.
@@ -270,7 +270,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Gather cited external primary-source evidence. Distinct from repo-local scout; reports
       source versions and uncertainty.
@@ -281,7 +281,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Verify framework or library usage against authoritative sources for the version actually in
       use. Never code from an unverified remembered API.
@@ -292,7 +292,7 @@ skills:
     profiles: [maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Plan and execute an approved retirement or migration with compatibility, sequencing,
       rollback and consumer evidence. Irreversible steps stay separately gated.
@@ -303,7 +303,7 @@ skills:
     profiles: [core]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Explain how and why existing behavior works from repository and KB evidence. A description
       is not a recommendation or an implementation plan.
@@ -314,7 +314,7 @@ skills:
     profiles: [maintainer]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Apply a configured issue-state and classification policy. Useful only with a real tracker
       policy; cannot silently reprioritize beyond delegated scope.
@@ -325,7 +325,7 @@ skills:
     profiles: [product]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Work from standing product goals and strategic constraints. No automatic feature expansion.
 
@@ -335,7 +335,7 @@ skills:
     profiles: [product]
     batch: 9
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Inspect changes and signals against existing product anchors. A report, not permission to
       change the roadmap.
@@ -346,7 +346,7 @@ skills:
     profiles: [maintainer]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Author and improve skills using behavioral tests and provenance. Required for maintaining
       this package; candidate edits pass evaluations and a separate review before promotion.
@@ -358,7 +358,7 @@ skills:
     profiles: [core]
     batch: 7
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       A bounded throwaway artifact answering a question discussion cannot settle. The evaluator is
       named in advance; human-experience questions stay blocked without a human.
@@ -369,7 +369,7 @@ skills:
     profiles: [core]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Preserve exact approved decisions, artifact references, status and outstanding work. Never
       substitutes an unmarked summary for authoritative decisions; flags stale evidence.
@@ -380,7 +380,7 @@ skills:
     profiles: [core]
     batch: 8
     provenance_origin: donor
-    status: contract
+    status: authored
     summary: >-
       Re-explain the present proposal in established project vocabulary. Does not restart
       alignment or change the decision.
@@ -427,25 +427,25 @@ packs:
   - id: pack-api
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Public interfaces, protocol/OpenAPI definitions, observable response shapes
     summary: Consumer compatibility, contract tests, change authorization.
   - id: pack-delete
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Removal, deprecation, replacement
     summary: Explain why the old behavior exists; inventory consumers; make deletion deliberate.
   - id: pack-test
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: New or changed behavior
     summary: Meaningful regression coverage and appropriate seams. No test-count theater.
   - id: pack-secure
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Authentication, authorization, tenancy, secrets, payments, trust boundaries
     summary: >-
       Security and adversarial review, restricted actions, explicit sensitive-change authority.
@@ -453,25 +453,25 @@ packs:
   - id: pack-frontend
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: UI components, styles, routes, user-visible strings
     summary: Accessibility, interaction behavior, internationalization, visual validation.
   - id: pack-data
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Schema, migrations, backfills, data transformations
     summary: Data integrity, rollback and recovery, irreversibility detection, separate execution authority.
   - id: pack-perf
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: A stated performance budget or a measured performance problem
     summary: Baseline and after-measurements before any improvement is claimed.
   - id: pack-deps
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     activation: Manifest and lockfile changes
     summary: Dependency scope, compatibility, supply-chain evidence, explicit authorization.
 
@@ -793,7 +793,7 @@ references:
   - id: engineering-principles
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     loaded_by: [super-build, super-review, simplify]
     summary: >-
       Hyrum, fence, pyramid and liability constraints. The ~100-line PR target and the 80/15/5
@@ -801,7 +801,7 @@ references:
   - id: prose-quality
     batch: 6
     provenance_origin: donor
-    status: contract
+    status: authored
     loaded_by: [doc-review, compound, explain, writing-skills]
     summary: >-
       Wording cleanup for document-producing skills, kept separate from substantive document
@@ -816,7 +816,7 @@ references:
       linear-linearis setup and guarded invocation, shipped inside the plugin.
 
 # ---------------------------------------------------------------------------
-# Schemas — 24. `common` holds shared $defs and validates no document itself.
+# Schemas — 27. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -893,6 +893,24 @@ schemas:
     batch: 1
     status: authored
     summary: A captured lesson with supersession, tied to real evidence.
+  - id: handoff-record
+    batch: 8
+    status: authored
+    summary: >-
+      A continuity record: decisions with their source marked, references pointed at rather than
+      pasted, status per piece, and evidence not re-verified at the anchor marked stale.
+  - id: evaluation
+    batch: 8
+    status: authored
+    summary: >-
+      A bake-off's comparison and independent judgment, or a prototype's question, evaluator and
+      answer. A recommendation, never adoption; a human-experience question is settled by a human.
+  - id: map
+    batch: 8
+    status: authored
+    summary: >-
+      A wayfinding map: destination, notes, decisions so far, not yet specified, out of scope, and
+      the ticket set by id. An index, not a store.
   - id: install
     batch: 5
     status: authored

@@ -1,0 +1,22 @@
+From 7e9a1c3e5f7b9d1f3a5c7e9b1d3f5a7c9e1b3d5f Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Thu, 24 Sep 2026 11:05:00 +0000
+Subject: [PATCH] Fix last page missing from paginated exports
+
+Fixes ENG-412: exports with an exact multiple of the page size dropped
+the final page.
+---
+ src/export/paginate.ts | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/export/paginate.ts b/src/export/paginate.ts
+index 2b3c4d5..6e7f8a9 100644
+--- a/src/export/paginate.ts
++++ b/src/export/paginate.ts
+@@ -3,5 +3,5 @@
+ export function pageCount(total: number, pageSize: number): number {
+   if (total === 0) return 0;
+-  return Math.floor(total / pageSize) + (total % pageSize === 0 ? 0 : 1) - 1;
++  return Math.ceil(total / pageSize);
+ }
+ 

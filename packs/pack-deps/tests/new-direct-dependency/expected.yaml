@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [new-dependency]
+why: The manifest adds a new direct dependency.

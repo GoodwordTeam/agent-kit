@@ -1,0 +1,2 @@
+attaches: false
+why: The serializer exposes a column an earlier merged migration added, and nothing in this change alters stored data.

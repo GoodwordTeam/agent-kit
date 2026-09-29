@@ -1,0 +1,303 @@
+# Provenance fragment for the "maintain-product" batch: six skill bodies with their manifests —
+# simplify, improve-architecture, deprecate, triage, strategy and product-pulse.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a file
+# derives from is recorded with a machine-checkable donor@commit:path.
+#
+# Both the body and its manifest carry rows, and so does every file under a skill's
+# references/ and assets/: each is an adapted file in its own right.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below is cited in research/dossiers/maintain-product.md and was verified to exist at its
+# pin with `git cat-file -e` in the pinned clone before it was written here.
+
+adaptations:
+
+  # --- simplify --------------------------------------------------------------------
+
+  - path: skills/simplify/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/SKILL.md
+    rationale: >-
+      The spine: scope resolution in the donor's order (caller-named, then branch against base,
+      then staged and unstaged only without a usable base) and the docs-only preflight, the three
+      lenses, the fix rules (edit only the scope, preserve outputs, errors, side effects and
+      ordering, never simplify away a safety check, including data-loss protection and
+      accessibility affordances), and verification with no relaxed assertion. Model selection,
+      bounded dispatch and permission paragraphs are dropped.
+
+  - path: skills/simplify/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md
+    rationale: >-
+      Explain before removing and preserve behavior become the first hard gate; "fewer lines is
+      not the goal" drops the net-lines figure. The "obviously dead" row adapts "Remove (after
+      confirming it's truly dead)" (line 152) and the "tests later" row adapts "Run tests after
+      each change" (line 159). The line counts in its pattern tables are not carried as findings
+      or limits (ruling numeric-heuristics-are-guidance).
+
+  - path: skills/simplify/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ai-slop-cleaner/SKILL.md
+    rationale: >-
+      Lock behavior with tests before cleanup, the masking-versus-grounded fallback
+      classification, and the ordered passes. Its planning-command handoff and interface checklist
+      are excluded.
+
+  - path: skills/simplify/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ai-slop-cleaner/SKILL.md
+    rationale: >-
+      The same lock-behavior-first rule and one pass at a time with targeted verification after
+      each, bounded to the requested files. Its reviewer-only mode is not carried.
+
+  - path: skills/simplify/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/minimal-code-discipline/SKILL.md
+    rationale: >-
+      Reuse before writing and the refusal to widen scope beyond what the change forces become the
+      scope limit and the "while I'm here" row.
+
+  - path: skills/simplify/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/SKILL.md
+    rationale: >-
+      The spine: scope resolution in the donor's order (caller-named, then branch against base,
+      then staged and unstaged only without a usable base) and the docs-only preflight, the three
+      lenses, the fix rules (edit only the scope, preserve outputs, errors, side effects and
+      ordering, never simplify away a safety check, including data-loss protection and
+      accessibility affordances), and verification with no relaxed assertion. Model selection,
+      bounded dispatch and permission paragraphs are dropped.
+
+  - path: skills/simplify/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/code-simplification/SKILL.md
+    rationale: >-
+      Explain before removing and preserve behavior become the first hard gate; "fewer lines is
+      not the goal" drops the net-lines figure. The "obviously dead" row adapts "Remove (after
+      confirming it's truly dead)" (line 152) and the "tests later" row adapts "Run tests after
+      each change" (line 159). The line counts in its pattern tables are not carried as findings
+      or limits (ruling numeric-heuristics-are-guidance).
+
+  - path: skills/simplify/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/ai-slop-cleaner/SKILL.md
+    rationale: >-
+      Lock behavior with tests before cleanup, the masking-versus-grounded fallback
+      classification, and the ordered passes. Its planning-command handoff and interface checklist
+      are excluded.
+
+  - path: skills/simplify/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/ai-slop-cleaner/SKILL.md
+    rationale: >-
+      The same lock-behavior-first rule and one pass at a time with targeted verification after
+      each, bounded to the requested files. Its reviewer-only mode is not carried.
+
+  - path: skills/simplify/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/minimal-code-discipline/SKILL.md
+    rationale: >-
+      Reuse before writing and the refusal to widen scope beyond what the change forces become the
+      scope limit and the "while I'm here" row.
+
+  - path: skills/simplify/references/personas/code-reuse.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/references/personas/code-reuse-reviewer.md
+    rationale: >-
+      The duplication and missed reuse lens, its questions and its out-of-scope list, adapted as a
+      lens the skill applies itself rather than a separately dispatched reviewer.
+
+  - path: skills/simplify/references/personas/code-quality.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/references/personas/code-quality-reviewer.md
+    rationale: >-
+      The readability and structure lens, its questions and its out-of-scope list, adapted as a
+      lens the skill applies itself rather than a separately dispatched reviewer.
+
+  - path: skills/simplify/references/personas/efficiency.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-simplify-code/references/personas/efficiency-reviewer.md
+    rationale: >-
+      The wasted work lens, its questions and its out-of-scope list, adapted as a lens the skill
+      applies itself rather than a separately dispatched reviewer.
+
+  # --- improve-architecture --------------------------------------------------------
+
+  - path: skills/improve-architecture/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/improve-codebase-architecture/SKILL.md
+    rationale: >-
+      The body adapts scoping from the commit history, the deletion test, the candidate card, the
+      decision-conflict rule, asking which one before proposing interfaces, grilling one
+      candidate, and recording only a load-bearing rejection. Repository-local decision and
+      glossary files become a proposed adr published through the knowledgebase (ruling central-kb-
+      owns-project-artifacts).
+
+  - path: skills/improve-architecture/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/improve-codebase-architecture/SKILL.md
+    rationale: >-
+      The manifest adapts scoping from the commit history, the deletion test, the candidate card,
+      the decision-conflict rule, asking which one before proposing interfaces, grilling one
+      candidate, and recording only a load-bearing rejection. Repository-local decision and
+      glossary files become a proposed adr published through the knowledgebase (ruling central-kb-
+      owns-project-artifacts).
+
+  - path: skills/improve-architecture/references/survey.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/improve-codebase-architecture/SKILL.md
+    rationale: >-
+      The exploration questions, the deletion test and the card fields with their strength scale.
+
+  - path: skills/improve-architecture/references/survey.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/improve-codebase-architecture/HTML-REPORT.md
+    rationale: >-
+      The self-contained page in the temporary directory, its legend and its no-introduction
+      opening. The CDN styling and diagram libraries are dropped.
+
+  # --- deprecate -------------------------------------------------------------------
+
+  - path: skills/deprecate/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      The five-question decision, advisory by default, replacement first, incremental migration
+      owned by the retiring surface's owner, and the rationalizations. The donor's linear removal
+      step becomes a checkpoint gated on an approved charter entry (ruling sensitive-actions-need-
+      approved-charter-entry); usage checks become the knowledgebase impact analysis.
+
+  - path: skills/deprecate/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      The manifest condenses the same decision, migration and removal-gate rules into triggers,
+      constraints and hard gates.
+
+  - path: skills/deprecate/references/migration-patterns.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      The strangler, adapter and feature-flag patterns, expand and contract with the donor's
+      worked column rename, the unowned-code criteria and the verification lists.
+
+  - path: skills/deprecate/assets/deprecation-notice.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/deprecation-and-migration/SKILL.md
+    rationale: >-
+      The donor's notice and migration-guide shape, published as a process page instead of a file
+      in the repository.
+
+  # --- triage ----------------------------------------------------------------------
+
+  - path: skills/triage/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/SKILL.md
+    rationale: >-
+      The state machine, the attention buckets, gather, recommend, verify, grill and apply with
+      the redundancy and prior-rejection checks, the wontfix variants, the quick override and the
+      mandatory disclaimer. Labels become the project's configured policy mapped onto the tracker
+      contract's operations; calls to separate grilling and domain-modeling skills become inline
+      dialogue.
+
+  - path: skills/triage/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/SKILL.md
+    rationale: >-
+      The manifest condenses the same roles, gates and outcomes.
+
+  - path: skills/triage/references/roles.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/SKILL.md
+    rationale: >-
+      The two category roles, the five state roles and their transitions.
+
+  - path: skills/triage/references/roles.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/setup-matt-pocock-skills/triage-labels.md
+    rationale: >-
+      The role-to-tracker mapping and the stop when none is configured, recast as the project
+      record's triage policy.
+
+  - path: skills/triage/references/rejections.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/OUT-OF-SCOPE.md
+    rationale: >-
+      One record per concept, a durable reason, matching by concept, the confirm, reconsider or
+      disagree choice, and recording only rejected enhancements. The repository directory becomes
+      the closed item in the system of record.
+
+  - path: skills/triage/assets/agent-brief.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/AGENT-BRIEF.md
+    rationale: >-
+      The brief's principles and template, mapped onto the ticket schema's goal, acceptance
+      criteria and non-goals.
+
+  - path: skills/triage/assets/triage-notes.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/triage/SKILL.md
+    rationale: >-
+      The donor's needs-info template: the disclaimer line, what is established, and specific
+      questions for the reporter.
+
+  # --- strategy --------------------------------------------------------------------
+
+  - path: skills/strategy/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/SKILL.md
+    rationale: >-
+      Anchor not plan, the human answers and the repository only grounds, short is a feature, the
+      sourced grounding model, routing by what is on record, the interview order, one edit round
+      and the one-line handoff. The repository-root file becomes a concept page published through
+      the knowledgebase (ruling central-kb-owns-project-artifacts); the dated current-year line
+      and the donor's sibling slash names are dropped.
+
+  - path: skills/strategy/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/SKILL.md
+    rationale: >-
+      The manifest condenses the same boundaries into non-triggers, constraints and hard gates.
+
+  - path: skills/strategy/references/interview.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/references/interview.md
+    rationale: >-
+      The overall rules, each section's opening question, bar and failure patterns, the stress
+      test and the two-round cap, condensed.
+
+  - path: skills/strategy/references/update-run.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/references/update-run.md
+    rationale: >-
+      Meaning is the contract, the ownership test, the never-edited author-approved section, drift
+      as candidates and the targeted revisit. Ownership reads the page's knowledgebase revision
+      history instead of a working-tree file; legacy heading migration is dropped.
+
+  - path: skills/strategy/assets/strategy-template.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-strategy/references/strategy-template.md
+    rationale: >-
+      The sections, their order, the filling rules and the post-write checklist, with angle-
+      bracketed fields. The frontmatter date is dropped because the knowledgebase revision carries
+      it.
+
+  # --- product-pulse ---------------------------------------------------------------
+
+  - path: skills/product-pulse/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/SKILL.md
+    rationale: >-
+      Read-only everywhere, no personal data, no thresholds, single page, the lookback window with
+      its fifteen-minute trailing buffer, and scheduling offered and never automatic, narrowed to a
+      reminder the human keeps, since no schedule may start a run. The repository report folder becomes a concept page in the knowledgebase whose revisions are the
+      timeline; the donor's configuration-file cascade becomes a configuration page read through
+      readContext.
+
+  - path: skills/product-pulse/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/report-template.md
+    rationale: >-
+      Per-metric resolution with the default-source marker, delta discipline, and what surfaces in
+      chat.
+
+  - path: skills/product-pulse/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/SKILL.md
+    rationale: >-
+      The manifest condenses the same boundaries into non-triggers, constraints and hard gates.
+
+  - path: skills/product-pulse/references/run.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/run.md
+    rationale: >-
+      Parallel and serial dispatch, the database-enabled check with its cost skip, the quality
+      sample and its scoring discipline, and the reason for the shape.
+
+  - path: skills/product-pulse/references/run.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/config.md
+    rationale: >-
+      The configuration key schema's shape, without the donor's key prefix, configuration files or
+      provider examples.
+
+  - path: skills/product-pulse/references/setup.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/setup.md
+    rationale: >-
+      Seeding from the strategy, the interview order, the read-write database refusal and the one-
+      time scheduling offer, narrowed to a reminder the human keeps. The configuration is published as a knowledgebase page instead of
+      merged into a local file.
+
+  - path: skills/product-pulse/assets/report-template.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-product-pulse/references/report-template.md
+    rationale: >-
+      The four sections and footer, the filling rules, the variations and the post-write
+      checklist, with angle-bracketed fields and no provider names.

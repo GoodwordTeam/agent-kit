@@ -1,0 +1,21 @@
+From 8c0d2f4b6c8e0a2b4d6f8b0d2a4c6e8a0c2e4b6d Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 14:00:00 +0000
+Subject: [PATCH] Rename customers.name to full_name
+
+---
+ db/migrations/20260926140000_rename_customer_name.sql | 5 +++++
+ 1 file changed, 5 insertions(+)
+ create mode 100644 db/migrations/20260926140000_rename_customer_name.sql
+
+diff --git a/db/migrations/20260926140000_rename_customer_name.sql b/db/migrations/20260926140000_rename_customer_name.sql
+new file mode 100644
+index 0000000..3e4f5a6
+--- /dev/null
++++ b/db/migrations/20260926140000_rename_customer_name.sql
+@@ -0,0 +1,5 @@
++-- up
++ALTER TABLE customers RENAME COLUMN name TO full_name;
++
++-- down
++ALTER TABLE customers RENAME COLUMN full_name TO name;

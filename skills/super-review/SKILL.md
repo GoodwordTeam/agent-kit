@@ -42,7 +42,7 @@ re-enters diagnosis, a bounded patch, new verification and affected delta review
 `delta` mode over the affected behavior, never a second full panel.
 
 Not for failing a change on its size or its test-ratio shape. A roughly-hundred-line target and a
-test pyramid are configurable starting points carried in `references/engineering-principles`, not
+test pyramid are configurable starting points carried in [`engineering-principles`](../../references/engineering-principles/REFERENCE.md), not
 grounds for a finding on their own (ruling `numeric-heuristics-are-guidance`).
 
 Not for reviewing a requirements document, a plan or an ADR. Those have their own persona catalog and
@@ -259,7 +259,7 @@ Review rounds: 3 (gate). `policies/limits.yaml` `review_rounds`, counted across 
 Panel size: no cap (guidance). Composition follows declared risk, so the count is an outcome of
 selection and never a target to hit or to trim to.
 
-Change size and test ratios: not gates (guidance). Carried in `references/engineering-principles`,
+Change size and test ratios: not gates (guidance). Carried in [`engineering-principles`](../../references/engineering-principles/REFERENCE.md),
 set per project, and never grounds for a finding on their own.
 
 Runner budgets: a cap the runner did not supply is not enforced and not guessed

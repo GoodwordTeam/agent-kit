@@ -496,7 +496,7 @@ conflicts:
         The lesson content and the keep/update/consolidate/replace/retire lifecycle survive; the
         destination moves to the configured knowledgebase root.
     binds:
-      skills: [compound, compound-refresh, super-ship, handoff, writing-skills]
+      skills: [compound, compound-refresh, super-ship, handoff, writing-skills, improve-architecture, deprecate, triage, strategy, product-pulse]
       protocols: [phase-operations, consensus-plan-gate, tdd, apply-findings, review-delta, attach-pack]
       roles: [code-review/learnings]
       schemas: [lesson, decision]
@@ -1034,7 +1034,7 @@ conflicts:
       borrowed from kb-write, so it lifts a mode ceiling only where kb-write is available too.
     discharged_in: [inputs, stop-conditions]
     binds:
-      skills: [wayfind]
+      skills: [wayfind, deprecate, triage]
       schemas: [install, project, tracker-binding]
       adapters: [claude-code, codex, runner-contract, tracker]
     scenario: 21
@@ -1046,8 +1046,8 @@ conflicts:
       body changes, the refusal is kb-write's and is already discharged there by
       fail-closed-adapter-lifts-ceiling. Rejected `side-effects`: tracker-write was already
       declared and already keyed by runner-contract §5, which this row cites and does not
-      restate. wayfind is the one skill bound, being the only one that requires tracker-access;
-      its SKILL.md states the chain and cites this row in Inputs. knowledgebase is not bound:
+      restate. wayfind, deprecate and triage are bound, being the skills that require
+      tracker-access; each SKILL.md states the chain and cites this row in Inputs. knowledgebase is not bound:
       the fallback uses its seven operations unchanged, and its contract would read the same had
       this row been decided the other way. Scenario 21 is the neighbouring case again: no step of
       the chain writes a scratch file into the working repository. The binding file is committed

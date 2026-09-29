@@ -1,0 +1,23 @@
+schema_version: "1.1"
+name: interrupted-pulse-publish-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20, needs-fixture]
+execution:
+  prompt: >-
+    /ak:product-pulse Resuming. The 24h report was assembled and sent to the knowledgebase, then the
+    session dropped before the read-back came back. Finish the run.
+  max_turns: 12
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: reads-back-before-publishing
+    type: llm
+    weight: 1
+    criteria: >-
+      The response reads the pulse page back before publishing again, deriving the idempotency key
+      from the run, the operation, the page identity and the artifact hash to decide whether the
+      earlier publish landed.
+  - name: no-duplicate-revision
+    type: llm
+    weight: 1
+    criteria: >-
+      The report is published once. The run does not publish a second revision of the same report,
+      and does not report the run complete without a read-back.

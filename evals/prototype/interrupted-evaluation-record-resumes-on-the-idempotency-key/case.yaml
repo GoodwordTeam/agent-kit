@@ -1,0 +1,23 @@
+schema_version: "1.1"
+name: interrupted-evaluation-record-resumes-on-the-idempotency-key
+tags: [resumability, scenario-20, needs-fixture]
+execution:
+  prompt: >-
+    Your previous prototype run settled whether the order-state reducer handles cancel after a
+    partial refund, and was interrupted after publishArtifact was sent for the evaluation record and
+    before its read-back returned. Finish the run.
+  max_turns: 10
+  allowed_tools: [Read, Glob, Grep, Skill]
+graders:
+  - name: reads-back-before-writing
+    type: llm
+    weight: 3
+    criteria: >-
+      The response recomputes the idempotency key from the run, the operation, the record's
+      identity and its content hash, and reads the record back before sending any write.
+  - name: no-duplicate-evaluation-record
+    type: llm
+    weight: 2
+    criteria: >-
+      Where the evaluation record is already present, the response reports it as published and
+      does not publish a second one. It does not rebuild the prototype or re-run the evaluation.

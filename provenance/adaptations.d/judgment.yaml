@@ -1,0 +1,536 @@
+# Provenance fragment for the "judgment" batch: seven skill bodies with their manifests —
+# ideate, pov, bakeoff, doubt-driven, research, source-driven and prototype.
+#
+# One row per (path, source) pair, keyed `path:` with a single `source:`, which is what
+# loadAdaptationFragments reads (src/validation/provenance.ts). A file adapted from
+# several donor files carries one row per donor file, so every upstream work a file
+# derives from is recorded with a machine-checkable donor@commit:path.
+#
+# Both the body and its manifest carry rows. A skill.yaml is an adapted file in its own
+# right: its triggers, non-triggers, hard gates, limits and tests condense the same donor
+# text the body adapts. A donor eval file is cited against the manifest only, because it
+# shaped the declared tests and nothing in the body. Skill-local reference files carry
+# their own rows.
+#
+# One fragment owns each adapted path: a second fragment claiming any path below is a
+# merge hazard and raises provenance.conflicting-adaptation.
+#
+# Donor ids and commits are those pinned in provenance/upstream.lock.yaml. Every path
+# below is named in research/dossiers/judgment.md and was read at its pin with
+# `git show <pin>:<path>` in the pinned clone before it was written here.
+
+adaptations:
+
+  # --- ideate ----------------------------------------------------------------------
+
+  - path: skills/ideate/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/SKILL.md
+    rationale: >-
+      Ground before ideating, generate many and critique all, and send action to alignment
+      rather than planning. The docs_root artifact root, output-format resolution, HTML
+      rendering and issue-tracker mode are dropped.
+
+  - path: skills/ideate/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/divergent-ideation.md
+    rationale: >-
+      The direct, external and reasoned basis tags, the drop rule for an idea with no basis,
+      and lens diversity as a default spread. The fixed sub-agent fleet and surprise-me mode
+      are dropped.
+
+  - path: skills/ideate/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/post-ideation-workflow.md
+    rationale: >-
+      Fresh-context critique followed by arbitration that states why it overrules, the closed
+      rejection taxonomy carried nearly verbatim, the ambition floor, and the honest survivor
+      count. The automatic file write and next-steps menu are dropped; the deliverable is
+      returned in the session.
+
+  - path: skills/ideate/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/scope-gates.md
+    rationale: >-
+      Subject identification within three questions, never asking about direction,
+      constraints, audience, tone or success criteria, and warn-and-proceed when grounding
+      fails.
+
+  - path: skills/ideate/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/SKILL.md
+    rationale: >-
+      Be honest, not supportive; the five-to-eight bound on considered variations; and the Not
+      Doing list. The docs/ideas save path and the helper script are dropped.
+
+  - path: skills/ideate/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/frameworks.md
+    rationale: >-
+      Carried to references/frameworks.md as ways to work a thin lens, each still bound to the
+      basis rule. Named-company examples are removed.
+
+  - path: skills/ideate/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Ground before ideating, generate many and
+      critique all, and send action to alignment rather than planning. The docs_root artifact
+      root, output-format resolution, HTML rendering and issue-tracker mode are dropped.
+
+  - path: skills/ideate/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/divergent-ideation.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The direct, external and reasoned basis tags,
+      the drop rule for an idea with no basis, and lens diversity as a default spread. The
+      fixed sub-agent fleet and surprise-me mode are dropped.
+
+  - path: skills/ideate/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/post-ideation-workflow.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Fresh-context critique followed by arbitration
+      that states why it overrules, the closed rejection taxonomy carried nearly verbatim, the
+      ambition floor, and the honest survivor count. The automatic file write and next-steps
+      menu are dropped; the deliverable is returned in the session.
+
+  - path: skills/ideate/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-ideate/references/scope-gates.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Subject identification within three questions,
+      never asking about direction, constraints, audience, tone or success criteria, and warn-
+      and-proceed when grounding fails.
+
+  - path: skills/ideate/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Be honest, not supportive; the five-to-eight
+      bound on considered variations; and the Not Doing list. The docs/ideas save path and the
+      helper script are dropped.
+
+  - path: skills/ideate/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/frameworks.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Carried to references/frameworks.md as ways to
+      work a thin lens, each still bound to the basis rule. Named-company examples are
+      removed.
+
+  - path: skills/ideate/references/frameworks.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/idea-refine/frameworks.md
+    rationale: >-
+      SCAMPER, how-might-we, first principles, jobs to be done, constraint-based ideation,
+      pre-mortem and analogous inspiration, each bound to the skill's basis rule. Named-
+      company examples are removed, and a jobs-to-be-done candidate about feeling is marked as
+      needing a human evaluator.
+
+  # --- pov -------------------------------------------------------------------------
+
+  - path: skills/pov/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/SKILL.md
+    rationale: >-
+      The subject-shaped point of view, read-only posture and the phase structure. The donor's
+      artifact root and report machinery are dropped; a durable record goes through
+      recordDecision.
+
+  - path: skills/pov/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/method.md
+    rationale: >-
+      The two-floor gate with its named Hold and Blocked results, the five grades, the skeptic
+      stance and "Either is viable", carried nearly verbatim.
+
+  - path: skills/pov/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/boundaries.md
+    rationale: >-
+      The selection escape hatch, rewritten to route to ideate, bakeoff and doc-review in this
+      catalog.
+
+  - path: skills/pov/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/intake.md
+    rationale: >-
+      The three reversibility tiers, which set investigation depth and nothing else.
+
+  - path: skills/pov/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md
+    rationale: >-
+      Freeze-first, peers inform and never vote, bounded reconciliation, and failure
+      disclosure. Every named participant, route and host-sniffing rule is removed;
+      independence becomes an attestation of true, false or unverified about an independent
+      reviewer context.
+
+  - path: skills/pov/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/followup.md
+    rationale: >-
+      The continuation-authority rule, as the gate that a recommendation is not authorization.
+
+  - path: skills/pov/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The subject-shaped point of view, read-only
+      posture and the phase structure. The donor's artifact root and report machinery are
+      dropped; a durable record goes through recordDecision.
+
+  - path: skills/pov/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/method.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The two-floor gate with its named Hold and
+      Blocked results, the five grades, the skeptic stance and "Either is viable", carried
+      nearly verbatim.
+
+  - path: skills/pov/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/boundaries.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The selection escape hatch, rewritten to route
+      to ideate, bakeoff and doc-review in this catalog.
+
+  - path: skills/pov/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/intake.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The three reversibility tiers, which set
+      investigation depth and nothing else.
+
+  - path: skills/pov/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Freeze-first, peers inform and never vote,
+      bounded reconciliation, and failure disclosure. Every named participant, route and host-
+      sniffing rule is removed; independence becomes an attestation of true, false or
+      unverified about an independent reviewer context.
+
+  - path: skills/pov/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/followup.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The continuation-authority rule, as the gate
+      that a recommendation is not authorization.
+
+  - path: skills/pov/references/independent-peers.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/cross-model-panel.md
+    rationale: >-
+      What counts as a request, the independent round with the frozen position withheld,
+      bounded reconciliation with its three stop states, disclosure of dropouts, and skeptic
+      mode. Every named participant, route, receipt field and host-attestation rule is
+      removed; independence is an attestation of true, false or unverified about an
+      independent reviewer context the runner supplies.
+
+  # --- bakeoff ---------------------------------------------------------------------
+
+  - path: skills/bakeoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/SKILL.md
+    rationale: >-
+      Definition of done, criteria fixed first, the two-usable-candidate floor, compare and
+      select, and the selected/unresolved/incomplete return contract. The donor's non-
+      executable-only rule widens to runnable experiments in isolated worktrees, as the
+      catalog summary requires.
+
+  - path: skills/bakeoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/candidates.md
+    rationale: >-
+      Fresh contexts with no sibling visibility and neutral author labels, renamed Candidate A
+      and B. The model-family dispatch routes and the scratch-directory script are dropped;
+      the runner supplies workspaces.
+
+  - path: skills/bakeoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/judging.md
+    rationale: >-
+      The rule that a completed bake-off has an independent judgment, run in a fresh context
+      on frozen candidates without the coordinator's ranking. The donor's judge ran the pov
+      skill; here the judge is internal, because a human-started bakeoff calling pov would be
+      a user-to-user call. Mechanics move to references/judging.md.
+
+  - path: skills/bakeoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/verification.md
+    rationale: >-
+      The counterexample check on the final artifact and the decision-critical premise test.
+
+  - path: skills/bakeoff/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/output.md
+    rationale: >-
+      Durable output on request only. The donor's docs_root resolution is replaced by
+      publishArtifact under a run-artifact placement.
+
+  - path: skills/bakeoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Definition of done, criteria fixed first, the
+      two-usable-candidate floor, compare and select, and the selected/unresolved/incomplete
+      return contract. The donor's non-executable-only rule widens to runnable experiments in
+      isolated worktrees, as the catalog summary requires.
+
+  - path: skills/bakeoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/candidates.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Fresh contexts with no sibling visibility and
+      neutral author labels, renamed Candidate A and B. The model-family dispatch routes and
+      the scratch-directory script are dropped; the runner supplies workspaces.
+
+  - path: skills/bakeoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/judging.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Freeze-before-judging and a fresh read-only
+      judge given the brief, criteria and neutral artifacts without the coordinator's ranking.
+      The donor's judge ran the pov skill; here it is internal, because a human-started
+      bakeoff calling pov would be a user-to-user call. Route discovery, model-family
+      preference and the oracle panel are dropped; independence is attested, not assumed.
+
+  - path: skills/bakeoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/method.md
+    rationale: >-
+      The manifest's judge-return output and hard gates condense the internal judge's grade
+      vocabulary and evidence floors, carried in references/judging.md from this file.
+
+  - path: skills/bakeoff/references/judging.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/judging.md
+    rationale: >-
+      Dispatch after candidates are complete; the brief, criteria, neutral candidate labels and
+      source pointers in, the coordinator's ranking and other judges' conclusions out; a
+      read-only judge with no follow-up menu; floors applied to shared premises; a blocked
+      return consumed as an evidence need; reconciliation by source evidence; the judge's
+      recommendation is not permission. The donor's judge ran the pov skill; here it is internal
+      to bakeoff, because a human-started bakeoff calling pov would be a user-to-user call.
+      Model-access route discovery, model-family preference and the oracle panel are dropped;
+      independence is an attestation of true, false or unverified.
+
+  - path: skills/bakeoff/references/judging.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-pov/references/method.md
+    rationale: >-
+      The skeptic stance, the two independent floors with their numbered what-to-inspect lists
+      and named Blocked results, the call-is-not-behavior rule, the grade vocabulary (applied
+      per candidate here; Not-our-problem has no candidate-set meaning and is dropped) and
+      "Either is viable" without a scorecard. Warm-mode, delivery and follow-up rules are
+      dropped.
+
+  - path: skills/bakeoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/verification.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The counterexample check on the final artifact
+      and the decision-critical premise test.
+
+  - path: skills/bakeoff/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-bakeoff/references/output.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Durable output on request only. The donor's
+      docs_root resolution is replaced by publishArtifact under a run-artifact placement.
+
+  # --- doubt-driven ----------------------------------------------------------------
+
+  - path: skills/doubt-driven/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md
+    rationale: >-
+      The non-triviality test, the claim, extract, doubt, reconcile and stop cycle, the
+      adversarial prompt, the artifact-and-contract-only rule, the classification precedence,
+      the three-cycle bound, the doubt-theater signal and the rationalizations. The cross-
+      model escalation becomes an offered second independent reviewer context, with every
+      named product and shell invocation removed. The in-place fix becomes a finding returned
+      to the artifact's owner, and a durable result goes through recordDecision.
+
+  - path: skills/doubt-driven/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The non-triviality test, the claim, extract,
+      doubt, reconcile and stop cycle, the adversarial prompt, the artifact-and-contract-only
+      rule, the classification precedence, the three-cycle bound, the doubt-theater signal and
+      the rationalizations. The cross-model escalation becomes an offered second independent
+      reviewer context, with every named product and shell invocation removed. The in-place
+      fix becomes a finding returned to the artifact's owner, and a durable result goes
+      through recordDecision.
+
+  - path: skills/doubt-driven/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/doubt-driven-development.json
+    rationale: >-
+      Eval shape only: the irreversible-migration positive and the mechanical non-triggers.
+
+  # --- research --------------------------------------------------------------------
+
+  - path: skills/research/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/research/SKILL.md
+    rationale: >-
+      The primary-sources-only rule and following every claim back to its owner, imported. The
+      donor saves the notes file in the repository; here the note is returned to the caller as
+      a run artifact and nothing is written to a repository path. Background running is not
+      required.
+
+  - path: skills/research/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/research/SKILL.md
+    rationale: >-
+      Question first, the scale ladder, the cite / verified-versus-inferred / report
+      contradictions / do-not-implement rules, and the four-part output. The donor's repo-
+      first step becomes the boundary with super-scout: repo-local parts are routed, not
+      searched here.
+
+  - path: skills/research/SKILL.md
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/external-context/SKILL.md
+    rationale: >-
+      Decomposing a broad question into 2 to 5 independent facets. The donor's named agent
+      type, tool-call shape and parallel-agent cap are dropped.
+
+  - path: skills/research/SKILL.md
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/best-practice-research/SKILL.md
+    rationale: >-
+      The terminal read-only contract, the source-quality rules (official and upstream first,
+      URLs, version and date context, third-party labelled supplemental, stale or conflicting
+      evidence flagged) and the repo-local-context field of the output. Named handoff targets
+      are rewritten to this catalog's ids.
+
+  - path: skills/research/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/research/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The primary-sources-only rule and following
+      every claim back to its owner, imported. The donor saves the notes file in the
+      repository; here the note is returned to the caller as a run artifact and nothing is
+      written to a repository path. Background running is not required.
+
+  - path: skills/research/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/research/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Question first, the scale ladder, the cite /
+      verified-versus-inferred / report contradictions / do-not-implement rules, and the four-
+      part output. The donor's repo-first step becomes the boundary with super-scout: repo-
+      local parts are routed, not searched here.
+
+  - path: skills/research/skill.yaml
+    source: omc@5281b19e0d64f8e6dc6767f2130299a88af2dc71:skills/external-context/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Decomposing a broad question into 2 to 5
+      independent facets. The donor's named agent type, tool-call shape and parallel-agent cap
+      are dropped.
+
+  - path: skills/research/skill.yaml
+    source: omx@cb955b0d5becbef76d2c1f0096b6e1f238e1e7f7:skills/best-practice-research/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The terminal read-only contract, the source-
+      quality rules (official and upstream first, URLs, version and date context, third-party
+      labelled supplemental, stale or conflicting evidence flagged) and the repo-local-context
+      field of the output. Named handoff targets are rewritten to this catalog's ids.
+
+  # --- source-driven ---------------------------------------------------------------
+
+  - path: skills/source-driven/SKILL.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/source-driven-development/SKILL.md
+    rationale: >-
+      DETECT, FETCH, IMPLEMENT, CITE; version detection first and asking when it is ambiguous;
+      the source hierarchy with recalled knowledge named non-authoritative; retrieval safety;
+      conflict surfacing; citation rules and the UNVERIFIED label; the rationalizations. The
+      cross-reference to a security skill this catalog lacks is folded inline, the explicit
+      speed carve-out is narrowed so implicit time pressure does not qualify, and the worked
+      formats move to references/citation-formats.md.
+
+  - path: skills/source-driven/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/source-driven-development/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. DETECT, FETCH, IMPLEMENT, CITE; version
+      detection first and asking when it is ambiguous; the source hierarchy with recalled
+      knowledge named non-authoritative; retrieval safety; conflict surfacing; citation rules
+      and the UNVERIFIED label; the rationalizations. The cross-reference to a security skill
+      this catalog lacks is folded inline, the explicit speed carve-out is narrowed so
+      implicit time pressure does not qualify, and the worked formats move to
+      references/citation-formats.md.
+
+  - path: skills/source-driven/skill.yaml
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:evals/cases/source-driven-development.json
+    rationale: >-
+      The positive framing (implement with the recommended approach, citing sources, flagging
+      anything unverified) informs the positive case. The donor's negatives name skills this
+      catalog does not have and are replaced.
+
+  - path: skills/source-driven/references/citation-formats.md
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/source-driven-development/SKILL.md
+    rationale: >-
+      The donor's worked formats moved behind references: dependency-file table (extended with
+      lockfiles), STACK DETECTED block, source hierarchy table, precise-fetch examples,
+      extract and ignore lists, CONFLICT DETECTED block, code and prose citation forms, and
+      the UNVERIFIED text.
+
+  # --- prototype -------------------------------------------------------------------
+
+  - path: skills/prototype/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/SKILL.md
+    rationale: >-
+      The logic and UI branches, defaulting by surrounding code with the assumption stated,
+      and the six rules. Capturing the answer goes to a knowledgebase evaluation record instead
+      of a repository file or a branch.
+
+  - path: skills/prototype/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/LOGIC.md
+    rationale: >-
+      The logic-branch build moved to references/logic.md: the pure portable module, the
+      single self-contained page in domain language, and the anti-patterns.
+
+  - path: skills/prototype/SKILL.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/UI.md
+    rationale: >-
+      The UI-branch build moved to references/ui.md: three variants by default and five at
+      most, structurally different, a switcher gated out of production, and rewriting on fold-
+      in.
+
+  - path: skills/prototype/SKILL.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-prototype/SKILL.md
+    rationale: >-
+      Do not fake the dimension being tested, the person's own perception as the evaluator,
+      the stop when no person is present, the stop and hand-back when the question moved, and
+      the decision capsule, which becomes an evaluation record published through
+      publishArtifact instead of a repository file.
+
+  - path: skills/prototype/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The logic and UI branches, defaulting by
+      surrounding code with the assumption stated, and the six rules. Capturing the answer
+      goes to a knowledgebase evaluation record instead of a repository file or a branch.
+
+  - path: skills/prototype/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/LOGIC.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The logic-branch build moved to
+      references/logic.md: the pure portable module, the single self-contained page in domain
+      language, and the anti-patterns.
+
+  - path: skills/prototype/skill.yaml
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/UI.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. The UI-branch build moved to references/ui.md:
+      three variants by default and five at most, structurally different, a switcher gated out
+      of production, and rewriting on fold-in.
+
+  - path: skills/prototype/skill.yaml
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-prototype/SKILL.md
+    rationale: >-
+      The manifest's triggers, hard gates, limits and declared tests condense the same
+      adaptation the body makes of this file. Do not fake the dimension being tested, the
+      person's own perception as the evaluator, the stop when no person is present, the stop
+      and hand-back when the question moved, and the decision capsule, which becomes an
+      evaluation record published through publishArtifact instead of a repository file.
+
+  - path: skills/prototype/references/logic.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/LOGIC.md
+    rationale: >-
+      Changed: the pure portable module, the single self-contained page in domain language,
+      and the anti-patterns are kept. Driving the module directly is the automated evaluator
+      for a technical question; the module is evidence the owning lane rewrites rather than
+      lifts in unchanged; the throwaway-branch capture becomes the workspace plus the evaluation
+      record.
+
+  - path: skills/prototype/references/ui.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/prototype/UI.md
+    rationale: >-
+      Changed: existing-page variants preferred over a throwaway route, three by default and
+      five at most, structurally different, the floating switcher gated out of production, and
+      rewriting the winner on fold-in are kept. Variants inside an existing page need an
+      isolated worktree, never the working tree; losers and the switcher stay in the workspace
+      rather than on a throwaway branch.

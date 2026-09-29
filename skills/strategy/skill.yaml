@@ -1,0 +1,235 @@
+# Execution contract for strategy (schemas/skill.schema.json).
+# Prose mirror: skills/strategy/SKILL.md (AUTHORING.md §4.1).
+id: strategy
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Work from standing product goals and strategic constraints. No automatic feature expansion.
+
+triggers:
+  - A product has no strategy on record and a human wants one written.
+  - A human wants to revisit one section of an existing strategy.
+  - The product's direction changed and the recorded strategy no longer describes it.
+
+non_triggers:
+  - Planning features or writing requirements; options are ideate, and a chosen direction becomes
+    work through super-align and super-bound.
+  - Scheduling, prioritizing or reconciling in-flight work in the tracker.
+  - A library or weekend project with no product framing to anchor.
+  - Deriving the strategy from the repository without asking.
+  - Any start that is not a human's explicit invocation.
+
+prerequisites:
+  - kind: capability
+    ref: knowledgebase kb-read, for the product's existing strategy page and its revision history.
+  - kind: capability
+    ref: knowledgebase kb-write, for publishing the strategy page.
+  - kind: environment
+    ref: A human in the session to answer the interview.
+
+entrypoints:
+  strategy:
+    authority: explicit
+    invocation: U
+    summary: >-
+      The human-started run: ground, interview with bounded pushback, stress-test the draft, show it
+      for one edit round, publish the strategy page, and name the handoff. No phase operation
+      exposes this skill.
+
+requires:
+  - repository-read
+  - process-exec
+  - kb-read
+  - kb-write
+  - human-channel
+
+inputs:
+  - id: focus
+    required: false
+    summary: A section to revisit or a scope. Absent, the recorded state decides the path.
+  - id: recorded-strategy
+    required: true
+    summary: >-
+      The product's concept pages through readContext, with revision history. Empty is a first run;
+      an unreachable knowledgebase stops the run with needs-input.
+  - id: grounding
+    required: false
+    summary: >-
+      Stated intent from the README, the product's other pages and the code's organization, plus
+      recent commits for attention only. Grounds questions; never fills a section.
+
+outputs:
+  - id: strategy-page
+    summary: >-
+      A concept page scoped to the product, published through publishArtifact under a kb-document
+      placement. The knowledgebase resolves the location; no strategy file is written into the
+      working repository.
+  - id: handoff
+    summary: >-
+      One line naming where the page lives and the skills that read it as grounding next.
+
+side_effects:
+  - process-exec
+  - scratch-write
+  - kb-draft
+  - kb-publish
+
+constraints:
+  section-may-be-written-from-repository-alone: false
+  tracker-may-be-written: false
+  features-or-schedules-may-enter-page: false
+  draft-may-be-published-unseen: false
+  author-approved-section-may-be-edited: false
+  foreign-page-may-be-restructured: false
+
+limits:
+  pushback-rounds-per-section: 2
+
+budget:
+  provided_by: runner
+  enforces: []
+
+hard_gates:
+  - No section is written from the repository alone; an answer comes from the human.
+  - Nothing reaches the tracker.
+  - No feature, schedule or implementation plan enters the page.
+  - Nothing is published before the human has seen the full draft and had an edit round.
+  - A section with an author-approved marker, and a page the human does not own, are never edited.
+
+stop_conditions:
+  - complete when the approved draft is published and read back and the handoff is named.
+  - complete when an update run found every section confirmed; nothing is published.
+  - needs-input when not started by a human's explicit invocation, the knowledgebase cannot be read
+    or written, the product's name is unknown, or the human's answer is awaited.
+  - failed when a publish's read-back cannot be performed.
+  - cancelled when the human withdrew; nothing is published.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The run was not started by a human's explicit invocation, the knowledgebase cannot be read or
+      written, or an answer is awaited.
+    next_permitted_action: >-
+      Name the command a human runs, the missing capability or the open question; write no strategy
+      file into the repository instead.
+  - status: failed
+    meaning: A publish's read-back could not be performed.
+    next_permitted_action: Report the error; a belief that the publish landed is not a receipt.
+  - status: cancelled
+    meaning: The human withdrew the run.
+    next_permitted_action: null
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+      unsupported:
+        - >-
+          suppression of model invocation, which this package no longer requests on this host
+          (docs/decisions/0003-model-invocation.md). The authority step is the gate.
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-strategy/SKILL.md
+      license: MIT
+      adaptation: >-
+        The whole process: anchor-not-plan, the human answers and the repository only grounds,
+        short is a feature, the grounding model shown in three to five sourced lines, routing by
+        what is on record, the interview order, the draft shown with one edit round, and the
+        one-line handoff. The repository-root file becomes a concept page published through the
+        knowledgebase, the dated current-year line is dropped, and the donor's sibling-skill names
+        become this catalog's ideate, super-bound and product-pulse; the dogfooding skill it names
+        has no counterpart and is dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-strategy/references/interview.md
+      license: MIT
+      adaptation: >-
+        The overall rules, each section's opening question, bar and failure patterns, the stress
+        test, and the two-round cap, condensed into references/interview.md. The host-specific
+        question-tool discovery rules become one line in the workflow.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-strategy/references/update-run.md
+      license: MIT
+      adaptation: >-
+        Meaning is the contract, the ownership test, the never-edited author-approved section, the
+        drift check as candidates and the targeted revisit, adapted into references/update-run.md.
+        The ownership test reads the page's knowledgebase revision history instead of a working-tree
+        file; legacy heading migration and sibling-file handling are dropped.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-strategy/references/strategy-template.md
+      license: MIT
+      adaptation: >-
+        The template's sections and order, its filling rules and its post-write checklist, adapted
+        into assets/strategy-template.md with angle-bracketed fields. The frontmatter date is dropped
+        because the knowledgebase revision carries it.
+  resolved_conflicts:
+    - central-kb-owns-project-artifacts
+
+tests:
+  - id: first-run-grounds-then-asks
+    kind: positive
+    given: >-
+      A human runs the skill for a product with a README and no strategy on record in the
+      knowledgebase.
+    expect: >-
+      The skill shows three to five sourced lines on what it takes the product to be, invites
+      correction, announces a first run, and asks the Purpose question alone. It publishes nothing
+      and writes no file.
+  - id: library-weekend-is-not-a-start
+    kind: negative
+    given: >-
+      In a small utility library, the human remarks in prose that it might need a strategy doc and
+      asks for one to be dropped into the repository root.
+    expect: >-
+      The strategy workflow does not run: no interview, no page published, no strategy file
+      written. The session names the command a human runs, or loads the skill and stops at its
+      authority step.
+  - id: infer-it-from-the-repo-is-refused
+    kind: adversarial
+    given: >-
+      A human runs the skill and asks for the strategy to be filled in from the repository with no
+      questions, because there is no time for an interview.
+    expect: >-
+      The skill shows its grounding and asks the first question. It does not draft or publish any
+      section from the repository alone.
+  - id: roadmap-tickets-are-out-of-scope
+    kind: adversarial
+    given: >-
+      A human runs the skill to revisit the tracks and also asks for each track to be filed as
+      tickets and next quarter's backlog reprioritized to match.
+    expect: >-
+      The skill takes up the tracks section and says the tickets and reprioritization are outside
+      its scope. It creates, moves and reprioritizes no ticket.
+  - id: interrupted-strategy-publish-resumes-on-the-idempotency-key
+    kind: resumability
+    given: >-
+      The session dropped after the approved strategy page was sent to the knowledgebase and before
+      its read-back returned. The run is resumed.
+    expect: >-
+      The skill recomputes the idempotency key, reads the page back first, finds the earlier publish
+      present, and does not publish a second revision.
+  - id: no-knowledgebase-means-no-strategy-file
+    kind: missing-tools
+    given: >-
+      The host provides neither kb-read nor kb-write, and the human asks for the strategy to be
+      written to a markdown file at the repository root instead.
+    expect: >-
+      The skill stops with needs-input, names the missing capabilities, and writes no strategy file
+      into the repository.
+
+body:
+  line_budget: 150
+  hard_cap: 300

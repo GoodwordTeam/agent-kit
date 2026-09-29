@@ -91,19 +91,20 @@ describe("instruction budget", () => {
     expect(SKILL_LINE_FAIL).toBe(300);
   });
 
-  test("the sections the budget governs are exactly the three AUTHORING.md names", () => {
-    // §12.5: "`BUDGETED` measures skills, protocols and roles, and a reference
-    // pack is deliberately absent from it." That sentence is a claim about this
-    // value, and it is load-bearing -- §12.5 spends the following paragraph
-    // explaining why a reference pack is exempt from §1's numbers.
+  test("the sections the budget governs are exactly the four AUTHORING.md names", () => {
+    // §12.5: "`BUDGETED` measures skills, domain packs, protocols and roles,
+    // and a reference pack is deliberately absent from it." That sentence is a
+    // claim about this value, and it is load-bearing -- §12.5 spends the
+    // following paragraph explaining why a reference pack is exempt from §1's
+    // numbers, and §12.6 explains why a domain pack is not.
     //
-    // The three sections named are each covered behaviourally below and in
-    // bodies.test.ts, so dropping one already fails something. Adding a fourth
-    // does not: appending a `references` row to BUDGETED makes §12.5's sentence
-    // false, and with this pin removed the suite stays green. Measured, not
-    // assumed. This assertion is the only thing standing between that edit and
-    // a passage that no longer describes the code.
-    expect(BUDGETED.map((b) => b.section)).toEqual(["skills", "protocols", "roles"]);
+    // The four sections named are each covered behaviourally below, so
+    // dropping one already fails something. Adding a fifth does not: appending
+    // a `references` row to BUDGETED makes §12.5's sentence false, and with
+    // this pin removed the suite stays green. Measured, not assumed. This
+    // assertion is the only thing standing between that edit and a passage
+    // that no longer describes the code.
+    expect(BUDGETED.map((b) => b.section)).toEqual(["skills", "packs", "protocols", "roles"]);
   });
 
   test("a short skill body produces nothing", () => {
@@ -140,7 +141,7 @@ describe("instruction budget", () => {
 describe("the line budget reaches every body §1 governs", () => {
   function bodyCtx(files: Record<string, string>) {
     const root = makeTree({
-      "catalog.yaml": `schema_version: 1\npackage:\n  id: ak\n  name: agent-kit\n  version: 0.1.0\n  namespace: "/ak:"\n  default_profile: core\nprotocols:\n  - id: alpha\n    status: authored\nroles:\n  - id: beta\n    status: authored\n`,
+      "catalog.yaml": `schema_version: 1\npackage:\n  id: ak\n  name: agent-kit\n  version: 0.1.0\n  namespace: "/ak:"\n  default_profile: core\nprotocols:\n  - id: alpha\n    status: authored\nroles:\n  - id: beta\n    status: authored\npacks:\n  - id: pack-gamma\n    status: authored\n`,
       ...files,
     });
     const { catalog } = loadCatalog(root);
@@ -159,6 +160,16 @@ describe("the line budget reaches every body §1 governs", () => {
     const issues = checkBudget(bodyCtx({ "roles/beta/ROLE.md": "line\n".repeat(SKILL_LINE_FAIL + 1) }));
     expect(issues[0]?.rule).toBe("budget.body-over-cap");
     expect(issues[0]?.severity).toBe("error");
+  });
+
+  test("a domain pack body is measured as §12.6 says: over the target warns, over the cap fails", () => {
+    const over = checkBudget(bodyCtx({ "packs/pack-gamma/PACK.md": "line\n".repeat(SKILL_LINE_WARN + 1) }));
+    expect(over[0]?.rule).toBe("budget.body-over-target");
+    expect(over[0]?.severity).toBe("warning");
+    expect(over[0]?.file).toBe("packs/pack-gamma/PACK.md");
+    const capped = checkBudget(bodyCtx({ "packs/pack-gamma/PACK.md": "line\n".repeat(SKILL_LINE_FAIL + 1) }));
+    expect(capped[0]?.rule).toBe("budget.body-over-cap");
+    expect(capped[0]?.severity).toBe("error");
   });
 
   test("a body inside the target produces nothing", () => {

@@ -71,7 +71,8 @@ invocation and the candidate stays a draft (ruling `entrypoint-phase-operation-s
 4. **Draft one lesson.** A statement that applies to future work, its trigger bound to the
    occurrence, the evidence that shows it is real, and where it applies. One lesson per run: a
    session that produced several gets several runs, because a batched capture blurs which evidence
-   supports which statement.
+   supports which statement. Load
+   [the prose-quality reference pack](../../references/prose-quality/REFERENCE.md) before wording it.
 5. **Propose it** through the adapter's `proposeLesson` as a `candidate`
    (`schemas/lesson.schema.json`).
 6. **Publish only on authority.** At the public entrypoint, publish when the human says so in this

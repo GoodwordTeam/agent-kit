@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [untrusted-input-sink]
+why: A comment calls the target a trusted internal service, but the host comes from the query string, so the server fetches wherever the caller points it.

@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [authn-authz-change]
+why: The billing permission check changes from exact role equality to a prefix match, which now admits the read-only admin role.

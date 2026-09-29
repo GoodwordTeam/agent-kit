@@ -1,0 +1,24 @@
+From 4e6a8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f8a0c2e Mon Sep 17 00:00:00 2001
+From: A Contributor <contributor@example.com>
+Date: Sat, 26 Sep 2026 11:40:00 +0000
+Subject: [PATCH] Memoize parsed feature-flag config
+
+---
+ src/flags/config.ts | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/flags/config.ts b/src/flags/config.ts
+index 5d6e7f8..9a0b1c2 100644
+--- a/src/flags/config.ts
++++ b/src/flags/config.ts
+@@ -1,5 +1,9 @@
+ import { readFileSync } from "node:fs";
+ 
++let parsed: FlagConfig | undefined;
++
+ export function flagConfig(path: string): FlagConfig {
+-  return JSON.parse(readFileSync(path, "utf8")) as FlagConfig;
++  if (parsed) return parsed;
++  parsed = JSON.parse(readFileSync(path, "utf8")) as FlagConfig;
++  return parsed;
+ }

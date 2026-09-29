@@ -1,0 +1,3 @@
+attaches: true
+matched_rules: [untrusted-input-sink]
+why: The server fetches a URL whose host a customer entered earlier, and whether a guard elsewhere covers this path is not evident from the change, so the possible server-side request forgery attaches rather than drops.

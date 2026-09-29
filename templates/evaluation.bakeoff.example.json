@@ -1,0 +1,130 @@
+{
+  "schema": "evaluation",
+  "schema_version": 1,
+  "id": "example-evaluation-1",
+  "project": {
+    "id": "example-project",
+    "repo": "example-org/example-service"
+  },
+  "run_id": "example-run-1",
+  "created_by": {
+    "role": "orchestrator",
+    "skill": "bakeoff"
+  },
+  "inputs": [],
+  "source_revision": {
+    "repo": "example-org/example-service",
+    "revision": "1111111111111111111111111111111111111111"
+  },
+  "created_at": "2026-09-19T09:00:00Z",
+  "status": "selected",
+  "kind": "bakeoff",
+  "brief": "Choose how the service parses its configuration file so that unknown keys are reported rather than dropped.",
+  "criteria": [
+    {
+      "text": "Unknown keys are reported with their line.",
+      "hard_constraint": true
+    },
+    {
+      "text": "No new runtime dependency.",
+      "hard_constraint": true
+    },
+    {
+      "text": "Error messages a new contributor can act on."
+    }
+  ],
+  "candidates": [
+    {
+      "label": "Candidate A",
+      "usable": true,
+      "artifact": "worktree bakeoff-a, src/config/parse.ts"
+    },
+    {
+      "label": "Candidate B",
+      "usable": true,
+      "artifact": "worktree bakeoff-b, src/config/parse.ts"
+    },
+    {
+      "label": "Candidate C",
+      "usable": false,
+      "dropout": "Returned no runnable artifact within the budget."
+    }
+  ],
+  "comparison": "A reports unknown keys with their line using the existing parser's positions; B reports them without lines, violating the first hard constraint.",
+  "selected": {
+    "candidate": "Candidate A",
+    "artifact": "worktree bakeoff-a, src/config/parse.ts"
+  },
+  "decisive_reasons": [
+    "Only A meets both hard constraints."
+  ],
+  "contributions": [
+    {
+      "what": "B's wording for the unknown-key message.",
+      "from": "Candidate B"
+    }
+  ],
+  "rejections": [
+    {
+      "what": "Candidate B",
+      "reason": "Violates the line-reporting hard constraint."
+    }
+  ],
+  "premises": [
+    {
+      "premise": "The existing parser exposes key positions.",
+      "evidence": [
+        {
+          "ref": "src/config/yaml.ts:18",
+          "kind": "code"
+        }
+      ]
+    }
+  ],
+  "counterexample": {
+    "case": "A key nested under a list item.",
+    "check": "Parsed a fixture with an unknown key inside a list entry.",
+    "result": "Reported with its line; the choice holds."
+  },
+  "verification": [
+    {
+      "ref": "example-verification-2",
+      "kind": "receipt",
+      "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    }
+  ],
+  "evidence_needed": [],
+  "budget_used": {
+    "candidates": 3
+  },
+  "judge": {
+    "grades": [
+      {
+        "candidate": "Candidate A",
+        "grade": "adopt"
+      },
+      {
+        "candidate": "Candidate B",
+        "grade": "reject",
+        "reason": "Hard-constraint violation."
+      }
+    ],
+    "position": {
+      "take": "Candidate A",
+      "why": "It meets every hard constraint on the project's own parser.",
+      "trade_offs": [
+        "Slightly more code than B."
+      ],
+      "conditions": [
+        "A parser swap would reopen the choice."
+      ]
+    },
+    "evidence": {
+      "verified": [
+        "The parser exposes key positions (src/config/yaml.ts:18)."
+      ],
+      "assumptions": []
+    },
+    "independence": true
+  }
+}

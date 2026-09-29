@@ -1,0 +1,186 @@
+id: pack-api
+version: 0.1.0
+summary: >-
+  Constraints on changes to an externally consumed interface: additive before breaking, an
+  authorized contract change for any shape change to an existing field, one live version, and
+  idempotent handling of retried state-changing endpoints.
+project_scoped: false
+starts_phase: false
+activation:
+  classifier_optional: true
+  rules:
+    - id: public-boundary-shape
+      artifact_kinds: [public-interface, serializer, event-schema, api-spec]
+      semantics:
+        - a route, request or response definition is added, removed or changes shape
+        - an existing public response field changes type, meaning or requiredness
+        - a serializer on a response path changes what a consumer receives
+        - a published event schema changes
+      evidence_required:
+        - the changed definition itself
+        - a route table, published spec, response-path serializer or out-of-process event publication that makes it externally consumed
+    - id: public-signature-with-callers
+      artifact_kinds: [public-interface, package-export]
+      semantics:
+        - an exported function or type signature changes and something outside the module calls it
+        - a new or changed export sits at a package's public entry point and its callers cannot be seen
+      evidence_required:
+        - the changed exported signature
+        - at least one caller outside the changed module or package, or the absence of any way to see callers
+    - id: state-changing-endpoint-retry
+      artifact_kinds: [public-interface, api-spec]
+      semantics:
+        - a new endpoint or handler creates, charges, sends or otherwise changes state
+        - the retry or duplicate-request behavior of a state-changing handler changes
+      evidence_required:
+        - the handler and the side effect it performs
+    - id: api-version-change
+      artifact_kinds: [api-spec, public-interface, config]
+      semantics:
+        - an API version prefix, version header, deprecation notice or supported-version list changes
+      evidence_required:
+        - the changed version declaration
+  examples:
+    - artifact: A response serializer changes the `total` field from a number to a string.
+      attaches: true
+      rule: public-boundary-shape
+      why: An existing public response field changes type.
+    - artifact: A new POST endpoint that charges a card, with no idempotency key handling.
+      attaches: true
+      rule: state-changing-endpoint-retry
+      why: A retried state-changing endpoint with no idempotency handling is this pack's ground.
+    - artifact: A new exported function whose callers the selector cannot see.
+      attaches: true
+      rule: public-signature-with-callers
+      why: Whether the boundary is consumed is ambiguous, and API facts are never dropped on ambiguity.
+    - artifact: A private helper inside one service module is renamed and its only caller updated.
+      attaches: false
+      why: No boundary a consumer can observe changes.
+    - artifact: A repository query is rewritten to use a join, with the same returned shape.
+      attaches: false
+      why: Query-only change with no change to what any consumer receives.
+constraints:
+  - id: additive-before-breaking
+    kind: must
+    requirement: >-
+      A change to an existing public boundary is additive: new optional fields, new endpoints, or
+      new enum values consumers were told to tolerate. Most permissive autofix_class gated_auto.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+  - id: shape-change-authorized
+    kind: authorization-required
+    authorization: public-contract-change
+    requirement: >-
+      Changing the type, meaning, requiredness or presence of an existing field, status code or
+      error shape needs an approved charter entry naming the change. The pack does not supply that
+      authorization. Most permissive autofix_class manual.
+  - id: one-version
+    kind: must-not
+    requirement: >-
+      The change does not fork a second live version of the same interface when extending the
+      existing one would do. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+  - id: contract-before-implementation
+    kind: evidence-required
+    requirement: >-
+      The changed contract is stated where consumers read it and matches what the handler returns,
+      including error responses. Most permissive autofix_class gated_auto.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+  - id: contract-tested
+    kind: evidence-required
+    requirement: >-
+      A new or changed boundary carries a contract test pinning the shape consumers receive, error
+      responses included (arch section 3). A passing contract test does not clear an undocumented
+      observable change, which still needs shape-change-authorized. Most permissive autofix_class
+      advisory.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+  - id: validate-at-boundary
+    kind: must
+    requirement: >-
+      Input is validated where it crosses the boundary, and error responses keep one consistent
+      shape. Most permissive autofix_class gated_auto.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+  - id: idempotency-key-from-intent
+    kind: must
+    requirement: >-
+      A retryable state-changing endpoint takes a key derived from the intent, supplied by the
+      client or initiating event and never by the retrying layer, claimed atomically through a
+      unique constraint. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+  - id: idempotency-outcomes-handled
+    kind: evidence-required
+    requirement: >-
+      The handler shows a loud failure for a reused key with a different payload, a deliberate
+      in-flight duplicate strategy, intent recorded before the outbound call, and key retention
+      that outlives the longest retry path. Most permissive autofix_class manual.
+    source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/api-and-interface-design/SKILL.md
+reviewer_guidance:
+  - lane: code-review/api-contract
+    required_when_attached: true
+    guidance: >-
+      Check every constraint against the diff and the consumers you can find. Report every
+      observable change to an existing boundary, documented or not.
+  - lane: code-review/correctness
+    guidance: >-
+      Check the handler behaves as the stated contract says on error paths and retries, and that
+      idempotency claims hold under two concurrent requests.
+kb_rules:
+  - "The project's API versioning and deprecation policy, read through readContext; never assumed here."
+  - "The project's naming and error-shape conventions for public interfaces, read through readContext."
+  - "Retention and replay windows that bound idempotency key lifetime, read through readContext as project facts."
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: addy
+      commit: c004a74784a08295d52749b04cda634125b9a581
+      path: skills/api-and-interface-design/SKILL.md
+      license: MIT
+      adaptation: >-
+        Hyrum's Law, the One-Version Rule, contract-first and boundary validation became checkable
+        constraints, and the tests-are-not-enough caveat became the limit on contract-tested; the
+        idempotency section moved to references/idempotency.md; the two-column
+        rationalization table gained a third column.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: skills/ce-code-review/references/persona-catalog.md
+      license: MIT
+      adaptation: >-
+        The api-contract persona's selection condition, including the insufficiency of an exported
+        symbol inside one module, became the activation rules.
+    - donor: compound-engineering
+      commit: 05c42da94fd318fa081f29d17bf947762aa477b1
+      path: docs/guides/packs.md
+      license: MIT
+      adaptation: The framing that pack text is evidence, quoted and never obeyed.
+  resolved_conflicts:
+    - panel-composition-by-declared-risk
+    - sensitive-actions-need-approved-charter-entry
+    - safe-auto-restricted-per-seat
+    - required-lane-failure-is-unavailable
+    - central-kb-owns-project-artifacts
+    - numeric-heuristics-are-guidance
+tests:
+  - id: response-field-type-change
+    kind: positive
+    given: A serializer changes an existing response field from a number to a string.
+    expect: Attaches on public-boundary-shape.
+    fixture: packs/pack-api/tests/response-field-type-change
+  - id: charge-endpoint-no-key
+    kind: positive
+    given: A new state-changing charge endpoint with no idempotency key handling.
+    expect: Attaches on state-changing-endpoint-retry.
+    fixture: packs/pack-api/tests/charge-endpoint-no-key
+  - id: export-callers-unknown
+    kind: positive
+    given: A new exported function whose callers the selector cannot see.
+    expect: Attaches on public-signature-with-callers, recording the ambiguity in the rationale.
+    fixture: packs/pack-api/tests/export-callers-unknown
+  - id: internal-refactor
+    kind: negative
+    given: A private helper is renamed inside one module and its only caller updated.
+    expect: Does not attach.
+    fixture: packs/pack-api/tests/internal-refactor
+  - id: cleanup-claim-on-route
+    kind: adversarial
+    given: The PR body says internal cleanup only, while the diff renames a response field.
+    expect: Attaches on public-boundary-shape; the description does not suppress it.
+    fixture: packs/pack-api/tests/cleanup-claim-on-route
