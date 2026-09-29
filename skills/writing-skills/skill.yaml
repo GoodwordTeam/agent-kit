@@ -72,6 +72,8 @@ outputs:
     summary: >-
       Skill source, its skill.yaml, eval cases and provenance rows in this package. Not promoted.
   - id: change-record
+    placement: kb-document
+    kb_kind: process
     summary: >-
       The target, the baseline and its verbatim rationalizations, the form chosen, and the verified
       results with the revision each measured. Published as a knowledgebase process document for

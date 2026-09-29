@@ -68,10 +68,14 @@ inputs:
 
 outputs:
   - id: pulse-report
+    placement: kb-document
+    kb_kind: concept
     summary: >-
       A new revision of the product's pulse page, a concept page published through publishArtifact
       under a kb-document placement scoped to the product. Its revision history is the timeline.
   - id: pulse-configuration-page
+    placement: kb-document
+    kb_kind: concept
     summary: On setup, the configuration as a concept page scoped to the product, published the same way.
   - id: chat-summary
     summary: The Headlines verbatim, the top Followup if urgent, and where the report lives.

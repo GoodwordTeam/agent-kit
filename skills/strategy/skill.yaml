@@ -61,6 +61,8 @@ inputs:
 
 outputs:
   - id: strategy-page
+    placement: kb-document
+    kb_kind: concept
     summary: >-
       A concept page scoped to the product, published through publishArtifact under a kb-document
       placement. The knowledgebase resolves the location; no strategy file is written into the

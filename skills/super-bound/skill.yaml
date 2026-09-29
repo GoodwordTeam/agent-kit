@@ -85,6 +85,8 @@ inputs:
 
 outputs:
   - id: prd-page
+    placement: kb-document
+    kb_kind: prd
     summary: >-
       The requirements when newly stated, published through publishArtifact under a kb-document
       placement naming kind prd. The knowledgebase resolves the location; no path is supplied.

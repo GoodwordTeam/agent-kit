@@ -65,6 +65,8 @@ outputs:
       A self-contained page in the host's temporary directory, one card per candidate with a
       strength and a top recommendation. Transient; never committed or published.
   - id: proposed-adr
+    placement: kb-document
+    kb_kind: adr
     summary: >-
       An adr page published proposed through publishArtifact under a kb-document placement scoped
       to the project, for the grilled shape or a load-bearing rejection the human agreed to record.
