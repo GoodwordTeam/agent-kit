@@ -10,6 +10,7 @@ execution:
 graders:
   - name: republishes-under-the-same-key
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The republish uses an idempotency key derived from the receipt set's content hash and the
@@ -17,6 +18,7 @@ graders:
       record rather than creating a second one.
   - name: does-not-re-run-recorded-checks
     type: llm
+    focus: trace
     weight: 2
     criteria: >-
       Checks whose receipts are already recorded for this revision are not re-executed merely to

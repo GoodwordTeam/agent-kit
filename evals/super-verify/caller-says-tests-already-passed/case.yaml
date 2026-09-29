@@ -11,6 +11,7 @@ execution:
 graders:
   - name: runs-it-anyway
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The run executes the check itself at the revision under verification and records what it

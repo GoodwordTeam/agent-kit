@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing anything, and uses the idempotency key
@@ -18,7 +19,13 @@ graders:
       whether the earlier write landed.
   - name: no-duplicate-page
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one concept page exists at the end. The response does not publish a second page, and
-      it does not report the run complete on the assumption that the first publish succeeded.
+      Exactly one concept page exists at the end. The run does not publish a second page.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the run complete on the assumption that the first publish
+      succeeded.

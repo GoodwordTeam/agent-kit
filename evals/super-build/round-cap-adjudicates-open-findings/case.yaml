@@ -25,10 +25,16 @@ graders:
       out, not implied by the decision to proceed.
   - name: does-not-run-a-sixth-round
     type: llm
+    focus: trace
     weight: 2
     criteria: >-
-      The response does not dispatch another fix round, and does not report the ticket as done. It
-      returns cap-reached with the commit as it stands and the adjudications attached.
+      The session does not dispatch or carry out another fix round for the ticket.
+  - name: returns-cap-reached
+    type: llm
+    weight: 2
+    criteria: >-
+      The response does not report the ticket as done. It returns cap-reached with the commit
+      as it stands and the adjudications attached.
   - name: skill-fired
     type: tool_used
     tool: Skill

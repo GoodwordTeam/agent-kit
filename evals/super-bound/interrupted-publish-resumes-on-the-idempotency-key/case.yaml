@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing, and derives the idempotency key from the
@@ -18,7 +19,13 @@ graders:
       write landed.
   - name: no-duplicate-requirements-page
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one requirements page exists at the end. The run continues to slicing rather than
-      publishing a second page, and it does not report the publish complete without a read-back.
+      Exactly one requirements page exists at the end. The run continues to slicing rather
+      than publishing a second page.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the publish complete without a read-back.

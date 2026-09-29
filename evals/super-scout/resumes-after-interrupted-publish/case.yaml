@@ -10,6 +10,7 @@ execution:
 graders:
   - name: resumes-rather-than-restarts
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The response continues from the recorded searches and the composed dossier rather than

@@ -11,13 +11,19 @@ execution:
 graders:
   - name: doubt-reads-back-before-rewriting
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing again, deriving the idempotency key from
       the run, the operation, the decision's identity and its content hash.
   - name: doubt-no-duplicate-record
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one recorded decision exists. The run does not write it a second time and does not
-      report the write complete without a read-back.
+      Exactly one recorded decision exists. The run does not write it a second time.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the write complete without a read-back.

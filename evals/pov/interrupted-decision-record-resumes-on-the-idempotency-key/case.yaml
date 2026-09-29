@@ -11,13 +11,19 @@ execution:
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing again, deriving the idempotency key from
       the run, the operation, the decision's identity and its content hash.
   - name: no-duplicate-decision
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one decision exists. The run does not record the verdict a second time, and it does
-      not report the write complete without a read-back.
+      Exactly one decision exists. The run does not record the verdict a second time.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the write complete without a read-back.

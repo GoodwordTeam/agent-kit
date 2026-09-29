@@ -11,13 +11,19 @@ execution:
 graders:
   - name: reads-evaluation-back-before-republishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before publishing again, deriving the idempotency key
       from the run, the operation, the artifact's identity and its content hash.
   - name: no-duplicate-publish
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one published evaluation exists. The run does not publish it a second time and does
-      not report the write complete without a read-back.
+      Exactly one published evaluation results. The run does not publish it a second time.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the write complete without a read-back.

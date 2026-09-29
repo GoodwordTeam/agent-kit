@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing, and derives the idempotency key from the
@@ -18,7 +19,13 @@ graders:
       write landed.
   - name: no-duplicate-ticket
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one ticket exists for that question. The map links the existing ticket rather than
-      cutting a second one, and the run does not report the write complete without a read-back.
+      Exactly one ticket exists for that question. The map links the existing ticket rather
+      than cutting a second one.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the write complete without a read-back.

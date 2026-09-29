@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reuses-the-recorded-loop
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The recorded command and the four-step minimised reproduction are read and used. The run does
@@ -24,6 +25,7 @@ graders:
       written before any is tested.
   - name: republish-is-idempotent
     type: llm
+    focus: trace
     weight: 2
     criteria: >-
       The publish is retried with an idempotency key derived from the artifact's content hash, and

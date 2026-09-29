@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-the-record-not-its-recollection
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The response establishes where the run stopped from the ledger and the commit history —
@@ -18,6 +19,7 @@ graders:
       what it believes happened.
   - name: does-not-repeat-committed-work
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No implementer is dispatched for AK-701 or AK-702, and their receipts are not re-run merely to

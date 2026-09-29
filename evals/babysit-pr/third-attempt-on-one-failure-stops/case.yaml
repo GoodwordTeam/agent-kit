@@ -10,6 +10,7 @@ execution:
 graders:
   - name: no-fourth-attempt
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       No fourth repair attempt is started, and no reassurance about the last diff buys one.

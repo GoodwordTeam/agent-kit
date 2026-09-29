@@ -10,6 +10,7 @@ execution:
 graders:
   - name: no-adr-for-ephemeral-reason
     type: llm
+    focus: last_message
     weight: 1
     criteria: >-
       The response does not record or publish a decision for the rejection, and does not offer to,

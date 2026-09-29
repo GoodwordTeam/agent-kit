@@ -11,13 +11,20 @@ execution:
 graders:
   - name: reads-back-before-publishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response derives the idempotency key from the run, the operation, the lesson identity and
       the artifact hash, and reads the lesson back from the knowledgebase before any second publish.
   - name: no-duplicate-lesson
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one published copy of the lesson results, and the run does not report the publish
-      complete without a read-back.
+      Exactly one published copy of the lesson results. The run does not publish the lesson a
+      second time.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the publish complete without a read-back.

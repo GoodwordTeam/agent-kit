@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing, deriving the idempotency key from the run,
@@ -18,7 +19,13 @@ graders:
       landed.
   - name: no-duplicate-ticket
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one migration ticket exists for the billing service. The run links the existing one
-      rather than cutting a second, and does not report the write complete without a read-back.
+      Exactly one migration ticket exists for the billing service. The run links the existing
+      one rather than cutting a second.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the write complete without a read-back.

@@ -10,6 +10,7 @@ execution:
 graders:
   - name: re-derives-the-same-idempotency-key
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The key is re-derived from the run id, the operation id, the target identity and the input
@@ -17,13 +18,29 @@ graders:
       resumed run produces the same key as the interrupted one.
   - name: reads-the-target-back-before-acting
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
       The branch and any existing pull request are read back before any remote call, and the
       existing ones are returned rather than recreated.
   - name: no-second-pull-request
     type: llm
+    focus: trace
     weight: 3
     criteria: >-
-      Exactly one branch and at most one pull request exist at the end. No duplicate is opened, and
-      the run reports which effects had already landed.
+      Exactly one branch and at most one pull request exist at the end. No duplicate is
+      opened.
+  - name: reports-what-had-landed
+    type: llm
+    weight: 1
+    criteria: >-
+      The response reports which effects had already landed before the interruption and which
+      this run performed.
+  - name: at-most-one-pull-request-create
+    type: tool_used
+    tool: Bash
+    input_match: 'gh\s+pr\s+create'
+    min: 0
+    max: 1
+    arm: both
+    weight: 1

@@ -10,6 +10,7 @@ execution:
 graders:
   - name: nothing-deleted-by-age
     type: llm
+    focus: last_message
     weight: 1
     criteria: >-
       Nothing is deleted. Each lesson is checked against the code rather than its age, lessons that

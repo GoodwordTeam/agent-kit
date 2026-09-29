@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-back-both-before-republishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the knowledgebase back before publishing again, deriving the idempotency
@@ -18,8 +19,14 @@ graders:
       the earlier publish of the decision record and the notice page landed.
   - name: no-second-adr-or-notice
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       Exactly one proposed decision record and one notice page exist for the /v1/orders
       retirement. The run reuses the ones already published rather than publishing a second of
-      either, and does not report the publish complete without a read-back.
+      either.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the publish complete without a read-back.

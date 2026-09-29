@@ -10,6 +10,7 @@ execution:
 graders:
   - name: reads-back-before-publishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reuses the idempotency key the runner contract derives, with the input artifact
@@ -17,10 +18,16 @@ graders:
       reads the record back from the knowledgebase before any second publish.
   - name: no-duplicate-record
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one published copy of the handoff record results, and the run does not report the
-      handoff complete without a read-back.
+      Exactly one published copy of the handoff record results. The run does not publish the
+      record a second time.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the handoff complete without a read-back.
   - name: skill-fired
     type: tool_used
     tool: Skill

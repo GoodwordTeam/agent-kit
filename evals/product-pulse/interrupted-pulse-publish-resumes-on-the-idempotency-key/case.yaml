@@ -10,6 +10,7 @@ execution:
 graders:
   - name: reads-back-before-publishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the pulse page back before publishing again, deriving the idempotency key
@@ -17,7 +18,13 @@ graders:
       earlier publish landed.
   - name: no-duplicate-revision
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      The report is published once. The run does not publish a second revision of the same report,
-      and does not report the run complete without a read-back.
+      The report is published once. The run does not publish a second revision of the same
+      report.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the run complete without a read-back.

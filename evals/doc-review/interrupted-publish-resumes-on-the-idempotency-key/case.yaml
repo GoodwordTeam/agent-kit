@@ -11,6 +11,7 @@ execution:
 graders:
   - name: reads-back-before-writing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the record back before writing, and derives the idempotency key from the
@@ -18,7 +19,13 @@ graders:
       write landed.
   - name: one-review-record-for-the-round
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      Exactly one review record exists for round one at the end. No second record is published, and
-      the run does not report the publish complete without a read-back.
+      Exactly one review record exists for round one at the end. No second record is
+      published.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the publish complete without a read-back.

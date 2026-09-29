@@ -1301,17 +1301,34 @@ it. Where the claim is about what the run did, write the deterministic form abov
 trace`; where it is about a file's contents, `focus: {source: file, path}`. `ak validate` raises
 `evals.llm-file-claim-without-focus` (`checkGraderSurfaces` in `src/validation/graders.ts`) on an
 `llm` grader with no `focus` whose `criteria` contain one sentence naming both a filesystem object
-and a write to it. The check is a heuristic with a narrow reach: a claim with no filesystem noun,
-such as "no ticket is cut", is not caught, and aiming it is the author's job. Writing `focus:
-last_message` explicitly clears the check, and is the author's statement that the default was
-chosen.
+and a write to it.
+
+The same trap holds for a claim about an action: "the run does not publish it a second time" is
+passed by a run that republished and said it had not. `ak validate` raises
+`evals.llm-action-claim-without-focus` from the same function on an `llm` grader with no `focus`
+whose `criteria` contain one sentence in which a negation or a count governs an action verb
+(publish, post, reply, push, merge, create, commit, delete, write, call, run, execute, start,
+dispatch, send, cut, record, deploy, invoke, and "opened" as a participle): "does not publish", "is
+not posted", "no second record is published", "published at most once", "posted again". Past tense
+is not read, because in criteria it describes the premise ("the seats it did not run"), not what the
+run must do. The resumability cases are where this matters most: every one claims the resumed run
+does not repeat a remote effect. Split a grader that mixes the two claims, as they do: the action
+goes in an `llm` grader with `focus: trace`, or in `tool_used` with `max` where the tool and its
+input are knowable from the case (`gh\s+pr\s+create` with `max: 1` on a resumed ship), and what the
+reply must say stays in its own grader on the default surface.
+
+Both checks are heuristics with a narrow reach. A claim with no filesystem noun and no governed
+action verb, such as "exactly one ticket exists", is not caught, and aiming it is the author's job.
+Writing `focus: last_message` explicitly clears either check, and is the author's statement that
+the default was chosen: it is the right surface where the action could only happen in the reply,
+such as a review round run inline in a case that grants no tool to dispatch one.
 
 `tests/grader-lint.test.ts` covers the other direction for the deterministic types. For every
 deterministic grader in `evals/` it builds a transcript the grader must fail, and one it must pass
 where one can be built, and scores both with `evaluate` in `src/validation/grader-eval.ts`, a local
 copy of the host's scoring rules. A grader that no transcript can fail breaks the test. `llm`
 graders are judged by a model, so no local transcript can score them: they are covered by the
-surface check above and not by this test. `baseline` graders are covered by neither.
+surface checks above and not by this test. `baseline` graders are covered by neither.
 
 The field names are **measured against the host**, not derived here. `criteria`, `tool` and
 `pattern` are what `claude plugin eval` accepted at `claude 2.1.278`, loading the built bundle, and

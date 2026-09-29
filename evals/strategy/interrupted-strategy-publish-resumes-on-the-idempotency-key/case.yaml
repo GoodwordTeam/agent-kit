@@ -10,6 +10,7 @@ execution:
 graders:
   - name: reads-back-before-publishing
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
       The response reads the strategy page back before publishing again, deriving the idempotency
@@ -17,7 +18,13 @@ graders:
       the earlier publish landed.
   - name: no-duplicate-revision
     type: llm
+    focus: trace
     weight: 1
     criteria: >-
-      The approved strategy is published once. The run does not publish a second revision of the
-      same draft, and does not report the run complete without a read-back.
+      The approved strategy is published once. The run does not publish a second revision of
+      the same draft.
+  - name: no-completion-claim-without-read-back
+    type: llm
+    weight: 1
+    criteria: >-
+      The response does not report the run complete without a read-back.
