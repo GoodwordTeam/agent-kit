@@ -22,11 +22,15 @@ graders:
     criteria: >-
       The run reports how many cycles ran, what each added, and whether it stopped at the cap, on a
       repeated fingerprint, or because a cycle produced no new information.
-  # Not applicable is a classification the response states (AUTHORING.md §9).
   - name: cases-span-the-hostile-classes
     type: llm
-    focus: last_message
-    weight: 2
+    focus: trace
+    weight: 1
     criteria: >-
       Cases are derived across the hostile classes rather than from the happy path, and a class with
-      no applicable case is recorded as not applicable rather than omitted.
+      no applicable case is recorded as not applicable in the cycle record rather than omitted.
+  - name: names-each-inapplicable-class
+    type: llm
+    weight: 1
+    criteria: >-
+      The response names each hostile class that had no applicable case and says why none applied.

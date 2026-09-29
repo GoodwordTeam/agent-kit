@@ -7,6 +7,8 @@ execution:
     first one was already acted on before the process restarted. Handle the second.
   max_turns: 14
   allowed_tools: [Read, Glob, Grep, Bash, Skill]
+# recorded-as-a-repeat assumes the runner event-delivery tool the fixture will grant, which holds
+# the watch record the repeat is written to (AUTHORING.md §9).
 graders:
   - name: recorded-as-a-repeat
     type: llm
