@@ -164,31 +164,35 @@ function ignoringRule(root: string, file: string): { source: string; pattern: st
 
 /**
  * Whether the .gitignore files committed at HEAD ignore `file`, decided by git
- * itself: each committed .gitignore is written at its own path into a scratch
+ * itself: the committed .gitignore of each directory above the file -- the only
+ * ones that can reach it -- is written at its own path into a scratch
  * repository, which has no other rules -- no template, no info/exclude, no
  * global excludes file -- and check-ignore runs there on the path from the
  * repository top. So a negation committed after the rule, or a rule present
  * only in the working tree, counts exactly as it would in a fresh clone.
  */
 function ignoredAtHead(root: string, file: string): boolean {
-  const listed = git(root, ["ls-tree", "-r", "-z", "--full-tree", "HEAD"]);
   const prefix = git(root, ["rev-parse", "--show-prefix"]);
-  if (listed.status !== 0 || prefix.status !== 0) return false;
+  if (prefix.status !== 0) return false;
+  const path = `${prefix.stdout.trim()}${file}`;
+  const segments = path.split("/").filter((segment) => segment !== "" && segment !== ".");
   const scratch = mkdtempSync(join(tmpdir(), "ak-ignore-"));
   try {
     if (git(scratch, ["init", "-q", "--template="]).status !== 0) return false;
-    for (const entry of listed.stdout.split("\0")) {
-      const [meta = "", path = ""] = entry.split("\t");
-      const [mode, type, object] = meta.split(" ");
-      if (type !== "blob" || mode === "120000" || basename(path) !== ".gitignore") continue;
+    for (let depth = 0; depth < segments.length; depth++) {
+      const rules = [...segments.slice(0, depth), ".gitignore"].join("/");
+      const listed = git(root, ["ls-tree", "-z", "--full-tree", "HEAD", "--", rules]);
+      if (listed.status !== 0) return false;
+      const entry = listed.stdout.split("\0")[0] ?? "";
+      const [mode, type, object] = entry.slice(0, entry.indexOf("\t")).split(" ");
+      if (type !== "blob" || mode === "120000") continue;
       const blob = git(root, ["cat-file", "blob", object ?? ""]);
       if (blob.status !== 0) return false;
-      mkdirSync(join(scratch, dirname(path)), { recursive: true });
-      writeFileSync(join(scratch, path), blob.stdout);
+      mkdirSync(join(scratch, ...segments.slice(0, depth)), { recursive: true });
+      writeFileSync(join(scratch, rules), blob.stdout);
     }
-    const input = `./${prefix.stdout.trim()}${file}\0`;
     const excludes = `core.excludesFile=${join(scratch, ".git", "no-excludes")}`;
-    return git(scratch, ["-c", excludes, "check-ignore", "-q", "-z", "--stdin", "--no-index"], { input, literal: false }).status === 0;
+    return git(scratch, ["-c", excludes, "check-ignore", "-q", "-z", "--stdin", "--no-index"], { input: `./${path}\0`, literal: false }).status === 0;
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
