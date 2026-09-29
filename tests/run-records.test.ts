@@ -209,6 +209,12 @@ describe("the plan record", () => {
     expect(validate(unbound)).toBe(false);
   });
 
+  test("a published plan carries the specification approval; a draft may await it", () => {
+    const { specification_approval: _, ...unapproved } = base;
+    expect(validate(unapproved)).toBe(false);
+    expect(validate({ ...unapproved, status: "draft" })).toBe(true);
+  });
+
   test("a specification with no acceptance criterion is refused", () => {
     expect(validate({ ...base, specification: { ...spec, acceptance_criteria: [] } })).toBe(false);
   });

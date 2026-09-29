@@ -1,4 +1,4 @@
-import { artifactHash } from "../util/hash.ts";
+import { artifactHash, canonicalJson, sha256Hex } from "../util/hash.ts";
 import { loadTemplateDocuments, type TemplateDocument } from "./documents.ts";
 import type { CheckContext } from "./context.ts";
 import { error, type Issue } from "./types.ts";
@@ -47,6 +47,7 @@ export function checkArtifacts(ctx: CheckContext): Issue[] {
     out.push(...checkEscalations(artifact));
     if (artifact.schema === "finding") out.push(...checkFinding(artifact));
     if (artifact.schema === "ticket") out.push(...checkTicket(artifact));
+    if (artifact.schema === "plan-record") out.push(...checkPlanRecord(artifact));
   }
 
   return out;
@@ -70,6 +71,42 @@ function checkApprovals(artifact: LoadedArtifact): Issue[] {
         "approval.stale",
         artifact.file,
         `approvals[${i}].artifact_hash is ${declared} but the artifact now hashes to ${current}. A changed artifact does not inherit the previous approval.`,
+      ),
+    );
+  }
+  return out;
+}
+
+/**
+ * The specification approval binds to the specification's own hash, not the
+ * plan record's, so slicing afterwards does not void it. The schema cannot
+ * compare members, so both links are checked here: the declared hash against
+ * the specification, and the approval against the specification.
+ */
+function checkPlanRecord(artifact: LoadedArtifact): Issue[] {
+  const spec = artifact.value["specification"];
+  if (spec === undefined) return [];
+  const current = `sha256:${sha256Hex(canonicalJson(spec))}`;
+  const out: Issue[] = [];
+
+  const declared = artifact.value["specification_hash"];
+  if (typeof declared === "string" && declared !== current) {
+    out.push(
+      error(
+        "plan-record.specification-hash-mismatch",
+        artifact.file,
+        `specification_hash is ${declared} but the specification hashes to ${current}.`,
+      ),
+    );
+  }
+
+  const approved = record(artifact.value["specification_approval"])?.["artifact_hash"];
+  if (typeof approved === "string" && approved !== current) {
+    out.push(
+      error(
+        "approval.stale",
+        artifact.file,
+        `specification_approval.artifact_hash is ${approved} but the specification now hashes to ${current}. A changed specification does not inherit the previous approval.`,
       ),
     );
   }

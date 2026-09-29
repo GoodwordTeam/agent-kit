@@ -76,8 +76,8 @@ which is model-invoked, and that direction is the legal one.
    renaming the same things here.
 5. Run `/ak:doc-review` on the specification and resolve everything it returns before cutting a
    ticket.
-6. Take the specification approval. The approval binds to the specification's own hash, which the
-   plan record carries as `specification_hash`, so slicing afterwards does not void it.
+6. Take the specification approval. The plan record carries it as `specification_approval`, bound
+   to the specification's own hash (`specification_hash`), so slicing afterwards does not void it.
 7. Slice into tickets. Each slice cuts a narrow but complete path through every layer, is demoable
    or verifiable on its own, and is sized to fit one fresh context window.
 8. Give every ticket its interfaces: what it consumes from earlier tickets with exact signatures,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agent-kit.local/schemas/plan-record.schema.json",
   "title": "Plan record",
-  "description": "The record `super-bound` writes once the specification is reviewed and sliced: the specification at decision level, the seams it is verified across, the slicing into tickets and the dependency graph between them. It is a run artifact published through the knowledgebase adapter's `publishArtifact` under a `run-artifact` placement and linked from the `prd` page, never a file in the working repository (ruling `central-kb-owns-project-artifacts`, docs/decisions/0001-kb-document-vocabulary.md §3). The tickets themselves are `ticket` artifacts; this record points at them rather than repeating them. The specification is approved before it is sliced, so its approval cannot bind to this record's own hash, which also covers the slices: it binds to `specification_hash`. An edited specification is a new hash and does not inherit the old approval; re-slicing an unchanged specification leaves its approval standing.",
+  "description": "The record `super-bound` writes once the specification is reviewed and sliced: the specification at decision level, the seams it is verified across, the slicing into tickets and the dependency graph between them. It is a run artifact published through the knowledgebase adapter's `publishArtifact` under a `run-artifact` placement and linked from the `prd` page, never a file in the working repository (ruling `central-kb-owns-project-artifacts`, docs/decisions/0001-kb-document-vocabulary.md §3). The tickets themselves are `ticket` artifacts; this record points at them rather than repeating them. The specification is approved before it is sliced, so its approval cannot bind to this record's own hash, which also covers the slices, and it is not an entry in the envelope's `approvals`, which bind to that hash: it is `specification_approval`, bound to `specification_hash`. An edited specification is a new hash and does not inherit the old approval; re-slicing an unchanged specification leaves its approval standing.",
   "type": "object",
   "required": ["specification", "specification_hash", "slices", "dependency_graph"],
   "properties": {
@@ -85,8 +85,13 @@
       }
     },
     "specification_hash": {
-      "description": "sha256 over the canonical JSON form of `specification` alone (keys sorted, no insignificant whitespace). The specification approval, an entry in the envelope's `approvals`, carries this value as its `artifact_hash`. The schema cannot compare the two members; the reader of an approval does.",
+      "description": "sha256 over the canonical JSON form of `specification` alone (keys sorted, no insignificant whitespace).",
       "$ref": "common.schema.json#/$defs/hash"
+    },
+    "specification_approval": {
+      "description": "The specification approval. Its `artifact_hash` is `specification_hash`, so slicing afterwards does not void it and an edited specification does not inherit it. Required once published; a `bound.run` draft may await it.",
+      "$ref": "common.schema.json#/$defs/approval",
+      "x-validator-rule": "plan-record.specification-approval-binds-to-the-specification-hash"
     },
     "slices": {
       "description": "The tickets the specification was sliced into, by reference. A slice that failed the zero-context check is a 'decision' ticket in place of the implementation ticket that could not be written; it is never executable work.",
@@ -131,5 +136,12 @@
     }
   },
   "unevaluatedProperties": false,
-  "allOf": [{ "$ref": "common.schema.json#/$defs/envelope" }]
+  "allOf": [
+    { "$ref": "common.schema.json#/$defs/envelope" },
+    {
+      "description": "A published plan was sliced, and slicing waits on the specification approval.",
+      "if": { "properties": { "status": { "const": "published" } }, "required": ["status"] },
+      "then": { "required": ["specification_approval"] }
+    }
+  ]
 }
