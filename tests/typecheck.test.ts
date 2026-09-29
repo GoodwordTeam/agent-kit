@@ -118,8 +118,8 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     expect(owned.filter((file) => !checked.has(file))).toEqual([]);
 
     // And the exclusion is the one documented in `tsconfig.json`, not a wider
-    // one that happens to still satisfy the line above. Every checked file that
-    // this repository owns must be under `src/` or `tests/`; anything the
+    // one that happens to still satisfy the line above. Checked files this
+    // repository owns also include `tools/oxlint/*.ts`; anything the
     // config started excluding beyond fixtures would drop out of `owned` and
     // pass silently without this.
     expect(owned.filter((file) => file.startsWith("tests/fixtures"))).toEqual([]);

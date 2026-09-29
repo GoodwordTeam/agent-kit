@@ -1,5 +1,5 @@
 /**
- * The lint ratchet: every rule in `.oxlintrc.json` is an error, and the violations that predate a rule
+ * The lint ratchet: a rule `.oxlintrc.json` leaves on is an error, and the violations that predate a rule
  * are recorded per file and rule in `tools/oxlint/baseline.json`. A run fails when any file holds more
  * violations of a rule than the baseline records, and when it holds fewer, because a count that went
  * down has to be written down or the room it leaves could be spent again. The baseline only shrinks:

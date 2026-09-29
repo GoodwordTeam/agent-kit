@@ -208,7 +208,7 @@ Node's type stripping.
 Fix the code. Don't add a cast, a `!`, or a disable comment just to quiet a rule; those are what
 the rules exist to catch.
 
-Every rule in `.oxlintrc.json` is an error. The violations that predate a rule are recorded per
+A rule `.oxlintrc.json` leaves on is an error. The violations that predate a rule are recorded per
 file and rule in `tools/oxlint/baseline.json`, and that file only shrinks. A count above the
 baseline fails. A count below it also fails until you record it with `bun run lint:baseline`,
 because a slot left unrecorded would be spent by the next change. Growth is refused unless
