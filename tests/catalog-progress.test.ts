@@ -70,7 +70,8 @@ function record(sections: Record<string, Section>): string {
 interface Run {
   readonly code: number;
   readonly expanded: string[];
-  readonly skipped: number;
+  /** What each SKIPPED line on stdout says was skipped. */
+  readonly skipped: string[];
   /** `[code, section]` per DISAGREEMENT line. */
   readonly disagreements: [string, string][];
 }
@@ -86,7 +87,7 @@ function probe(cwd: string, baseline: string, expansions?: string): Run {
   return {
     code: run.exitCode ?? -1,
     expanded: lines(run.stdout, "EXPANDED").map((l) => l.split(/\s+/)[0] ?? ""),
-    skipped: lines(run.stdout, "SKIPPED").length,
+    skipped: lines(run.stdout, "SKIPPED"),
     disagreements: lines(run.stderr, "DISAGREEMENT").map((l) => {
       const [code = "", section = ""] = l.split(/\s+/);
       return [code, section];
@@ -100,7 +101,7 @@ const one = (ids: string[], commits: string[], baseline = 4, size = 4 + ids.leng
 describe("catalog-progress.sh", () => {
   test("a catalog at the baseline counts is clean with no expansions file", () => {
     const r = repo();
-    expect(probe(r.root, r.baseline)).toEqual({ code: 0, expanded: [], skipped: 0, disagreements: [] });
+    expect(probe(r.root, r.baseline)).toEqual({ code: 0, expanded: [], skipped: [], disagreements: [] });
   });
 
   test("a recorded expansion, cited to the commit that adds it, reads clean", () => {
@@ -108,7 +109,7 @@ describe("catalog-progress.sh", () => {
     expect(probe(r.root, r.baseline, one(["extra"], [r.added]))).toEqual({
       code: 0,
       expanded: ["adapters"],
-      skipped: 0,
+      skipped: [],
       disagreements: [],
     });
   });
@@ -157,6 +158,22 @@ describe("catalog-progress.sh", () => {
     expect(run.disagreements).toEqual([["commit-unresolved", "adapters"]]);
   });
 
+  test("a cited commit that leaves catalog.yaml alone flags, though its tree has the id", () => {
+    const r = repo({ adapters: ["extra"] });
+    // The id is in this commit's catalog because an earlier commit added it;
+    // having it is not adding it.
+    writeFileSync(join(r.root, "notes.md"), "unrelated\n");
+    git(r.root, "add", "notes.md");
+    git(r.root, "commit", "-q", "-m", "notes");
+    const later = git(r.root, "rev-parse", "HEAD");
+    const run = probe(r.root, r.baseline, one(["extra"], [later]));
+    expect(run.code).toBe(1);
+    expect(run.disagreements).toEqual([
+      ["commit-does-not-add", "adapters"],
+      ["id-not-added-by-cited-commit", "adapters"],
+    ]);
+  });
+
   test("a cited commit whose catalog change does not add the id flags", () => {
     const r = repo({ adapters: ["extra"] });
     const run = probe(r.root, r.baseline, one(["extra"], [r.baseline]));
@@ -184,14 +201,101 @@ describe("catalog-progress.sh", () => {
     const clone = join(mkdtempSync(join(tmpdir(), "ak-shallow-")), "c");
     git(tmpdir(), "clone", "-q", "--depth", "1", `file://${r.root}`, clone);
     const run = probe(clone, r.baseline, one(["extra"], [r.added]));
-    expect(run).toEqual({ code: 0, expanded: ["adapters"], skipped: 1, disagreements: [] });
+    expect(run).toEqual({
+      code: 0,
+      expanded: ["adapters"],
+      skipped: [`history checks: baseline ${r.baseline} is not in this shallow clone`],
+      disagreements: [],
+    });
     const unrecorded = probe(clone, r.baseline, one([], [r.added]));
     expect(unrecorded.disagreements).toContainEqual(["count-differs", "adapters"]);
+  });
+
+  describe("a shallow clone with the baseline but not every cited commit", () => {
+    /**
+     * main: a root commit, the baseline, a commit adding `extra` and `other`,
+     * and one that leaves the catalog alone. A side branch off the baseline
+     * adds `other` on its own. A depth-3 clone of main has the baseline and
+     * everything after it, is shallow, and lacks the side commit.
+     */
+    function partial(): { clone: string; baseline: string; added: string; later: string; side: string } {
+      const root = makeTree({ "README.md": "root\n" });
+      git(root, "init", "-q", "-b", "main");
+      git(root, "add", "-A");
+      git(root, "commit", "-q", "-m", "root");
+      writeFileSync(join(root, "catalog.yaml"), catalog());
+      git(root, "add", "-A");
+      git(root, "commit", "-q", "-m", "baseline");
+      const baseline = git(root, "rev-parse", "HEAD");
+      git(root, "checkout", "-q", "-b", "side");
+      writeFileSync(join(root, "catalog.yaml"), catalog({ adapters: ["other"] }));
+      git(root, "commit", "-q", "-am", "side");
+      const side = git(root, "rev-parse", "HEAD");
+      git(root, "checkout", "-q", "main");
+      writeFileSync(join(root, "catalog.yaml"), catalog({ adapters: ["extra", "other"] }));
+      git(root, "commit", "-q", "-am", "expand");
+      const added = git(root, "rev-parse", "HEAD");
+      writeFileSync(join(root, "notes.md"), "unrelated\n");
+      git(root, "add", "notes.md");
+      git(root, "commit", "-q", "-m", "notes");
+      const later = git(root, "rev-parse", "HEAD");
+      const clone = join(mkdtempSync(join(tmpdir(), "ak-partial-")), "c");
+      git(tmpdir(), "clone", "-q", "--depth", "3", "--single-branch", "--branch", "main", `file://${root}`, clone);
+      expect(git(clone, "rev-parse", "--is-shallow-repository")).toBe("true");
+      return { clone, baseline, added, later, side };
+    }
+
+    const two = (extraCommit: string, side: string): string =>
+      record({
+        adapters: {
+          baseline: 4,
+          catalog: 6,
+          expansions: [
+            { ids: ["extra"], reason: "r", commits: [extraCommit] },
+            { ids: ["other"], reason: "r", commits: [side] },
+          ],
+        },
+      });
+
+    test("skips only the missing commit, and the ids that depend on it", () => {
+      const p = partial();
+      expect(probe(p.clone, p.baseline, two(p.added, p.side))).toEqual({
+        code: 0,
+        expanded: ["adapters"],
+        skipped: [`adapters: commit ${p.side} is not in this shallow clone`],
+        disagreements: [],
+      });
+    });
+
+    test("still checks the cited commits that resolve", () => {
+      const p = partial();
+      const run = probe(p.clone, p.baseline, two(p.later, p.side));
+      expect(run.code).toBe(1);
+      expect(run.skipped).toEqual([`adapters: commit ${p.side} is not in this shallow clone`]);
+      expect(run.disagreements).toEqual([
+        ["commit-does-not-add", "adapters"],
+        ["id-not-added-by-cited-commit", "adapters"],
+      ]);
+    });
+
+    test("does not read a boundary commit's missing parent as an empty catalog", () => {
+      const p = partial();
+      // The baseline is the clone's boundary: its parent was not fetched.
+      // Read as empty, it would appear to add every id in its catalog.
+      const run = probe(p.clone, p.baseline, one(["adapters-0"], [p.baseline], 4, 4));
+      expect(run.skipped).toEqual([`adapters: the parent of commit ${p.baseline} is not in this shallow clone`]);
+      expect(run.disagreements.map(([code]) => code)).not.toContain("commit-does-not-add");
+    });
   });
 
   test("this repository's catalog has no unexplained difference from the baseline", () => {
     const run = Bun.spawnSync(["bash", PROBE], { cwd: ROOT });
     expect(new TextDecoder().decode(run.stderr)).not.toContain("DISAGREEMENT");
     expect(run.exitCode).toBe(0);
+    // A full clone has every commit the record cites, so a SKIPPED line here
+    // means a check did not run, not that the record held up.
+    if (git(ROOT, "rev-parse", "--is-shallow-repository") === "false") {
+      expect(new TextDecoder().decode(run.stdout)).not.toContain("SKIPPED");
+    }
   });
 });

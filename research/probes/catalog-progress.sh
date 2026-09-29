@@ -39,7 +39,8 @@
 # already had, and a cited commit that does not resolve or whose catalog.yaml
 # change does not add the ids it is cited for. The history checks need the
 # baseline and the cited commits; in a shallow clone that lacks them, they are
-# reported as skipped rather than guessed. CATALOG_BASELINE names another
+# reported as skipped rather than guessed. A clone that has the baseline but
+# not every cited commit skips only what depends on the missing ones. CATALOG_BASELINE names another
 # baseline commit, which the tests use on fixture repositories.
 #
 # Output: the table on stdout, one `EXPANDED` line per section with recorded
@@ -160,22 +161,34 @@ for section, record in expansions.items():
             disagree("id-in-baseline", section, f"recorded expansion {i} is already in the baseline catalog at {baseline_rev}")
     for e in entries:
         added = set()
+        # An entry with a cited commit this clone cannot check may owe its ids
+        # to that commit, so only its id-not-added check is skipped; the
+        # commits that do resolve are still checked.
+        unchecked = False
         for c in e.get("commits") or []:
             sha = resolve(str(c))
             if sha is None:
                 if shallow:
                     skipped.append(f"{section}: commit {c} is not in this shallow clone")
+                    unchecked = True
                 else:
                     disagree("commit-unresolved", section, f"cited commit {c} does not resolve")
                 continue
-            after, prior = ids_at(sha, section), ids_at(f"{sha}^", section)
-            adds = (after or set()) - (prior or set())
-            mine = adds & set(e.get("ids") or [])
+            parent = resolve(f"{sha}^")
+            if parent is None and shallow:
+                # A shallow boundary: the parent exists but was not fetched, and
+                # reading it as empty would credit the commit with every id.
+                skipped.append(f"{section}: the parent of commit {c} is not in this shallow clone")
+                unchecked = True
+                continue
+            after = ids_at(sha, section) or set()
+            prior = (ids_at(parent, section) or set()) if parent is not None else set()
+            mine = (after - prior) & set(e.get("ids") or [])
             if not mine:
                 disagree("commit-does-not-add", section, f"cited commit {c} adds none of {', '.join(e.get('ids') or [])} to catalog.yaml")
             added |= mine
         for i in e.get("ids") or []:
-            if i not in added and not shallow:
+            if i not in added and not unchecked:
                 disagree("id-not-added-by-cited-commit", section, f"no cited commit adds {i} to catalog.yaml")
 
 print(f"catalog progress at {os.environ['SUBJECT']}")
