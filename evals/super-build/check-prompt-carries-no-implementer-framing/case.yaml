@@ -31,7 +31,7 @@ graders:
     criteria: >-
       Concerns in the report about correctness or scope are addressed before the check runs, or
       recorded as observations in the record the run writes. They are not passed to the seats as
-      framing and not silently dropped.
+      framing and not silently dropped. A run that writes no such record passes.
   - name: says-how-each-concern-was-handled
     type: llm
     weight: 1

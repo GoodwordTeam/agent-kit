@@ -26,7 +26,8 @@ graders:
     weight: 2
     criteria: >-
       The incoming safe_auto is recorded as gated_auto on intake, in the ticket or finding record
-      the run writes. The finding is not dropped for its action class.
+      the run writes. The finding is not dropped for its action class. A run that writes no such
+      record passes.
   - name: says-the-seat-not-the-class-is-restricted
     type: llm
     weight: 1
