@@ -60,7 +60,8 @@ Setup is an operator task, not a skill. Stop at the first step that fails.
    the conversation, never print the file, never run `linearis auth login`.
 5. Write `ak.tracker.yaml`: `backend: linear-linearis`, `token_file`, `defaults.team` (required),
    `defaults.project` (optional), `statuses` in the team's own names.
-6. Gitignore the token file in the project's `.gitignore`, then run the check below. A token file
+6. Gitignore the token file in the project's `.gitignore` and commit that rule, then run the check
+   below: an uncommitted rule protects only this checkout. A token file
    that is tracked or in history stops setup: tell the human to rotate the token.
 7. Verify with `teams read <team>` through the guarded call. Exit `42` goes back to step 4.
 
@@ -124,6 +125,8 @@ printf './%s\0' "$f" | git check-ignore -v -z --stdin --no-index | tr '\0' '\n'
 #   source, line, pattern, path: the source must be a .gitignore in the repository, and a
 #   pattern starting with ! un-ignores the file, so it does not count. The ./ prefix matters:
 #   stdin paths are still pathspecs, and ':(top)x' would otherwise be checked as 'x'.
+git show "HEAD:$source" | grep -qxF "$pattern"                       # exit 0: the rule is committed
+#   $source and $pattern are the first and third fields above; source is from the repository top.
 git --literal-pathspecs ls-files --error-unmatch -- "$f"            # exit 0: tracked, refuse
 git --literal-pathspecs log --all --full-history --format=%h -1 -- "$f"   # any output: in history, rotate
 ```

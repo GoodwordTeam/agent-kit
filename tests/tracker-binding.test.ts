@@ -161,6 +161,31 @@ describe("the secret stays in the folder and out of git", () => {
     expect(rules(dir)).toEqual(["error tracker.secret-not-ignored"]);
   });
 
+  test("an untracked .gitignore does not count: the next clone has no rule", () => {
+    const dir = project({ [BINDING_FILE]: BINDING });
+    writeFileSync(join(dir, ".gitignore"), ".linear-token\n");
+    writeToken(join(dir, ".linear-token"));
+    expect(rules(dir)).toEqual(["error tracker.secret-not-ignored"]);
+  });
+
+  test("a rule added to a tracked .gitignore counts only once it is committed", () => {
+    const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": "node_modules\n" });
+    writeFileSync(join(dir, ".gitignore"), "node_modules\n.linear-token\n");
+    writeToken(join(dir, ".linear-token"));
+    expect(rules(dir)).toEqual(["error tracker.secret-not-ignored"]);
+    git(dir, "add", ".gitignore");
+    expect(rules(dir)).toEqual(["error tracker.secret-not-ignored"]);
+    git(dir, "commit", "-q", "-m", "ignore the token");
+    expect(rules(dir)).toEqual([]);
+  });
+
+  test("an unrelated uncommitted edit to .gitignore does not hide a committed rule", () => {
+    const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": ".linear-token\n" });
+    writeFileSync(join(dir, ".gitignore"), ".linear-token\ndist/\n");
+    writeToken(join(dir, ".linear-token"));
+    expect(rules(dir)).toEqual([]);
+  });
+
   test("a token path holding ':' is still matched to its .gitignore", () => {
     const binding = BINDING.replace(".linear-token", "keys/a:b");
     const dir = project({ [BINDING_FILE]: binding, "keys/.gitignore": "a:b\n" });

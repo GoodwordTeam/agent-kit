@@ -161,6 +161,12 @@ function ignoringRule(root: string, file: string): { source: string; pattern: st
   return { source, pattern };
 }
 
+/** Whether `pattern` is a line of the committed `source`, a path from the repository top as check-ignore reports it. */
+function committedRule(root: string, source: string, pattern: string): boolean {
+  const shown = git(root, ["show", `HEAD:${source}`]);
+  return shown.status === 0 && shown.stdout.split("\n").some((line) => line.trim() === pattern);
+}
+
 /**
  * The secret-handling checks: the ones that fail if a token could leave the operator's machine or be missed.
  *
@@ -206,9 +212,14 @@ export function checkTrackerSecret(projectRoot: string, binding: TrackerBinding,
   // A project .gitignore, specifically: it protects every operator who follows
   // the binding's path, where a global excludes file protects only the one
   // machine that has it.
-  const source = ignoringRule(projectRoot, file)?.source ?? "";
+  const rule = ignoringRule(projectRoot, file);
+  const source = rule?.source ?? "";
   if (source === "" || isAbsolute(source) || basename(source) !== ".gitignore") {
     issues.push(error("tracker.secret-not-ignored", file, "token_file is not ignored by a .gitignore in this repository. Add it to the project's .gitignore, so no operator following this binding can stage it."));
+  } else if (!committedRule(projectRoot, source, rule!.pattern)) {
+    // An untracked .gitignore, or a rule not yet committed to a tracked one, is
+    // machine-local in the same way: the next clone has no rule.
+    issues.push(error("tracker.secret-not-ignored", file, `token_file is ignored only by an uncommitted rule in ${source}. Commit that .gitignore rule, so every clone of the project ignores it.`));
   }
 
   const history = git(projectRoot, ["log", "--all", "--full-history", "--format=%h", "-1", "--", file], { timeout: historyTimeoutMs });
