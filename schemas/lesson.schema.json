@@ -122,7 +122,9 @@
               "if": { "properties": { "kind": { "const": "delegated-grant" } }, "required": ["kind"] },
               "then": {
                 "required": ["grant"],
-                "properties": { "grant": { "properties": { "covers": { "const": "publish-lesson" } }, "required": ["covers"] } }
+                "properties": {
+                  "grant": { "properties": { "covers": { "const": "publish-lesson" } }, "required": ["covers"] }
+                }
               },
               "else": { "required": ["approval"] }
             }
@@ -183,7 +185,9 @@
       "description": "A consolidation names the lessons it absorbed, so the originals stay findable (plan 2.3).",
       "if": {
         "required": ["supersession"],
-        "properties": { "supersession": { "properties": { "action": { "const": "consolidate" } }, "required": ["action"] } }
+        "properties": {
+          "supersession": { "properties": { "action": { "const": "consolidate" } }, "required": ["action"] }
+        }
       },
       "then": {
         "properties": {

@@ -99,9 +99,7 @@
       "by": "reviewer-standards",
       "choice": "hold-merge",
       "rationale": "The charter does not name merge at all. Reading a grant into that silence is the reading the charter cannot settle, so it is the human's to answer.",
-      "unresolved_assumptions": [
-        "Whether the charter's silence on merge was deliberate or an omission."
-      ],
+      "unresolved_assumptions": ["Whether the charter's silence on merge was deliberate or an omission."],
       "escalate": true,
       "at": "2026-09-19T09:00:00Z",
       "saw_other_judgment": false
@@ -152,9 +150,7 @@
     ],
     "default": "hold-merge",
     "charter_rule": "charter:denied_actions",
-    "blocked": [
-      "example-ticket-1"
-    ]
+    "blocked": ["example-ticket-1"]
   },
   "result": {
     "operation": "decision.approve-ticket",
@@ -195,9 +191,7 @@
       ],
       "default": "hold-merge",
       "charter_rule": "charter:denied_actions",
-      "blocked": [
-        "example-ticket-1"
-      ]
+      "blocked": ["example-ticket-1"]
     }
   }
 }

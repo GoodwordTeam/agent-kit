@@ -129,7 +129,9 @@ export class GitHubReviewSource {
   pullRequests(repo: string, numbers: readonly number[], since?: string): PullRequestRef[] {
     const fields = ["--json", "number,headRefOid,author"];
     if (numbers.length > 0) {
-      return numbers.flatMap((n) => this.json<PullRequestRef>(["pr", "view", String(n), "--repo", repo, ...fields]) ?? []);
+      return numbers.flatMap(
+        (n) => this.json<PullRequestRef>(["pr", "view", String(n), "--repo", repo, ...fields]) ?? [],
+      );
     }
     if (since !== undefined) {
       const listed = this.json<PullRequestRef[]>([

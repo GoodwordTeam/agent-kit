@@ -21,7 +21,8 @@ import { evalInstrument } from "./evals/session.ts";
 
 const FIXTURES = join(import.meta.dir, "evals", "fixtures", "transcripts");
 const fixture = (name: string) => readFileSync(join(FIXTURES, name), "utf8");
-const tools = (events: ReturnType<SubjectAdapter["parse"]>["events"]) => events.filter((e): e is ToolEvent => e.kind === "tool");
+const tools = (events: ReturnType<SubjectAdapter["parse"]>["events"]) =>
+  events.filter((e): e is ToolEvent => e.kind === "tool");
 
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "ak-subjects-test-")));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
@@ -48,9 +49,19 @@ describe("claude", () => {
   test("a typed slash command's expansion becomes a user event the scorer reads as a load; tool results do not", () => {
     const expansion = JSON.stringify({
       type: "user",
-      message: { content: [{ type: "text", text: "<command-message>ak:compound is running</command-message>\n<command-name>/ak:compound</command-name>" }] },
+      message: {
+        content: [
+          {
+            type: "text",
+            text: "<command-message>ak:compound is running</command-message>\n<command-name>/ak:compound</command-name>",
+          },
+        ],
+      },
     });
-    const toolResult = JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", content: "file contents" }] } });
+    const toolResult = JSON.stringify({
+      type: "user",
+      message: { content: [{ type: "tool_result", content: "file contents" }] },
+    });
     const parsed = claude.parse(`${expansion}\n${toolResult}\n${JSON.stringify({ type: "result", result: "done" })}`);
     expect(parsed.events.map((e) => e.kind)).toEqual(["user"]);
     expect(skillLoads(parsed.events).map((l) => [l.skill, l.via])).toEqual([["compound", "expansion"]]);
@@ -58,12 +69,23 @@ describe("claude", () => {
 
   test("argv: isolation flags always, model, cap, bundle and appended context only when given", () => {
     expect(claude.command(req, undefined)).toEqual([
-      "claude", "-p", "--output-format", "stream-json", "--verbose",
-      "--settings", '{"disableAllHooks":true}', "--setting-sources", "project,local", "--strict-mcp-config",
+      "claude",
+      "-p",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--settings",
+      '{"disableAllHooks":true}',
+      "--setting-sources",
+      "project,local",
+      "--strict-mcp-config",
       "--no-session-persistence",
       "Load the greet skill.",
     ]);
-    const full = claude.command({ ...req, maxTurns: 3, bundleDir: "/dist/claude-code", appendSystemPrompt: "ROSTER" }, "bound-a");
+    const full = claude.command(
+      { ...req, maxTurns: 3, bundleDir: "/dist/claude-code", appendSystemPrompt: "ROSTER" },
+      "bound-a",
+    );
     expect(full.slice(5, 9)).toEqual(["--model", "bound-a", "--max-turns", "3"]);
     expect(full).toContain("--plugin-dir");
     expect(full.slice(-3)).toEqual(["--append-system-prompt", "ROSTER", "Load the greet skill."]);
@@ -86,16 +108,35 @@ describe("codex", () => {
   test("documented items: file changes, MCP, web search, and a command cut off by the timeout", () => {
     const parsed = codex.parse(fixture("codex-tools.doc-derived.jsonl"));
     expect(tools(parsed.events).map((e) => e.name)).toEqual([
-      "Bash", "Read", "Read", "Write", "Edit", "mcp__tracker__get_issue", "WebSearch", "Bash",
+      "Bash",
+      "Read",
+      "Read",
+      "Write",
+      "Edit",
+      "mcp__tracker__get_issue",
+      "WebSearch",
+      "Bash",
     ]);
-    const reads = tools(parsed.events).filter((e) => e.name === "Read").map((e) => e.input.file_path);
+    const reads = tools(parsed.events)
+      .filter((e) => e.name === "Read")
+      .map((e) => e.input.file_path);
     expect(reads).toEqual(["skills/super-align/SKILL.md", "README.md"]);
     expect(parsed.reply).toBe("Loaded super-align.");
     expect(tools(parsed.events).at(-1)!.input.command).toBe("bun test");
   });
 
   test("a deleted file, or a change of a kind not listed, is a mutating tool", () => {
-    const stdout = JSON.stringify({ type: "item.completed", item: { id: "1", type: "file_change", changes: [{ path: "a.md", kind: "delete" }, { path: "b.md", kind: "rename" }] } });
+    const stdout = JSON.stringify({
+      type: "item.completed",
+      item: {
+        id: "1",
+        type: "file_change",
+        changes: [
+          { path: "a.md", kind: "delete" },
+          { path: "b.md", kind: "rename" },
+        ],
+      },
+    });
     expect(tools(codex.parse(stdout).events).map((e) => [e.name, e.input.file_path])).toEqual([
       ["Delete", "a.md"],
       ["Edit", "b.md"],
@@ -115,7 +156,9 @@ describe("codex", () => {
 
   test("argv: the caller's connected apps are off, as plugins are", () => {
     // On 2026-09-28 codex subjects searched the operator's connected GitHub, Vercel and Drive apps.
-    expect(codex.command(req, undefined).join(" ")).toContain("--disable plugins --disable remote_plugin --disable apps");
+    expect(codex.command(req, undefined).join(" ")).toContain(
+      "--disable plugins --disable remote_plugin --disable apps",
+    );
   });
 });
 
@@ -133,7 +176,9 @@ describe("grok", () => {
   test("the served models come from the end line's usage, sorted and joined", () => {
     expect(grok.parse(fixture("grok-skill.jsonl")).model).toBe("subject-model");
     const end = (usage: Record<string, unknown>) => JSON.stringify({ type: "end", num_turns: 1, modelUsage: usage });
-    expect(grok.parse(end({ "model-under-test": {}, "helper-under-test": {} })).model).toBe("helper-under-test,model-under-test");
+    expect(grok.parse(end({ "model-under-test": {}, "helper-under-test": {} })).model).toBe(
+      "helper-under-test,model-under-test",
+    );
     expect(grok.parse(end({})).model).toBeUndefined();
   });
 
@@ -145,13 +190,18 @@ describe("grok", () => {
   });
 
   test("a session that ends normally reports its stop reason", () => {
-    expect(grok.parse(JSON.stringify({ type: "end", stopReason: "end_turn", num_turns: 1 })).stopReason).toBe("end_turn");
+    expect(grok.parse(JSON.stringify({ type: "end", stopReason: "end_turn", num_turns: 1 })).stopReason).toBe(
+      "end_turn",
+    );
   });
 
   test("documented tools map onto the shared names; unmapped ones keep their own", () => {
     const parsed = grok.parse(fixture("grok-tools.doc-derived.jsonl"));
     expect(tools(parsed.events).map((e) => e.name)).toEqual(["Grep", "Bash", "Read", "list_dir", "Write"]);
-    expect(parsed.events.filter((e) => e.kind === "message").map((e) => (e.kind === "message" ? e.text : ""))).toEqual(["Reading it now.", "ok"]);
+    expect(parsed.events.filter((e) => e.kind === "message").map((e) => (e.kind === "message" ? e.text : ""))).toEqual([
+      "Reading it now.",
+      "ok",
+    ]);
     expect(parsed.reply).toBe("ok");
   });
 
@@ -190,16 +240,27 @@ describe("grok", () => {
     expect(argv).not.toContain("--always-approve");
     expect(allow).not.toContain("Bash");
     expect(allow.some((rule) => rule?.startsWith("Write") || rule?.startsWith("Edit"))).toBe(false);
-    expect(argv.slice(argv.indexOf("--permission-mode"), argv.indexOf("--permission-mode") + 2)).toEqual(["--permission-mode", "dontAsk"]);
+    expect(argv.slice(argv.indexOf("--permission-mode"), argv.indexOf("--permission-mode") + 2)).toEqual([
+      "--permission-mode",
+      "dontAsk",
+    ]);
   });
 });
 
 describe("shell reads", () => {
   test("unwraps login shells and finds printed files across pipelines, skipping options, scripts and output redirects", () => {
     expect(unwrap("/bin/zsh -lc 'cat a b'")).toBe("cat a b");
-    expect(unwrap("bash -lc \"head -n 5 x\"")).toBe("head -n 5 x");
+    expect(unwrap('bash -lc "head -n 5 x"')).toBe("head -n 5 x");
     expect(words(`cat "a b" 'c' d\\ e && ls`)).toEqual(["cat", "a b", "c", "d e", "&&", "ls"]);
-    expect(words("git status 2>&1 >&2 &>/dev/null & ls")).toEqual(["git", "status", "2>&1", ">&2", "&>/dev/null", "&", "ls"]);
+    expect(words("git status 2>&1 >&2 &>/dev/null & ls")).toEqual([
+      "git",
+      "status",
+      "2>&1",
+      ">&2",
+      "&>/dev/null",
+      "&",
+      "ls",
+    ]);
     expect(words("ls&>out.log")).toEqual(["ls", "&>out.log"]);
     expect(words("cat a.md>x")).toEqual(["cat", "a.md", ">x"]);
     expect(words("ls>out.log")).toEqual(["ls", ">out.log"]);
@@ -233,14 +294,14 @@ describe("isolation", () => {
     const callerHome = join(scratch, "caller");
     mkdirSync(join(callerHome, ".codex"), { recursive: true });
     mkdirSync(join(callerHome, ".grok"), { recursive: true });
-    writeFileSync(join(callerHome, ".codex", "auth.json"), "{\"codex\":1}");
-    writeFileSync(join(callerHome, ".grok", "auth.json"), "{\"grok\":1}");
+    writeFileSync(join(callerHome, ".codex", "auth.json"), '{"codex":1}');
+    writeFileSync(join(callerHome, ".grok", "auth.json"), '{"grok":1}');
     const bundle = join(scratch, "dist");
     mkdirSync(join(bundle, "skills", "super-align"), { recursive: true });
     writeFileSync(join(bundle, "skills", "super-align", "SKILL.md"), "---\nname: super-align\n---\n");
 
     const c = codex.isolate!(join(scratch, "s1"), { ...req, env: { HOME: callerHome }, bundleDir: bundle });
-    expect(readFileSync(join(c.env.CODEX_HOME!, "auth.json"), "utf8")).toBe("{\"codex\":1}");
+    expect(readFileSync(join(c.env.CODEX_HOME!, "auth.json"), "utf8")).toBe('{"codex":1}');
     expect(existsSync(join(c.env.CODEX_HOME!, "skills", "super-align", "SKILL.md"))).toBe(true);
     expect(c.env.HOME).not.toBe(callerHome);
 
@@ -249,8 +310,19 @@ describe("isolation", () => {
     expect(g.env.GROK_CLAUDE_SKILLS_ENABLED).toBe("false");
     expect(g.env.GROK_MEMORY).toBe("0");
 
-    expect(claude.isolate!(scratch, req).env).toEqual({ CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1", CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" });
-    expect(withoutParentSession({ CLAUDE_CODE_ENTRYPOINT: "cli", EVAL_X: "1", CLAUDECODE: "1", ANTHROPIC_API_KEY: "k", PATH: "/bin" })).toEqual({ ANTHROPIC_API_KEY: "k", PATH: "/bin" });
+    expect(claude.isolate!(scratch, req).env).toEqual({
+      CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1",
+      CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+    });
+    expect(
+      withoutParentSession({
+        CLAUDE_CODE_ENTRYPOINT: "cli",
+        EVAL_X: "1",
+        CLAUDECODE: "1",
+        ANTHROPIC_API_KEY: "k",
+        PATH: "/bin",
+      }),
+    ).toEqual({ ANTHROPIC_API_KEY: "k", PATH: "/bin" });
     const auth = { CLAUDE_CODE_OAUTH_TOKEN: "t", CLAUDE_CODE_USE_BEDROCK: "1", CLAUDE_CODE_USE_VERTEX: "1" };
     expect(withoutParentSession({ ...auth, CLAUDE_CODE_SSE_PORT: "1" })).toEqual(auth);
     expect(BUNDLE_FOR).toEqual({ claude: "claude-code", codex: "codex", grok: "claude-code" });
@@ -280,8 +352,20 @@ describe("runSubject", () => {
       command: () => ["sh", "-c", 'printf \'{"type":"result","result":"%s","num_turns":1}\\n\' "$MARK"'],
       isolate: () => ({ env: { MARK: "isolated" }, leaks: ["none"], release: () => (released = true) }),
     };
-    const result = await runSubject(fake, "subject-a", "bound-a", { ...req, cwd: scratch, env: { PATH: process.env.PATH ?? "" } });
-    expect(result).toMatchObject({ subject: "subject-a", host: "claude", reply: "isolated", exitCode: 0, timedOut: false, turns: 1, leaks: ["none"] });
+    const result = await runSubject(fake, "subject-a", "bound-a", {
+      ...req,
+      cwd: scratch,
+      env: { PATH: process.env.PATH ?? "" },
+    });
+    expect(result).toMatchObject({
+      subject: "subject-a",
+      host: "claude",
+      reply: "isolated",
+      exitCode: 0,
+      timedOut: false,
+      turns: 1,
+      leaks: ["none"],
+    });
     expect(released).toBe(true);
   });
 
@@ -295,7 +379,8 @@ describe("runSubject", () => {
 describe("eval receipt instrument", () => {
   test("names the revision, donor availability, and the install clause with the tracker's state", () => {
     const root = join(scratch, "instrument");
-    for (const rel of ["catalog.yaml", "adapters"]) cpSync(join(PACKAGE_ROOT, rel), join(root, rel), { recursive: true });
+    for (const rel of ["catalog.yaml", "adapters"])
+      cpSync(join(PACKAGE_ROOT, rel), join(root, rel), { recursive: true });
     const bare = evalInstrument(root, "abc123");
     expect(bare.revision).toBe("abc123");
     expect(bare.donors_present).toBe(false);
@@ -310,7 +395,9 @@ describe("eval receipt instrument", () => {
     expect(unconfigured.install_config).toStartWith("ak.install.yaml: attached tracker; tracker: no backend");
 
     writeFileSync(join(root, "ak.install.yaml"), "attached: [tracker]\ntracker:\n  backend: some-tracker\n");
-    expect(evalInstrument(root, "def456").install_config).toBe("ak.install.yaml: attached tracker; tracker: backend some-tracker");
+    expect(evalInstrument(root, "def456").install_config).toBe(
+      "ak.install.yaml: attached tracker; tracker: backend some-tracker",
+    );
   });
 
   test("refuses to describe a root that has no catalog", () => {
@@ -321,7 +408,8 @@ describe("eval receipt instrument", () => {
 
   test("refuses an install file it cannot read rather than recording the host alone", () => {
     const root = join(scratch, "bad-install");
-    for (const rel of ["catalog.yaml", "adapters"]) cpSync(join(PACKAGE_ROOT, rel), join(root, rel), { recursive: true });
+    for (const rel of ["catalog.yaml", "adapters"])
+      cpSync(join(PACKAGE_ROOT, rel), join(root, rel), { recursive: true });
     writeFileSync(join(root, "ak.install.yaml"), "attached: tracker\n");
     expect(() => evalInstrument(root, "abc123")).toThrow("ak.install.yaml: Declares no 'attached:' list");
     writeFileSync(join(root, "ak.install.yaml"), "attached: [\n");

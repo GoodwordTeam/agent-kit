@@ -83,7 +83,9 @@ export class ClaudeMemSource {
 
   lastActivityMs(project: string): number {
     const row = this.db
-      .query<{ last: number | null }, [string, string]>("select max(created_at_epoch) as last from observations where (project = ? or project like ?)")
+      .query<{ last: number | null }, [string, string]>(
+        "select max(created_at_epoch) as last from observations where (project = ? or project like ?)",
+      )
       .get(...this.args(project));
     return row?.last ?? 0;
   }
@@ -99,7 +101,11 @@ export class ClaudeMemSource {
   }
 
   /** Observations after a watermark id, oldest first unless `newestFirst`. */
-  observationsSince(project: string, afterId: number, options: { sinceEpochMs?: number; newestFirst?: boolean } = {}): ObservationRow[] {
+  observationsSince(
+    project: string,
+    afterId: number,
+    options: { sinceEpochMs?: number; newestFirst?: boolean } = {},
+  ): ObservationRow[] {
     const order = options.newestFirst === true ? "desc" : "asc";
     return this.db
       .query<ObservationRow, [string, string, number, number]>(
@@ -165,12 +171,18 @@ export class ClaudeMemSource {
   }
 
   promptCount(sessionDbId: number): number {
-    const row = this.db.query<{ n: number }, [number]>("select count(*) as n from user_prompts where session_db_id = ?").get(sessionDbId);
+    const row = this.db
+      .query<{ n: number }, [number]>("select count(*) as n from user_prompts where session_db_id = ?")
+      .get(sessionDbId);
     return row?.n ?? 0;
   }
 
   /** First user prompt per session, newest first. Feeds skill discovery when transcripts are unavailable. */
-  sessionPrompts(project: string, sinceMs: number, limit = 200): Array<{ content_session_id: string; user_prompt: string }> {
+  sessionPrompts(
+    project: string,
+    sinceMs: number,
+    limit = 200,
+  ): Array<{ content_session_id: string; user_prompt: string }> {
     return this.db
       .query<{ content_session_id: string; user_prompt: string }, [string, string, number, number]>(
         `select content_session_id, user_prompt from sdk_sessions where (project = ? or project like ?)
@@ -183,7 +195,9 @@ export class ClaudeMemSource {
   editedFiles(memorySessionId: string): string[] {
     const marks = EDIT_TOOLS.map(() => "?").join(", ");
     const rows = this.db
-      .query<{ tool_input: string | null }, string[]>(`select tool_input from tool_uses where memory_session_id = ? and tool_name in (${marks})`)
+      .query<{ tool_input: string | null }, string[]>(
+        `select tool_input from tool_uses where memory_session_id = ? and tool_name in (${marks})`,
+      )
       .all(memorySessionId, ...EDIT_TOOLS);
     const out = new Set<string>();
     for (const row of rows) {
@@ -210,7 +224,9 @@ export class ClaudeMemSource {
   /** How many sessions read a path. Measures whether a candidate skill is ever used. */
   sessionsReading(path: string): number {
     const row = this.db
-      .query<{ n: number }, [string]>("select count(distinct memory_session_id) as n from observations where files_read like ?")
+      .query<{ n: number }, [string]>(
+        "select count(distinct memory_session_id) as n from observations where files_read like ?",
+      )
       .get(`%${path}%`);
     return row?.n ?? 0;
   }

@@ -78,14 +78,20 @@ export function install(args: InstallArgs, opts: FirstmateOptions): InstallResul
   const targets = [
     { rel: ENV_FILE, kind: "env" as const, text: envText(home, resolve(opts.akRoot)) },
     { rel: SETTINGS_FILE, kind: "settings" as const, text: settingsText(resolve(opts.akRoot)) },
-    ...(args.evidence === undefined ? [] : [{ rel: EVIDENCE_FILE, kind: "env" as const, text: evidenceText(args.evidence) }]),
+    ...(args.evidence === undefined
+      ? []
+      : [{ rel: EVIDENCE_FILE, kind: "env" as const, text: evidenceText(args.evidence) }]),
   ];
   const stale = args.evidence === undefined ? [{ rel: EVIDENCE_FILE, kind: "env" as const }] : [];
-  const foreign = [...targets, ...stale].filter((t) => existsSync(join(home, t.rel)) && !ours(join(home, t.rel), t.kind));
+  const foreign = [...targets, ...stale].filter(
+    (t) => existsSync(join(home, t.rel)) && !ours(join(home, t.rel), t.kind),
+  );
   if (foreign.length > 0) {
     return {
       ok: false,
-      errors: foreign.map((t) => `${join(home, t.rel)} exists and was not written by ak firstmate install; refusing to overwrite it`),
+      errors: foreign.map(
+        (t) => `${join(home, t.rel)} exists and was not written by ak firstmate install; refusing to overwrite it`,
+      ),
       written: [],
     };
   }

@@ -68,14 +68,22 @@ export function checkCatalogRules(ctx: CheckContext): Issue[] {
   for (const reference of catalog.bySection("references")) {
     if (reference.loadedBy.length === 0) {
       issues.push(
-        error(RULE_REFERENCE_LOADER, "catalog.yaml", `reference ${reference.id} declares no loaded_by; progressive disclosure is only checkable when the loaders are named`),
+        error(
+          RULE_REFERENCE_LOADER,
+          "catalog.yaml",
+          `reference ${reference.id} declares no loaded_by; progressive disclosure is only checkable when the loaders are named`,
+        ),
       );
       continue;
     }
     for (const loader of reference.loadedBy) {
       if (!skillIds.has(loader)) {
         issues.push(
-          error(RULE_REFERENCE_LOADER, "catalog.yaml", `reference ${reference.id} is loaded_by ${loader}, which is not a declared skill`),
+          error(
+            RULE_REFERENCE_LOADER,
+            "catalog.yaml",
+            `reference ${reference.id} is loaded_by ${loader}, which is not a declared skill`,
+          ),
         );
       }
     }
@@ -97,11 +105,21 @@ export function checkCatalogRules(ctx: CheckContext): Issue[] {
     const first = defaults[0];
     if (first !== undefined && first.id !== declared) {
       issues.push(
-        error(RULE_DEFAULT_PROFILE, "catalog.yaml", `profile ${first.id} is the default but package.default_profile is ${declared}`),
+        error(
+          RULE_DEFAULT_PROFILE,
+          "catalog.yaml",
+          `profile ${first.id} is the default but package.default_profile is ${declared}`,
+        ),
       );
     }
     if (declared.length > 0 && !profiles.some((p) => p.id === declared)) {
-      issues.push(error(RULE_DEFAULT_PROFILE, "catalog.yaml", `package.default_profile is ${declared}, which is not a declared profile`));
+      issues.push(
+        error(
+          RULE_DEFAULT_PROFILE,
+          "catalog.yaml",
+          `package.default_profile is ${declared}, which is not a declared profile`,
+        ),
+      );
     }
   }
 
@@ -230,7 +248,9 @@ export function checkSkillManifests(ctx: CheckContext): Issue[] {
         const childId = str(child);
         if (childId === null) continue;
         if (!catalog.skillIds().has(childId)) {
-          issues.push(error(RULE_SKILL_INVOCATION, manifest.file, `child_skills names ${childId}, which is not a declared skill`));
+          issues.push(
+            error(RULE_SKILL_INVOCATION, manifest.file, `child_skills names ${childId}, which is not a declared skill`),
+          );
           continue;
         }
         if (invocationOf(childId) === "U") {
@@ -279,7 +299,11 @@ export function checkSkillManifests(ctx: CheckContext): Issue[] {
       const providedBy = str(budget["provided_by"]);
       if (providedBy !== "runner") {
         issues.push(
-          error(RULE_SKILL_BUDGET, manifest.file, `budget.provided_by is ${providedBy ?? "unset"}; budgets are handed in by the runner and never computed here`),
+          error(
+            RULE_SKILL_BUDGET,
+            manifest.file,
+            `budget.provided_by is ${providedBy ?? "unset"}; budgets are handed in by the runner and never computed here`,
+          ),
         );
       }
       const limits = obj(manifest.doc["limits"]) ?? {};
@@ -334,11 +358,21 @@ export function checkPackManifests(ctx: CheckContext): Issue[] {
 
     const examples = arr(activation["examples"]).map(obj);
     if (examples.length < 2) {
-      issues.push(error(RULE_PACK_ACTIVATION, manifest.file, `activation declares ${examples.length} example(s); at least two are required`));
+      issues.push(
+        error(
+          RULE_PACK_ACTIVATION,
+          manifest.file,
+          `activation declares ${examples.length} example(s); at least two are required`,
+        ),
+      );
     }
     if (examples.length > 0 && !examples.some((e) => e !== null && e["attaches"] === false)) {
       issues.push(
-        error(RULE_PACK_ACTIVATION, manifest.file, "activation examples contain no negative case; a rule with no example that does not attach has no demonstrated boundary"),
+        error(
+          RULE_PACK_ACTIVATION,
+          manifest.file,
+          "activation examples contain no negative case; a rule with no example that does not attach has no demonstrated boundary",
+        ),
       );
     }
   }
@@ -351,7 +385,11 @@ export function checkPackManifests(ctx: CheckContext): Issue[] {
       const pack = str(record["pack"]) ?? `#${i}`;
       if (arr(record["matched_rules"]).length === 0) {
         issues.push(
-          error(RULE_PACK_ATTACHMENT, artifact.file, `packs_attached[${i}] (${pack}) names no matched rule; the reason a pack attached is recorded, never reconstructed`),
+          error(
+            RULE_PACK_ATTACHMENT,
+            artifact.file,
+            `packs_attached[${i}] (${pack}) names no matched rule; the reason a pack attached is recorded, never reconstructed`,
+          ),
         );
       }
       if (str(record["rationale"]) === null) {
@@ -360,7 +398,11 @@ export function checkPackManifests(ctx: CheckContext): Issue[] {
       for (const key of ["grant", "grants", "approval", "approvals", "authority"]) {
         if (record[key] !== undefined) {
           issues.push(
-            error(RULE_PACK_ATTACHMENT, artifact.file, `packs_attached[${i}] (${pack}) carries ${key}; attaching a pack authorizes nothing`),
+            error(
+              RULE_PACK_ATTACHMENT,
+              artifact.file,
+              `packs_attached[${i}] (${pack}) carries ${key}; attaching a pack authorizes nothing`,
+            ),
           );
         }
       }

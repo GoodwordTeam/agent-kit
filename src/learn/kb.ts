@@ -62,8 +62,14 @@ function kebab(text: string): string {
 const LOCAL_ID = /^[a-z]{2}-\d{1,6}$/;
 
 /** A lesson artifact with status `candidate`. Shape only; nothing is sent. The local id is the runtime's, never a judge's. */
-export function lessonDraft(input: LessonDraftInput, project: ProjectIdentity, runId: string, at: Date = new Date()): Record<string, unknown> {
-  if (!LOCAL_ID.test(input.localId)) throw new Error(`lesson draft: local id must look like ls-003, got ${JSON.stringify(input.localId)}`);
+export function lessonDraft(
+  input: LessonDraftInput,
+  project: ProjectIdentity,
+  runId: string,
+  at: Date = new Date(),
+): Record<string, unknown> {
+  if (!LOCAL_ID.test(input.localId))
+    throw new Error(`lesson draft: local id must look like ls-003, got ${JSON.stringify(input.localId)}`);
   const projectId = kebab(basename(project.root));
   const repoName = project.repo ?? projectId;
   const created = nowIso(at);
@@ -85,8 +91,13 @@ export function lessonDraft(input: LessonDraftInput, project: ProjectIdentity, r
       occurrence: { id: input.occurrence.id, hash: artifactHash(input.occurrence.content) },
       at: created,
     },
-    evidence: input.evidence.map((item) => (item.note === undefined ? { ref: item.ref, kind: item.kind } : { ...item })),
-    applies_to: input.paths && input.paths.length > 0 ? { domains: input.domains, paths: input.paths } : { domains: input.domains },
+    evidence: input.evidence.map((item) =>
+      item.note === undefined ? { ref: item.ref, kind: item.kind } : { ...item },
+    ),
+    applies_to:
+      input.paths && input.paths.length > 0
+        ? { domains: input.domains, paths: input.paths }
+        : { domains: input.domains },
     ...(input.guidance && input.guidance.length > 0 ? { guidance: input.guidance } : {}),
   };
 }
@@ -106,7 +117,8 @@ export interface ProposalResult {
  */
 export function proposeLesson(ctx: LearnContext, ledgerDir: string, draft: Record<string, unknown>): ProposalResult {
   const id = String(draft.id);
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id) || id.includes("..")) throw new Error(`proposal id is not a file name: ${JSON.stringify(id)}`);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id) || id.includes(".."))
+    throw new Error(`proposal id is not a file name: ${JSON.stringify(id)}`);
   const recordPath = join(ledgerDir, "proposals", `${id}.json`);
   const previous = readJson<{ kb_ref?: string } | null>(recordPath, null);
   if (previous?.kb_ref) return { ref: previous.kb_ref, delivered: true };
@@ -115,7 +127,11 @@ export function proposeLesson(ctx: LearnContext, ledgerDir: string, draft: Recor
   const command = ctx.env.AK_LEARN_KB_COMMAND;
   let result: ProposalResult = { ref: `ledger:proposals/${id}.json`, delivered: false };
   if (command !== undefined && command.trim() !== "" && !ctx.config.dryRun) {
-    const reply = run(["sh", "-c", `${command} proposeLesson`], { input: JSON.stringify(draft), timeoutMs: 60_000, env: ctx.env });
+    const reply = run(["sh", "-c", `${command} proposeLesson`], {
+      input: JSON.stringify(draft),
+      timeoutMs: 60_000,
+      env: ctx.env,
+    });
     try {
       const parsed = JSON.parse(reply.stdout) as { ref?: unknown };
       if (reply.code === 0 && typeof parsed.ref === "string" && parsed.ref !== "") {

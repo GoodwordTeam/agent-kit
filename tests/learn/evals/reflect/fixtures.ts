@@ -114,14 +114,28 @@ export interface BuiltFixture {
  * the first session) and then the injection land last. A fact marked `in_injection` is written into
  * the injection's observation, ahead of the payload.
  */
-export function buildFixture(spec: FixtureSpec, distractors: readonly ObsSpec[], dbPath: string, now = Date.now()): BuiltFixture {
+export function buildFixture(
+  spec: FixtureSpec,
+  distractors: readonly ObsSpec[],
+  dbPath: string,
+  now = Date.now(),
+): BuiltFixture {
   const mem = new MemFixture(dbPath);
   const sids = [sessionId(spec.id, 1), sessionId(spec.id, 2)] as const;
   mem.session({ sid: sids[0], project: spec.project, started: now - 7_200_000, completed: now - 6_000_000 });
   mem.session({ sid: sids[1], project: spec.project, started: now - 3_600_000, completed: now - 3_000_000 });
   let at = now - 5_500_000;
-  const add = (sid: string, o: ObsSpec) => mem.observation({ sid, project: spec.project, type: o.type, title: o.title, facts: o.facts ?? [], at: (at += 1000) });
-  const noiseOf = (kind: NoiseSpec["kind"]) => (spec.noise ?? []).filter((n) => n.kind === kind && n.title !== undefined);
+  const add = (sid: string, o: ObsSpec) =>
+    mem.observation({
+      sid,
+      project: spec.project,
+      type: o.type,
+      title: o.title,
+      facts: o.facts ?? [],
+      at: (at += 1000),
+    });
+  const noiseOf = (kind: NoiseSpec["kind"]) =>
+    (spec.noise ?? []).filter((n) => n.kind === kind && n.title !== undefined);
   for (const n of noiseOf("superseded")) add(sids[0], n as ObsSpec);
   const factIds = new Map<string, string[]>();
   const colocated = spec.facts.filter((f) => f.in_injection);
@@ -135,12 +149,21 @@ export function buildFixture(spec: FixtureSpec, distractors: readonly ObsSpec[],
   for (const noise of distractors.slice(separate.length)) add(sids[1], noise);
   for (const n of noiseOf("one-off")) add(sids[1], n as ObsSpec);
   const injection = spec.injection;
-  if (injection === undefined && colocated.length > 0) throw new Error(`${spec.id}: in_injection facts need an injection`);
+  if (injection === undefined && colocated.length > 0)
+    throw new Error(`${spec.id}: in_injection facts need an injection`);
   const lead = injection?.lead === undefined ? [] : [`obs:${add(sids[0], { type: "discovery", ...injection.lead })}`];
   const injectionFacts = [...colocated.flatMap((f) => f.facts ?? []), ...(injection?.facts ?? [])];
-  const injectionId = injection === undefined ? undefined : `obs:${add(sids[1], { type: "discovery", title: injection.title, facts: injectionFacts })}`;
+  const injectionId =
+    injection === undefined
+      ? undefined
+      : `obs:${add(sids[1], { type: "discovery", title: injection.title, facts: injectionFacts })}`;
   for (const fact of colocated) factIds.set(fact.key, [injectionId!, sid8(sids[1])]);
-  mem.summary({ sid: sids[0], project: spec.project, request: `work on ${spec.project}`, completed: "see observations" });
+  mem.summary({
+    sid: sids[0],
+    project: spec.project,
+    request: `work on ${spec.project}`,
+    completed: "see observations",
+  });
   mem.close();
   return { spec, dbPath, factIds, injectionId, injectionIds: injectionId === undefined ? [] : [...lead, injectionId] };
 }

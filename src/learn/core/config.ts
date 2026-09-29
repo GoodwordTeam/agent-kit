@@ -41,7 +41,17 @@ export interface LearnConfig {
  * `--mcp-config` keeps the user's and plugins' MCP servers out as well.
  * `--bare` is deliberately absent: it also drops the login the call needs.
  */
-export const DEFAULT_JUDGE = ["claude", "-p", "--tools", "", "--strict-mcp-config", "--settings", '{"disableAllHooks":true}', "--output-format", "json"];
+export const DEFAULT_JUDGE = [
+  "claude",
+  "-p",
+  "--tools",
+  "",
+  "--strict-mcp-config",
+  "--settings",
+  '{"disableAllHooks":true}',
+  "--output-format",
+  "json",
+];
 
 function int(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
   const raw = env[name];
@@ -98,15 +108,21 @@ export function splitCommand(text: string): string[] {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): LearnConfig {
-  const configDir = env.CLAUDE_CONFIG_DIR && env.CLAUDE_CONFIG_DIR.trim() !== "" ? env.CLAUDE_CONFIG_DIR : join(homedir(), ".claude");
-  const memDir = env.CLAUDE_MEM_DATA_DIR && env.CLAUDE_MEM_DATA_DIR.trim() !== "" ? env.CLAUDE_MEM_DATA_DIR : join(homedir(), ".claude-mem");
-  const judge = env.AK_LEARN_JUDGE && env.AK_LEARN_JUDGE.trim() !== "" ? splitCommand(env.AK_LEARN_JUDGE) : DEFAULT_JUDGE;
+  const configDir =
+    env.CLAUDE_CONFIG_DIR && env.CLAUDE_CONFIG_DIR.trim() !== "" ? env.CLAUDE_CONFIG_DIR : join(homedir(), ".claude");
+  const memDir =
+    env.CLAUDE_MEM_DATA_DIR && env.CLAUDE_MEM_DATA_DIR.trim() !== ""
+      ? env.CLAUDE_MEM_DATA_DIR
+      : join(homedir(), ".claude-mem");
+  const judge =
+    env.AK_LEARN_JUDGE && env.AK_LEARN_JUDGE.trim() !== "" ? splitCommand(env.AK_LEARN_JUDGE) : DEFAULT_JUDGE;
   return {
     configDir,
     runtimeDir: join(configDir, "agent-kit", "learn"),
     judgeCommand: judge,
     judgeTimeoutMs: int(env, "AK_LEARN_JUDGE_TIMEOUT_S", 300) * 1000,
-    memDb: env.AK_LEARN_MEM_DB && env.AK_LEARN_MEM_DB.trim() !== "" ? env.AK_LEARN_MEM_DB : join(memDir, "claude-mem.db"),
+    memDb:
+      env.AK_LEARN_MEM_DB && env.AK_LEARN_MEM_DB.trim() !== "" ? env.AK_LEARN_MEM_DB : join(memDir, "claude-mem.db"),
     activeAt: int(env, "AK_LEARN_ACTIVE_AT", 2),
     promoteAt: int(env, "AK_LEARN_PROMOTE_AT", 3),
     idleS: int(env, "AK_LEARN_IDLE_S", 300),

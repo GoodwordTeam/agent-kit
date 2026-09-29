@@ -36,7 +36,9 @@ function guard(bindingPath: string, input: Record<string, unknown>, cwd?: string
   });
   const out = proc.stdout.toString();
   if (out.trim() === "") return { denied: false, reason: "", code: proc.exitCode ?? -1 };
-  const parsed = JSON.parse(out) as { hookSpecificOutput: { permissionDecision: string; permissionDecisionReason: string } };
+  const parsed = JSON.parse(out) as {
+    hookSpecificOutput: { permissionDecision: string; permissionDecisionReason: string };
+  };
   return {
     denied: parsed.hookSpecificOutput.permissionDecision === "deny",
     reason: parsed.hookSpecificOutput.permissionDecisionReason,
@@ -79,9 +81,13 @@ describe("child-guard", () => {
     const ledger = "/Users/w/.agent-kit/firstmate/bindings/ak-T-1.json";
     expect(guard(b, child("Write", { file_path: ledger })).reason).toContain("binding ledger");
     expect(guard(b, child("Edit", { file_path: ledger })).reason).toContain("binding ledger");
-    expect(guard(b, child("NotebookEdit", { notebook_path: "/Users/w/.agent-kit/firstmate/x.ipynb" })).reason).toContain("binding ledger");
+    expect(
+      guard(b, child("NotebookEdit", { notebook_path: "/Users/w/.agent-kit/firstmate/x.ipynb" })).reason,
+    ).toContain("binding ledger");
     expect(guard(b, child("Bash", { command: `echo '{}' >${ledger}` })).reason).toContain("binding ledger");
-    expect(guard(b, child("Bash", { command: "cp /tmp/r.json ~/.agent-kit/firstmate/bindings/" })).reason).toContain("binding ledger");
+    expect(guard(b, child("Bash", { command: "cp /tmp/r.json ~/.agent-kit/firstmate/bindings/" })).reason).toContain(
+      "binding ledger",
+    );
   });
 
   test("a main-thread call is never judged, even one naming ak firstmate bind or the ledger", () => {
@@ -93,7 +99,9 @@ describe("child-guard", () => {
     ]) {
       expect(guard(b, parent("Bash", { command: cmd })).denied).toBe(false);
     }
-    expect(guard(b, parent("Write", { file_path: "/Users/w/.agent-kit/firstmate/bindings/x.json" })).denied).toBe(false);
+    expect(guard(b, parent("Write", { file_path: "/Users/w/.agent-kit/firstmate/bindings/x.json" })).denied).toBe(
+      false,
+    );
   });
 
   test("a main-thread call is never judged, even one a child would be denied", () => {
@@ -137,7 +145,17 @@ describe("child-guard", () => {
   });
 
   test("ordinary child commands pass", () => {
-    for (const command of ["bun test", "git status", "git diff HEAD", "gh pr view 3", "cat CLAUDE.md", "grep -rn push src", "gh api repos/o/r/pulls/3", "gh api -X POST repos/o/r/issues/3/comments -f body=x", `gh api graphql -f query='query { repository(owner:"o", name:"r") { pullRequest(number:3) { title } } }'`]) {
+    for (const command of [
+      "bun test",
+      "git status",
+      "git diff HEAD",
+      "gh pr view 3",
+      "cat CLAUDE.md",
+      "grep -rn push src",
+      "gh api repos/o/r/pulls/3",
+      "gh api -X POST repos/o/r/issues/3/comments -f body=x",
+      `gh api graphql -f query='query { repository(owner:"o", name:"r") { pullRequest(number:3) { title } } }'`,
+    ]) {
       expect({ command, denied: guard(b, child("Bash", { command })).denied }).toEqual({ command, denied: false });
     }
   });
@@ -224,10 +242,22 @@ describe("child-guard exact output (characterization)", () => {
 
   const allowCases: Array<{ name: string; bindingPath: string; input: string | Record<string, unknown> }> = [
     { name: "main-thread git push", bindingPath: b, input: parent("Bash", { command: "git push origin main" }) },
-    { name: "main-thread write outside worktree", bindingPath: b, input: parent("Write", { file_path: "/etc/passwd" }) },
+    {
+      name: "main-thread write outside worktree",
+      bindingPath: b,
+      input: parent("Write", { file_path: "/etc/passwd" }),
+    },
     { name: "child ordinary bash command", bindingPath: b, input: child("Bash", { command: "git status" }) },
-    { name: "child write inside worktree", bindingPath: b, input: child("Write", { file_path: `${WORKTREE}/src/a.ts` }) },
-    { name: "child write inside evidence store", bindingPath: b, input: child("Write", { file_path: "/evidence/store/raw-1.json" }) },
+    {
+      name: "child write inside worktree",
+      bindingPath: b,
+      input: child("Write", { file_path: `${WORKTREE}/src/a.ts` }),
+    },
+    {
+      name: "child write inside evidence store",
+      bindingPath: b,
+      input: child("Write", { file_path: "/evidence/store/raw-1.json" }),
+    },
     { name: "child reads a pull request", bindingPath: b, input: child("Bash", { command: "gh pr view 3" }) },
   ];
 
@@ -238,7 +268,12 @@ describe("child-guard exact output (characterization)", () => {
     });
   }
 
-  const denyCases: Array<{ name: string; bindingPath: string; input: string | Record<string, unknown>; reason: string }> = [
+  const denyCases: Array<{
+    name: string;
+    bindingPath: string;
+    input: string | Record<string, unknown>;
+    reason: string;
+  }> = [
     {
       name: "malformed JSON input",
       bindingPath: b,
@@ -377,13 +412,15 @@ describe("child-guard exact output (characterization)", () => {
       name: "write outside worktree/evidence/tmp",
       bindingPath: b,
       input: child("Write", { file_path: "/work/treehouse/x" }),
-      reason: "a task-local child writes only inside the worktree, the evidence store or its scratch directory, not /work/treehouse/x",
+      reason:
+        "a task-local child writes only inside the worktree, the evidence store or its scratch directory, not /work/treehouse/x",
     },
     {
       name: "NotebookEdit outside worktree/evidence/tmp",
       bindingPath: b,
       input: child("NotebookEdit", { notebook_path: "/tmp/x.ipynb" }),
-      reason: "a task-local child writes only inside the worktree, the evidence store or its scratch directory, not /tmp/x.ipynb",
+      reason:
+        "a task-local child writes only inside the worktree, the evidence store or its scratch directory, not /tmp/x.ipynb",
     },
   ];
 

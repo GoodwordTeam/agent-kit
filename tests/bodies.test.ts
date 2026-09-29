@@ -60,7 +60,10 @@ function body(title: string, sections: ReadonlyArray<string>): string {
 const protocolBody = (sections: ReadonlyArray<string> = PROTOCOL_SECTIONS): string => body("Alpha", sections);
 const roleBody = (sections: ReadonlyArray<string> = ROLE_SECTIONS): string => body("Seat", sections);
 
-function ctxFor(files: Record<string, string>): { root: string; catalog: NonNullable<ReturnType<typeof loadCatalog>["catalog"]> } {
+function ctxFor(files: Record<string, string>): {
+  root: string;
+  catalog: NonNullable<ReturnType<typeof loadCatalog>["catalog"]>;
+} {
   const root = makeTree(files);
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
@@ -105,7 +108,10 @@ describe("protocol body shape (AUTHORING 12.1)", () => {
   });
 
   test("a protocol missing ## Invoked by is an error naming the heading", () => {
-    const ctx = protocolTree({}, PROTOCOL_SECTIONS.filter((h) => h !== "## Invoked by"));
+    const ctx = protocolTree(
+      {},
+      PROTOCOL_SECTIONS.filter((h) => h !== "## Invoked by"),
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
     expect(issue?.file).toBe("protocols/alpha/PROTOCOL.md");
     expect(issue?.message).toContain("## Invoked by");
@@ -125,7 +131,9 @@ describe("protocol body shape (AUTHORING 12.1)", () => {
     const a = swapped[4] as string;
     swapped[4] = swapped[5] as string;
     swapped[5] = a;
-    const issue = errors(checkBodyShapes(protocolTree({}, swapped))).find((i) => i.rule === "body.sections-out-of-order");
+    const issue = errors(checkBodyShapes(protocolTree({}, swapped))).find(
+      (i) => i.rule === "body.sections-out-of-order",
+    );
     expect(issue?.message).toContain("## Hard gates");
   });
 
@@ -175,9 +183,12 @@ describe("protocol body shape (AUTHORING 12.1)", () => {
  * and asserts the rule fires, and the two paired controls below assert that
  * seating skills did not reach across into the other two shapes.
  */
-const SKILL_FRONTMATTER = ["---", "name: alpha", "description: Does the one thing.", "license: MIT", "---", ""].join("\n");
+const SKILL_FRONTMATTER = ["---", "name: alpha", "description: Does the one thing.", "license: MIT", "---", ""].join(
+  "\n",
+);
 
-const skillBody = (sections: ReadonlyArray<string> = SKILL_SECTIONS): string => `${SKILL_FRONTMATTER}${body("Alpha", sections)}`;
+const skillBody = (sections: ReadonlyArray<string> = SKILL_SECTIONS): string =>
+  `${SKILL_FRONTMATTER}${body("Alpha", sections)}`;
 
 function skillTree(extra: Record<string, string> = {}, sections?: ReadonlyArray<string>) {
   return ctxFor({
@@ -205,7 +216,10 @@ describe("skill body shape (AUTHORING 3)", () => {
   });
 
   test("a skill missing ## Stop conditions is an error naming the heading and the file", () => {
-    const ctx = skillTree({}, SKILL_SECTIONS.filter((h) => h !== "## Stop conditions"));
+    const ctx = skillTree(
+      {},
+      SKILL_SECTIONS.filter((h) => h !== "## Stop conditions"),
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
     expect(issue?.file).toBe("skills/alpha/SKILL.md");
     expect(issue?.message).toContain("## Stop conditions");
@@ -254,7 +268,10 @@ describe("skill body shape (AUTHORING 3)", () => {
   test("the sections behind the frontmatter are the ones checked", () => {
     // Without this the exemption above could be read as "skip the frontmatter",
     // and a body whose headings live after a `---` block would go unsplit.
-    const ctx = skillTree({}, SKILL_SECTIONS.filter((h) => h !== "## When to use"));
+    const ctx = skillTree(
+      {},
+      SKILL_SECTIONS.filter((h) => h !== "## When to use"),
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
     expect(issue?.message).toContain("## When to use");
   });
@@ -301,7 +318,10 @@ describe("role body shape (AUTHORING 12.2)", () => {
   });
 
   test("a role missing ## Evidence it must cite is an error naming the heading", () => {
-    const ctx = roleTree({}, ROLE_SECTIONS.filter((h) => h !== "## Evidence it must cite"));
+    const ctx = roleTree(
+      {},
+      ROLE_SECTIONS.filter((h) => h !== "## Evidence it must cite"),
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
     expect(issue?.message).toContain("## Evidence it must cite");
   });
@@ -324,7 +344,15 @@ describe("role body shape (AUTHORING 12.2)", () => {
   });
 
   test("## Rationalizations this seat makes comes last", () => {
-    const moved = ["## What this seat judges", "## Not this seat", "## Evidence it must cite", "## Never", "## Rationalizations this seat makes", "## What it returns", "## When it has nothing to say"];
+    const moved = [
+      "## What this seat judges",
+      "## Not this seat",
+      "## Evidence it must cite",
+      "## Never",
+      "## Rationalizations this seat makes",
+      "## What it returns",
+      "## When it has nothing to say",
+    ];
     const issue = errors(checkBodyShapes(roleTree({}, moved))).find((i) => i.rule === "body.sections-out-of-order");
     expect(issue?.message).toContain("## Rationalizations this seat makes");
   });
@@ -451,7 +479,10 @@ describe("domain pack body shape (AUTHORING 12.6)", () => {
   });
 
   test("a missing required section is an error naming it", () => {
-    const ctx = packTree({}, PACK_SECTIONS.filter((h) => h !== "## Does not attach when"));
+    const ctx = packTree(
+      {},
+      PACK_SECTIONS.filter((h) => h !== "## Does not attach when"),
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "body.missing-section");
     expect(issue?.file).toBe("packs/pack-alpha/PACK.md");
     expect(issue?.message).toContain("## Does not attach when");
@@ -518,8 +549,8 @@ describe("loose doctrine files (AUTHORING 12.3)", () => {
       "protocols/alpha/PROTOCOL.md": protocolBody(),
       "protocols/invocation-authority.md": "# Invocation authority\n\nDoctrine, not a catalog entry.\n",
     });
-    const flagged = [...checkCompleteness(ctx), ...checkBodyShapes(ctx)].filter(
-      (i) => i.file.includes("invocation-authority"),
+    const flagged = [...checkCompleteness(ctx), ...checkBodyShapes(ctx)].filter((i) =>
+      i.file.includes("invocation-authority"),
     );
     expect(flagged).toEqual([]);
   });
@@ -576,8 +607,8 @@ const CONTRACT = [
   "   artifact. `implementer` and `plan-review/planner` carry the converse instead, naming what the",
   "   seat writes and stating that it never writes a finding, a receipt, a review record or a ticket,",
   "   and never closes or approves what it produced.",
-  '4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and',
-  '   `code-review/project-standards` (the catalog\'s only `tier: standards-gate`). They carry *"cites an',
+  "4. **Standards grounding.** Two seats judge against a project standard: `reviewer-standards` and",
+  "   `code-review/project-standards` (the catalog's only `tier: standards-gate`). They carry *\"cites an",
   '   actual project rule or returns empty; an absent standard is never an invented preference."* This',
   "   row is **not** an instance of ruling `required-lane-failure-is-unavailable` and does not cite it.",
   "   No ruling states it; §12.2 does.",
@@ -697,18 +728,18 @@ describe("the two universal ## Never rows (AUTHORING 12.2)", () => {
 
   test("the citation alone does not satisfy the row; the row's own text must be there", () => {
     const hollow = "2. Some other prohibition entirely (ruling `required-lane-failure-is-unavailable`).";
-    const issues = errors(checkBodyShapes(seatTree("seat", neverSection([CLOSURE_ROW, hollow, PLAIN_AUTHORSHIP_ROW])))).filter(
-      (i) => i.rule === "role.never-row-not-verbatim",
-    );
+    const issues = errors(
+      checkBodyShapes(seatTree("seat", neverSection([CLOSURE_ROW, hollow, PLAIN_AUTHORSHIP_ROW]))),
+    ).filter((i) => i.rule === "role.never-row-not-verbatim");
     expect(issues).toHaveLength(1);
   });
 
   test("the row's text alone does not satisfy it either; the citation must be there too", () => {
     const uncited = UNAVAILABLE_ROW.replace(" (ruling\n   `required-lane-failure-is-unavailable`)", "");
     expect(uncited).not.toBe(UNAVAILABLE_ROW);
-    const issues = errors(checkBodyShapes(seatTree("seat", neverSection([CLOSURE_ROW, uncited, PLAIN_AUTHORSHIP_ROW])))).filter(
-      (i) => i.rule === "role.missing-universal-never-row",
-    );
+    const issues = errors(
+      checkBodyShapes(seatTree("seat", neverSection([CLOSURE_ROW, uncited, PLAIN_AUTHORSHIP_ROW]))),
+    ).filter((i) => i.rule === "role.missing-universal-never-row");
     expect(issues).toHaveLength(1);
   });
 
@@ -906,7 +937,10 @@ describe("the contract is the authority, and its absence is said rather than pas
     // the two it recognised and passed the rest would report a clean tree while
     // a row nothing checks stands in AUTHORING.md.
     const anchor = "**Conditional, required exactly where the condition holds:**";
-    const extended = CONTRACT.replace(anchor, `3. **A third universal row.** Stated here and nowhere else.\n\n${anchor}`);
+    const extended = CONTRACT.replace(
+      anchor,
+      `3. **A third universal row.** Stated here and nowhere else.\n\n${anchor}`,
+    );
     expect(extended).not.toBe(CONTRACT);
     const ctx = ctxFor({
       "catalog.yaml": `${CATALOG_HEAD}roles:\n  - id: seat\n    status: authored\n${CATALOG_TWINS}`,
@@ -936,7 +970,10 @@ describe("the contract is the authority, and its absence is said rather than pas
   test("the rows are read from the contract, so editing the contract moves the bar", () => {
     // The property that keeps the row text out of src/. A body carrying the
     // contract's row passes; change the contract alone and the same body fails.
-    const moved = CONTRACT.replace("Only independent verification closes a finding.", "Only independent verification closes it.");
+    const moved = CONTRACT.replace(
+      "Only independent verification closes a finding.",
+      "Only independent verification closes it.",
+    );
     expect(moved).not.toBe(CONTRACT);
     const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, PLAIN_AUTHORSHIP_ROW]);
     const ctx = ctxFor({
@@ -972,7 +1009,9 @@ describe("the gate names the population it covered", () => {
 describe("the conditional authorship row (AUTHORING 12.2)", () => {
   test("a judging seat carries the plain form", () => {
     expect(
-      errors(checkBodyShapes(seatTree("seat", COMPLIANT_JUDGING_SEAT))).filter((i) => i.rule === "role.authorship-row-mismatch"),
+      errors(checkBodyShapes(seatTree("seat", COMPLIANT_JUDGING_SEAT))).filter(
+        (i) => i.rule === "role.authorship-row-mismatch",
+      ),
     ).toEqual([]);
   });
 
@@ -993,19 +1032,25 @@ describe("the conditional authorship row (AUTHORING 12.2)", () => {
 
   test("a producing seat that carries neither form is an error", () => {
     const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW]);
-    const issue = errors(checkBodyShapes(seatTree("implementer", never))).find((i) => i.rule === "role.authorship-row-mismatch");
+    const issue = errors(checkBodyShapes(seatTree("implementer", never))).find(
+      (i) => i.rule === "role.authorship-row-mismatch",
+    );
     expect(issue?.severity).toBe("error");
   });
 
   test("a judging seat carrying the converse is an error: only two seats produce", () => {
     const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW, CONVERSE_AUTHORSHIP_ROW]);
-    const issue = errors(checkBodyShapes(seatTree("supervisor", never))).find((i) => i.rule === "role.authorship-row-mismatch");
+    const issue = errors(checkBodyShapes(seatTree("supervisor", never))).find(
+      (i) => i.rule === "role.authorship-row-mismatch",
+    );
     expect(issue?.severity).toBe("error");
   });
 
   test("a judging seat carrying no authorship row at all is an error", () => {
     const never = neverSection([CLOSURE_ROW, UNAVAILABLE_ROW]);
-    const issue = errors(checkBodyShapes(seatTree("supervisor", never))).find((i) => i.rule === "role.authorship-row-mismatch");
+    const issue = errors(checkBodyShapes(seatTree("supervisor", never))).find(
+      (i) => i.rule === "role.authorship-row-mismatch",
+    );
     expect(issue?.severity).toBe("error");
   });
 
@@ -1167,7 +1212,6 @@ describe("the gate against the real contract and the real seats", () => {
   });
 });
 
-
 /**
  * §12.2's counterpart table, as AUTHORING.md writes it. The fixtures carry a
  * small one rather than the real families, so a test asserts a rule and not a
@@ -1202,7 +1246,8 @@ function panelTree(id: string, bullets: string, extra: Record<string, string> = 
   });
 }
 
-const OTHER_PANEL_SEATS = "  - id: code-review/security\n    status: contract\n  - id: doc-review/security-lens\n    status: contract\n";
+const OTHER_PANEL_SEATS =
+  "  - id: code-review/security\n    status: contract\n  - id: doc-review/security-lens\n    status: contract\n";
 
 describe("a bullet naming another panel names a seat in it (AUTHORING 12.2)", () => {
   test("another panel in prose with no id anywhere in the bullet is an error", () => {
@@ -1296,17 +1341,27 @@ describe("every counterpart the table declares is named (AUTHORING 12.2)", () =>
   });
 
   test("a present AUTHORING.md whose table has gone is an error, not a check that quietly passes", () => {
-    const ctx = panelTree("code-review/security", "- **The closure decision.** Not this seat's call.\n", {
-      "AUTHORING.md": "# Authoring\n\nThe families that exist today:\n\nnone, apparently.\n",
-    }, OTHER_PANEL_SEATS);
+    const ctx = panelTree(
+      "code-review/security",
+      "- **The closure decision.** Not this seat's call.\n",
+      {
+        "AUTHORING.md": "# Authoring\n\nThe families that exist today:\n\nnone, apparently.\n",
+      },
+      OTHER_PANEL_SEATS,
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-table-unreadable");
     expect(issue?.file).toBe("AUTHORING.md");
   });
 
   test("a one-way family is an error naming both, because a reader arrives from either side", () => {
-    const ctx = panelTree("code-review/security", "- **`doc-review/security-lens`.** Reads a plan.\n", {
-      "AUTHORING.md": AUTHORING,
-    }, OTHER_PANEL_SEATS);
+    const ctx = panelTree(
+      "code-review/security",
+      "- **`doc-review/security-lens`.** Reads a plan.\n",
+      {
+        "AUTHORING.md": AUTHORING,
+      },
+      OTHER_PANEL_SEATS,
+    );
     const issue = checkBodyShapes(ctx).find((i) => i.rule === "role.counterpart-table-asymmetric");
     expect(issue?.severity).toBe("error");
     expect(issue?.message).toContain("code-review/security");
@@ -1330,34 +1385,49 @@ describe("every counterpart the table declares is named (AUTHORING 12.2)", () =>
     // no completeness claim -- so it stays. What cannot stay is a hand-typed
     // number standing beside the list it counts, which is the same shape that
     // produced the asymmetry.
-    const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
-      "AUTHORING.md": `${authoringWith([
-        ["code-review/security", "`doc-review/security-lens`"],
-        ["doc-review/security-lens", "`code-review/security`"],
-      ])}\nSeven seats of twenty-nine are named here.\n`,
-    }, OTHER_PANEL_SEATS);
+    const ctx = panelTree(
+      "plan-review/architect",
+      "- **`doc-review/security-lens`.** Reads a plan.\n",
+      {
+        "AUTHORING.md": `${authoringWith([
+          ["code-review/security", "`doc-review/security-lens`"],
+          ["doc-review/security-lens", "`code-review/security`"],
+        ])}\nSeven seats of twenty-nine are named here.\n`,
+      },
+      OTHER_PANEL_SEATS,
+    );
     const issue = errors(checkBodyShapes(ctx)).find((i) => i.rule === "role.counterpart-census-count-stale");
     expect(issue?.message).toContain("Seven");
     expect(issue?.message).toContain("2");
   });
 
   test("a prose count that matches the table is left alone", () => {
-    const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
-      "AUTHORING.md": `${authoringWith([
-        ["code-review/security", "`doc-review/security-lens`"],
-        ["doc-review/security-lens", "`code-review/security`"],
-      ])}\nTwo seats of three are named here.\n`,
-    }, OTHER_PANEL_SEATS);
+    const ctx = panelTree(
+      "plan-review/architect",
+      "- **`doc-review/security-lens`.** Reads a plan.\n",
+      {
+        "AUTHORING.md": `${authoringWith([
+          ["code-review/security", "`doc-review/security-lens`"],
+          ["doc-review/security-lens", "`code-review/security`"],
+        ])}\nTwo seats of three are named here.\n`,
+      },
+      OTHER_PANEL_SEATS,
+    );
     expect(checkBodyShapes(ctx).filter((i) => i.rule === "role.counterpart-census-count-stale")).toEqual([]);
   });
 
   test("the coverage of the census is reported, since a symmetry guard cannot prove completeness", () => {
-    const ctx = panelTree("plan-review/architect", "- **`doc-review/security-lens`.** Reads a plan.\n", {
-      "AUTHORING.md": authoringWith([
-        ["code-review/security", "`doc-review/security-lens`"],
-        ["doc-review/security-lens", "`code-review/security`"],
-      ]),
-    }, OTHER_PANEL_SEATS);
+    const ctx = panelTree(
+      "plan-review/architect",
+      "- **`doc-review/security-lens`.** Reads a plan.\n",
+      {
+        "AUTHORING.md": authoringWith([
+          ["code-review/security", "`doc-review/security-lens`"],
+          ["doc-review/security-lens", "`code-review/security`"],
+        ]),
+      },
+      OTHER_PANEL_SEATS,
+    );
     const note = checkBodyShapes(ctx).find((i) => i.rule === "role.counterpart-census-coverage");
     expect(note?.severity).toBe("note");
     expect(note?.message).toContain("2");

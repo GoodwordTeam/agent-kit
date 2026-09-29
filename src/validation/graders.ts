@@ -122,7 +122,9 @@ const ACTION_VERBS: ReadonlyArray<ActionVerb> = [
   verb([`${RE}publish`, `${RE}publishes`, `${RE}publishing`, `${RE}published`]),
   verb(["post", "posts", "posting", "posted"], { noun: true }),
   verb(["reply", "replies", "replying", "replied"], { noun: true }),
-  verb(["(?:force-)?push", "(?:force-)?pushes", "(?:force-)?pushing", "(?:force-)?pushed"], { phrasal: String.raw`\s+back\b` }),
+  verb(["(?:force-)?push", "(?:force-)?pushes", "(?:force-)?pushing", "(?:force-)?pushed"], {
+    phrasal: String.raw`\s+back\b`,
+  }),
   verb(["merge", "merges", "merging", "merged"]),
   // "open with" is left out: "does not open with a theory" is about the reply.
   verb([`${RE}open`, `${RE}opens`, `${RE}opening`, `${RE}opened`], { not: String.raw`\s+with\b` }),
@@ -137,7 +139,10 @@ const ACTION_VERBS: ReadonlyArray<ActionVerb> = [
     // "call it a regression" names a thing; "call them a second time" is a call.
     not: String.raw`\s+(?:it|them|this|that)\s+(?:an?|the)\s+(?!second\b|third\b)`,
   }),
-  verb([`${RE}run`, `${RE}runs`, `${RE}running`, `${RE}run`], { noun: true, phrasal: String.raw`\s+(?:through|over|across|into)\b` }),
+  verb([`${RE}run`, `${RE}runs`, `${RE}running`, `${RE}run`], {
+    noun: true,
+    phrasal: String.raw`\s+(?:through|over|across|into)\b`,
+  }),
   verb([`${RE}execute`, `${RE}executes`, `${RE}executing`, `${RE}executed`]),
   verb([`${RE}start`, `${RE}starts`, `${RE}starting`, `${RE}started`], { not: String.raw`\s+with\b` }),
   verb([`${RE}dispatch`, `${RE}dispatches`, `${RE}dispatching`, `${RE}dispatched`]),
@@ -153,7 +158,10 @@ const any = (pick: (v: ActionVerb) => string, keep: (v: ActionVerb) => boolean =
 
 const BASE = any((v) => v.base);
 const THIRD = any((v) => v.third);
-const VERBAL_THIRD = any((v) => v.third, (v) => v.noun !== true);
+const VERBAL_THIRD = any(
+  (v) => v.third,
+  (v) => v.noun !== true,
+);
 const ING = any((v) => v.ing);
 const PARTICIPLE = any((v) => v.participle);
 const ADVERB = String.raw`(?:\w+ly\s+)?`;

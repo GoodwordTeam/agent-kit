@@ -124,7 +124,10 @@
       "allOf": [
         {
           "description": "Production credentials are a sensitive action and are never available by default (plan 7.2).",
-          "if": { "properties": { "secrets_policy": { "const": "production-approved" } }, "required": ["secrets_policy"] },
+          "if": {
+            "properties": { "secrets_policy": { "const": "production-approved" } },
+            "required": ["secrets_policy"]
+          },
           "then": {
             "required": ["approval"],
             "properties": { "approval": { "properties": { "authority": { "const": "explicit" } } } }
@@ -236,10 +239,7 @@
       "then": {
         "required": ["reason"],
         "not": {
-          "anyOf": [
-            { "required": ["exit_status"] },
-            { "required": ["output_digest"] }
-          ]
+          "anyOf": [{ "required": ["exit_status"] }, { "required": ["output_digest"] }]
         }
       }
     },

@@ -8,7 +8,15 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEFAULT_MATRIX, effectiveMaxTurns, loadMatrix, type Matrix, parseMatrix, type Seat, turnCapReceipt } from "./evals/matrix.ts";
+import {
+  DEFAULT_MATRIX,
+  effectiveMaxTurns,
+  loadMatrix,
+  type Matrix,
+  parseMatrix,
+  type Seat,
+  turnCapReceipt,
+} from "./evals/matrix.ts";
 import { buildPanel, calibration, grade, type Judge, parseVote, readQueue } from "./evals/panel.ts";
 import type { SessionResult } from "./evals/subjects/types.ts";
 
@@ -31,11 +39,16 @@ describe("matrix", () => {
 
   test("rejects an unknown host, a panel under two reviewers, a duplicate id and another independence rule", () => {
     const bad = (yaml: string) => () => parseMatrix(yaml);
-    const ok = "reviewers: [{id: r-a, host: codex, model: x}, {id: r-b, host: grok, model: y}]\npanels: {independent-of: subject, min-reviewers: 2}\n";
+    const ok =
+      "reviewers: [{id: r-a, host: codex, model: x}, {id: r-b, host: grok, model: y}]\npanels: {independent-of: subject, min-reviewers: 2}\n";
     expect(bad(`subjects: [{id: s-a, host: other, model: m}]\n${ok}`)).toThrow(/host/);
-    expect(bad(`subjects: [{id: s-a, host: claude, model: m}]\n${ok.replace("min-reviewers: 2", "min-reviewers: 1")}`)).toThrow(/min-reviewers/);
+    expect(
+      bad(`subjects: [{id: s-a, host: claude, model: m}]\n${ok.replace("min-reviewers: 2", "min-reviewers: 1")}`),
+    ).toThrow(/min-reviewers/);
     expect(bad(`subjects: [{id: r-a, host: claude, model: m}]\n${ok}`)).toThrow(/appears twice/);
-    expect(bad(`subjects: [{id: s-a, host: claude, model: m}]\n${ok.replace("subject", "author")}`)).toThrow(/independent-of/);
+    expect(bad(`subjects: [{id: s-a, host: claude, model: m}]\n${ok.replace("subject", "author")}`)).toThrow(
+      /independent-of/,
+    );
   });
 
   test("an absent matrix file falls back to one unbound claude subject and no reviewers", () => {
@@ -48,13 +61,17 @@ describe("matrix", () => {
   });
 
   test("a subject may leave its binding to the host; a reviewer may not", () => {
-    const tail = "reviewers: [{id: r-a, host: codex, model: x}, {id: r-b, host: grok, model: y}]\npanels: {independent-of: subject, min-reviewers: 2}\n";
+    const tail =
+      "reviewers: [{id: r-a, host: codex, model: x}, {id: r-b, host: grok, model: y}]\npanels: {independent-of: subject, min-reviewers: 2}\n";
     expect(parseMatrix(`subjects: [{id: s-a, host: claude}]\n${tail}`).subjects[0]!.model).toBeUndefined();
-    expect(() => parseMatrix(`subjects: [{id: s-a, host: claude}]\n${tail.replace(", model: y", "")}`)).toThrow(/model/);
+    expect(() => parseMatrix(`subjects: [{id: s-a, host: claude}]\n${tail.replace(", model: y", "")}`)).toThrow(
+      /model/,
+    );
   });
 
   test("a subject turn cap distinguishes an override, no cap, and the evaluator default", () => {
-    const tail = "reviewers: [{id: r-a, host: codex, model: x}, {id: r-b, host: grok, model: y}]\npanels: {independent-of: subject, min-reviewers: 2}\n";
+    const tail =
+      "reviewers: [{id: r-a, host: codex, model: x}, {id: r-b, host: grok, model: y}]\npanels: {independent-of: subject, min-reviewers: 2}\n";
     const matrix = parseMatrix(
       "subjects:\n" +
         "  - {id: s-a, host: claude, max-turns: 12}\n" +
@@ -86,7 +103,9 @@ describe("matrix", () => {
 
   test("the receipt records each subject's effective cap, including no cap", () => {
     expect(turnCapReceipt({ id: "s-a", host: "claude", model: undefined, maxTurns: 12 }, 6)).toEqual({ max_turns: 12 });
-    expect(turnCapReceipt({ id: "s-b", host: "grok", model: undefined, maxTurns: null }, 6)).toEqual({ max_turns: null });
+    expect(turnCapReceipt({ id: "s-b", host: "grok", model: undefined, maxTurns: null }, 6)).toEqual({
+      max_turns: null,
+    });
     expect(turnCapReceipt({ id: "s-c", host: "claude", model: undefined }, 6)).toEqual({ max_turns: 6 });
     expect(turnCapReceipt({ id: "s-d", host: "codex", model: undefined }, 6)).toEqual({ max_turns: null });
   });
@@ -96,11 +115,18 @@ describe("buildPanel", () => {
   const subject = seat("subject-a", "claude", "bind-1");
 
   test("a reviewer bound like the subject is refused and its seat reported unavailable, not filled", () => {
-    const reviewers = [seat("reviewer-a", "claude", "bind-1"), seat("reviewer-b", "codex", "bind-2"), seat("reviewer-c", "grok", "bind-3")];
+    const reviewers = [
+      seat("reviewer-a", "claude", "bind-1"),
+      seat("reviewer-b", "codex", "bind-2"),
+      seat("reviewer-c", "grok", "bind-3"),
+    ];
     const panel = buildPanel({ reviewers, panels: rules }, subject);
     expect(panel.status).toBe("available");
     expect(panel.members.map((m) => m.id)).toEqual(["reviewer-b", "reviewer-c"]);
-    expect(panel.seats.find((s) => s.reviewer.id === "reviewer-a")).toMatchObject({ status: "unavailable", reason: "bound like subject subject-a" });
+    expect(panel.seats.find((s) => s.reviewer.id === "reviewer-a")).toMatchObject({
+      status: "unavailable",
+      reason: "bound like subject subject-a",
+    });
     expect(panel.members.some((m) => m.model === subject.model)).toBe(false);
   });
 
@@ -121,10 +147,17 @@ describe("buildPanel", () => {
   });
 
   test("an unbound subject runs its host's default, so no reviewer on that host is independent of it", () => {
-    const reviewers = [seat("reviewer-a", "claude", "bind-9"), seat("reviewer-b", "codex", "bind-2"), seat("reviewer-c", "grok", "bind-3")];
+    const reviewers = [
+      seat("reviewer-a", "claude", "bind-9"),
+      seat("reviewer-b", "codex", "bind-2"),
+      seat("reviewer-c", "grok", "bind-3"),
+    ];
     const panel = buildPanel({ reviewers, panels: rules }, { id: "subject-a", host: "claude", model: undefined });
     expect(panel.members.map((m) => m.id)).toEqual(["reviewer-b", "reviewer-c"]);
-    expect(panel.seats[0]).toMatchObject({ status: "unavailable", reason: "subject subject-a runs the claude default binding" });
+    expect(panel.seats[0]).toMatchObject({
+      status: "unavailable",
+      reason: "subject subject-a runs the claude default binding",
+    });
   });
 
   test("seating prefers hosts other than the subject's, then hosts not yet on the panel", () => {
@@ -137,7 +170,10 @@ describe("buildPanel", () => {
     const panel = buildPanel({ reviewers, panels: { ...rules, size: 2 } }, subject);
     expect(panel.members.map((m) => m.id)).toEqual(["reviewer-b", "reviewer-d"]);
     expect(panel.hosts).toEqual(["codex", "grok"]);
-    expect(panel.seats.filter((s) => s.status === "unused").map((s) => s.reviewer.id)).toEqual(["reviewer-a", "reviewer-c"]);
+    expect(panel.seats.filter((s) => s.status === "unused").map((s) => s.reviewer.id)).toEqual([
+      "reviewer-a",
+      "reviewer-c",
+    ]);
   });
 });
 
@@ -157,23 +193,40 @@ describe("grade", () => {
     timedOut: false,
     durationMs: 1,
   };
-  const judges = (votes: Record<string, string>): Judge => async (reviewer, prompt) => {
-    expect(prompt).toContain("[tool Skill]");
-    expect(prompt).toContain("<criteria>");
-    return votes[reviewer.id]!;
-  };
+  const judges =
+    (votes: Record<string, string>): Judge =>
+    async (reviewer, prompt) => {
+      expect(prompt).toContain("[tool Skill]");
+      expect(prompt).toContain("<criteria>");
+      return votes[reviewer.id]!;
+    };
 
   test("unanimity is the verdict and nothing is queued", async () => {
     const queue = join(scratch, "unanimous.jsonl");
-    const g = await grade(panel, transcript, "Loads greet.", { item: "c1", queue, judge: judges({ "reviewer-b": '{"verdict":"PASS","reason":"loaded"}', "reviewer-c": 'Sure. {"verdict": "pass", "reason": "yes"}' }) });
+    const g = await grade(panel, transcript, "Loads greet.", {
+      item: "c1",
+      queue,
+      judge: judges({
+        "reviewer-b": '{"verdict":"PASS","reason":"loaded"}',
+        "reviewer-c": 'Sure. {"verdict": "pass", "reason": "yes"}',
+      }),
+    });
     expect(g.verdict).toBe("PASS");
     expect(readQueue(queue)).toEqual([]);
   });
 
   test("disagreement is needs-human and lands in the queue with every vote and an empty label", async () => {
     const queue = join(scratch, "q", "disagree.jsonl");
-    const g = await grade(panel, transcript, "Loads greet.", { item: "c2", queue, judge: judges({ "reviewer-b": '{"verdict":"PASS"}', "reviewer-c": '{"verdict":"FAIL","reason":"no"}' }) });
-    expect(g).toMatchObject({ verdict: "needs-human", reason: "reviewers disagree", votes: { "reviewer-b": "PASS", "reviewer-c": "FAIL" } });
+    const g = await grade(panel, transcript, "Loads greet.", {
+      item: "c2",
+      queue,
+      judge: judges({ "reviewer-b": '{"verdict":"PASS"}', "reviewer-c": '{"verdict":"FAIL","reason":"no"}' }),
+    });
+    expect(g).toMatchObject({
+      verdict: "needs-human",
+      reason: "reviewers disagree",
+      votes: { "reviewer-b": "PASS", "reviewer-c": "FAIL" },
+    });
     const [row] = readQueue(queue);
     expect(row).toMatchObject({ item: "c2", subject: "subject-a", label: null, panel_verdict: "needs-human" });
     expect(row!.transcript).toContain("[final reply] ok");
@@ -181,21 +234,39 @@ describe("grade", () => {
 
   test("an unreadable reply is never counted as a vote", async () => {
     const queue = join(scratch, "invalid.jsonl");
-    const g = await grade(panel, transcript, "c", { item: "c3", queue, judge: judges({ "reviewer-b": '{"verdict":"PASS"}', "reviewer-c": "I think it passes" }) });
+    const g = await grade(panel, transcript, "c", {
+      item: "c3",
+      queue,
+      judge: judges({ "reviewer-b": '{"verdict":"PASS"}', "reviewer-c": "I think it passes" }),
+    });
     expect(g.verdict).toBe("needs-human");
     expect(g.reason).toBe("a reviewer gave no readable verdict");
     expect(readQueue(queue)).toHaveLength(1);
   });
 
   test("an unavailable panel grades nothing and calls no judge", async () => {
-    const lone = buildPanel({ reviewers: [seat("reviewer-a", "claude", "bind-1"), seat("reviewer-b", "codex", "bind-2")], panels: rules }, subject);
-    const g = await grade(lone, transcript, "c", { item: "c4", queue: join(scratch, "none.jsonl"), judge: async () => { throw new Error("called"); } });
+    const lone = buildPanel(
+      { reviewers: [seat("reviewer-a", "claude", "bind-1"), seat("reviewer-b", "codex", "bind-2")], panels: rules },
+      subject,
+    );
+    const g = await grade(lone, transcript, "c", {
+      item: "c4",
+      queue: join(scratch, "none.jsonl"),
+      judge: async () => {
+        throw new Error("called");
+      },
+    });
     expect(g.verdict).toBe("unavailable");
   });
 
   test("calibrateEvery also queues unanimous items", async () => {
     const queue = join(scratch, "calibrate.jsonl");
-    await grade(panel, transcript, "c", { item: "c5", queue, calibrateEvery: 1, judge: judges({ "reviewer-b": '{"verdict":"FAIL"}', "reviewer-c": '{"verdict":"FAIL"}' }) });
+    await grade(panel, transcript, "c", {
+      item: "c5",
+      queue,
+      calibrateEvery: 1,
+      judge: judges({ "reviewer-b": '{"verdict":"FAIL"}', "reviewer-c": '{"verdict":"FAIL"}' }),
+    });
     expect(readQueue(queue)[0]).toMatchObject({ panel_verdict: "FAIL", label: null });
   });
 
@@ -209,10 +280,25 @@ describe("calibration", () => {
   test("κ per reviewer pair and per reviewer against the human, from labelled rows only", () => {
     const queue = join(scratch, "labelled.jsonl");
     const row = (item: string, b: string, c: string, label: string | null) =>
-      JSON.stringify({ item, subject: "subject-a", criteria: "", transcript: "", votes: { "reviewer-b": b, "reviewer-c": c }, reasons: {}, panel_verdict: "needs-human", label });
+      JSON.stringify({
+        item,
+        subject: "subject-a",
+        criteria: "",
+        transcript: "",
+        votes: { "reviewer-b": b, "reviewer-c": c },
+        reasons: {},
+        panel_verdict: "needs-human",
+        label,
+      });
     writeFileSync(
       queue,
-      [row("i1", "PASS", "FAIL", "PASS"), row("i2", "FAIL", "PASS", "FAIL"), row("i3", "PASS", "PASS", "PASS"), row("i4", "FAIL", "FAIL", "FAIL"), row("i5", "PASS", "invalid", null)].join("\n") + "\n",
+      [
+        row("i1", "PASS", "FAIL", "PASS"),
+        row("i2", "FAIL", "PASS", "FAIL"),
+        row("i3", "PASS", "PASS", "PASS"),
+        row("i4", "FAIL", "FAIL", "FAIL"),
+        row("i5", "PASS", "invalid", null),
+      ].join("\n") + "\n",
     );
     const { labelled, kappa } = calibration(queue);
     expect(labelled).toBe(4);

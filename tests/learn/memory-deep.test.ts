@@ -69,7 +69,9 @@ describe("evidence compaction", () => {
 
   test("a single-event month is singular", () => {
     const page = "---\nid: rp-x\n---\n\n## Evidence\n- obs:5 (observer:discovery pr 1401 2026-01-05)\n";
-    expect(compactEvidence(page, "2026-09-18")).toBe("---\nid: rp-x\n---\n\n## Evidence\n- 2026-01: 1 event (obs 5; prs 1401)\n");
+    expect(compactEvidence(page, "2026-09-18")).toBe(
+      "---\nid: rp-x\n---\n\n## Evidence\n- 2026-01: 1 event (obs 5; prs 1401)\n",
+    );
   });
 
   test("a second pass merges into the existing month line", () => {
@@ -108,8 +110,20 @@ function twoLessons(): Ledger {
     ledger,
     {
       lessons: [
-        { statement: "keeper about subagent reports", scope: "repo", evidence: ["Sa"], confidence: 0.7, tags: ["preference"] },
-        { statement: "dropped about extraction grounding", scope: "repo", evidence: ["Sb", "Sc"], confidence: 0.8, tags: ["security"] },
+        {
+          statement: "keeper about subagent reports",
+          scope: "repo",
+          evidence: ["Sa"],
+          confidence: 0.7,
+          tags: ["preference"],
+        },
+        {
+          statement: "dropped about extraction grounding",
+          scope: "repo",
+          evidence: ["Sb", "Sc"],
+          confidence: 0.8,
+          tags: ["security"],
+        },
       ],
     },
     new Set(["Sa", "Sb", "Sc"]),
@@ -141,7 +155,9 @@ describe("merge and contradiction", () => {
 
   test("pairs naming an unknown id are ignored", () => {
     const ledger = twoLessons();
-    expect(applyPairs(ledger, { merge: [["ls-001", "ls-404"]], contradict: [["ls-002"]] }, "2026-09-18").merged).toEqual([]);
+    expect(
+      applyPairs(ledger, { merge: [["ls-001", "ls-404"]], contradict: [["ls-002"]] }, "2026-09-18").merged,
+    ).toEqual([]);
   });
 });
 
@@ -180,7 +196,9 @@ describe("weekly", () => {
       new Map(),
     );
     const ctx = testContext({ cwd: root, replies: [{ merge: [["ls-001", "ls-002"]], contradict: [] }] });
-    expect(deep(ctx, ledger, root, null)).toBe("weekly: 0 review pattern pages compacted, 0 stale, 1 merged, 0 conflicts");
+    expect(deep(ctx, ledger, root, null)).toBe(
+      "weekly: 0 review pattern pages compacted, 0 stale, 1 merged, 0 conflicts",
+    );
     const files = readdirSync(ledger.path("proposals"));
     expect(files).toEqual(["learn-shop-ls-001.json"]);
     const record = readJson<{ draft: Record<string, unknown> }>(ledger.path("proposals", files[0]!), { draft: {} });
@@ -214,13 +232,28 @@ describe("weekly", () => {
       new Set(ids),
       new Map(ids.map((id, i) => [id, ["aaaaaaaa", "bbbbbbbb", "cccccccc", "dddddddd", "eeeeeeee"][i]!])),
     );
-    expect([...loadLessons(ledger).values()].map(({ meta }) => meta.status)).toEqual(["confirmed", "hypothesis", "hypothesis", "hypothesis"]);
+    expect([...loadLessons(ledger).values()].map(({ meta }) => meta.status)).toEqual([
+      "confirmed",
+      "hypothesis",
+      "hypothesis",
+      "hypothesis",
+    ]);
     const ctx = testContext({
       cwd: root,
       env: { AK_LEARN_MEM_DB: memDb },
-      replies: [{ merge: [["ls-001", "ls-002"], ["ls-003", "ls-004"]], contradict: [] }],
+      replies: [
+        {
+          merge: [
+            ["ls-001", "ls-002"],
+            ["ls-003", "ls-004"],
+          ],
+          contradict: [],
+        },
+      ],
     });
-    expect(deep(ctx, ledger, root, null)).toBe("weekly: 0 review pattern pages compacted, 0 stale, 2 merged, 0 conflicts");
+    expect(deep(ctx, ledger, root, null)).toBe(
+      "weekly: 0 review pattern pages compacted, 0 stale, 2 merged, 0 conflicts",
+    );
     const lessons = loadLessons(ledger);
     expect([lessons.get("ls-001")!.meta.sessions, lessons.get("ls-001")!.meta.status]).toEqual([3, "confirmed"]);
     expect([lessons.get("ls-003")!.meta.sessions, lessons.get("ls-003")!.meta.status]).toEqual([2, "confirmed"]);

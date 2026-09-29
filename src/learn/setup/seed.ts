@@ -33,7 +33,12 @@ export function seed(ctx: LearnContext, repo: string, options: SeedOptions = {})
   const review = reviewLedger(ctx.config, root);
   const memory = ensureMemoryLedger(memoryDir(ctx.config, root));
   const skills = skillsLedger(ctx, root);
-  for (const [name, ledger] of [["review", review], ["memory", memory], ["skills", skills]] as const) ctx.io.out(`${name} ledger: ${ledger.dir}`);
+  for (const [name, ledger] of [
+    ["review", review],
+    ["memory", memory],
+    ["skills", skills],
+  ] as const)
+    ctx.io.out(`${name} ledger: ${ledger.dir}`);
 
   const dry: LearnContext = {
     ...ctx,
@@ -48,7 +53,11 @@ export function seed(ctx: LearnContext, repo: string, options: SeedOptions = {})
   const bySource = new Map<string, number>();
   for (const event of result.events) bySource.set(event.source, (bySource.get(event.source) ?? 0) + 1);
   const detail = [...bySource.entries()].map(([source, n]) => `${source}=${n}`).join(", ");
-  ctx.io.out(`dry ingest: ${result.events.length} events visible${detail === "" ? "" : ` (${detail})`}; nothing written`);
-  ctx.io.out(`next: \`ak learn review run --repo ${root}\` for the first review pass, \`ak learn memory run --repo ${root}\` for the first memory pass`);
+  ctx.io.out(
+    `dry ingest: ${result.events.length} events visible${detail === "" ? "" : ` (${detail})`}; nothing written`,
+  );
+  ctx.io.out(
+    `next: \`ak learn review run --repo ${root}\` for the first review pass, \`ak learn memory run --repo ${root}\` for the first memory pass`,
+  );
   return 0;
 }

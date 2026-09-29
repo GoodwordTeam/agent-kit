@@ -32,16 +32,8 @@
     "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "immutable": true,
     "reviewers_may_edit_source": false,
-    "includes": [
-      "diff",
-      "tests",
-      "prior-findings",
-      "verification-receipts"
-    ],
-    "excludes": [
-      "implementer-narrative",
-      "other-reviewer-judgments"
-    ]
+    "includes": ["diff", "tests", "prior-findings", "verification-receipts"],
+    "excludes": ["implementer-narrative", "other-reviewer-judgments"]
   },
   "authorship": {
     "implementer": "implementer",

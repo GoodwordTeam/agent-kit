@@ -341,7 +341,9 @@ operations:
         entrypoints: { run: { effects: ["artifact-write", "remote-push", "kb-publish"] } },
       }),
     };
-    const issues = checkSideEffects(ctxFor(files)).filter((i) => i.rule === "sideeffects.entrypoint-effect-unpermitted");
+    const issues = checkSideEffects(ctxFor(files)).filter(
+      (i) => i.rule === "sideeffects.entrypoint-effect-unpermitted",
+    );
     expect(issues).toHaveLength(1);
     expect(issues[0]?.message).toContain("kb-publish");
     expect(issues[0]?.message).not.toContain("remote-push");
@@ -367,7 +369,10 @@ operations:
 
 describe("binding an operation to the entrypoint it runs", () => {
   test("the policy's own entrypoint field binds it", () => {
-    const named = POLICY.replace("    authority: delegated-grant", "    entrypoint: run\n    authority: delegated-grant");
+    const named = POLICY.replace(
+      "    authority: delegated-grant",
+      "    entrypoint: run\n    authority: delegated-grant",
+    );
     const files = clean({
       "policies/invocation.yaml": named,
       "skills/bound/skill.yaml": skillYaml("bound", {
@@ -379,7 +384,10 @@ describe("binding an operation to the entrypoint it runs", () => {
   });
 
   test("the two bindings naming different entrypoints is an error, not a silent preference", () => {
-    const named = POLICY.replace("    authority: delegated-grant", "    entrypoint: main\n    authority: delegated-grant");
+    const named = POLICY.replace(
+      "    authority: delegated-grant",
+      "    entrypoint: main\n    authority: delegated-grant",
+    );
     const files = clean({
       "policies/invocation.yaml": named,
       "skills/bound/skill.yaml": skillYaml("bound", {
@@ -398,7 +406,10 @@ describe("binding an operation to the entrypoint it runs", () => {
   });
 
   test("a policy entrypoint the skill does not have is an error", () => {
-    const named = POLICY.replace("    authority: delegated-grant", "    entrypoint: absent\n    authority: delegated-grant");
+    const named = POLICY.replace(
+      "    authority: delegated-grant",
+      "    entrypoint: absent\n    authority: delegated-grant",
+    );
     const issues = checkSideEffects(ctxFor(clean({ "policies/invocation.yaml": named })));
     expect(issues.map((i) => i.rule)).toContain("sideeffects.operation-entrypoint-unknown");
   });

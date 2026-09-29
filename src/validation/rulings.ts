@@ -237,12 +237,22 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
     const row = record(entry);
     const id = typeof row["id"] === "string" ? row["id"] : null;
     if (id === null || !KEBAB.test(id)) {
-      issues.push(error("rulings.malformed-id", RULINGS_FILE, `conflicts[${i}] has id ${id ?? "(missing)"}, which is not a kebab-case id`));
+      issues.push(
+        error(
+          "rulings.malformed-id",
+          RULINGS_FILE,
+          `conflicts[${i}] has id ${id ?? "(missing)"}, which is not a kebab-case id`,
+        ),
+      );
       continue;
     }
     if (seen.has(id)) {
       issues.push(
-        error("rulings.duplicate-id", RULINGS_FILE, `ruling id ${id} is declared more than once; the ids are what every body cites and must be unique`),
+        error(
+          "rulings.duplicate-id",
+          RULINGS_FILE,
+          `ruling id ${id} is declared more than once; the ids are what every body cites and must be unique`,
+        ),
       );
       continue;
     }
@@ -322,7 +332,10 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
           ),
         );
       } else {
-        const named = dischargedValue.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter((v) => v.length > 0);
+        const named = dischargedValue
+          .filter((v): v is string => typeof v === "string")
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0);
         if (named.length === 0) {
           issues.push(
             error(
@@ -348,7 +361,14 @@ export function loadRulings(root: string): { rows: RulingRow[]; issues: Issue[];
         dischargedIn = [...new Set(named.filter((v) => sections.has(v)))];
       }
     } else if (Array.isArray(dischargedValue)) {
-      dischargedIn = [...new Set(dischargedValue.filter((v): v is string => typeof v === "string").map((v) => v.trim()).filter((v) => v.length > 0))];
+      dischargedIn = [
+        ...new Set(
+          dischargedValue
+            .filter((v): v is string => typeof v === "string")
+            .map((v) => v.trim())
+            .filter((v) => v.length > 0),
+        ),
+      ];
     }
 
     rows.push({ id, binds, universal, text, scenario, dischargedIn });
@@ -436,7 +456,8 @@ function checkCitations(ctx: CheckContext, known: ReadonlySet<string>): Issue[] 
   const { root } = ctx;
 
   const markdown = new Set<string>();
-  for (const dir of MARKDOWN_ROOTS) for (const file of walkFiles(root, dir)) if (file.endsWith(".md")) markdown.add(file);
+  for (const dir of MARKDOWN_ROOTS)
+    for (const file of walkFiles(root, dir)) if (file.endsWith(".md")) markdown.add(file);
   for (const file of MARKDOWN_FILES) if (readTextIfPresent(join(root, file)) !== null) markdown.add(file);
 
   for (const file of [...markdown].sort()) {
@@ -584,7 +605,13 @@ function checkBinds(ctx: CheckContext, rows: ReadonlyArray<RulingRow>): Issue[] 
         continue;
       }
       if (!isSection(kind)) {
-        issues.push(error("rulings.unknown-binds-kind", RULINGS_FILE, `${row.id} binds a kind '${kind}', which is not a catalog section`));
+        issues.push(
+          error(
+            "rulings.unknown-binds-kind",
+            RULINGS_FILE,
+            `${row.id} binds a kind '${kind}', which is not a catalog section`,
+          ),
+        );
         continue;
       }
       const declared = new Set(catalog.bySection(kind).map((e) => e.id));

@@ -131,9 +131,9 @@ describe("the capability table §3 states once for both hosts", () => {
     const table = loadCapabilityTable(REPO);
     expect(table.available).toBe(true);
     expect(table.issues).toEqual([]);
-    const schema = JSON.parse(
-      require("node:fs").readFileSync(join(REPO, "schemas/common.schema.json"), "utf8"),
-    ) as { $defs: { capability: { enum: string[] } } };
+    const schema = JSON.parse(require("node:fs").readFileSync(join(REPO, "schemas/common.schema.json"), "utf8")) as {
+      $defs: { capability: { enum: string[] } };
+    };
     expect([...table.status.keys()].sort()).toEqual([...schema.$defs.capability.enum].sort());
   });
 });
@@ -264,7 +264,10 @@ describe("a not-provided capability an attached adapter supplies", () => {
   test("never lifts a capability the host's table does not mention", () => {
     // An adapter claiming to supply something §3 has no row for does not make
     // the row exist; the unknown stays unknown and still caps.
-    const claims: Supply = { attached: new Set(["knowledgebase"]), suppliers: new Map([["telepathy", ["knowledgebase"]]]) };
+    const claims: Supply = {
+      attached: new Set(["knowledgebase"]),
+      suppliers: new Map([["telepathy", ["knowledgebase"]]]),
+    };
     const ceiling = ceilingFor(["telepathy"], table, claims);
     expect(ceiling.unknown).toEqual(["telepathy"]);
     expect(ceiling.mode).toBe("guided");
@@ -274,7 +277,10 @@ describe("a not-provided capability an attached adapter supplies", () => {
     const trackerTable = loadCapabilityTable(
       makeTree(contractWith(`${ROWS}\n| \`tracker-access\` | \`not-provided\` | See the tracker adapter |`)),
     );
-    const borrowing = (attached: string[], fallbacks = new Map([["tracker-access", new Map([["tracker", "kb-write"]])]])): Supply => ({
+    const borrowing = (
+      attached: string[],
+      fallbacks = new Map([["tracker-access", new Map([["tracker", "kb-write"]])]]),
+    ): Supply => ({
       attached: new Set(attached),
       suppliers: new Map([
         ["kb-write", ["knowledgebase"]],
@@ -284,7 +290,9 @@ describe("a not-provided capability an attached adapter supplies", () => {
     });
 
     test("lifts where what it borrows is supplied by an attached adapter", () => {
-      expect(ceilingFor(["tracker-access"], trackerTable, borrowing(["tracker", "knowledgebase"])).mode).toBe("autonomous");
+      expect(ceilingFor(["tracker-access"], trackerTable, borrowing(["tracker", "knowledgebase"])).mode).toBe(
+        "autonomous",
+      );
     });
 
     test("caps where what it borrows is not, and names what it borrows and who would supply it", () => {
@@ -292,7 +300,11 @@ describe("a not-provided capability an attached adapter supplies", () => {
       expect(ceiling.mode).toBe("guided");
       expect(ceiling.blocking).toEqual([]);
       expect(ceiling.detached).toEqual([
-        { capability: "tracker-access", adapters: ["tracker"], fallsBackOn: { capability: "kb-write", adapters: ["knowledgebase"] } },
+        {
+          capability: "tracker-access",
+          adapters: ["tracker"],
+          fallsBackOn: { capability: "kb-write", adapters: ["knowledgebase"] },
+        },
       ]);
     });
 
@@ -384,7 +396,9 @@ describe("super-ship's trusted-evidence ceiling", () => {
 
       const decision = plan.decisions.find((d) => d.skill === "super-ship");
       expect(decision?.mode).toBe("manual");
-      expect(decision?.unenforceable.some((entry) => entry.startsWith("trusted evidence is not provided by the host"))).toBe(true);
+      expect(
+        decision?.unenforceable.some((entry) => entry.startsWith("trusted evidence is not provided by the host")),
+      ).toBe(true);
     });
   }
 });

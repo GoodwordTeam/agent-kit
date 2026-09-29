@@ -20,7 +20,13 @@ import {
   stratify,
 } from "../../src/learn/memory/consolidate.ts";
 import { rollbackWiki } from "../../src/learn/memory/cli.ts";
-import { buildEpisodes, CONSOLIDATED_FILE, type Episode, unconsolidatedEpisodes, UNDONE_RUNS_FILE } from "../../src/learn/memory/episodes.ts";
+import {
+  buildEpisodes,
+  CONSOLIDATED_FILE,
+  type Episode,
+  unconsolidatedEpisodes,
+  UNDONE_RUNS_FILE,
+} from "../../src/learn/memory/episodes.ts";
 import { ensureMemoryLedger, loadLessons, proposeConfirmed, readState } from "../../src/learn/memory/ledger.ts";
 import { lessonsBlock } from "../../src/learn/memory/session-context.ts";
 import { EVENTS_FILE, reviewLedger } from "../../src/learn/review/ledger.ts";
@@ -30,7 +36,14 @@ import { gitRepo, MemFixture, scratch, testContext } from "./helpers.ts";
 
 const REPLY = {
   lessons: [
-    { statement: "Read pieces per shipment, not per order", scope: "repo", evidence: ["obs:1"], confidence: 0.6, supersedes: [], tags: [] },
+    {
+      statement: "Read pieces per shipment, not per order",
+      scope: "repo",
+      evidence: ["obs:1"],
+      confidence: 0.6,
+      supersedes: [],
+      tags: [],
+    },
     {
       statement: "Run api tests from the main worktree",
       scope: "technology",
@@ -47,7 +60,14 @@ const REPLY = {
       supersedes: ["ls-001"],
       tags: [],
     },
-    { statement: "no evidence lesson", scope: "repo", evidence: ["obs:404"], confidence: 0.9, supersedes: [], tags: [] },
+    {
+      statement: "no evidence lesson",
+      scope: "repo",
+      evidence: ["obs:404"],
+      confidence: 0.9,
+      supersedes: [],
+      tags: [],
+    },
   ],
   review_events: [
     { text: "PR body claimed 15 files, the diff had 16", kind: "finding", evidence: ["obs:2"], files: ["docs/PR.md"] },
@@ -67,7 +87,10 @@ describe("consolidate apply", () => {
     const ctx = testContext();
     const ledger = ensureMemoryLedger(join(scratch(), "memory"));
     const review = reviewLedger(ctx.config, gitRepo(join(scratch(), "repo")));
-    const summary = applyConsolidation(ledger, REPLY, VALID, OBS_SESSION, { review: { ledger: review, project: "repo" }, runId: "nightly-test" });
+    const summary = applyConsolidation(ledger, REPLY, VALID, OBS_SESSION, {
+      review: { ledger: review, project: "repo" },
+      runId: "nightly-test",
+    });
     expect(summary).toEqual({
       created: ["ls-001", "ls-002", "ls-003"],
       dropped: 1,
@@ -78,19 +101,39 @@ describe("consolidate apply", () => {
     });
     const lessons = loadLessons(ledger);
     const meta = (id: string) => lessons.get(id)!.meta;
-    expect([meta("ls-001").status, meta("ls-001").valid_until, meta("ls-001").superseded_by]).toEqual(["superseded", todayLocal(), "ls-003"]);
-    expect([meta("ls-002").status, meta("ls-002").sessions, meta("ls-002").tags]).toEqual(["confirmed", 2, ["blocker"]]);
-    expect([meta("ls-003").status, meta("ls-003").supersedes, meta("ls-003").confidence]).toEqual(["hypothesis", ["ls-001"], "0.80"]);
+    expect([meta("ls-001").status, meta("ls-001").valid_until, meta("ls-001").superseded_by]).toEqual([
+      "superseded",
+      todayLocal(),
+      "ls-003",
+    ]);
+    expect([meta("ls-002").status, meta("ls-002").sessions, meta("ls-002").tags]).toEqual([
+      "confirmed",
+      2,
+      ["blocker"],
+    ]);
+    expect([meta("ls-003").status, meta("ls-003").supersedes, meta("ls-003").confidence]).toEqual([
+      "hypothesis",
+      ["ls-001"],
+      "0.80",
+    ]);
     expect(readFileSync(ledger.path("lessons.md"), "utf8")).toContain("| ls-002 | confirmed | technology | 0.90 |");
 
     const events = readJsonl<ReviewEvent>(review.path(EVENTS_FILE));
     expect(events.length).toBe(1);
-    expect([events[0]!.source, events[0]!.kind, events[0]!.obs_id, events[0]!.path]).toEqual(["learn-memory", "finding", 2, "docs/PR.md"]);
+    expect([events[0]!.source, events[0]!.kind, events[0]!.obs_id, events[0]!.path]).toEqual([
+      "learn-memory",
+      "finding",
+      2,
+      "docs/PR.md",
+    ]);
     expect(events[0]!.text.startsWith("PR body claimed 15 files, the diff had 16")).toBe(true);
     expect([events[0]!.author, events[0]!.url]).toEqual(["learn-memory", "learn-memory:run/nightly-test"]);
     expect(review.git(["status", "--porcelain"]).stdout.trim()).toBe("");
     // The same text hashes the same, so a repeat forwards nothing.
-    expect(forwardReviewEvents(review, ledger, "repo", REPLY.review_events, VALID, "again")).toEqual({ forwarded: 0, parked: 0 });
+    expect(forwardReviewEvents(review, ledger, "repo", REPLY.review_events, VALID, "again")).toEqual({
+      forwarded: 0,
+      parked: 0,
+    });
   });
 
   test("the runtime sets status and counts; a judged status is ignored", () => {
@@ -141,7 +184,10 @@ describe("consolidate apply", () => {
       OBS_SESSION,
     );
     const lessons = loadLessons(ledger);
-    expect([lessons.get("ls-001")!.meta.statement, lessons.get("ls-001")!.meta.confidence]).toEqual(["two lines here", "1.00"]);
+    expect([lessons.get("ls-001")!.meta.statement, lessons.get("ls-001")!.meta.confidence]).toEqual([
+      "two lines here",
+      "1.00",
+    ]);
     expect(lessons.get("ls-002")!.meta.confidence).toBe("0.00");
 
     const page = lessons.get("ls-001")!;
@@ -149,7 +195,11 @@ describe("consolidate apply", () => {
     const reloaded = loadLessons(ledger).get("ls-001")!;
     expect(reloaded.meta.id).toBe("ls-001");
     const root = gitRepo(join(scratch(), "repo"));
-    const result = proposeConfirmed(ctx, ledger, root, reloaded, { runId: "nightly-test", createdBy: "learn/consolidator", trigger: "failure" });
+    const result = proposeConfirmed(ctx, ledger, root, reloaded, {
+      runId: "nightly-test",
+      createdBy: "learn/consolidator",
+      trigger: "failure",
+    });
     expect(result.ref).toBe("ledger:proposals/learn-repo-ls-001.json");
     expect(readdirSync(ledger.path("proposals"))).toEqual(["learn-repo-ls-001.json"]);
   });
@@ -179,9 +229,19 @@ describe("prompt budget", () => {
   test("only episodes that fit the prompt are included, so only their ids can pass the gate", () => {
     const dbPath = join(scratch(), "mem.db");
     const mem = new MemFixture(dbPath);
-    const eps = [0, 1, 2, 3].map((i) => episode(`s${i}`, { started: i, ended: i, priority: 1 - i / 10, request: "x".repeat(200) }));
+    const eps = [0, 1, 2, 3].map((i) =>
+      episode(`s${i}`, { started: i, ended: i, priority: 1 - i / 10, request: "x".repeat(200) }),
+    );
     for (const ep of eps)
-      mem.observation({ sid: ep.sid, project: "app", type: "discovery", title: "t".repeat(200), subtitle: "s", facts: ["f".repeat(400)], at: 1 });
+      mem.observation({
+        sid: ep.sid,
+        project: "app",
+        type: "discovery",
+        title: "t".repeat(200),
+        subtitle: "s",
+        facts: ["f".repeat(400)],
+        at: 1,
+      });
     mem.close();
     const source = ClaudeMemSource.open(dbPath)!;
     let obsBy: Map<string, ObservationRow[]>;
@@ -213,7 +273,9 @@ describe("stratify", () => {
   test("the 40/40/20 quota fills from the rest by priority", () => {
     const eps = [
       ...[0, 1, 2, 3].map((i) => episode(`f${i}`, { started: i, failure_signals: 1, priority: 0.9 - i / 100 })),
-      ...[0, 1, 2, 3].map((i) => episode(`n${i}`, { started: 10 + i, files_modified: [`n${i}`], priority: 0.5 - i / 100 })),
+      ...[0, 1, 2, 3].map((i) =>
+        episode(`n${i}`, { started: 10 + i, files_modified: [`n${i}`], priority: 0.5 - i / 100 }),
+      ),
     ];
     const { chosen, failures } = stratify(eps, 5);
     expect(failures.map((ep) => ep.sid)).toEqual(["f0", "f1"]);
@@ -258,7 +320,14 @@ function nightlyFixture(replies: (o1: number, o2: number) => Reply[]) {
 
 function confirmedReply(o1: number, o2: number): Reply {
   return {
-    lessons: [{ statement: "Run the api tests from the main worktree", evidence: [`obs:${o1}`, `obs:${o2}`], confidence: 0.9, tags: ["preference"] }],
+    lessons: [
+      {
+        statement: "Run the api tests from the main worktree",
+        evidence: [`obs:${o1}`, `obs:${o2}`],
+        confidence: 0.9,
+        tags: ["preference"],
+      },
+    ],
     review_events: [{ text: "tests were run from a linked worktree", kind: "correction", evidence: [`obs:${o1}`] }],
     log: "one batch",
   };
@@ -269,7 +338,9 @@ describe("nightly", () => {
     const { ctx, root, ledger, review, source, o1, o2 } = nightlyFixture((o1, o2) => [confirmedReply(o1, o2)]);
     const episodesBefore = readFileSync(ledger.path("episodes.jsonl"), "utf8");
     try {
-      expect(consolidate(ctx, source, ledger, root, review)).toBe("nightly: 2/2 episodes -> +1 lessons, 1 review events");
+      expect(consolidate(ctx, source, ledger, root, review)).toBe(
+        "nightly: 2/2 episodes -> +1 lessons, 1 review events",
+      );
     } finally {
       source.close();
     }
@@ -281,7 +352,9 @@ describe("nightly", () => {
     expect(unconsolidatedEpisodes(ledger)).toEqual([]);
     expect(readState(ledger).last_nightly).toBe(todayLocal());
     expect(readdirSync(ledger.path("proposals"))).toEqual(["learn-shop-ls-001.json"]);
-    const { draft } = readJson<{ draft: Record<string, unknown> }>(ledger.path("proposals", "learn-shop-ls-001.json"), { draft: {} });
+    const { draft } = readJson<{ draft: Record<string, unknown> }>(ledger.path("proposals", "learn-shop-ls-001.json"), {
+      draft: {},
+    });
     expect(draft.created_by).toEqual({ role: "learn/consolidator" });
     expect(draft.status).toBe("candidate");
     expect((draft.trigger as { kind: string }).kind).toBe("correction");
@@ -298,7 +371,9 @@ describe("nightly", () => {
     const { ctx, root, ledger, review, source } = nightlyFixture((o1, o2) => [confirmedReply(o1, o2)]);
     const release = review.tryLock()!;
     try {
-      expect(consolidate(ctx, source, ledger, root, review)).toBe("nightly: 2/2 episodes -> +1 lessons, 0 review events");
+      expect(consolidate(ctx, source, ledger, root, review)).toBe(
+        "nightly: 2/2 episodes -> +1 lessons, 0 review events",
+      );
     } finally {
       release();
     }
@@ -321,7 +396,10 @@ describe("nightly", () => {
   });
 
   test("a rollback releases the episodes its undone run consolidated", () => {
-    const { ctx, root, ledger, review, source } = nightlyFixture((o1, o2) => [confirmedReply(o1, o2), confirmedReply(o1, o2)]);
+    const { ctx, root, ledger, review, source } = nightlyFixture((o1, o2) => [
+      confirmedReply(o1, o2),
+      confirmedReply(o1, o2),
+    ]);
     try {
       consolidate(ctx, source, ledger, root, review);
       expect(unconsolidatedEpisodes(ledger)).toEqual([]);
@@ -330,7 +408,9 @@ describe("nightly", () => {
       expect(loadLessons(ledger).size).toBe(0);
       expect(readJsonl<{ run: string }>(ledger.path(UNDONE_RUNS_FILE)).map((row) => row.run)).toEqual([run]);
       expect(unconsolidatedEpisodes(ledger).map((episode) => episode.sid)).toEqual(["aaaa1111-0000", "bbbb2222-0000"]);
-      expect(consolidate(ctx, source, ledger, root, review)).toBe("nightly: 2/2 episodes -> +1 lessons, 0 review events");
+      expect(consolidate(ctx, source, ledger, root, review)).toBe(
+        "nightly: 2/2 episodes -> +1 lessons, 0 review events",
+      );
     } finally {
       source.close();
     }
@@ -343,11 +423,15 @@ describe("nightly", () => {
     // A file where the proposals directory belongs makes proposeLesson throw.
     writeFileSync(ledger.path("proposals"), "not a directory\n");
     try {
-      expect(consolidate(ctx, source, ledger, root, review)).toBe("nightly: 2/2 episodes -> +1 lessons, 1 review events");
+      expect(consolidate(ctx, source, ledger, root, review)).toBe(
+        "nightly: 2/2 episodes -> +1 lessons, 1 review events",
+      );
     } finally {
       source.close();
     }
-    const run = readJsonl<{ status: string; proposals: string[]; proposals_skipped?: string[] }>(ledger.path("runs.jsonl")).at(-1)!;
+    const run = readJsonl<{ status: string; proposals: string[]; proposals_skipped?: string[] }>(
+      ledger.path("runs.jsonl"),
+    ).at(-1)!;
     expect([run.status, run.proposals]).toEqual(["ok", []]);
     expect(run.proposals_skipped?.[0]).toStartWith("ls-001: ");
     expect(readFileSync(ledger.path("log.md"), "utf8")).toContain("proposal skipped ls-001: ");

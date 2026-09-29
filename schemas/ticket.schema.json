@@ -4,7 +4,16 @@
   "title": "Ticket",
   "description": "Plan 5.3. One ticket artifact with type 'decision' or 'implementation'. A decision ticket resolves a question; it can never be executed as implementation work (release scenario 11). Parallel safety comes from write_ownership, not from dependency edges alone (scenario 13).",
   "type": "object",
-  "required": ["type", "work_source", "goal", "non_goals", "acceptance_criteria", "prerequisites", "stop_conditions", "kb_refs"],
+  "required": [
+    "type",
+    "work_source",
+    "goal",
+    "non_goals",
+    "acceptance_criteria",
+    "prerequisites",
+    "stop_conditions",
+    "kb_refs"
+  ],
   "properties": {
     "schema": { "const": "ticket" },
     "status": {
@@ -151,10 +160,7 @@
       "then": {
         "required": ["decision"],
         "not": {
-          "anyOf": [
-            { "required": ["allowed_changes"] },
-            { "required": ["write_ownership"] }
-          ]
+          "anyOf": [{ "required": ["allowed_changes"] }, { "required": ["write_ownership"] }]
         }
       },
       "else": {

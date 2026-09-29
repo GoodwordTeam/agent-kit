@@ -151,7 +151,7 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     // it would race them.
     const dir = mkdtempSync(join(tmpdir(), "ak-tsc-"));
     const file = join(dir, "planted.ts");
-    writeFileSync(file, "export const x: number = \"not a number\";\n");
+    writeFileSync(file, 'export const x: number = "not a number";\n');
     const run = tsc(["--noEmit", "--strict", "--types", "", file], dir);
     expect(run.status).not.toBe(0);
     expect(`${run.stdout}${run.stderr}`).toContain("TS2322");

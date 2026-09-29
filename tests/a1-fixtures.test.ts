@@ -117,6 +117,8 @@ describe("A1 scaffold content leaves the behavior observable", () => {
     expect(alignment.context).toContain("kb://adr/0004-tenant-model");
     const adr = readFileSync(join(workspace, "knowledge-base/adr/0004-tenant-model.md"), "utf8");
     expect(adr).toMatch(/^status: accepted$/m);
-    expect(adr).toMatch(/self-serve\s+sandbox provisioning may use the billing endpoint when it authenticates a\s+paying-organisation admin/i);
+    expect(adr).toMatch(
+      /self-serve\s+sandbox provisioning may use the billing endpoint when it authenticates a\s+paying-organisation admin/i,
+    );
   });
 });

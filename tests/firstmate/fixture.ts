@@ -59,7 +59,10 @@ export function makeHome(opts: { patched: boolean | "0001" }): Home {
   const file = join(home, "bin/fm-dod-lib.sh");
   const stack: Upstream["stack"] = [];
   let before = ORIGINAL;
-  for (const [id, after] of [["0001-agent-kit-mode", PATCHED], ["0002-agent-kit-audit", PATCHED_2]] as const) {
+  for (const [id, after] of [
+    ["0001-agent-kit-mode", PATCHED],
+    ["0002-agent-kit-audit", PATCHED_2],
+  ] as const) {
     writeFileSync(file, before);
     gitIn(home, "add", "-A");
     writeFileSync(file, after);
@@ -78,8 +81,7 @@ export function makeHome(opts: { patched: boolean | "0001" }): Home {
 export function makeProject(noMistakes?: string): string {
   const project = makeTree({
     "src/a.ts": "export const a = 1;\n",
-    ".no-mistakes.yaml":
-      noMistakes ?? "commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 0\n  ci: 0\n",
+    ".no-mistakes.yaml": noMistakes ?? "commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 0\n  ci: 0\n",
   });
   gitIn(project, "init", "-q", "-b", "main");
   gitIn(project, "add", "-A");

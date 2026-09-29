@@ -37,7 +37,7 @@ export function run(cmd: readonly string[], options: RunOptions = {}): RunResult
   return {
     code: result.status ?? (result.error === undefined ? 1 : 127),
     stdout: result.stdout ?? "",
-    stderr: result.stderr ?? (result.error?.message ?? ""),
+    stderr: result.stderr ?? result.error?.message ?? "",
     timedOut,
   };
 }

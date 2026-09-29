@@ -78,7 +78,15 @@ export interface SubjectAdapter {
   /** The argv this adapter would run, for the receipt. `model` is the matrix binding, passed through opaquely. */
   command(req: SessionRequest, model: string | undefined): string[];
   /** Parse the host's stdout into the shared event shape. Pure, so it is tested on stored transcripts. */
-  parse(stdout: string): { events: SessionEvent[]; reply: string; costUsd?: number; turns?: number; model?: string; slashCommands?: string[]; stopReason?: string };
+  parse(stdout: string): {
+    events: SessionEvent[];
+    reply: string;
+    costUsd?: number;
+    turns?: number;
+    model?: string;
+    slashCommands?: string[];
+    stopReason?: string;
+  };
   /**
    * Set up a private host home under `scratch` (credentials, the bundle's skills, compatibility
    * scans off) and return the environment overrides that point the host at it, plus `release`,

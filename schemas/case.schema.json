@@ -5,13 +5,7 @@
   "description": "AUTHORING.md §9. The `evals/<skill-id>/<case-id>/case.yaml` that the host's eval runner loads, as against the `tests[]` entry in skill.yaml that declares it. This schema says a case is **well-formed**. It does not say a case is covered, or tested, or that it passes: nothing in this package executes a case, and that is by design -- `adapters/runner-contract/CONTRACT.md` §1 puts execution, isolation and credentials with the runner, and the plan hands the running of these files to `claude plugin eval` on the host. Before this existed a `case.yaml` reduced to a single `tags:` line validated exactly as the full case beside it did, and an empty file was a valid case that satisfied `evals.declaration-without-case` and counted toward the three-case floor. That is what this closes, and it is all of what it closes. A case is configuration, not a durable run artifact, so it carries no envelope and is absent from common.schema.json#/$defs/schema_id.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "name",
-    "tags",
-    "execution",
-    "graders"
-  ],
+  "required": ["schema_version", "name", "tags", "execution", "graders"],
   "properties": {
     "schema_version": {
       "description": "The loader's case format, not this package's version -- AUTHORING.md §8 keeps the two independent. Pinned to the one format this schema was written against, so a host that starts emitting a newer one is a deliberate edit here rather than a silent divergence between what the runner accepts and what this file describes.",
@@ -34,11 +28,7 @@
       "description": "What the runner is asked to do. Closed, but on the keys the host reads rather than on the three AUTHORING.md §9 happens to document.\n\nIt was closed on those three, with the reason that a key the loader accepts and this does not is \"a schema edit, which is the direction that gets noticed\". That reasoning was wrong and is recorded here rather than deleted, because the way it failed is the point. It was not noticed and could not have been: the symptom of refusing a key the host accepts is that nobody writes that key, and the one author who tries gets a validation error naming their own file and concludes they were mistaken. A closed schema fails by making the missing feature look like nothing anyone wanted. `scaffold_script` was refused from 7db25a7 until it was declared here, and the visible result was a corpus in which no case declared a fixture and a run that scored 0.00 against an empty workspace.\n\nThe keys here have two owners. `prompt` is this package's. `max_turns`, `allowed_tools` and `timeout_seconds` are the host's, settled elsewhere, and no amount of internal agreement between §9, this file and src/ is evidence about them -- which is why each one names the host version it was confirmed against. `allowed_tools` already said as much about its members and this file then closed the object against the host's other keys, which is the same mistake one level up.",
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "prompt",
-        "max_turns",
-        "allowed_tools"
-      ],
+      "required": ["prompt", "max_turns", "allowed_tools"],
       "properties": {
         "prompt": {
           "description": "The prompt the case runs. Required, and non-empty, because a case whose prompt is absent is the stub this schema exists to refuse.",
@@ -82,12 +72,7 @@
           "description": "Host feature-flag overrides for the run, as a map from flag name to a scalar. Values are not constrained here: the flags are the host's and a case that sets one this package has never heard of is the host's business. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
           "type": "object",
           "additionalProperties": {
-            "type": [
-              "boolean",
-              "string",
-              "number",
-              "null"
-            ]
+            "type": ["boolean", "string", "number", "null"]
           }
         }
       },
@@ -100,24 +85,14 @@
       "items": {
         "description": "Open, not closed, and that is a known divergence from the host rather than a safe default. AUTHORING.md §9 specifies every grader type's fields and its scoring surface, and the per-type `allOf` branches below require the field each type cannot do without. The field names are what `claude plugin eval` accepted at `claude 2.1.278`, measured by loading the whole corpus against it, and the loader definition in the same binary: §9 once said `expected_outcome` for `llm`, this schema required it, and the host rejects that key outright, so 87 of 87 shipped cases failed to load. **The host's grader object is closed** -- it refuses any key it does not define, which is how two surplus `expected_outcome` fields on `tool_used` graders were caught. The openness here therefore buys no safety against the runner: it admits exactly the surplus the runner will reject. What this schema does not check, `ak validate` partly does: `evals.llm-file-claim-without-focus` and `evals.llm-action-claim-without-focus` fail an `llm` grader whose criteria make a claim about files, or about an action the run takes, with no `focus`, and `tests/grader-lint.test.ts` shows every deterministic grader in the corpus can fail.",
         "type": "object",
-        "required": [
-          "name",
-          "type"
-        ],
+        "required": ["name", "type"],
         "properties": {
           "name": {
             "$ref": "common.schema.json#/$defs/nonempty_string"
           },
           "type": {
             "description": "The six types AUTHORING.md §9 lists. `baseline` was absent from this enum until 4756a2e measured it off the host binary's loader definition, which meant a `baseline` grader was refused here -- the same shape as `scaffold_script`, and missed for the same reason: an enum that omits a value produces no artifact naming it. `research/probes/host-case-keys.py` did not catch this one either, because its source is the authoring spec `claude plugin eval init` prints and that spec's table lists five types. The loader definition is the stronger source for grader fields; the authoring spec is the only source for their defaults. Neither alone is complete. §9 also asks for a deterministic grader over `llm` wherever the pass criterion is observable, which is a preference a schema cannot hold.",
-            "enum": [
-              "tool_used",
-              "llm",
-              "regex",
-              "file_exists",
-              "tool_order",
-              "baseline"
-            ]
+            "enum": ["tool_used", "llm", "regex", "file_exists", "tool_order", "baseline"]
           },
           "weight": {
             "type": "integer",
@@ -134,29 +109,18 @@
           },
           "arm": {
             "description": "Which ablation arm scores this grader. Every grader type takes it and it is optional. `with-only` makes the grader an ablation indicator that reports but does not score, which is what a `tool_used: Skill` grader for the plugin under test becomes by default. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
-            "enum": [
-              "with-only",
-              "both"
-            ]
+            "enum": ["with-only", "both"]
           },
           "focus": {
             "description": "The surface an `llm` grader is scored against: `last_message` (the default), `trace` (the run's tool calls and their inputs), `files` (the newline-separated list of paths created during the run), `mock_calls`, or `{source: file, path}` (the contents of one created file). The default is why a grader whose `criteria` describe a file is scored against what the run said rather than what it did; `ak validate` raises `evals.llm-file-claim-without-focus` on that shape, and `evals.llm-action-claim-without-focus` on the same shape when the `criteria` negate or count an action the run takes, and writing `focus: last_message` explicitly clears either. AUTHORING.md §9. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
             "oneOf": [
               {
-                "enum": [
-                  "trace",
-                  "last_message",
-                  "files",
-                  "mock_calls"
-                ]
+                "enum": ["trace", "last_message", "files", "mock_calls"]
               },
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "source",
-                  "path"
-                ],
+                "required": ["source", "path"],
                 "properties": {
                   "source": {
                     "const": "file"
@@ -172,20 +136,12 @@
             "description": "The same surfaces, for a `regex` grader, with the same `last_message` default and the same consequence: a pattern meant for a created path needs `target: files`. AUTHORING.md §9. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
             "oneOf": [
               {
-                "enum": [
-                  "trace",
-                  "last_message",
-                  "files",
-                  "mock_calls"
-                ]
+                "enum": ["trace", "last_message", "files", "mock_calls"]
               },
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "source",
-                  "path"
-                ],
+                "required": ["source", "path"],
                 "properties": {
                   "source": {
                     "const": "file"
@@ -206,10 +162,7 @@
             "description": "How a `regex` grader's pattern must match, defaulting to `contains` at the host. `count:N` asserts an exact number of matches. Read off the host binary's loader definition at claude 2.1.278, which is the strongest source available for this file: it is the object the runner actually parses, not a help text and not an authoring spec.",
             "oneOf": [
               {
-                "enum": [
-                  "contains",
-                  "not_contains"
-                ]
+                "enum": ["contains", "not_contains"]
               },
               {
                 "type": "string",
@@ -252,9 +205,7 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "tool"
-                ],
+                "required": ["tool"],
                 "properties": {
                   "tool": {
                     "$ref": "common.schema.json#/$defs/nonempty_string"
@@ -275,9 +226,7 @@
               {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "tool"
-                ],
+                "required": ["tool"],
                 "properties": {
                   "tool": {
                     "$ref": "common.schema.json#/$defs/nonempty_string"
@@ -299,14 +248,10 @@
                   "const": "llm"
                 }
               },
-              "required": [
-                "type"
-              ]
+              "required": ["type"]
             },
             "then": {
-              "required": [
-                "criteria"
-              ]
+              "required": ["criteria"]
             }
           },
           {
@@ -317,14 +262,10 @@
                   "const": "tool_used"
                 }
               },
-              "required": [
-                "type"
-              ]
+              "required": ["type"]
             },
             "then": {
-              "required": [
-                "tool"
-              ]
+              "required": ["tool"]
             }
           },
           {
@@ -335,14 +276,10 @@
                   "const": "regex"
                 }
               },
-              "required": [
-                "type"
-              ]
+              "required": ["type"]
             },
             "then": {
-              "required": [
-                "pattern"
-              ]
+              "required": ["pattern"]
             }
           },
           {
@@ -353,14 +290,10 @@
                   "const": "file_exists"
                 }
               },
-              "required": [
-                "type"
-              ]
+              "required": ["type"]
             },
             "then": {
-              "required": [
-                "path"
-              ]
+              "required": ["path"]
             }
           },
           {
@@ -371,15 +304,10 @@
                   "const": "tool_order"
                 }
               },
-              "required": [
-                "type"
-              ]
+              "required": ["type"]
             },
             "then": {
-              "required": [
-                "before",
-                "after"
-              ]
+              "required": ["before", "after"]
             }
           },
           {
@@ -390,15 +318,10 @@
                   "const": "baseline"
                 }
               },
-              "required": [
-                "type"
-              ]
+              "required": ["type"]
             },
             "then": {
-              "required": [
-                "baseline_file",
-                "criteria"
-              ]
+              "required": ["baseline_file", "criteria"]
             }
           }
         ]

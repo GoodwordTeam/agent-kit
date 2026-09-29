@@ -31,10 +31,7 @@
     }
   },
   "goal": "The merge question raised by example-decision-2 is answered in the charter, so no later run has to read a grant into the charter's silence.",
-  "non_goals": [
-    "Merging anything.",
-    "Changing the loader, which is example-ticket-1's work."
-  ],
+  "non_goals": ["Merging anything.", "Changing the loader, which is example-ticket-1's work."],
   "acceptance_criteria": [
     {
       "id": "AC-1",

@@ -39,7 +39,10 @@ export function statusLine(binding: { delivery: { action: "publish" | "dry-run" 
     case "complete":
       if (evidence.length === 0) return bad("done needs evidence refs: the receipts and the review the ship rested on");
       if (binding.delivery.action === "dry-run") {
-        return { ok: true, line: `done ${at}: dry-run ship prepared, nothing published evidence=${evidence.join(",")}` };
+        return {
+          ok: true,
+          line: `done ${at}: dry-run ship prepared, nothing published evidence=${evidence.join(",")}`,
+        };
       }
       if (a.pr === undefined || a.pr === "") return bad("done on a publish needs the PR url");
       return { ok: true, line: `done ${at}: PR ${a.pr} checks green evidence=${evidence.join(",")}` };

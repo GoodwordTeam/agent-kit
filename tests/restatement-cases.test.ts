@@ -32,7 +32,13 @@ package:
 `;
 
 function policyYaml(): string {
-  const lines = ["schema_version: 1", "policy: resolved-conflicts", `rows: ${RULINGS_AT_REVISION.length}`, "", "conflicts:"];
+  const lines = [
+    "schema_version: 1",
+    "policy: resolved-conflicts",
+    `rows: ${RULINGS_AT_REVISION.length}`,
+    "",
+    "conflicts:",
+  ];
   for (const [index, row] of RULINGS_AT_REVISION.entries()) {
     lines.push(`  - id: ${row.id}`, "    tension: captured with the corpus", "    ruling: >-");
     // Folded scalar: one physical line, so no wrapping can alter the text.
@@ -345,8 +351,13 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
       expect({ id: item.id, score: scores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, score: 0 });
       const hidden = item.scoreIfUncited;
       if (hidden === undefined) throw new Error(`suppressed case carries no scoreIfUncited: ${item.id}`);
-      expect({ id: item.id, uncited: uncitedScores.get(item.id)?.score ?? -1 }).toEqual({ id: item.id, uncited: hidden });
-      expect(longestSharedRun(item.text, RULINGS_AT_REVISION.find((r) => r.id === item.ruling)?.text ?? "")).toBeGreaterThan(10);
+      expect({ id: item.id, uncited: uncitedScores.get(item.id)?.score ?? -1 }).toEqual({
+        id: item.id,
+        uncited: hidden,
+      });
+      expect(
+        longestSharedRun(item.text, RULINGS_AT_REVISION.find((r) => r.id === item.ruling)?.text ?? ""),
+      ).toBeGreaterThan(10);
     }
     // And the field belongs to exactly the cases that name their own ruling: a
     // `scoreIfUncited` on a case with nothing to uncite would be a number
@@ -408,9 +419,11 @@ describe("the labelled corpus, which is what any recall claim rests on", () => {
     // Tolerance, not equality: an edit to a ruling legitimately moves these,
     // and should show up as a re-measure rather than as a broken build. A
     // change to the scoring path moves them much further than this.
-    const drifted = LABELLED.map((item) => ({ id: item.id, was: item.score, now: scores.get(item.id)?.score ?? 0 })).filter(
-      (row) => Math.abs(row.now - row.was) > 0.05,
-    );
+    const drifted = LABELLED.map((item) => ({
+      id: item.id,
+      was: item.score,
+      now: scores.get(item.id)?.score ?? 0,
+    })).filter((row) => Math.abs(row.now - row.was) > 0.05);
     expect(drifted).toEqual([]);
   });
 

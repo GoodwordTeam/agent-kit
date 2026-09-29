@@ -87,7 +87,9 @@ describe("finding axes stay separate", () => {
 
   test("a smell routed to an automatic fixer class is an error", () => {
     const ctx = ctxFor({
-      "templates/f.json": JSON.stringify(envelope("finding", { spec_quality: "smell", difficulty: null, autofix_class: "safe_auto" })),
+      "templates/f.json": JSON.stringify(
+        envelope("finding", { spec_quality: "smell", difficulty: null, autofix_class: "safe_auto" }),
+      ),
     });
     expect(checkArtifacts(ctx).some((i) => i.rule === "finding.smell-is-not-autofixable")).toBe(true);
   });
@@ -96,9 +98,19 @@ describe("finding axes stay separate", () => {
 describe("the plan record's specification approval binds to the specification", () => {
   const spec = { problem: "Nested run artifacts are not loaded." };
   const specHash = `sha256:${sha256Hex(canonicalJson(spec))}`;
-  const approval = (hash: string) => ({ artifact_hash: hash, by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" });
+  const approval = (hash: string) => ({
+    artifact_hash: hash,
+    by: "human",
+    authority: "explicit",
+    at: "2026-09-19T11:00:00Z",
+  });
   const plan = (extra: Record<string, unknown>) =>
-    envelope("plan-record", { specification: spec, specification_hash: specHash, specification_approval: approval(specHash), ...extra });
+    envelope("plan-record", {
+      specification: spec,
+      specification_hash: specHash,
+      specification_approval: approval(specHash),
+      ...extra,
+    });
   const rules = (value: unknown) =>
     checkArtifacts(ctxFor({ "templates/p.json": JSON.stringify(value) }))
       .filter((i) => i.rule === "approval.stale" || i.rule === "plan-record.specification-hash-mismatch")
@@ -111,7 +123,10 @@ describe("the plan record's specification approval binds to the specification", 
 
   test("an edited specification does not inherit the approval, and its declared hash is caught", () => {
     const edited = { ...spec, non_goals: ["Added after approval."] };
-    expect(rules(plan({ specification: edited }))).toEqual(["plan-record.specification-hash-mismatch", "approval.stale"]);
+    expect(rules(plan({ specification: edited }))).toEqual([
+      "plan-record.specification-hash-mismatch",
+      "approval.stale",
+    ]);
   });
 
   test("an approval bound to the whole record rather than the specification is stale", () => {
@@ -123,14 +138,21 @@ describe("the plan record's specification approval binds to the specification", 
 describe("approvals bind to content", () => {
   test("an approval whose artifact_hash matches the artifact passes", () => {
     const artifact = envelope("ticket", { type: "decision" });
-    const approved = { ...artifact, approvals: [{ artifact_hash: artifactHash(artifact), by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" }] };
+    const approved = {
+      ...artifact,
+      approvals: [
+        { artifact_hash: artifactHash(artifact), by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" },
+      ],
+    };
     const ctx = ctxFor({ "templates/t.json": JSON.stringify(approved) });
     expect(checkArtifacts(ctx).filter((i) => i.rule === "approval.stale")).toEqual([]);
   });
 
   test("an approval whose artifact_hash no longer matches is a stale approval", () => {
     const artifact = envelope("ticket", { type: "decision", goal: "the goal it was approved with" });
-    const approvals = [{ artifact_hash: artifactHash(artifact), by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" }];
+    const approvals = [
+      { artifact_hash: artifactHash(artifact), by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" },
+    ];
     const changed = { ...artifact, goal: "a different goal added after approval", approvals };
     const ctx = ctxFor({ "templates/t.json": JSON.stringify(changed) });
     const issue = checkArtifacts(ctx).find((i) => i.rule === "approval.stale");
@@ -141,8 +163,17 @@ describe("approvals bind to content", () => {
   test("adding an approval does not itself invalidate the hash", () => {
     const artifact = envelope("verification");
     const hash = artifactHash(artifact);
-    const one = { ...artifact, approvals: [{ artifact_hash: hash, by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" }] };
-    const two = { ...artifact, approvals: [...one.approvals, { artifact_hash: hash, by: "supervisor", authority: "explicit", at: "2026-09-19T12:00:00Z" }] };
+    const one = {
+      ...artifact,
+      approvals: [{ artifact_hash: hash, by: "human", authority: "explicit", at: "2026-09-19T11:00:00Z" }],
+    };
+    const two = {
+      ...artifact,
+      approvals: [
+        ...one.approvals,
+        { artifact_hash: hash, by: "supervisor", authority: "explicit", at: "2026-09-19T12:00:00Z" },
+      ],
+    };
     const ctx = ctxFor({ "templates/v.json": JSON.stringify(two) });
     expect(checkArtifacts(ctx).filter((i) => i.rule === "approval.stale")).toEqual([]);
   });
@@ -152,7 +183,11 @@ describe("a decision ticket is never executable", () => {
   test("a decision ticket carrying implementation fields is an error", () => {
     const ctx = ctxFor({
       "templates/t.json": JSON.stringify(
-        envelope("ticket", { type: "decision", decision: { question: "q", subtype: "task", mode: "hitl" }, allowed_changes: { files: ["src/**"] } }),
+        envelope("ticket", {
+          type: "decision",
+          decision: { question: "q", subtype: "task", mode: "hitl" },
+          allowed_changes: { files: ["src/**"] },
+        }),
       ),
     });
     const issue = checkArtifacts(ctx).find((i) => i.rule === "ticket.decision-dispatched-as-implementation");
@@ -186,7 +221,11 @@ describe("a decision ticket is never executable", () => {
   test("a resolved decision ticket with an answer is fine", () => {
     const ctx = ctxFor({
       "templates/t.json": JSON.stringify(
-        envelope("ticket", { type: "decision", status: "done", decision: { question: "q", subtype: "task", mode: "hitl", answer: "we chose B" } }),
+        envelope("ticket", {
+          type: "decision",
+          status: "done",
+          decision: { question: "q", subtype: "task", mode: "hitl", answer: "we chose B" },
+        }),
       ),
     });
     expect(checkArtifacts(ctx).filter((i) => i.rule === "ticket.decision-dispatched-as-implementation")).toEqual([]);
@@ -247,7 +286,9 @@ describe("no author closes their own finding", () => {
 
   test("a resolved finding with no closure receipt at all is an error", () => {
     const ctx = ctxFor({
-      "templates/f.json": JSON.stringify(envelope("finding", { status: "resolved", created_by: { role: "code-review/security" } })),
+      "templates/f.json": JSON.stringify(
+        envelope("finding", { status: "resolved", created_by: { role: "code-review/security" } }),
+      ),
     });
     expect(checkArtifacts(ctx).some((i) => i.rule === "finding.closed-without-receipt")).toBe(true);
   });
@@ -339,7 +380,9 @@ describe("grants are issued by the runner, never forged", () => {
 
   test("with no charter present at all the check reports it as unverifiable, not clean", () => {
     const ctx = ctxFor({
-      "templates/d.json": JSON.stringify(envelope("decision", { grant: { charter_hash: `sha256:${"0".repeat(64)}`, covers: "x" } })),
+      "templates/d.json": JSON.stringify(
+        envelope("decision", { grant: { charter_hash: `sha256:${"0".repeat(64)}`, covers: "x" } }),
+      ),
     });
     expect(checkArtifacts(ctx).some((i) => i.rule === "grant.charter-hash-unknown")).toBe(true);
   });
@@ -350,7 +393,17 @@ describe("escalation defaults", () => {
     const ctx = ctxFor({
       "templates/r.json": JSON.stringify(
         envelope("review", {
-          escalation: { need: "n", options: [{ id: "a", summary: "A" }, { id: "b", summary: "B" }], tried: [{ ref: "x" }], default: "b", charter_rule: "policy:limits/fix_cycles", blocked: ["T-1"] },
+          escalation: {
+            need: "n",
+            options: [
+              { id: "a", summary: "A" },
+              { id: "b", summary: "B" },
+            ],
+            tried: [{ ref: "x" }],
+            default: "b",
+            charter_rule: "policy:limits/fix_cycles",
+            blocked: ["T-1"],
+          },
         }),
       ),
     });
@@ -361,7 +414,14 @@ describe("escalation defaults", () => {
     const ctx = ctxFor({
       "templates/r.json": JSON.stringify(
         envelope("review", {
-          escalation: { need: "n", options: [{ id: "a", summary: "A" }], tried: [{ ref: "x" }], default: "zzz", charter_rule: "r", blocked: ["T-1"] },
+          escalation: {
+            need: "n",
+            options: [{ id: "a", summary: "A" }],
+            tried: [{ ref: "x" }],
+            default: "zzz",
+            charter_rule: "r",
+            blocked: ["T-1"],
+          },
         }),
       ),
     });

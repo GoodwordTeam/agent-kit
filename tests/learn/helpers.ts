@@ -67,11 +67,13 @@ export interface TestContext extends LearnContext {
  * A context rooted in scratch space. `replies` are returned by the judge in
  * order; a function reply sees the prompt. Every prompt is recorded.
  */
-export function testContext(options: {
-  cwd?: string;
-  env?: Record<string, string>;
-  replies?: Array<Record<string, unknown> | null | ((prompt: string) => Record<string, unknown> | null)>;
-} = {}): TestContext {
+export function testContext(
+  options: {
+    cwd?: string;
+    env?: Record<string, string>;
+    replies?: Array<Record<string, unknown> | null | ((prompt: string) => Record<string, unknown> | null)>;
+  } = {},
+): TestContext {
   const base = scratch();
   const rolesDir = stubRoles(join(base, "roles"));
   const env: NodeJS.ProcessEnv = {
@@ -137,7 +139,15 @@ export class MemFixture {
     this.db.exec(MEM_SCHEMA);
   }
 
-  session(row: { sid: string; project: string; started: number; completed?: number | null; platform?: string; prompt?: string; content?: string }): number {
+  session(row: {
+    sid: string;
+    project: string;
+    started: number;
+    completed?: number | null;
+    platform?: string;
+    prompt?: string;
+    content?: string;
+  }): number {
     const result = this.db
       .query(
         "insert into sdk_sessions (content_session_id, memory_session_id, project, platform_source, user_prompt, started_at_epoch, completed_at_epoch, status) values (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -194,19 +204,32 @@ export class MemFixture {
 
   summary(row: { sid: string; project: string; request?: string; completed?: string; next?: string }): void {
     this.db
-      .query("insert into session_summaries (memory_session_id, project, request, completed, next_steps) values (?, ?, ?, ?, ?)")
+      .query(
+        "insert into session_summaries (memory_session_id, project, request, completed, next_steps) values (?, ?, ?, ?, ?)",
+      )
       .run(row.sid, row.project, row.request ?? null, row.completed ?? null, row.next ?? null);
   }
 
   prompt(row: { sessionDbId: number; content: string; n: number; text: string }): void {
     this.db
-      .query("insert into user_prompts (session_db_id, content_session_id, prompt_number, prompt_text) values (?, ?, ?, ?)")
+      .query(
+        "insert into user_prompts (session_db_id, content_session_id, prompt_number, prompt_text) values (?, ?, ?, ?)",
+      )
       .run(row.sessionDbId, row.content, row.n, row.text);
   }
 
-  toolUse(row: { sid: string; project: string; tool: string; input?: Record<string, unknown>; cwd?: string; at: number }): void {
+  toolUse(row: {
+    sid: string;
+    project: string;
+    tool: string;
+    input?: Record<string, unknown>;
+    cwd?: string;
+    at: number;
+  }): void {
     this.db
-      .query("insert into tool_uses (memory_session_id, project, tool_name, tool_input, cwd, created_at_epoch) values (?, ?, ?, ?, ?, ?)")
+      .query(
+        "insert into tool_uses (memory_session_id, project, tool_name, tool_input, cwd, created_at_epoch) values (?, ?, ?, ?, ?, ?)",
+      )
       .run(row.sid, row.project, row.tool, JSON.stringify(row.input ?? {}), row.cwd ?? null, row.at);
   }
 

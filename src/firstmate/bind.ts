@@ -8,7 +8,16 @@
  * adapters/firstmate/WORKER.md for fm-brief to insert.
  */
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 
@@ -58,7 +67,12 @@ export interface BindResult {
 const refused = (errors: string[], checks: Check[] = []): BindResult => ({ ok: false, errors, checks, markdown: "" });
 
 function kebab(text: string): string {
-  const k = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64).replace(/-+$/, "");
+  const k = text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64)
+    .replace(/-+$/, "");
   return k === "" ? "project" : k;
 }
 
@@ -109,7 +123,12 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
   const pin = pinBundle(opts.bundleDir, opts.pinsDir);
   if (typeof pin === "string") return refused([pin], checked.checks);
   if (!existsSync(join(pin.path, GATE_FILE))) {
-    return refused([`the pinned bundle at ${pin.path} has no ${GATE_FILE}, so the worker could not record or check a lifecycle gate; rebuild it with ak build`], checked.checks);
+    return refused(
+      [
+        `the pinned bundle at ${pin.path} has no ${GATE_FILE}, so the worker could not record or check a lifecycle gate; rebuild it with ak build`,
+      ],
+      checked.checks,
+    );
   }
 
   let charter: Binding["charter"] = null;
@@ -163,7 +182,11 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
   };
 
   const invalid = validateBinding(opts.akRoot, binding);
-  if (invalid.length > 0) return refused(invalid.map((e) => `binding does not validate: ${e}`), checked.checks);
+  if (invalid.length > 0)
+    return refused(
+      invalid.map((e) => `binding does not validate: ${e}`),
+      checked.checks,
+    );
 
   const template = readFileSync(join(opts.akRoot, "adapters/firstmate/WORKER.md"), "utf8");
   const markdown = render(template, {
@@ -177,7 +200,10 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
     bundle_hash: pin.hash,
     bundle_path: pin.path,
     host: args.host,
-    charter: charter === null ? "none. This run holds no sensitive-action authority and acquires none by running" : `${charter.ref} (${charter.hash})`,
+    charter:
+      charter === null
+        ? "none. This run holds no sensitive-action authority and acquires none by running"
+        : `${charter.ref} (${charter.hash})`,
     gates: gates.join(", "),
     gate_cmd: `node ${join(pin.path, GATE_FILE)}`,
     evidence_dir: store.location,
@@ -193,7 +219,10 @@ export function bind(args: BindArgs, opts: FirstmateOptions): BindResult {
     upstream_commit: upstream.commit,
   });
   if (/^Delivery contract: mode=/m.test(markdown)) {
-    return refused(["the rendered worker section carries a 'Delivery contract: mode=' line, which only Firstmate may write"], checked.checks);
+    return refused(
+      ["the rendered worker section carries a 'Delivery contract: mode=' line, which only Firstmate may write"],
+      checked.checks,
+    );
   }
 
   const out = resolve(args.bindingOut);

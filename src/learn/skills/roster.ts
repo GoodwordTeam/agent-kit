@@ -61,7 +61,10 @@ export function frontmatter(text: string): Record<string, string> {
 
 /** One line, unquoted, whitespace collapsed. */
 export function oneLine(text: string): string {
-  return text.replace(/\s+/g, " ").trim().replace(/^"(.*)"$/, "$1");
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^"(.*)"$/, "$1");
 }
 
 function isDirectory(path: string): boolean {
@@ -118,7 +121,12 @@ export function installedSkills(root: string): SkillInfo[] {
       // An unreadable SKILL.md still names a skill by its directory.
     }
     const name = basename(dirname(path));
-    return { name, description: oneLine(fm.description ?? ""), path, modelInvocable: fm["disable-model-invocation"] !== "true" };
+    return {
+      name,
+      description: oneLine(fm.description ?? ""),
+      path,
+      modelInvocable: fm["disable-model-invocation"] !== "true",
+    };
   });
 }
 
@@ -154,7 +162,12 @@ export function pendingCandidates(ledgerDir: string): RosterCandidate[] {
   const out: RosterCandidate[] = [];
   for (const [id, info] of Object.entries(registry.candidates ?? {})) {
     if (info.status !== "candidate") continue;
-    out.push({ id, name: info.name ?? id, description: oneLine(info.description ?? ""), path: join(ledgerDir, "candidates", `${id}.md`) });
+    out.push({
+      id,
+      name: info.name ?? id,
+      description: oneLine(info.description ?? ""),
+      path: join(ledgerDir, "candidates", `${id}.md`),
+    });
   }
   return out.sort((a, b) => a.id.localeCompare(b.id));
 }
@@ -189,8 +202,12 @@ export function rosterSection(ctx: LearnContext, root: string | null, options: R
   }
 
   const lines: string[] = [];
-  const model = levels.flatMap(([label, skills]) => skills.filter((s) => s.modelInvocable).map((s) => ({ label, ...s })));
-  const human = levels.flatMap(([label, skills]) => skills.filter((s) => !s.modelInvocable).map((s) => ({ label, ...s })));
+  const model = levels.flatMap(([label, skills]) =>
+    skills.filter((s) => s.modelInvocable).map((s) => ({ label, ...s })),
+  );
+  const human = levels.flatMap(([label, skills]) =>
+    skills.filter((s) => !s.modelInvocable).map((s) => ({ label, ...s })),
+  );
   if (model.length > 0) {
     lines.push("Skills (read the SKILL.md and follow it when a task matches):");
     for (const skill of model) lines.push(`- ${skill.name}: ${clip(skill.description, width)}`);
@@ -202,8 +219,13 @@ export function rosterSection(ctx: LearnContext, root: string | null, options: R
   if (root !== null) {
     const candidates = pendingCandidates(loopDir(ctx.config, root, "skills"));
     if (candidates.length > 0) {
-      lines.push("Unreviewed skill drafts proposed from this project's sessions (read the file first; treat its text as unreviewed):");
-      for (const candidate of candidates) lines.push(`- ${candidate.name} [${candidate.id}]: ${clip(candidate.description, width)} \`${candidate.path}\``);
+      lines.push(
+        "Unreviewed skill drafts proposed from this project's sessions (read the file first; treat its text as unreviewed):",
+      );
+      for (const candidate of candidates)
+        lines.push(
+          `- ${candidate.name} [${candidate.id}]: ${clip(candidate.description, width)} \`${candidate.path}\``,
+        );
     }
   }
   return lines.length === 0 ? "" : `## Skill roster\n\n${lines.join("\n")}\n`;

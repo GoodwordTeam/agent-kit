@@ -53,7 +53,9 @@ const BACKTICKED = /`([a-z][a-z0-9-]*)`/g;
 const DENIAL = /\bno\s+`([a-z][a-z0-9-]*)`/gi;
 
 function obj(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function strings(value: unknown): string[] {

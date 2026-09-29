@@ -185,7 +185,8 @@ export function loadInstallConfig(root: string, catalog: Catalog): InstallConfig
     const borrowed = new Map<string, Map<string, string>>();
     for (const { adapter, fallsBackOn } of adapters) {
       if (backends.has(adapter)) continue;
-      for (const [capability, needs] of fallsBackOn) borrowed.set(capability, new Map([...(borrowed.get(capability) ?? []), [adapter, needs]]));
+      for (const [capability, needs] of fallsBackOn)
+        borrowed.set(capability, new Map([...(borrowed.get(capability) ?? []), [adapter, needs]]));
     }
     return {
       file,
@@ -205,10 +206,19 @@ export function loadInstallConfig(root: string, catalog: Catalog): InstallConfig
   try {
     doc = parseYaml(text);
   } catch (cause) {
-    issues.push(error("packaging.install-unreadable", INSTALL_FILE, `Not valid YAML, so nothing is attached: ${cause instanceof Error ? cause.message : String(cause)}`));
+    issues.push(
+      error(
+        "packaging.install-unreadable",
+        INSTALL_FILE,
+        `Not valid YAML, so nothing is attached: ${cause instanceof Error ? cause.message : String(cause)}`,
+      ),
+    );
     return done(INSTALL_FILE, []);
   }
-  const listed = doc !== null && typeof doc === "object" && !Array.isArray(doc) ? (doc as Record<string, unknown>)["attached"] : undefined;
+  const listed =
+    doc !== null && typeof doc === "object" && !Array.isArray(doc)
+      ? (doc as Record<string, unknown>)["attached"]
+      : undefined;
   if (!Array.isArray(listed) || !listed.every((id): id is string => typeof id === "string")) {
     issues.push(
       error(
@@ -250,7 +260,8 @@ export function loadInstallConfig(root: string, catalog: Catalog): InstallConfig
   const backends = new Map<string, string>();
   for (const adapter of fallbacks.keys()) {
     const section = (doc as Record<string, unknown>)[adapter];
-    const backend = section !== null && typeof section === "object" ? (section as Record<string, unknown>)["backend"] : undefined;
+    const backend =
+      section !== null && typeof section === "object" ? (section as Record<string, unknown>)["backend"] : undefined;
     if (typeof backend !== "string" || backend.length === 0) continue;
     if (!attached.includes(adapter)) {
       // Not quietly honoured and not quietly dropped: the file says both that
@@ -306,7 +317,9 @@ function backendStates(config: InstallConfig): string[] {
     }
     const each = needs.map((capability) => {
       const by = (config.supply.suppliers.get(capability) ?? []).filter((a) => config.supply.attached.has(a));
-      return by.length > 0 ? `${capability} fallback (${by.join(", ")})` : `${capability} fallback, which no attached adapter supplies`;
+      return by.length > 0
+        ? `${capability} fallback (${by.join(", ")})`
+        : `${capability} fallback, which no attached adapter supplies`;
     });
     states.push(`${adapter}: no backend, ${each.join(", ")}`);
   }
@@ -326,5 +339,7 @@ function backendStates(config: InstallConfig): string[] {
  * attached id names an adapter whose contract supplies something.
  */
 export function checkInstallConfig(ctx: { root: string; catalog: Catalog }): Issue[] {
-  return loadInstallConfig(ctx.root, ctx.catalog).issues.filter((issue) => issue.rule !== "packaging.install-unreadable");
+  return loadInstallConfig(ctx.root, ctx.catalog).issues.filter(
+    (issue) => issue.rule !== "packaging.install-unreadable",
+  );
 }

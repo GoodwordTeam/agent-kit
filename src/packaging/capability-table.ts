@@ -284,11 +284,15 @@ export function ceilingFor(requires: readonly string[], table: CapabilityTable, 
       blocking.push(capability);
       continue;
     }
-    const borrowed = attached.map((adapter) => supply.fallbacks?.get(capability)?.get(adapter)).find((c) => c !== undefined);
+    const borrowed = attached
+      .map((adapter) => supply.fallbacks?.get(capability)?.get(adapter))
+      .find((c) => c !== undefined);
     detached.push({
       capability,
       adapters: [...suppliers],
-      ...(borrowed === undefined ? {} : { fallsBackOn: { capability: borrowed, adapters: [...(supply.suppliers.get(borrowed) ?? [])] } }),
+      ...(borrowed === undefined
+        ? {}
+        : { fallsBackOn: { capability: borrowed, adapters: [...(supply.suppliers.get(borrowed) ?? [])] } }),
     });
   }
 
@@ -305,7 +309,13 @@ export function ceilingFor(requires: readonly string[], table: CapabilityTable, 
  * cycle, which lifts nothing: two adapters each borrowing the other's refusal
  * have no refusal between them.
  */
-function borrowingHolds(capability: string, adapter: string, table: CapabilityTable, supply: Supply, seen: ReadonlySet<string>): boolean {
+function borrowingHolds(
+  capability: string,
+  adapter: string,
+  table: CapabilityTable,
+  supply: Supply,
+  seen: ReadonlySet<string>,
+): boolean {
   const borrowed = supply.fallbacks?.get(capability)?.get(adapter);
   if (borrowed === undefined) return true;
   if (seen.has(borrowed)) return false;
@@ -313,5 +323,7 @@ function borrowingHolds(capability: string, adapter: string, table: CapabilityTa
   if (status === undefined) return false;
   if (!BLOCKING.has(status)) return true;
   const next = new Set([...seen, borrowed]);
-  return (supply.suppliers.get(borrowed) ?? []).some((a) => supply.attached.has(a) && borrowingHolds(borrowed, a, table, supply, next));
+  return (supply.suppliers.get(borrowed) ?? []).some(
+    (a) => supply.attached.has(a) && borrowingHolds(borrowed, a, table, supply, next),
+  );
 }

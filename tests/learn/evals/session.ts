@@ -31,7 +31,8 @@ export function cleanEnv(): Record<string, string> {
 /** Repository identity every manual-eval receipt needs to make its instrument reproducible. */
 export function evalInstrument(root: string, revision: string) {
   const { catalog } = loadCatalog(root);
-  if (catalog === null) throw new Error(`${root} has no readable catalog.yaml, so the receipt cannot name its install configuration`);
+  if (catalog === null)
+    throw new Error(`${root} has no readable catalog.yaml, so the receipt cannot name its install configuration`);
   const install = loadInstallConfig(root, catalog);
   if (hasErrors(install.issues)) {
     const why = install.issues.filter((i) => i.severity === "error").map((i) => `${i.file}: ${i.message}`);
@@ -50,7 +51,22 @@ export function scratchRepo(): string {
   const repo = join(base, "repo");
   mkdirSync(repo);
   run(["git", "init", "-q"], { cwd: repo });
-  run(["git", "-c", "user.name=eval", "-c", "user.email=eval@example.invalid", "commit", "-q", "--allow-empty", "-m", "init", "--no-gpg-sign"], { cwd: repo });
+  run(
+    [
+      "git",
+      "-c",
+      "user.name=eval",
+      "-c",
+      "user.email=eval@example.invalid",
+      "commit",
+      "-q",
+      "--allow-empty",
+      "-m",
+      "init",
+      "--no-gpg-sign",
+    ],
+    { cwd: repo },
+  );
   return repo;
 }
 
@@ -61,8 +77,17 @@ export interface AsyncResult {
 }
 
 /** Spawn without blocking, so cases can run in parallel. The child is killed at the timeout. */
-export async function runAsync(cmd: readonly string[], options: { cwd: string; env: Record<string, string>; timeoutMs: number }): Promise<AsyncResult> {
-  const child = Bun.spawn([...cmd], { cwd: options.cwd, env: options.env, stdin: "ignore", stdout: "pipe", stderr: "ignore" });
+export async function runAsync(
+  cmd: readonly string[],
+  options: { cwd: string; env: Record<string, string>; timeoutMs: number },
+): Promise<AsyncResult> {
+  const child = Bun.spawn([...cmd], {
+    cwd: options.cwd,
+    env: options.env,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "ignore",
+  });
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;

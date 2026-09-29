@@ -14,7 +14,16 @@ import { isUserInvoked, loadSkillManifest } from "./manifest.ts";
 import { resolveProfile } from "./profiles.ts";
 
 /** Trees that exist only in the source repository and are never installed. */
-const SOURCE_ONLY_PREFIXES = ["research/", "provenance/", "src/", "tests/", "dist/", ".donors/", ".work/", "node_modules/"];
+const SOURCE_ONLY_PREFIXES = [
+  "research/",
+  "provenance/",
+  "src/",
+  "tests/",
+  "dist/",
+  ".donors/",
+  ".work/",
+  "node_modules/",
+];
 
 /** Where the packager parks a copied shared dependency, preserving its source layout. */
 export const SHARED_ROOT = "references/shared";
@@ -417,7 +426,13 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     const bodyPath = entryBodyPath("skills", entry.id);
     const body = readTextIfPresent(join(root, bodyPath));
     if (body === null) {
-      issues.push(error("packaging.skill-body-missing", bodyPath, `Skill '${entry.id}' is included in the bundle but has no ${bodyPath}.`));
+      issues.push(
+        error(
+          "packaging.skill-body-missing",
+          bodyPath,
+          `Skill '${entry.id}' is included in the bundle but has no ${bodyPath}.`,
+        ),
+      );
       continue;
     }
 
@@ -675,7 +690,13 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   if (GATE_SKILLS.some((name) => emitted.includes(name))) {
     const text = readTextIfPresent(join(root, GATE_SOURCE));
     if (text === null) {
-      issues.push(error("packaging.gate-source-missing", GATE_SOURCE, `${GATE_SOURCE} is missing, so the bundle cannot carry the lifecycle gate its super-* skills record and check.`));
+      issues.push(
+        error(
+          "packaging.gate-source-missing",
+          GATE_SOURCE,
+          `${GATE_SOURCE} is missing, so the bundle cannot carry the lifecycle gate its super-* skills record and check.`,
+        ),
+      );
     } else {
       files.set(GATE_FILE, { path: GATE_FILE, contents: gateScript(text), source: GATE_SOURCE });
     }
@@ -698,7 +719,15 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   }
   files.set(BUILD_RECORD_FILE[host], {
     path: BUILD_RECORD_FILE[host],
-    contents: buildRecord(host, membership.profile, install, excluded, decisions, capabilities.enforces, capabilities.notes),
+    contents: buildRecord(
+      host,
+      membership.profile,
+      install,
+      excluded,
+      decisions,
+      capabilities.enforces,
+      capabilities.notes,
+    ),
   });
 
   return { host, profile: membership.profile, files: sortFiles(files), decisions, issues };
@@ -724,7 +753,12 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
  * ("Unknown field 'ak'. Claude Code ignores it at load time."), so anything this
  * package wants to record about its own build goes in `buildRecord` instead.
  */
-function manifestObject(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>, hasCorpus: boolean): Record<string, unknown> {
+function manifestObject(
+  ctx: CheckContext,
+  host: HostId,
+  skills: ReadonlyArray<string>,
+  hasCorpus: boolean,
+): Record<string, unknown> {
   const pkg = ctx.catalog.package;
   const manifest: Record<string, unknown> = {
     name: pkg.id,

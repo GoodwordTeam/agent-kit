@@ -29,12 +29,19 @@ skills:
     provenance_origin: donor
 `;
 
-const SKILL = "---\nname: alpha\ndescription: Runs the alpha workflow when a human asks for it.\n---\n\n# Alpha\n\nRun it.\n";
-const LOCK = "donors:\n  - id: donorx\n    path: .donors/donorx\n    commit: 0123456789abcdef0123456789abcdef01234567\n";
+const SKILL =
+  "---\nname: alpha\ndescription: Runs the alpha workflow when a human asks for it.\n---\n\n# Alpha\n\nRun it.\n";
+const LOCK =
+  "donors:\n  - id: donorx\n    path: .donors/donorx\n    commit: 0123456789abcdef0123456789abcdef01234567\n";
 const SOURCE = "donorx@0123456789abcdef0123456789abcdef01234567:docs/guide.md";
 
 function ctxFor(files: Record<string, string>) {
-  const root = makeTree({ "catalog.yaml": CATALOG, "skills/alpha/SKILL.md": SKILL, "provenance/upstream.lock.yaml": LOCK, ...files });
+  const root = makeTree({
+    "catalog.yaml": CATALOG,
+    "skills/alpha/SKILL.md": SKILL,
+    "provenance/upstream.lock.yaml": LOCK,
+    ...files,
+  });
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
   return { root, catalog };
@@ -67,7 +74,10 @@ describe("adaptations.d fragments are the write surface", () => {
   test("two fragments claiming the same path with different sources is a conflict", () => {
     const ctx = ctxFor({
       [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: fragment("skills/alpha/SKILL.md", SOURCE),
-      [`${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`]: fragment("skills/alpha/SKILL.md", "donory@abcdef1234567890abcdef1234567890abcdef12:other.md"),
+      [`${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`]: fragment(
+        "skills/alpha/SKILL.md",
+        "donory@abcdef1234567890abcdef1234567890abcdef12:other.md",
+      ),
     });
     const issue = loadAdaptationFragments(ctx.root).issues.find((i) => i.rule === "provenance.conflicting-adaptation");
     expect(issue?.severity).toBe("error");
@@ -92,8 +102,7 @@ describe("adaptations.d fragments are the write surface", () => {
   test("one fragment may record several donor sources for one body, and both survive the merge", () => {
     const second = "donory@abcdef1234567890abcdef1234567890abcdef12:other.md";
     const ctx = ctxFor({
-      [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]:
-        `adaptations:\n  - path: skills/alpha/SKILL.md\n    source: ${SOURCE}\n  - path: skills/alpha/SKILL.md\n    source: ${second}\n`,
+      [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: `adaptations:\n  - path: skills/alpha/SKILL.md\n    source: ${SOURCE}\n  - path: skills/alpha/SKILL.md\n    source: ${second}\n`,
     });
     const { rows, issues } = loadAdaptationFragments(ctx.root);
     expect(issues.filter((i) => i.severity === "error")).toEqual([]);
@@ -131,7 +140,10 @@ describe("adaptations.yaml is generated, never hand-edited", () => {
       { path: "b.md", source: SOURCE, file: "x", row: { path: "b.md", source: SOURCE } },
     ]);
     expect(a).toBe(b);
-    expect((parseYaml(a) as { adaptations: Array<{ path: string }> }).adaptations.map((r) => r.path)).toEqual(["a.md", "b.md"]);
+    expect((parseYaml(a) as { adaptations: Array<{ path: string }> }).adaptations.map((r) => r.path)).toEqual([
+      "a.md",
+      "b.md",
+    ]);
   });
 
   test("fields a fragment carries beyond path and source survive the merge", () => {
@@ -183,7 +195,10 @@ describe("adaptations.yaml is generated, never hand-edited", () => {
   test("ak build refuses to write a file merged from conflicting fragments", () => {
     const ctx = ctxFor({
       [`${ADAPTATIONS_FRAGMENT_DIR}/batch-1.yaml`]: fragment("a.md", SOURCE),
-      [`${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`]: fragment("a.md", "donory@abcdef1234567890abcdef1234567890abcdef12:other.md"),
+      [`${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`]: fragment(
+        "a.md",
+        "donory@abcdef1234567890abcdef1234567890abcdef12:other.md",
+      ),
     });
     const issues = writeAdaptations(ctx);
     expect(issues.some((i) => i.rule === "provenance.conflicting-adaptation")).toBe(true);

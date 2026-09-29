@@ -200,7 +200,10 @@ describe("the positive fixture", () => {
     const root = materializeFixture("valid/minimal");
     expect(runValidation(root).issues.filter((i) => i.severity === "error")).toEqual([]);
 
-    writeFileSync(join(root, "templates/ticket.json"), JSON.stringify({ schema: "ticket", id: 7, title: "wrong type" }));
+    writeFileSync(
+      join(root, "templates/ticket.json"),
+      JSON.stringify({ schema: "ticket", id: 7, title: "wrong type" }),
+    );
     const broken = runValidation(root).issues.filter((i) => i.severity === "error");
     expect(broken.map((i) => i.rule)).toContain("schemas.document-invalid");
     expect(broken.some((i) => i.file === "templates/ticket.json")).toBe(true);
@@ -234,7 +237,8 @@ describe("invalid fixtures", () => {
     expect(readFileSync(join(fixture, "schemas/install.schema.json"), "utf8")).toBe(
       readFileSync(join(repo, "schemas/install.schema.json"), "utf8"),
     );
-    const common = (root: string) => JSON.parse(readFileSync(join(root, "schemas/common.schema.json"), "utf8")).$defs.kebab_id;
+    const common = (root: string) =>
+      JSON.parse(readFileSync(join(root, "schemas/common.schema.json"), "utf8")).$defs.kebab_id;
     expect(common(fixture)).toEqual(common(repo));
   });
 
@@ -268,7 +272,10 @@ describe("the fixtures do not smuggle denied strings into the tree", () => {
   });
 
   test("materializing a fixture substitutes the markers, so the scanner sees the real strings", () => {
-    const body = readFileSync(join(materializeFixture("invalid/05-model-name-in-body"), "skills/alpha/SKILL.md"), "utf8");
+    const body = readFileSync(
+      join(materializeFixture("invalid/05-model-name-in-body"), "skills/alpha/SKILL.md"),
+      "utf8",
+    );
     expect(body).not.toContain("__DENY_MODEL_TERM__");
     expect(matchTerms(body, DENY_TERMS).length).toBeGreaterThan(0);
   });

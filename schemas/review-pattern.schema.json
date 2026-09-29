@@ -9,7 +9,11 @@
     "id": { "type": "string", "pattern": "^rp-[0-9]{3,}$" },
     "title": { "$ref": "common.schema.json#/$defs/nonempty_string" },
     "status": { "enum": ["candidate", "active", "retired"] },
-    "count": { "description": "Events counted against this page. An event is counted once however often it is replayed.", "type": "integer", "minimum": 0 },
+    "count": {
+      "description": "Events counted against this page. An event is counted once however often it is replayed.",
+      "type": "integer",
+      "minimum": 0
+    },
     "first_seen": { "$ref": "common.schema.json#/$defs/date" },
     "last_seen": {
       "description": "Empty until the first event is counted.",

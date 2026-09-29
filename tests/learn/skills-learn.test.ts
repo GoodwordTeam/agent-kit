@@ -80,7 +80,14 @@ function repoClean(root: string): boolean {
 describe("transcript extraction (claude-reflect port)", () => {
   test("system content, tool results and continuations are not user requests", () => {
     expect(shouldIncludeMessage("rerun the review bot please")).toBe(true);
-    for (const text of ["", "<command-name>/x</command-name>", "[Request interrupted]", '{"a":1}', "This session is being continued from x", "**bold**"]) {
+    for (const text of [
+      "",
+      "<command-name>/x</command-name>",
+      "[Request interrupted]",
+      '{"a":1}',
+      "This session is being continued from x",
+      "**bold**",
+    ]) {
       expect(shouldIncludeMessage(text)).toBe(false);
     }
   });
@@ -93,7 +100,10 @@ describe("transcript extraction (claude-reflect port)", () => {
         userLine("first real request"),
         userLine("meta noise", { isMeta: true }),
         JSON.stringify({ type: "assistant", message: { content: "an answer" } }),
-        userLine([{ type: "tool_result", content: "x" }, { type: "text", text: "second real request" }]),
+        userLine([
+          { type: "tool_result", content: "x" },
+          { type: "text", text: "second real request" },
+        ]),
         "not json",
         userLine("<system-reminder>injected</system-reminder>"),
       ].join("\n"),
@@ -109,8 +119,20 @@ describe("gatherSessions", () => {
     transcript(ctx, root, "dddd4444-0000", ["only one usable message here"]);
     const memDb = join(scratch(), "mem.db");
     const mem = new MemFixture(memDb);
-    mem.session({ sid: "m1", content: "eeee5555-0000", project: "repo", started: Date.now(), prompt: "rerun the review bot on this branch" });
-    mem.session({ sid: "m2", content: "aaaa1111-0000", project: "repo", started: Date.now(), prompt: "a duplicate of a transcript session" });
+    mem.session({
+      sid: "m1",
+      content: "eeee5555-0000",
+      project: "repo",
+      started: Date.now(),
+      prompt: "rerun the review bot on this branch",
+    });
+    mem.session({
+      sid: "m2",
+      content: "aaaa1111-0000",
+      project: "repo",
+      started: Date.now(),
+      prompt: "a duplicate of a transcript session",
+    });
     mem.close();
     const withMem: TestContext = { ...ctx, config: { ...ctx.config, memDb } };
 
@@ -127,7 +149,10 @@ describe("gatherSessions", () => {
 });
 
 describe("the evidence gate", () => {
-  const sessions: SessionSample[] = Object.entries(SESSIONS).map(([sid, messages]) => ({ sid: sid.slice(0, 8), messages }));
+  const sessions: SessionSample[] = Object.entries(SESSIONS).map(([sid, messages]) => ({
+    sid: sid.slice(0, 8),
+    messages,
+  }));
 
   test("three sessions quoting real words pass, with the name kebab-cased", () => {
     const gated = gateCandidate(CAND, sessions, new Set());
@@ -146,9 +171,19 @@ describe("the evidence gate", () => {
   });
 
   test("short quotes that would match any session are not evidence", () => {
-    const tiny = { ...CAND, evidence: [{ session: "aaaa1111", quote: "e" }, { session: "bbbb2222", quote: "the" }, { session: "cccc3333", quote: "review" }] };
+    const tiny = {
+      ...CAND,
+      evidence: [
+        { session: "aaaa1111", quote: "e" },
+        { session: "bbbb2222", quote: "the" },
+        { session: "cccc3333", quote: "review" },
+      ],
+    };
     expect(gateCandidate(tiny, sessions, new Set())).toBeNull();
-    const threeWords = { ...CAND, evidence: [...CAND.evidence.slice(0, 2), { session: "cccc3333", quote: "the bot review" }] };
+    const threeWords = {
+      ...CAND,
+      evidence: [...CAND.evidence.slice(0, 2), { session: "cccc3333", quote: "the bot review" }],
+    };
     expect(gateCandidate(threeWords, sessions, new Set())).toBeNull();
   });
 
@@ -169,22 +204,34 @@ describe("renderDraft", () => {
   test("renders a SKILL.md draft with steps, guardrails and evidence", () => {
     const text = renderDraft({ ...CAND, name: "bot-re-review" }, "sk-001", "2026-09-24");
     expect(text.startsWith(`---\nname: bot-re-review\ndescription: ${CAND.description}\n---\n`)).toBe(true);
-    expect(text).toContain("## Steps\n1. gh pr comment $PR --body '@review-bot review'\n2. poll gh pr checks until fresh\n");
+    expect(text).toContain(
+      "## Steps\n1. gh pr comment $PR --body '@review-bot review'\n2. poll gh pr checks until fresh\n",
+    );
     expect(text).toContain("## Guardrails (from corrections)\n- never mention the assistant in the comment\n");
     expect(text).toContain("- session `aaaa1111`: “ask the bot to re-review”");
-    expect(text).toContain("*Candidate sk-001, proposed by skill-learn on 2026-09-24 from 3 sessions (confidence high).");
+    expect(text).toContain(
+      "*Candidate sk-001, proposed by skill-learn on 2026-09-24 from 3 sessions (confidence high).",
+    );
   });
 });
 
 describe("discover", () => {
   test("a gated candidate lands in the ledger with a runtime id; the repository is untouched", () => {
-    const { ctx, root, packageRoot } = fixture([{ candidates: [CAND, { ...CAND, name: "thin", evidence: CAND.evidence.slice(0, 1) }] }]);
+    const { ctx, root, packageRoot } = fixture([
+      { candidates: [CAND, { ...CAND, name: "thin", evidence: CAND.evidence.slice(0, 1) }] },
+    ]);
     const summary = discover(ctx, root, { packageRoot });
     expect(summary).toBe("analysed 3 sessions; 1 new candidates: sk-001 bot-re-review");
     expect(ctx.prompts[0]).toContain("#### session aaaa1111");
     const ledger = skillsLedger(ctx, root);
     const registry = loadRegistry(ledger);
-    expect(registry.candidates["sk-001"]).toMatchObject({ name: "bot-re-review", scope: "global", status: "candidate", evidence: 3, uses: 0 });
+    expect(registry.candidates["sk-001"]).toMatchObject({
+      name: "bot-re-review",
+      scope: "global",
+      status: "candidate",
+      evidence: 3,
+      uses: 0,
+    });
     expect(registry.next).toBe(2);
     expect(readFileSync(ledger.path("candidates", "sk-001.md"), "utf8")).toContain("# bot-re-review");
     expect(run(["git", "status", "--porcelain"], { cwd: ledger.dir }).stdout).toBe("");
@@ -240,7 +287,13 @@ describe("uses and promotion", () => {
     mem.observation({ sid: "s1", project: "repo", type: "discovery", filesRead: [draft], at });
     mem.observation({ sid: "s1", project: "repo", type: "discovery", filesRead: [draft], at });
     mem.observation({ sid: "s2", project: "repo", type: "discovery", filesRead: [draft, "/other"], at });
-    mem.observation({ sid: "s3", project: "repo", type: "discovery", filesRead: [ledger.path("candidates", "sk-002.md")], at });
+    mem.observation({
+      sid: "s3",
+      project: "repo",
+      type: "discovery",
+      filesRead: [ledger.path("candidates", "sk-002.md")],
+      at,
+    });
     mem.close();
     const withMem: TestContext = { ...ctx, config: { ...ctx.config, memDb } };
 
@@ -268,7 +321,9 @@ describe("uses and promotion", () => {
     const { ctx, root, packageRoot } = fixture([{ candidates: [CAND] }]);
     discover(ctx, root, { packageRoot });
     const text = promoteCandidate(ctx, root, "sk-001")!;
-    expect(text.split("\n")[0]).toBe("Input for the writing-skills skill: candidate sk-001 (bot-re-review), used by 0 sessions, evidence from 3.");
+    expect(text.split("\n")[0]).toBe(
+      "Input for the writing-skills skill: candidate sk-001 (bot-re-review), used by 0 sessions, evidence from 3.",
+    );
     expect(text).toContain("---\nname: bot-re-review\n");
     const info = loadRegistry(skillsLedger(ctx, root)).candidates["sk-001"]!;
     expect(info.status).toBe("promoted");

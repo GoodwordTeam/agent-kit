@@ -269,7 +269,13 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
 
   // ------------------------------------------------------- docrules.ts: dossier
-  { rule: "dossier.turns-used-within-turns-allowed", file: "dossier.example.json", path: "budget.turns_used", to: 9, kind: "value" },
+  {
+    rule: "dossier.turns-used-within-turns-allowed",
+    file: "dossier.example.json",
+    path: "budget.turns_used",
+    to: 9,
+    kind: "value",
+  },
   {
     rule: "dossier.lexical-baseline-present",
     file: "dossier.example.json",
@@ -279,7 +285,13 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
     kind: "value",
     note: "Both lexical searches have to change: the rule asks whether any search is lexical, so mutating one of two leaves it satisfied. A mutation that reaches the rule only because the document happens to hold one node of its kind is a weaker measurement than it looks. AUTHORING.md section 8 uses this rule as its worked example and depends on that quantifier, and nothing here would notice if it moved: a rule firing per search is still fired by changing both, so this entry stays green while the paragraph quietly goes false. Anyone narrowing src/validation/docrules.ts's `some` owes section 8 a rewrite.",
   },
-  { rule: "dossier.stale-or-absent-graph-documents-a-limitation", file: "dossier.example.json", path: "coverage_limits", to: [], kind: "value" },
+  {
+    rule: "dossier.stale-or-absent-graph-documents-a-limitation",
+    file: "dossier.example.json",
+    path: "coverage_limits",
+    to: [],
+    kind: "value",
+  },
   {
     rule: "dossier.no-architectural-verdict",
     file: "dossier.example.json",
@@ -297,7 +309,13 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
 
   // --------------------------------------------------------- docrules.ts: event
-  { rule: "event.no-event-field-confers-authority", file: "event.example.json", path: "trust.grants_authority", to: true, kind: "value" },
+  {
+    rule: "event.no-event-field-confers-authority",
+    file: "event.example.json",
+    path: "trust.grants_authority",
+    to: true,
+    kind: "value",
+  },
   {
     rule: "event.remote-side-effect-key-is-unique-and-read-back",
     file: "event.example.json",
@@ -372,15 +390,57 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
 
   // ------------------------------------------------------- docrules.ts: project
-  { rule: "project.kb-root-is-not-an-application-local-docs-tree", file: "project.example.json", path: "kb.ownership", to: "local", kind: "value" },
-  { rule: "project.standards-path-resolves-or-lane-returns-empty", file: "project.example.json", path: "standards.0.path", to: "AUTHORING-that-does-not-exist.md", kind: "value" },
-  { rule: "project.test-pyramid-percentages-sum-to-100", file: "project.example.json", path: "guidance.test_pyramid.unit_percent", to: 70, kind: "value" },
-  { rule: "project.numeric-guidance-never-becomes-a-gate", file: "project.example.json", path: "guidance.pr_size.enforcement", to: "blocking", kind: "value" },
-  { rule: "project.single-tracker-system-of-record", file: "project.example.json", path: "tracker_policy.mirrors.0.role", to: "authoritative", kind: "value" },
+  {
+    rule: "project.kb-root-is-not-an-application-local-docs-tree",
+    file: "project.example.json",
+    path: "kb.ownership",
+    to: "local",
+    kind: "value",
+  },
+  {
+    rule: "project.standards-path-resolves-or-lane-returns-empty",
+    file: "project.example.json",
+    path: "standards.0.path",
+    to: "AUTHORING-that-does-not-exist.md",
+    kind: "value",
+  },
+  {
+    rule: "project.test-pyramid-percentages-sum-to-100",
+    file: "project.example.json",
+    path: "guidance.test_pyramid.unit_percent",
+    to: 70,
+    kind: "value",
+  },
+  {
+    rule: "project.numeric-guidance-never-becomes-a-gate",
+    file: "project.example.json",
+    path: "guidance.pr_size.enforcement",
+    to: "blocking",
+    kind: "value",
+  },
+  {
+    rule: "project.single-tracker-system-of-record",
+    file: "project.example.json",
+    path: "tracker_policy.mirrors.0.role",
+    to: "authoritative",
+    kind: "value",
+  },
 
   // -------------------------------------------------------- docrules.ts: review
-  { rule: "review.seat-filled-by-someone-other-than-the-author", file: "review.example.json", path: "lanes.0.seat.independent_of_author", to: false, kind: "value" },
-  { rule: "review.security-seat-not-filled-by-implementer-or-spec-approver", file: "review.example.json", path: "lanes.1.seat.filled_by", to: "implementer", kind: "value" },
+  {
+    rule: "review.seat-filled-by-someone-other-than-the-author",
+    file: "review.example.json",
+    path: "lanes.0.seat.independent_of_author",
+    to: false,
+    kind: "value",
+  },
+  {
+    rule: "review.security-seat-not-filled-by-implementer-or-spec-approver",
+    file: "review.example.json",
+    path: "lanes.1.seat.filled_by",
+    to: "implementer",
+    kind: "value",
+  },
   {
     rule: "review.unavailable-required-lane-blocks-approval",
     file: "review.blocked.example.json",
@@ -388,8 +448,20 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
     to: "approved",
     kind: "value",
   },
-  { rule: "review.third-fix-cycle-stops", file: "review.example.json", path: "fix_cycles.allowed", to: 3, kind: "value" },
-  { rule: "review.delta-scope-bounded-by-affected-behavior", file: "review.example.json", path: "delta_scope.boundary", to: "changed-lines", kind: "value" },
+  {
+    rule: "review.third-fix-cycle-stops",
+    file: "review.example.json",
+    path: "fix_cycles.allowed",
+    to: 3,
+    kind: "value",
+  },
+  {
+    rule: "review.delta-scope-bounded-by-affected-behavior",
+    file: "review.example.json",
+    path: "delta_scope.boundary",
+    to: "changed-lines",
+    kind: "value",
+  },
   {
     rule: "review.material-change-establishes-a-new-baseline",
     file: "review.blocked.example.json",
@@ -400,7 +472,13 @@ const MUTATIONS: ReadonlyArray<Mutation> = [
   },
 
   // -------------------------------------------------- docrules.ts: verification
-  { rule: "verification.prose-never-substitutes-for-exit-status-and-digest", file: "verification.example.json", path: "exit_status", to: 1, kind: "value" },
+  {
+    rule: "verification.prose-never-substitutes-for-exit-status-and-digest",
+    file: "verification.example.json",
+    path: "exit_status",
+    to: 1,
+    kind: "value",
+  },
   {
     rule: "verification.weakened-check-requires-its-own-decision",
     clause: "the named decision must resolve and must have decided",
@@ -510,7 +588,9 @@ function main(): number {
   if (wrong.length > 0) {
     console.error();
     for (const line of wrong) console.error(`MUTATION DID NOT REPORT: ${line}`);
-    console.error("A mutation that does not report means the mapping here no longer matches the rule. Fix this file, not the count.");
+    console.error(
+      "A mutation that does not report means the mapping here no longer matches the rule. Fix this file, not the count.",
+    );
     return 1;
   }
   if (baseline.length > 0) {

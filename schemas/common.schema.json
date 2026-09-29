@@ -34,10 +34,7 @@
     },
     "actor_role": {
       "description": "Who created or acted on an artifact: a catalog role id, or one of the reserved actors human, runner, orchestrator.",
-      "anyOf": [
-        { "enum": ["human", "runner", "orchestrator"] },
-        { "$ref": "#/$defs/role_id" }
-      ]
+      "anyOf": [{ "enum": ["human", "runner", "orchestrator"] }, { "$ref": "#/$defs/role_id" }]
     },
     "operation_id": {
       "description": "Phase operation id, '<domain>.<action>', e.g. 'review.delta'.",
@@ -54,7 +51,24 @@
     },
     "schema_id": {
       "description": "Artifact schemas that carry the envelope.",
-      "enum": ["project", "ticket", "dossier", "finding", "review", "verification", "charter", "decision", "event", "lesson", "handoff-record", "evaluation", "map", "plan-record", "ship-evidence", "run-ledger"]
+      "enum": [
+        "project",
+        "ticket",
+        "dossier",
+        "finding",
+        "review",
+        "verification",
+        "charter",
+        "decision",
+        "event",
+        "lesson",
+        "handoff-record",
+        "evaluation",
+        "map",
+        "plan-record",
+        "ship-evidence",
+        "run-ledger"
+      ]
     },
     "hash": {
       "description": "Content digest. For an artifact: sha256 over its canonical JSON form (keys sorted, no insignificant whitespace) with the 'approvals' member removed.",
@@ -217,7 +231,18 @@
     "envelope": {
       "description": "Plan 5.2: schema version, project/repo identity, run ID, creator role, input artifact IDs and hashes, source revision, timestamp and status. Each artifact schema narrows 'status'.",
       "type": "object",
-      "required": ["schema", "schema_version", "id", "project", "run_id", "created_by", "inputs", "source_revision", "created_at", "status"],
+      "required": [
+        "schema",
+        "schema_version",
+        "id",
+        "project",
+        "run_id",
+        "created_by",
+        "inputs",
+        "source_revision",
+        "created_at",
+        "status"
+      ],
       "properties": {
         "schema": { "$ref": "#/$defs/schema_id" },
         "schema_version": { "const": 1 },
@@ -394,7 +419,16 @@
       "description": "A task-local child: a helper a worker starts inside its own task, under its own ownership, as opposed to a fleet task a supervisor dispatches (ruling `task-local-child-not-fleet-task`). It is depth 1 by construction: a child starts no child. Its scope is a subset of the parent's, it writes only to its artifact destination, and what it spends is counted against the parent's persistent budget rather than a fresh one. It never spawns fleet work, merges, pushes or contacts a human. These are declarations; which of them a host enforces is stated per host in adapters/firstmate/CONTRACT.md §5.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["parent_run_id", "child_id", "role", "scope", "permissions", "artifact_destination", "budget", "depth"],
+      "required": [
+        "parent_run_id",
+        "child_id",
+        "role",
+        "scope",
+        "permissions",
+        "artifact_destination",
+        "budget",
+        "depth"
+      ],
       "properties": {
         "parent_run_id": { "$ref": "#/$defs/artifact_id" },
         "child_id": { "$ref": "#/$defs/artifact_id" },

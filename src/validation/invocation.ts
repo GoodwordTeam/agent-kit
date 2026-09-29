@@ -148,7 +148,11 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
     const body = readTextIfPresent(join(root, bodyPath));
     const manifest = loadSkillManifest(root, entry.id);
 
-    if (manifest.invocation !== undefined && entry.invocation !== undefined && manifest.invocation !== entry.invocation) {
+    if (
+      manifest.invocation !== undefined &&
+      entry.invocation !== undefined &&
+      manifest.invocation !== entry.invocation
+    ) {
       issues.push(
         error(
           "invocation.declaration-conflict",
@@ -248,7 +252,12 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
       const targetInvocation = invocationOf.get(ref.target);
       if (targetInvocation === undefined) {
         issues.push(
-          error("invocation.unknown-target", ref.file, `'${ref.target}' is not a skill declared in catalog.yaml.`, line),
+          error(
+            "invocation.unknown-target",
+            ref.file,
+            `'${ref.target}' is not a skill declared in catalog.yaml.`,
+            line,
+          ),
         );
         continue;
       }
@@ -278,4 +287,3 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
 
   return issues;
 }
-

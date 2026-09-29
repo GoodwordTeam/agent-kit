@@ -98,7 +98,8 @@ export function compactEvidence(text: string, today: string): string {
   }
   for (const [month, b] of months) {
     const parts: string[] = [];
-    if (b.obs.length > 0) parts.push(b.obs.length > 1 ? `obs ${Math.min(...b.obs)}…${Math.max(...b.obs)}` : `obs ${b.obs[0]}`);
+    if (b.obs.length > 0)
+      parts.push(b.obs.length > 1 ? `obs ${Math.min(...b.obs)}…${Math.max(...b.obs)}` : `obs ${b.obs[0]}`);
     if (b.prs.size > 0) parts.push(`prs ${[...b.prs].sort((x, y) => Number(x) - Number(y)).join(", ")}`);
     out[out.indexOf(`@@${month}`)] = `- ${month}: ${b.n} event${b.n === 1 ? "" : "s"} (${parts.join("; ")})`;
   }
@@ -170,7 +171,8 @@ export function lessonObsSessions(ctx: LearnContext, ledger: Ledger): Map<string
 function pairsOf(value: unknown, known: ReadonlyMap<string, unknown>): Array<[string, string]> {
   if (!Array.isArray(value)) return [];
   return value.filter(
-    (pair): pair is [string, string] => Array.isArray(pair) && pair.length === 2 && pair.every((id) => typeof id === "string" && known.has(id)),
+    (pair): pair is [string, string] =>
+      Array.isArray(pair) && pair.length === 2 && pair.every((id) => typeof id === "string" && known.has(id)),
   );
 }
 
@@ -210,7 +212,11 @@ export function applyPairs(
     km.tags = [...new Set([...list(km.tags), ...list(dm.tags)])].sort();
     km.last_seen = [str(km.last_seen), str(dm.last_seen)].sort().at(-1)!;
     km.merged = [...new Set([...list(km.merged), drop])].sort();
-    km.sessions = Math.max(sessionsOf(km.evidence, obsSession).size, Number(km.sessions) || 0, Number(dm.sessions) || 0);
+    km.sessions = Math.max(
+      sessionsOf(km.evidence, obsSession).size,
+      Number(km.sessions) || 0,
+      Number(dm.sessions) || 0,
+    );
     if (km.status === "hypothesis") km.status = km.sessions >= 2 ? "confirmed" : "hypothesis";
     const body =
       `\n## Statement\n${str(km.statement)}\n\n## Merged from ${drop}\n${str(dm.statement)}\n\n## Evidence\n` +
@@ -284,8 +290,13 @@ export function deep(ctx: LearnContext, ledger: Ledger, root: string, review: Le
     ...(skippedProposals.length > 0 ? { proposals_skipped: skippedProposals } : {}),
   });
   const compactNote =
-    compacted === -1 ? "evidence compaction skipped (review ledger locked, retries next week)" : `${compacted} review pattern pages compacted`;
-  logLine(ledger, `weekly: ${compactNote}, ${stale.length} lessons stale, ${pairs.merged.length} merged, ${pairs.conflicts.length} conflicts`);
+    compacted === -1
+      ? "evidence compaction skipped (review ledger locked, retries next week)"
+      : `${compacted} review pattern pages compacted`;
+  logLine(
+    ledger,
+    `weekly: ${compactNote}, ${stale.length} lessons stale, ${pairs.merged.length} merged, ${pairs.conflicts.length} conflicts`,
+  );
   ledger.commit("weekly");
   return `weekly: ${compactNote}, ${stale.length} stale, ${pairs.merged.length} merged, ${pairs.conflicts.length} conflicts`;
 }

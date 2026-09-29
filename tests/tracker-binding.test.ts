@@ -1,11 +1,26 @@
 import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
-import { BINDING_FILE, checkTrackerBinding, checkTrackerSecret, findProjectRoot, loadTrackerBinding } from "../src/tracker/binding.ts";
+import {
+  BINDING_FILE,
+  checkTrackerBinding,
+  checkTrackerSecret,
+  findProjectRoot,
+  loadTrackerBinding,
+} from "../src/tracker/binding.ts";
 import { compileSchemas } from "../src/validation/schemas.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -36,7 +51,19 @@ defaults:
 function git(dir: string, ...args: string[]): string {
   return execFileSync(
     "git",
-    ["-C", dir, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", ...args],
+    [
+      "-C",
+      dir,
+      "-c",
+      "user.name=fixture",
+      "-c",
+      "user.email=fixture@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "core.hooksPath=/dev/null",
+      ...args,
+    ],
     { encoding: "utf8" },
   );
 }
@@ -68,11 +95,20 @@ describe("the binding schema", () => {
   });
 
   test("a linear-linearis binding with a team, a project and statuses is valid", () => {
-    expect(validate({ backend: "linear-linearis", token_file: ".linear-token", defaults: { team: "ENG", project: "Billing" }, statuses: { done: "Done" } })).toBe(true);
+    expect(
+      validate({
+        backend: "linear-linearis",
+        token_file: ".linear-token",
+        defaults: { team: "ENG", project: "Billing" },
+        statuses: { done: "Done" },
+      }),
+    ).toBe(true);
   });
 
   test("a token under an unknown top-level key is a schema error, because the root refuses unknown keys", () => {
-    expect(validate({ backend: "linear-linearis", token_file: ".t", defaults: { team: "ENG" }, token: TOKEN })).toBe(false);
+    expect(validate({ backend: "linear-linearis", token_file: ".t", defaults: { team: "ENG" }, token: TOKEN })).toBe(
+      false,
+    );
   });
 
   test("the generic schema names no vendor: any backend id and its own defaults pass it", () => {
@@ -86,7 +122,14 @@ describe("the binding schema", () => {
   });
 
   test("statuses map only the ticket schema's statuses", () => {
-    expect(validate({ backend: "linear-linearis", token_file: ".t", defaults: { team: "ENG" }, statuses: { triaged: "Triage" } })).toBe(false);
+    expect(
+      validate({
+        backend: "linear-linearis",
+        token_file: ".t",
+        defaults: { team: "ENG" },
+        statuses: { triaged: "Triage" },
+      }),
+    ).toBe(false);
   });
 });
 
@@ -100,12 +143,19 @@ describe("loading a binding", () => {
 
   test("a binding parses into its fields", () => {
     const dir = project({ [BINDING_FILE]: BINDING }, false);
-    expect(loadTrackerBinding(dir, REPO).binding).toEqual({ backend: "linear-linearis", token_file: ".linear-token", defaults: { team: "ENG" } });
+    expect(loadTrackerBinding(dir, REPO).binding).toEqual({
+      backend: "linear-linearis",
+      token_file: ".linear-token",
+      defaults: { team: "ENG" },
+    });
   });
 
   test("linear-linearis needs a team and reads no other default than project, from its own schema", () => {
     for (const defaults of ["  project: Billing\n", "  team: ENG\n  workspace: x\n"]) {
-      const dir = project({ [BINDING_FILE]: `backend: linear-linearis\ntoken_file: .t\ndefaults:\n${defaults}` }, false);
+      const dir = project(
+        { [BINDING_FILE]: `backend: linear-linearis\ntoken_file: .t\ndefaults:\n${defaults}` },
+        false,
+      );
       const issues = loadTrackerBinding(dir, REPO).issues;
       expect(issues.map((i) => i.rule)).toEqual(["tracker.binding-invalid"]);
       expect(issues[0]!.message).toContain("schemas/tracker-backends/linear-linearis.schema.json");
@@ -113,7 +163,10 @@ describe("loading a binding", () => {
   });
 
   test("a backend with no document under adapters/tracker/backends is an error", () => {
-    const dir = project({ [BINDING_FILE]: "backend: some-other-tracker\ntoken_file: .t\ndefaults:\n  board: '7'\n" }, false);
+    const dir = project(
+      { [BINDING_FILE]: "backend: some-other-tracker\ntoken_file: .t\ndefaults:\n  board: '7'\n" },
+      false,
+    );
     const loaded = loadTrackerBinding(dir, REPO);
     expect(loaded.binding).toBeNull();
     expect(loaded.issues.map((i) => `${i.severity} ${i.rule}`)).toEqual(["error tracker.backend-unknown"]);
@@ -239,7 +292,7 @@ describe("the secret stays in the folder and out of git", () => {
   test("GIT_DIR in the caller's environment does not redirect the check", () => {
     // The token is in this repository's history; a check redirected to the clean
     // repository in GIT_DIR would find no history and pass.
-    const other = project({ "x": "1" });
+    const other = project({ x: "1" });
     const dir = project({ [BINDING_FILE]: BINDING, ".linear-token": TOKEN });
     git(dir, "rm", "-q", "--cached", ".linear-token");
     writeFileSync(join(dir, ".gitignore"), ".linear-token\n");
@@ -275,7 +328,10 @@ describe("the secret stays in the folder and out of git", () => {
     // A real `git log` on a one-commit fixture can finish inside any timeout, so the
     // scan is made to hang: a `git` first on PATH sleeps on `log` and defers the rest.
     const bin = mkdtempSync(join(tmpdir(), "ak-slow-git-"));
-    writeFileSync(join(bin, "git"), `#!/bin/sh\nfor a in "$@"; do [ "$a" = log ] && exec sleep 30; done\nexec ${Bun.which("git")} "$@"\n`);
+    writeFileSync(
+      join(bin, "git"),
+      `#!/bin/sh\nfor a in "$@"; do [ "$a" = log ] && exec sleep 30; done\nexec ${Bun.which("git")} "$@"\n`,
+    );
     chmodSync(join(bin, "git"), 0o755);
     const saved = process.env["PATH"];
     process.env["PATH"] = `${bin}:${saved}`;
@@ -383,7 +439,12 @@ describe("ak tracker check", () => {
   });
 
   test("run from a subdirectory, it checks the nearest binding above, up to the repository top", () => {
-    const dir = project({ [BINDING_FILE]: BINDING, ".gitignore": ".linear-token\n", ".linear-token": TOKEN, "src/deep/x.ts": "" });
+    const dir = project({
+      [BINDING_FILE]: BINDING,
+      ".gitignore": ".linear-token\n",
+      ".linear-token": TOKEN,
+      "src/deep/x.ts": "",
+    });
     expect(findProjectRoot(join(dir, "src", "deep"))).toBe(dir);
     const result = run(["tracker", "check", join(dir, "src", "deep")]);
     expect(result.code).toBe(0);

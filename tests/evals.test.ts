@@ -126,7 +126,10 @@ describe("the floor is three cases with all three kinds", () => {
   test("each required kind is named when it is the one missing", () => {
     for (const missing of REQUIRED_CASE_KINDS) {
       const kinds = REQUIRED_CASE_KINDS.filter((k) => k !== missing);
-      const cases = [...kinds.map((k, i) => ({ id: `case-${i}`, kind: k })), { id: "case-filler", kind: kinds[0] as string }];
+      const cases = [
+        ...kinds.map((k, i) => ({ id: `case-${i}`, kind: k })),
+        { id: "case-filler", kind: kinds[0] as string },
+      ];
       const issue = errors(checkEvals(complete({}, cases))).find((i) => i.rule === "evals.missing-case-kind");
       expect(issue?.message).toContain(missing);
     }
@@ -487,7 +490,9 @@ describe("what decides a grader, and what a shared name decides", () => {
     // regex graders exist rather than that they say the same thing.
     expect(
       rule(
-        twoSkills((skill, caseId) => caseWith(caseId, `  - name: g\n    type: regex\n    pattern: needs-${skill}-${caseId}\n`)),
+        twoSkills((skill, caseId) =>
+          caseWith(caseId, `  - name: g\n    type: regex\n    pattern: needs-${skill}-${caseId}\n`),
+        ),
         "evals.duplicate-graders",
       ),
     ).toHaveLength(0);
@@ -506,7 +511,9 @@ describe("what decides a grader, and what a shared name decides", () => {
   });
 
   test("a grader type the table has no row for is refused rather than guessed", () => {
-    const issues = twoSkills((_skill, caseId) => caseWith(caseId, `  - name: g\n    type: baseline\n    baseline_file: base.md\n    criteria: matches\n`));
+    const issues = twoSkills((_skill, caseId) =>
+      caseWith(caseId, `  - name: g\n    type: baseline\n    baseline_file: base.md\n    criteria: matches\n`),
+    );
     const refusals = rule(issues, "evals.grader-type-unclassified");
     expect(refusals).toHaveLength(2 * THREE.length);
     expect(refusals[0]?.severity).toBe("error");
@@ -540,7 +547,10 @@ describe("what decides a grader, and what a shared name decides", () => {
     expect(
       rule(
         twoSkills((skill, caseId) =>
-          caseWith(caseId, `  - name: reads-back-${skill}\n    type: llm\n    criteria: The ${skill} run stops at ${caseId}.\n`),
+          caseWith(
+            caseId,
+            `  - name: reads-back-${skill}\n    type: llm\n    criteria: The ${skill} run stops at ${caseId}.\n`,
+          ),
         ),
         "evals.duplicate-case-names",
       ),

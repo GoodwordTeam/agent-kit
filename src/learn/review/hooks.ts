@@ -67,7 +67,12 @@ function touch(path: string): void {
 }
 
 /** Stop hook. Skips plugin-cache sessions, nested stops, non-git directories and runs inside the debounce window. */
-export function stopHook(ctx: LearnContext, payload: HookPayload, args: LearnArgs, spawner: Spawner = detachSpawner): void {
+export function stopHook(
+  ctx: LearnContext,
+  payload: HookPayload,
+  args: LearnArgs,
+  spawner: Spawner = detachSpawner,
+): void {
   const cwd = typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : ctx.cwd;
   if (cwd.includes("/plugins/cache/") || payload.stop_hook_active === true) return;
   const root = mainRepoRoot(cwd);
@@ -122,7 +127,12 @@ const GUARDRAIL: ReadonlyArray<readonly [string, string, number, number]> = [
   ["don't (?:over-engineer|add extra|be too|make unnecessary)", "dont-over-engineer", 0.85, 90],
   ["don't (?:refactor|reorganize|restructure) (?:unless|without)", "dont-refactor-unless", 0.85, 90],
   ["leave .{1,30} (?:alone|unchanged|as is)", "leave-alone", 0.85, 90],
-  ["don't (?:add|include) (?:comments|docstrings|type hints|annotations) (?:unless|to code)", "dont-add-annotations", 0.85, 90],
+  [
+    "don't (?:add|include) (?:comments|docstrings|type hints|annotations) (?:unless|to code)",
+    "dont-add-annotations",
+    0.85,
+    90,
+  ],
   ["(?:minimal|minimum|only necessary) changes", "minimal-changes", 0.8, 90],
 ];
 
@@ -208,10 +218,12 @@ export function detectPatterns(text: string): Detection {
   if (stripped.length <= (CJK.test(stripped) ? 2 : 4)) return NONE();
 
   for (const [pattern, name, confidence, decay] of EXPLICIT) {
-    if (search(pattern, text)) return { type: "explicit", patterns: name, confidence, sentiment: "correction", decayDays: decay };
+    if (search(pattern, text))
+      return { type: "explicit", patterns: name, confidence, sentiment: "correction", decayDays: decay };
   }
   for (const [pattern, name, confidence, decay] of GUARDRAIL) {
-    if (search(pattern, text)) return { type: "guardrail", patterns: name, confidence, sentiment: "correction", decayDays: decay };
+    if (search(pattern, text))
+      return { type: "guardrail", patterns: name, confidence, sentiment: "correction", decayDays: decay };
   }
   if (FALSE_POSITIVE.some((pattern) => search(pattern, text))) return NONE();
   if (NON_CORRECTION.some((pattern) => search(pattern, text))) return NONE();
@@ -230,10 +242,18 @@ export function detectPatterns(text: string): Detection {
     let confidence = strong ? 0.75 : 0.6;
     if (length < MIN_SHORT_CORRECTION_LENGTH) confidence = Math.min(0.9, confidence + 0.1);
     else if (length > 300) confidence = Math.max(0.5, confidence - 0.15);
-    return { type: "auto", patterns: cjk.map(([, name]) => name).join(" "), confidence, sentiment: "correction", decayDays: strong ? 90 : 60 };
+    return {
+      type: "auto",
+      patterns: cjk.map(([, name]) => name).join(" "),
+      confidence,
+      sentiment: "correction",
+      decayDays: strong ? 90 : 60,
+    };
   }
 
-  const matched = CORRECTION.filter(([pattern, , strong]) => search(pattern, text) && (strong || length <= MAX_WEAK_PATTERN_LENGTH));
+  const matched = CORRECTION.filter(
+    ([pattern, , strong]) => search(pattern, text) && (strong || length <= MAX_WEAK_PATTERN_LENGTH),
+  );
   if (matched.length === 0) return NONE();
   const names = matched.map(([, name]) => name);
   const strong = matched.some(([, , isStrong]) => isStrong);
@@ -251,7 +271,12 @@ export function detectPatterns(text: string): Detection {
 
 /** Prompt hook. Detection runs first, so a prompt that is not a correction costs no git call and no write. */
 export function promptHook(ctx: LearnContext, payload: HookPayload, args: LearnArgs): void {
-  const raw = typeof payload.prompt === "string" ? payload.prompt : typeof payload.user_prompt === "string" ? payload.user_prompt : "";
+  const raw =
+    typeof payload.prompt === "string"
+      ? payload.prompt
+      : typeof payload.user_prompt === "string"
+        ? payload.user_prompt
+        : "";
   const prompt = raw.trim();
   if (prompt === "" || prompt.startsWith("<")) return;
   if (prompt.length > MAX_CAPTURE_PROMPT_LENGTH && !/remember:/i.test(prompt)) return;
@@ -264,6 +289,9 @@ export function promptHook(ctx: LearnContext, payload: HookPayload, args: LearnA
   const ledger = reviewLedger(ctx.config, root);
   const platform = flag(args, "source") === "codex" ? "codex" : "claude";
   appendEvents(ledger, [
-    correctionEvent(prompt, nowIso(), memProject(ctx, root), platform, { patterns: detection.patterns, confidence: detection.confidence }),
+    correctionEvent(prompt, nowIso(), memProject(ctx, root), platform, {
+      patterns: detection.patterns,
+      confidence: detection.confidence,
+    }),
   ]);
 }

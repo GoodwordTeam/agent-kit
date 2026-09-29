@@ -4,7 +4,19 @@
   "title": "Autopilot charter",
   "description": "Plan 7.2. The charter a human fixes before an autopilot run: work source, repositories and branches, artifact destinations, allowed capabilities, denied actions, budgets, stage and loop limits, and the exact checkpoint categories the supervisor pair may decide. It is immutable and identified by its hash, and it lives outside worker-writable scope — both are pinned here rather than left to convention, so a run cannot enlarge its own authority. Default grants are drawn from common#/$defs/grantable_action, which structurally cannot contain a sensitive action; a sensitive action becomes available only through a 'sensitive_grants' entry carrying an explicit human approval. Changing a charter produces a new charter with a new hash that supersedes the old one; there is no in-place amendment.",
   "type": "object",
-  "required": ["immutability", "work_source", "repos", "artifact_destinations", "allowed_capabilities", "default_grants", "denied_actions", "checkpoints", "limits", "budgets", "supervisors"],
+  "required": [
+    "immutability",
+    "work_source",
+    "repos",
+    "artifact_destinations",
+    "allowed_capabilities",
+    "default_grants",
+    "denied_actions",
+    "checkpoints",
+    "limits",
+    "budgets",
+    "supervisors"
+  ],
   "properties": {
     "schema": { "const": "charter" },
     "status": { "enum": ["draft", "active", "superseded", "revoked"] },

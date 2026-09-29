@@ -61,7 +61,9 @@ describe("hook merge", () => {
     expect(ensureHook(doc, "SessionStart", `${AK} session-start`, { matcher: MATCHER })).toBe(true);
     expect(ensureHook(doc, "SessionStart", `${AK} session-start`, { matcher: MATCHER })).toBe(false);
     expect(doc).toEqual({
-      hooks: { SessionStart: [{ hooks: [{ type: "command", command: `${AK} session-start`, timeout: 10 }], matcher: MATCHER }] },
+      hooks: {
+        SessionStart: [{ hooks: [{ type: "command", command: `${AK} session-start`, timeout: 10 }], matcher: MATCHER }],
+      },
     });
   });
 
@@ -74,7 +76,10 @@ describe("hook merge", () => {
   test("a duplicate pre-existing entry is not multiplied", () => {
     const doc: HookDoc = {
       hooks: {
-        SessionStart: [{ hooks: [{ type: "command", command: `${AK} session-start` }] }, { hooks: [{ type: "command", command: `${AK} session-start` }] }],
+        SessionStart: [
+          { hooks: [{ type: "command", command: `${AK} session-start` }] },
+          { hooks: [{ type: "command", command: `${AK} session-start` }] },
+        ],
       },
     };
     expect(ensureHook(doc, "SessionStart", `${AK} session-start`)).toBe(false);
@@ -82,7 +87,11 @@ describe("hook merge", () => {
   });
 
   test("an entry of ours with an old command line is updated in place, not added beside", () => {
-    const doc: HookDoc = { hooks: { Stop: [{ hooks: [{ type: "command", command: "bun /old/place/src/cli.ts learn hook stop", timeout: 5 }] }] } };
+    const doc: HookDoc = {
+      hooks: {
+        Stop: [{ hooks: [{ type: "command", command: "bun /old/place/src/cli.ts learn hook stop", timeout: 5 }] }],
+      },
+    };
     expect(ensureHook(doc, "Stop", `${AK} stop`, { timeout: 120 })).toBe(true);
     expect(doc.hooks!.Stop).toEqual([{ hooks: [{ type: "command", command: `${AK} stop`, timeout: 120 }] }]);
     expect(ensureHook(doc, "Stop", `${AK} stop --source codex`)).toBe(true);
@@ -95,7 +104,12 @@ describe("hook merge", () => {
       hooks: {
         SessionStart: [
           { hooks: [{ type: "command", command: `${AK} session-start` }] },
-          { hooks: [{ type: "command", command: "echo other" }, { type: "command", command: `${AK} prompt` }] },
+          {
+            hooks: [
+              { type: "command", command: "echo other" },
+              { type: "command", command: `${AK} prompt` },
+            ],
+          },
         ],
         Stop: [{ hooks: [{ type: "command", command: `${AK} stop` }] }],
       },
@@ -140,7 +154,10 @@ describe("setup wire", () => {
     const ctx = context(deps);
     const settings = join(ctx.config.configDir, "settings.json");
     mkdirSync(ctx.config.configDir, { recursive: true });
-    writeFileSync(settings, JSON.stringify({ theme: "dark", hooks: { Stop: [{ hooks: [{ type: "command", command: "echo bye" }] }] } }));
+    writeFileSync(
+      settings,
+      JSON.stringify({ theme: "dark", hooks: { Stop: [{ hooks: [{ type: "command", command: "echo bye" }] }] } }),
+    );
     expect(wire(ctx, deps)).toBe(0);
     const first = readFileSync(settings, "utf8");
     expect(wire(ctx, deps)).toBe(0);
@@ -150,7 +167,9 @@ describe("setup wire", () => {
     const doc = readDoc(settings);
     expect(doc.theme).toBe("dark");
     expect(commands(doc, "Stop")).toEqual(["echo bye", `${AK} stop`]);
-    expect(doc.hooks!.SessionStart).toEqual([{ hooks: [{ type: "command", command: `${AK} session-start`, timeout: 10 }], matcher: MATCHER }]);
+    expect(doc.hooks!.SessionStart).toEqual([
+      { hooks: [{ type: "command", command: `${AK} session-start`, timeout: 10 }], matcher: MATCHER },
+    ]);
     expect(doc.hooks!.Stop![1]!.hooks![0]!.timeout).toBe(120);
     expect(JSON.parse(readFileSync(`${settings}.bak`, "utf8")).theme).toBe("dark");
   });
@@ -208,10 +227,17 @@ describe("setup wire", () => {
     const ctx = context(deps);
     const memDir = join(deps.home, ".claude-mem");
     mkdirSync(memDir, { recursive: true });
-    writeFileSync(join(memDir, "settings.json"), JSON.stringify({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "50", CLAUDE_MEM_PROVIDER: "keep-me" }));
+    writeFileSync(
+      join(memDir, "settings.json"),
+      JSON.stringify({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "50", CLAUDE_MEM_PROVIDER: "keep-me" }),
+    );
     wire(ctx, deps);
     const settings = JSON.parse(readFileSync(join(memDir, "settings.json"), "utf8")) as Record<string, string>;
-    expect(settings).toEqual({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "25", CLAUDE_MEM_PROVIDER: "keep-me", CLAUDE_MEM_MODE: MEM_MODE });
+    expect(settings).toEqual({
+      CLAUDE_MEM_CONTEXT_OBSERVATIONS: "25",
+      CLAUDE_MEM_PROVIDER: "keep-me",
+      CLAUDE_MEM_MODE: MEM_MODE,
+    });
     expect(readFileSync(join(memDir, "modes", `${MEM_MODE}.json`), "utf8")).toBe('{"name": "review learning"}\n');
     expect(deps.calls).toEqual([]);
     expect(ctx.out.at(-1)).toContain("--restart-worker");
@@ -230,7 +256,16 @@ describe("setup wire", () => {
   test("--restart-worker restarts through the injected runner only", () => {
     const deps = fakeDeps();
     const ctx = context(deps);
-    const script = join(ctx.config.configDir, "plugins", "cache", "market", "claude-mem", "1.0.0", "scripts", "worker-service.cjs");
+    const script = join(
+      ctx.config.configDir,
+      "plugins",
+      "cache",
+      "market",
+      "claude-mem",
+      "1.0.0",
+      "scripts",
+      "worker-service.cjs",
+    );
     mkdirSync(join(script, ".."), { recursive: true });
     writeFileSync(script, "");
     wire(ctx, deps, { restartWorker: true });
@@ -253,10 +288,15 @@ describe("setup wire", () => {
 describe("setup uninstall", () => {
   test("removes only our entries and units, restores claude-mem, and keeps the ledgers", () => {
     const deps = fakeDeps({ bins: ["bun", "git", "systemctl"] });
-    const ctx = testContext({ env: { CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: join(deps.home, ".codex") } });
+    const ctx = testContext({
+      env: { CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: join(deps.home, ".codex") },
+    });
     const settings = join(ctx.config.configDir, "settings.json");
     mkdirSync(ctx.config.configDir, { recursive: true });
-    writeFileSync(settings, JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command: "echo bye" }] }] } }));
+    writeFileSync(
+      settings,
+      JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command: "echo bye" }] }] } }),
+    );
     wire(ctx, deps, {});
     wire(ctx, deps, { host: "codex" });
     const unitDir = join(deps.home, ".config", "systemd", "user");
@@ -277,7 +317,9 @@ describe("setup uninstall", () => {
     expect(JSON.parse(readFileSync(join(deps.home, ".claude-mem", "settings.json"), "utf8"))).toEqual({});
     expect(existsSync(ledger)).toBe(true);
     expect(existsSync(`${settings}.bak`)).toBe(true);
-    expect(JSON.parse(readFileSync(`${settings}.bak`, "utf8"))).toEqual({ hooks: { Stop: [{ hooks: [{ type: "command", command: "echo bye" }] }] } });
+    expect(JSON.parse(readFileSync(`${settings}.bak`, "utf8"))).toEqual({
+      hooks: { Stop: [{ hooks: [{ type: "command", command: "echo bye" }] }] },
+    });
 
     expect(uninstall(ctx, deps, { purge: true })).toBe(0);
     expect(existsSync(join(ctx.config.configDir, "projects", "-repo", "agent-kit"))).toBe(false);
@@ -291,18 +333,27 @@ describe("claude-mem settings round trip", () => {
     const ctx = testContext({ env: { CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: "" } });
     const memSettings = join(deps.home, ".claude-mem", "settings.json");
     mkdirSync(join(deps.home, ".claude-mem"), { recursive: true });
-    writeFileSync(memSettings, JSON.stringify({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "40", CLAUDE_MEM_PROVIDER: "keep-me" }));
+    writeFileSync(
+      memSettings,
+      JSON.stringify({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "40", CLAUDE_MEM_PROVIDER: "keep-me" }),
+    );
     wire(ctx, deps);
     expect(JSON.parse(readFileSync(memSettings, "utf8")).CLAUDE_MEM_CONTEXT_OBSERVATIONS).toBe("25");
     uninstall(ctx, deps);
-    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "40", CLAUDE_MEM_PROVIDER: "keep-me" });
+    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({
+      CLAUDE_MEM_CONTEXT_OBSERVATIONS: "40",
+      CLAUDE_MEM_PROVIDER: "keep-me",
+    });
 
     wire(ctx, deps);
     const edited = JSON.parse(readFileSync(memSettings, "utf8")) as Record<string, string>;
     edited.CLAUDE_MEM_CONTEXT_OBSERVATIONS = "30";
     writeFileSync(memSettings, JSON.stringify(edited));
     uninstall(ctx, deps);
-    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30", CLAUDE_MEM_PROVIDER: "keep-me" });
+    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({
+      CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30",
+      CLAUDE_MEM_PROVIDER: "keep-me",
+    });
   });
 
   test("uninstall drops the record even when nothing matched, so a rewire records the current values", () => {
@@ -314,13 +365,19 @@ describe("claude-mem settings round trip", () => {
     wire(ctx, deps);
     writeFileSync(memSettings, JSON.stringify({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30", CLAUDE_MEM_MODE: "user-mode" }));
     uninstall(ctx, deps);
-    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30", CLAUDE_MEM_MODE: "user-mode" });
+    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({
+      CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30",
+      CLAUDE_MEM_MODE: "user-mode",
+    });
     expect(existsSync(memPreviousPath(ctx))).toBe(false);
 
     wire(ctx, deps);
     expect(JSON.parse(readFileSync(memSettings, "utf8")).CLAUDE_MEM_CONTEXT_OBSERVATIONS).toBe("25");
     uninstall(ctx, deps);
-    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({ CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30", CLAUDE_MEM_MODE: "user-mode" });
+    expect(JSON.parse(readFileSync(memSettings, "utf8"))).toEqual({
+      CLAUDE_MEM_CONTEXT_OBSERVATIONS: "30",
+      CLAUDE_MEM_MODE: "user-mode",
+    });
   });
 
   test("uninstall leaves an unparseable hooks file untouched", () => {

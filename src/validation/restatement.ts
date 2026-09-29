@@ -142,7 +142,7 @@ const SCANNED_EXTENSIONS = [".md", ".yaml"];
  * weight and accumulates across a long window.
  */
 const STOPWORDS = new Set(
-  ("a an the and or but if then than that this these those is are was were be been being it its of to in on for from by with as at into not no never only own same so such can cannot could may might must shall should will would do does did done have has had here there where when who whom which what while each every any all both few more most other some one two three").split(
+  "a an the and or but if then than that this these those is are was were be been being it its of to in on for from by with as at into not no never only own same so such can cannot could may might must shall should will would do does did done have has had here there where when who whom which what while each every any all both few more most other some one two three".split(
     " ",
   ),
 );

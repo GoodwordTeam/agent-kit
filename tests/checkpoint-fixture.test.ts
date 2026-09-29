@@ -53,7 +53,10 @@ ${readdirSync(SCHEMAS_DIR)
 
 const artifactNames = readdirSync(join(FIXTURE, "artifacts")).filter((n) => n.endsWith(".json"));
 const artifacts = Object.fromEntries(
-  artifactNames.map((n) => [n, JSON.parse(readFileSync(join(FIXTURE, "artifacts", n), "utf8")) as Record<string, unknown>]),
+  artifactNames.map((n) => [
+    n,
+    JSON.parse(readFileSync(join(FIXTURE, "artifacts", n), "utf8")) as Record<string, unknown>,
+  ]),
 );
 
 /** Materialize once; every git assertion reads the same throwaway repository. */
@@ -139,9 +142,7 @@ describe("the fixture repository has nowhere to push", () => {
 
   test("no remote configuration of any kind survives materialization", () => {
     const config = execFileSync("git", ["-C", repo, "config", "--list"], { encoding: "utf8" });
-    const reaching = config
-      .split("\n")
-      .filter((line) => /^remote\.|insteadof|pushurl/i.test(line));
+    const reaching = config.split("\n").filter((line) => /^remote\.|insteadof|pushurl/i.test(line));
     expect(reaching).toEqual([]);
   });
 });
@@ -252,7 +253,9 @@ describe("the findings point at what they say they point at", () => {
         const lines = readFileSync(join(repo, path), "utf8").split("\n");
         const actual = lines[line_range.start - 1];
         if (actual !== entry["excerpt"]) {
-          wrong.push(`${name} evidence[${i}] claims ${path}:${line_range.start} is ${JSON.stringify(entry["excerpt"])}, found ${JSON.stringify(actual)}`);
+          wrong.push(
+            `${name} evidence[${i}] claims ${path}:${line_range.start} is ${JSON.stringify(entry["excerpt"])}, found ${JSON.stringify(actual)}`,
+          );
         }
       }
     }
@@ -281,7 +284,7 @@ describe("the findings point at what they say they point at", () => {
     // which is the whole argument for there being one of them.
     const finding = artifacts["finding.tenant-isolation.json"]!;
     const inputs = (finding["fingerprint"] as Record<string, any>)["inputs"];
-    const excerpt = ((finding["evidence"] as Array<Record<string, any>>)[0]!)["excerpt"];
+    const excerpt = (finding["evidence"] as Array<Record<string, any>>)[0]!["excerpt"];
 
     const moved = readFileSync(join(FIXTURE, "stages", "line-move", "report.ts"), "utf8").split("\n");
     const before = readFileSync(join(repo, "src/report.ts"), "utf8").split("\n");

@@ -50,12 +50,32 @@ function itemEvents(item: Item): SessionEvent[] {
     case "command_execution": {
       const command = unwrap(item.command ?? "");
       const bash: SessionEvent = { kind: "tool", name: "Bash", raw: "command_execution", input: { command } };
-      return [bash, ...readsOf(command).map((file_path): SessionEvent => ({ kind: "tool", name: "Read", raw: "command_execution", input: { file_path, via: "shell" } }))];
+      return [
+        bash,
+        ...readsOf(command).map((file_path): SessionEvent => ({
+          kind: "tool",
+          name: "Read",
+          raw: "command_execution",
+          input: { file_path, via: "shell" },
+        })),
+      ];
     }
     case "file_change":
-      return (item.changes ?? []).map((c) => ({ kind: "tool", name: CHANGE_TOOL[c.kind ?? ""] ?? "Edit", raw: "file_change", input: { file_path: c.path, change: c.kind } }));
+      return (item.changes ?? []).map((c) => ({
+        kind: "tool",
+        name: CHANGE_TOOL[c.kind ?? ""] ?? "Edit",
+        raw: "file_change",
+        input: { file_path: c.path, change: c.kind },
+      }));
     case "mcp_tool_call":
-      return [{ kind: "tool", name: `mcp__${item.server}__${item.tool}`, raw: "mcp_tool_call", input: { arguments: item.arguments } }];
+      return [
+        {
+          kind: "tool",
+          name: `mcp__${item.server}__${item.tool}`,
+          raw: "mcp_tool_call",
+          input: { arguments: item.arguments },
+        },
+      ];
     case "web_search":
       return [{ kind: "tool", name: "WebSearch", raw: "web_search", input: { query: item.query } }];
     default:
@@ -84,7 +104,9 @@ export const codex: SubjectAdapter = {
       "apps",
       ...(model === undefined ? [] : ["-m", model]),
       // A JSON string is a valid TOML basic string, which is how `-c` parses the value.
-      ...(req.appendSystemPrompt === undefined ? [] : ["-c", `developer_instructions=${JSON.stringify(req.appendSystemPrompt)}`]),
+      ...(req.appendSystemPrompt === undefined
+        ? []
+        : ["-c", `developer_instructions=${JSON.stringify(req.appendSystemPrompt)}`]),
       req.prompt,
     ];
   },
@@ -114,7 +136,12 @@ export const codex: SubjectAdapter = {
   },
   isolate(scratch: string, req: SessionRequest): Isolation {
     const callerHome = req.env.CODEX_HOME ?? join(req.env.HOME ?? homedir(), ".codex");
-    const home = privateHome(join(scratch, "codex-home"), join(callerHome, "auth.json"), req.bundleDir === undefined ? undefined : join(req.bundleDir, "skills"), "skills");
+    const home = privateHome(
+      join(scratch, "codex-home"),
+      join(callerHome, "auth.json"),
+      req.bundleDir === undefined ? undefined : join(req.bundleDir, "skills"),
+      "skills",
+    );
     mkdirSync(join(scratch, "home"), { recursive: true });
     return {
       env: { CODEX_HOME: home.dir, HOME: join(scratch, "home") },

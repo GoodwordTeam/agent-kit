@@ -67,10 +67,16 @@ export function decide(input: DecideInput, thresholds: Thresholds): Job[] {
   const idle = input.idleS >= thresholds.idleS;
   const now = input.now.getTime();
   const lastReflect = input.state.last_reflect ?? 0;
-  if ((idle && input.newTokens >= thresholds.reflectTokens) || (input.newObs > 0 && now - lastReflect >= REFLECT_MAX_GAP_MS)) due.push("reflect");
+  if (
+    (idle && input.newTokens >= thresholds.reflectTokens) ||
+    (input.newObs > 0 && now - lastReflect >= REFLECT_MAX_GAP_MS)
+  )
+    due.push("reflect");
   const today = todayLocal(input.now);
   if (
-    (input.now.getHours() >= thresholds.nightlyHour && (input.state.last_nightly ?? "") < today && input.unconsolidated >= 1) ||
+    (input.now.getHours() >= thresholds.nightlyHour &&
+      (input.state.last_nightly ?? "") < today &&
+      input.unconsolidated >= 1) ||
     (input.unconsolidated >= NIGHTLY_BACKLOG && idle)
   ) {
     due.push("nightly");
@@ -115,15 +121,19 @@ export function runProject(
     }
     const state = readState(ledger);
     const lastActivity = source.lastActivityMs(memProject);
-    if (!lastActivity) return [...out, `no claude-mem observations under project '${memProject}'; check the folder basename matches`];
+    if (!lastActivity)
+      return [...out, `no claude-mem observations under project '${memProject}'; check the folder basename matches`];
     const idleS = (nowMs() - lastActivity) / 1000;
     const { tokens: newTokens, count: newObs } = source.newTokensSince(memProject, state.last_obs_id_reflected ?? 0);
     const unconsolidated = unconsolidatedEpisodes(ledger).length;
     const force = options.force === true ? (options.job ?? "all") : null;
     let due = decide({ state, now: new Date(), idleS, newTokens, newObs, unconsolidated, force }, ctx.config);
-    if (options.job !== undefined && options.force !== true) due = due.filter((job) => options.job === "all" || options.job === job);
+    if (options.job !== undefined && options.force !== true)
+      due = due.filter((job) => options.job === "all" || options.job === job);
     const dueText = due.length > 0 ? due.join(",") : "none";
-    out.push(`idle ${Math.floor(idleS)}s new_tokens ${newTokens} new_obs ${newObs} unconsolidated ${unconsolidated} due ${dueText}`);
+    out.push(
+      `idle ${Math.floor(idleS)}s new_tokens ${newTokens} new_obs ${newObs} unconsolidated ${unconsolidated} due ${dueText}`,
+    );
     const trigger = options.force === true ? "force" : "tick";
     const existingReview = new Ledger(reviewLedgerDir(ctx.config, root));
     const runners: Record<Job, () => string> = {
@@ -139,7 +149,8 @@ export function runProject(
       } catch (error) {
         const err = error as Error;
         out.push(`${job} failed: ${err.message}`);
-        if (!dryRun) logLine(ledger, `${job} failed: ${err.message}\n\`\`\`\n${(err.stack ?? "").slice(-1500)}\n\`\`\``);
+        if (!dryRun)
+          logLine(ledger, `${job} failed: ${err.message}\n\`\`\`\n${(err.stack ?? "").slice(-1500)}\n\`\`\``);
       }
     }
     return out;
@@ -176,7 +187,10 @@ export function tick(ctx: LearnContext, options: { only?: string; job?: Job | "a
     }
     try {
       tickLog(ctx, `== ${nowIso()} tick${ctx.config.dryRun ? " DRY RUN" : ""}`);
-      const registry = options.only === undefined ? discoverProjects(ctx.config, source.toolUseCwds(discoverySince())) : readRegistry(ctx.config);
+      const registry =
+        options.only === undefined
+          ? discoverProjects(ctx.config, source.toolUseCwds(discoverySince()))
+          : readRegistry(ctx.config);
       const cutoff = nowMs() - ACTIVE_DAYS * 86_400_000;
       for (const entry of Object.values(registry)) {
         if (options.only !== undefined && entry.root !== options.only) continue;

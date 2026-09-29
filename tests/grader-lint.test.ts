@@ -23,7 +23,15 @@ import { Glob } from "bun";
 import { parse as parseYaml } from "yaml";
 
 import type { Catalog } from "../src/catalog/load.ts";
-import { DETERMINISTIC_TYPES, callMatches, evaluate, globToRegExp, type Grader, type ToolCall, type Transcript } from "../src/validation/grader-eval.ts";
+import {
+  DETERMINISTIC_TYPES,
+  callMatches,
+  evaluate,
+  globToRegExp,
+  type Grader,
+  type ToolCall,
+  type Transcript,
+} from "../src/validation/grader-eval.ts";
 import { actionClaim, checkGraderSurfaces, fileClaim, unaimedClaims } from "../src/validation/graders.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -235,7 +243,8 @@ function corpusGraders(): CorpusGrader[] {
   for (const path of [...new Glob("evals/*/*/case.yaml").scanSync(ROOT)].sort()) {
     const doc = parseYaml(readFileSync(join(ROOT, path), "utf8")) as { graders?: Grader[] };
     for (const grader of doc.graders ?? []) {
-      if (DETERMINISTIC_TYPES.has(String(grader["type"]))) out.push({ where: `${path} :: ${String(grader["name"])}`, grader });
+      if (DETERMINISTIC_TYPES.has(String(grader["type"])))
+        out.push({ where: `${path} :: ${String(grader["name"])}`, grader });
     }
   }
   return out;
@@ -282,7 +291,11 @@ function witnessText(pattern: string, flags: string): string | null {
 
 /** A path the glob matches. */
 function witnessPath(glob: string): string | null {
-  const path = glob.replace(/\*\*\//g, "a/").replace(/\*\*/g, "a").replace(/\*/g, "a").replace(/\?/g, "a");
+  const path = glob
+    .replace(/\*\*\//g, "a/")
+    .replace(/\*\*/g, "a")
+    .replace(/\*/g, "a")
+    .replace(/\?/g, "a");
   return globToRegExp(glob).test(path) ? path : null;
 }
 
@@ -324,7 +337,14 @@ function mutants(g: Grader): { failing: Transcript; passing: Transcript | null }
       if (match === "contains") return { failing: on(""), passing: on(text) };
       if (match === "not_contains") return { failing: on(text), passing: on("") };
       const n = Number(match.slice("count:".length));
-      return { failing: on(Array(n + 1).fill(text).join("\n")), passing: on(Array(n).fill(text).join("\n")) };
+      return {
+        failing: on(
+          Array(n + 1)
+            .fill(text)
+            .join("\n"),
+        ),
+        passing: on(Array(n).fill(text).join("\n")),
+      };
     }
     default:
       return `unmodelled type ${String(g["type"])}`;

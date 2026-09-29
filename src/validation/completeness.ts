@@ -44,7 +44,8 @@ function presentDirIds(
       ids.push(top);
       continue;
     }
-    const isContainer = bodyFiles(root, `${section}/${top}`).length === 0 && [...declared].some((id) => id.startsWith(`${top}/`));
+    const isContainer =
+      bodyFiles(root, `${section}/${top}`).length === 0 && [...declared].some((id) => id.startsWith(`${top}/`));
     if (isContainer) {
       const children = listDirs(join(sectionRoot, top));
       if (children.length === 0) emptyContainers.push(top);
@@ -84,7 +85,11 @@ export function checkCompleteness(ctx: CheckContext): Issue[] {
           );
         } else {
           issues.push(
-            note("catalog.entry-not-authored", dir, `${section}/${entry.id} is declared with status: contract and has no body yet.`),
+            note(
+              "catalog.entry-not-authored",
+              dir,
+              `${section}/${entry.id} is declared with status: contract and has no body yet.`,
+            ),
           );
         }
         continue;
@@ -97,9 +102,7 @@ export function checkCompleteness(ctx: CheckContext): Issue[] {
 
       if (!hasPreferred) {
         if (present.length === 0) {
-          issues.push(
-            error("catalog.entry-missing-body", dir, `${dir}/ exists but has no ${preferred}.`),
-          );
+          issues.push(error("catalog.entry-missing-body", dir, `${dir}/ exists but has no ${preferred}.`));
         } else {
           const report = mandatory ? error : warning;
           issues.push(
@@ -162,15 +165,31 @@ function checkFileSections(ctx: CheckContext): Issue[] {
       if (exists(join(root, path))) {
         if (entry.status === "contract") {
           issues.push(
-            warning("catalog.status-behind-body", path, `${path} exists but catalog.yaml still says status: contract. Set it to authored.`),
+            warning(
+              "catalog.status-behind-body",
+              path,
+              `${path} exists but catalog.yaml still says status: contract. Set it to authored.`,
+            ),
           );
         }
         continue;
       }
       if (entry.status === "authored") {
-        issues.push(error("catalog.entry-without-file", path, `catalog.yaml declares ${section}/${entry.id} as authored but ${path} does not exist.`));
+        issues.push(
+          error(
+            "catalog.entry-without-file",
+            path,
+            `catalog.yaml declares ${section}/${entry.id} as authored but ${path} does not exist.`,
+          ),
+        );
       } else {
-        issues.push(note("catalog.entry-not-authored", path, `${section}/${entry.id} is declared with status: contract and has no file yet.`));
+        issues.push(
+          note(
+            "catalog.entry-not-authored",
+            path,
+            `${section}/${entry.id} is declared with status: contract and has no file yet.`,
+          ),
+        );
       }
     }
 
@@ -179,7 +198,11 @@ function checkFileSections(ctx: CheckContext): Issue[] {
       for (const dir of listDirs(join(root, "adapters"))) {
         if (!declared.has(entryFilePath("adapters", dir))) {
           issues.push(
-            error("catalog.file-without-entry", `adapters/${dir}`, `adapters/${dir}/ exists but catalog.yaml declares no adapters entry '${dir}'.`),
+            error(
+              "catalog.file-without-entry",
+              `adapters/${dir}`,
+              `adapters/${dir}/ exists but catalog.yaml declares no adapters entry '${dir}'.`,
+            ),
           );
         }
       }
@@ -189,7 +212,13 @@ function checkFileSections(ctx: CheckContext): Issue[] {
       if (!name.endsWith(section === "schemas" ? ".schema.json" : ".yaml")) continue;
       const path = `${section}/${name}`;
       if (!declared.has(path)) {
-        issues.push(error("catalog.file-without-entry", path, `${path} exists but catalog.yaml declares no ${section} entry for it.`));
+        issues.push(
+          error(
+            "catalog.file-without-entry",
+            path,
+            `${path} exists but catalog.yaml declares no ${section} entry for it.`,
+          ),
+        );
       }
     }
   }

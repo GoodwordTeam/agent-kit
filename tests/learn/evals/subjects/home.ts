@@ -15,7 +15,12 @@ export interface Home {
   release(): void;
 }
 
-export function privateHome(dir: string, credentials: string | undefined, skillsFrom: string | undefined, skillsTo: string): Home {
+export function privateHome(
+  dir: string,
+  credentials: string | undefined,
+  skillsFrom: string | undefined,
+  skillsTo: string,
+): Home {
   mkdirSync(join(dir, skillsTo), { recursive: true });
   let original: string | undefined;
   const copy = join(dir, "auth.json");
@@ -24,14 +29,16 @@ export function privateHome(dir: string, credentials: string | undefined, skills
     writeFileSync(copy, original, { mode: 0o600 });
   }
   if (skillsFrom !== undefined && existsSync(skillsFrom)) {
-    for (const id of readdirSync(skillsFrom)) cpSync(join(skillsFrom, id), join(dir, skillsTo, id), { recursive: true });
+    for (const id of readdirSync(skillsFrom))
+      cpSync(join(skillsFrom, id), join(dir, skillsTo, id), { recursive: true });
   }
   return {
     dir,
     release() {
       if (credentials === undefined || original === undefined || !existsSync(copy)) return;
       const after = readFileSync(copy, "utf8");
-      if (after !== original && readFileSync(credentials, "utf8") === original) writeFileSync(credentials, after, { mode: 0o600 });
+      if (after !== original && readFileSync(credentials, "utf8") === original)
+        writeFileSync(credentials, after, { mode: 0o600 });
     },
   };
 }

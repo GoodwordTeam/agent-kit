@@ -19,7 +19,10 @@ function draftWith(localId: string) {
       statement: "Tests that compare timestamps pin the clock; otherwise they fail across a second boundary.",
       trigger: "correction",
       occurrence: { id: "obs-412", content: { title: "flaky timestamp test" } },
-      evidence: [{ ref: "claude-mem:obs-412", kind: "transcript" }, { ref: "claude-mem:obs-507", kind: "transcript", note: "second session" }],
+      evidence: [
+        { ref: "claude-mem:obs-412", kind: "transcript" },
+        { ref: "claude-mem:obs-507", kind: "transcript", note: "second session" },
+      ],
       domains: ["testing"],
       paths: ["tests/**"],
       guidance: ["Pass a fixed Date into the function under test."],

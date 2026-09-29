@@ -18,7 +18,19 @@ import { lessonDraft, proposeLesson } from "../kb.ts";
 import { rawSnapshot } from "./events.ts";
 import { EVENTS_FILE } from "./ledger.ts";
 import { PROCESSED_FILE } from "./maintain.ts";
-import { firstLine, impactRow, list, loadPatterns, logLine, num, type Pattern, rebuildIndex, savePattern, section, str } from "./patterns.ts";
+import {
+  firstLine,
+  impactRow,
+  list,
+  loadPatterns,
+  logLine,
+  num,
+  type Pattern,
+  rebuildIndex,
+  savePattern,
+  section,
+  str,
+} from "./patterns.ts";
 
 export function bullet(pattern: Pattern): string {
   const fix = firstLine(pattern.body, "Fix").trim() || str(pattern.meta, "title");
@@ -33,7 +45,12 @@ function evidenceLines(pattern: Pattern): string[] {
 }
 
 /** The candidate lesson a promoted guardrail proposes to the knowledgebase. */
-export function guardrailDraft(ctx: LearnContext, pattern: Pattern, root: string, at: Date = new Date()): Record<string, unknown> {
+export function guardrailDraft(
+  ctx: LearnContext,
+  pattern: Pattern,
+  root: string,
+  at: Date = new Date(),
+): Record<string, unknown> {
   const evidence = evidenceLines(pattern).map((line) => {
     const ref = line.split(" ")[0]!;
     return {
@@ -81,7 +98,13 @@ function teamProposal(pattern: Pattern): string {
  * Promote one pattern in memory: guardrail bullet, bookkeeping, impact row,
  * team proposal and knowledgebase draft. Returns whether a team proposal was added.
  */
-function promoteOne(ctx: LearnContext, ledger: Ledger, root: string, pattern: Pattern, texts: { guard: string; pending: string }): boolean {
+function promoteOne(
+  ctx: LearnContext,
+  ledger: Ledger,
+  root: string,
+  pattern: Pattern,
+  texts: { guard: string; pending: string },
+): boolean {
   texts.guard = `${texts.guard.replace(/\n+$/, "")}${texts.guard.trim() === "" ? "" : "\n"}${bullet(pattern)}\n`;
   pattern.meta.promoted_to = "guardrails";
   pattern.meta.promoted_count = num(pattern.meta, "count");
@@ -115,7 +138,12 @@ export function skillCandidates(patterns: ReadonlyMap<string, Pattern>): SkillCa
   const out: SkillCandidate[] = [];
   for (const pattern of patterns.values()) {
     const { meta } = pattern;
-    if (meta.status !== "active" || meta.promoted_to !== "guardrails" || str(meta, "skill_candidate") !== "" || num(meta, "promoted_count") === 0)
+    if (
+      meta.status !== "active" ||
+      meta.promoted_to !== "guardrails" ||
+      str(meta, "skill_candidate") !== "" ||
+      num(meta, "promoted_count") === 0
+    )
       continue;
     const since = num(meta, "count") - num(meta, "promoted_count");
     const steps = section(pattern.body, "Fix")
@@ -130,7 +158,10 @@ export function skillCandidates(patterns: ReadonlyMap<string, Pattern>): SkillCa
 /** Promote every active pattern at or over the threshold that is not promoted yet, then commit. */
 export function propose(ctx: LearnContext, ledger: Ledger, root: string, threshold = ctx.config.promoteAt): string {
   const patterns = loadPatterns(ledger);
-  const texts = { guard: readText(ledger.path("guardrails.md")), pending: readText(ledger.path("pending-team-promotions.md")) };
+  const texts = {
+    guard: readText(ledger.path("guardrails.md")),
+    pending: readText(ledger.path("pending-team-promotions.md")),
+  };
   const promoted: string[] = [];
   const proposed: string[] = [];
   let baselined = false;
@@ -142,7 +173,12 @@ export function propose(ctx: LearnContext, ledger: Ledger, root: string, thresho
       baselined = true;
       continue;
     }
-    if (pattern.meta.status !== "active" || num(pattern.meta, "count") < threshold || str(pattern.meta, "promoted_to") !== "") continue;
+    if (
+      pattern.meta.status !== "active" ||
+      num(pattern.meta, "count") < threshold ||
+      str(pattern.meta, "promoted_to") !== ""
+    )
+      continue;
     promoted.push(pattern.id);
     if (ctx.config.dryRun) continue;
     if (promoteOne(ctx, ledger, root, pattern, texts)) proposed.push(pattern.id);
@@ -166,9 +202,13 @@ export function promoteById(ctx: LearnContext, ledger: Ledger, root: string, id:
   const pattern = patterns.get(id);
   if (pattern === undefined) return `unknown pattern ${id}`;
   if (pattern.meta.status === "retired") return `${id} is retired`;
-  if (str(pattern.meta, "promoted_to") !== "") return `${id} is already promoted to ${str(pattern.meta, "promoted_to")}`;
+  if (str(pattern.meta, "promoted_to") !== "")
+    return `${id} is already promoted to ${str(pattern.meta, "promoted_to")}`;
   if (ctx.config.dryRun) return `dry run: would promote ${id}`;
-  const texts = { guard: readText(ledger.path("guardrails.md")), pending: readText(ledger.path("pending-team-promotions.md")) };
+  const texts = {
+    guard: readText(ledger.path("guardrails.md")),
+    pending: readText(ledger.path("pending-team-promotions.md")),
+  };
   const team = promoteOne(ctx, ledger, root, pattern, texts);
   writeFileSync(ledger.path("guardrails.md"), texts.guard);
   writeFileSync(ledger.path("pending-team-promotions.md"), texts.pending);
@@ -228,7 +268,8 @@ export function rollback(ledger: Ledger, to?: string): string {
   }
   const sha = ledger.git(["rev-parse", "--verify", "--quiet", `${to}^{commit}`]).stdout.trim();
   if (sha === "") return `unknown revision ${to}`;
-  if (ledger.git(["merge-base", "--is-ancestor", sha, "HEAD"]).code !== 0) return `${to} is not an ancestor of the ledger's HEAD`;
+  if (ledger.git(["merge-base", "--is-ancestor", sha, "HEAD"]).code !== 0)
+    return `${to} is not an ancestor of the ledger's HEAD`;
   const dirty = ledger
     .git(["status", "--porcelain", "--", ...ROLLBACK_PATHS])
     .stdout.split("\n")

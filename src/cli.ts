@@ -22,7 +22,15 @@ import { ADAPTATIONS_FILE, checkAdaptationsSync } from "./validation/provenance.
 import type { CheckContext } from "./validation/context.ts";
 import { runValidation } from "./validation/run.ts";
 import { isSkillStyleIssue } from "./validation/skill-style.ts";
-import { blockingSkips, error, formatIssue, hasErrors, skippedChecks, sortIssues, type Issue } from "./validation/types.ts";
+import {
+  blockingSkips,
+  error,
+  formatIssue,
+  hasErrors,
+  skippedChecks,
+  sortIssues,
+  type Issue,
+} from "./validation/types.ts";
 
 export interface CliIo {
   out: (line: string) => void;
@@ -179,7 +187,10 @@ function validate(parsed: Parsed, options: CliOptions): number {
           ok: result.ok,
           skipped: skippedChecks(result.issues),
           unavailable: blockingSkips(result.issues),
-          install: install === undefined ? null : { file: install.file, attached: install.attached, backends: Object.fromEntries(install.backends) },
+          install:
+            install === undefined
+              ? null
+              : { file: install.file, attached: install.attached, backends: Object.fromEntries(install.backends) },
           issues: shown,
         },
         null,
@@ -188,13 +199,7 @@ function validate(parsed: Parsed, options: CliOptions): number {
     );
     return result.ok ? 0 : 1;
   }
-  report(
-    options.io,
-    shown,
-    "ak validate",
-    install === undefined ? undefined : describeInstall(install),
-    result.issues,
-  );
+  report(options.io, shown, "ak validate", install === undefined ? undefined : describeInstall(install), result.issues);
   return result.ok ? 0 : 1;
 }
 
@@ -269,11 +274,19 @@ function trackerCommand(parsed: Parsed, options: CliOptions): number {
   const dir = parsed.positional[1] ?? ".";
   const start = isAbsolute(dir) ? dir : join(options.cwd, dir);
   if (!existsSync(start) || !statSync(start).isDirectory()) {
-    return report(options.io, [error("tracker.project-missing", dir, "Not a directory, so there is no project folder to check.")], "ak tracker check");
+    return report(
+      options.io,
+      [error("tracker.project-missing", dir, "Not a directory, so there is no project folder to check.")],
+      "ak tracker check",
+    );
   }
   // From a subdirectory, the binding that governs it is the nearest one above,
   // up to the repository's top level (findProjectRoot).
-  return report(options.io, checkTrackerBinding(findProjectRoot(start), join(import.meta.dir, "..")), "ak tracker check");
+  return report(
+    options.io,
+    checkTrackerBinding(findProjectRoot(start), join(import.meta.dir, "..")),
+    "ak tracker check",
+  );
 }
 
 export function runCli(argv: readonly string[], options: CliOptions): number {

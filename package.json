@@ -3,11 +3,11 @@
   "version": "0.1.0-dev",
   "private": true,
   "description": "One engineering lifecycle amalgamated from eight donors (seven MIT, one Apache-2.0): seven super skills, packs, protocols and roles, installable as a Claude Code plugin under /ak:.",
-  "type": "module",
   "license": "MIT",
   "bin": {
     "ak": "./src/cli.ts"
   },
+  "type": "module",
   "scripts": {
     "ak": "bun run src/cli.ts",
     "validate": "bun run src/cli.ts validate",

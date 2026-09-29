@@ -227,7 +227,8 @@ export function attach(ctx: CheckContext, input: string): AttachResult {
 
     if (sufficient.length === 0) {
       const detail = loaded.subject.contentsAvailable ? "" : "; file contents unavailable";
-      const near = supporting.length > 0 ? `; ${supporting.length} supporting signal(s) matched but never select alone` : "";
+      const near =
+        supporting.length > 0 ? `; ${supporting.length} supporting signal(s) matched but never select alone` : "";
       skipped.push({
         pack,
         reason: `no sufficient signal matched (${signals.length} evaluated${detail}${near})`,
@@ -264,7 +265,9 @@ export function formatAttachResult(result: AttachResult): string[] {
     lines.push(`    why: ${selection.rationale}`);
     for (const e of selection.evidence) {
       const where = e.line === undefined ? "" : `:${e.line}`;
-      lines.push(`    - ${e.weight} ${e.kind}${where} [${e.rules.join(", ")}] ${e.note} -- matched ${JSON.stringify(e.matched)}`);
+      lines.push(
+        `    - ${e.weight} ${e.kind}${where} [${e.rules.join(", ")}] ${e.note} -- matched ${JSON.stringify(e.matched)}`,
+      );
     }
   }
   for (const entry of result.skipped) {

@@ -71,7 +71,7 @@ describe("selection by artifact and semantics", () => {
   });
 
   test("security content selects pack-secure even when the path says nothing", () => {
-    const ctx = ctxFor({ "src/util/thing.ts": 'const h = { Authorization: `Bearer ${token}` };\n' });
+    const ctx = ctxFor({ "src/util/thing.ts": "const h = { Authorization: `Bearer ${token}` };\n" });
     expect(packs(attach(ctx, "src/util/thing.ts"))).toContain("pack-secure");
   });
 
@@ -170,7 +170,7 @@ describe("pack.yaml is not a signal source", () => {
     const ctx = ctxFor({
       "packs/pack-deps/pack.yaml": "id: pack-deps\nenabled: false\n",
       "packs/pack-secure/pack.yaml":
-        "id: pack-secure\nactivation:\n  signals:\n    - kind: path-regex\n      pattern: \"(^|/)vault/\"\n      weight: sufficient\n      note: vault\n",
+        'id: pack-secure\nactivation:\n  signals:\n    - kind: path-regex\n      pattern: "(^|/)vault/"\n      weight: sufficient\n      note: vault\n',
     });
     expect(packs(attach(ctx, "bun.lock"))).toContain("pack-deps");
     expect(packs(attach(ctx, "infra/vault/config.hcl"))).not.toContain("pack-secure");

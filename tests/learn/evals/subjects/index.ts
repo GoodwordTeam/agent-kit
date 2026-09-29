@@ -31,17 +31,28 @@ const AUTH = new Set(["CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLA
  */
 export function withoutParentSession(env: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(env).filter(([key]) => AUTH.has(key) || (!key.startsWith("CLAUDE_CODE_") && !key.startsWith("EVAL_") && key !== "CLAUDECODE")),
+    Object.entries(env).filter(
+      ([key]) => AUTH.has(key) || (!key.startsWith("CLAUDE_CODE_") && !key.startsWith("EVAL_") && key !== "CLAUDECODE"),
+    ),
   );
 }
 
 /** Run one session for `subjectId` under the adapter's isolation. `model` is the matrix binding, passed through opaquely. */
-export async function runSubject(adapter: SubjectAdapter, subjectId: string, model: string | undefined, req: SessionRequest): Promise<SessionResult> {
+export async function runSubject(
+  adapter: SubjectAdapter,
+  subjectId: string,
+  model: string | undefined,
+  req: SessionRequest,
+): Promise<SessionResult> {
   const scratch = realpathSync(mkdtempSync(join(tmpdir(), `ak-subject-${adapter.host}-`)));
   const isolation = adapter.isolate?.(scratch, req);
   const started = Date.now();
   try {
-    const result = await runAsync(adapter.command(req, model), { cwd: req.cwd, env: { ...withoutParentSession(req.env), ...isolation?.env }, timeoutMs: req.timeoutMs });
+    const result = await runAsync(adapter.command(req, model), {
+      cwd: req.cwd,
+      env: { ...withoutParentSession(req.env), ...isolation?.env },
+      timeoutMs: req.timeoutMs,
+    });
     const parsed = adapter.parse(result.stdout);
     return {
       subject: subjectId,

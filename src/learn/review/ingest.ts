@@ -13,7 +13,13 @@ import type { Ledger } from "../core/ledger.ts";
 import { projectFolderName, reflectFolderName, registryPath } from "../core/paths.ts";
 import { nowIso, readJson, writeJson } from "../core/store.ts";
 import { ClaudeMemSource, jsonList, type ObservationRow } from "../sources/claude-mem.ts";
-import { GitHubReviewSource, type IssueComment, type PullRequestRef, type Review, type ReviewComment } from "../sources/github.ts";
+import {
+  GitHubReviewSource,
+  type IssueComment,
+  type PullRequestRef,
+  type Review,
+  type ReviewComment,
+} from "../sources/github.ts";
 import { appendEvents, eventHash, makeEvent, parseSeverity, type ReviewEvent, stripHtml } from "./events.ts";
 
 /** Bot noise and slash commands that ride on issue comments. */
@@ -80,7 +86,12 @@ export function reviewEvent(review: Review, pr: number, sha: string, project: st
   });
 }
 
-export function reportEvent(comment: IssueComment, pr: number, sha: string, project: string | null): ReviewEvent | null {
+export function reportEvent(
+  comment: IssueComment,
+  pr: number,
+  sha: string,
+  project: string | null,
+): ReviewEvent | null {
   const body = comment.body ?? "";
   if (NOISE.test(body) || !REPORT.test(body)) return null;
   return makeEvent({
@@ -99,7 +110,12 @@ export function reportEvent(comment: IssueComment, pr: number, sha: string, proj
   });
 }
 
-export function eventsFromGithub(source: GitHubReviewSource, repo: string, prs: readonly PullRequestRef[], project: string | null): ReviewEvent[] {
+export function eventsFromGithub(
+  source: GitHubReviewSource,
+  repo: string,
+  prs: readonly PullRequestRef[],
+  project: string | null,
+): ReviewEvent[] {
   const events: ReviewEvent[] = [];
   for (const pr of prs) {
     const sha = pr.headRefOid ?? "";
@@ -153,7 +169,12 @@ export function observationEvent(row: ObservationRow, project: string): ReviewEv
 }
 
 /** Review observations after the ledger's watermark. Returns the new watermark alongside. */
-export function eventsFromClaudeMem(ctx: LearnContext, ledger: Ledger, project: string, sinceMs: number): { events: ReviewEvent[]; maxId: number } {
+export function eventsFromClaudeMem(
+  ctx: LearnContext,
+  ledger: Ledger,
+  project: string,
+  sinceMs: number,
+): { events: ReviewEvent[]; maxId: number } {
   const minId = readJson<{ claude_mem_max_id?: number }>(ledger.path(WATERMARK_FILE), {}).claude_mem_max_id ?? 0;
   const source = ClaudeMemSource.open(ctx.config.memDb);
   if (source === null) return { events: [], maxId: minId };
@@ -271,9 +292,13 @@ export function ingest(ctx: LearnContext, ledger: Ledger, root: string, options:
     if (repo === null) {
       // An absent source is reported, never read as "no findings": a quiet run would look like a clean one.
       unavailable.push("github");
-      ctx.io.err("ak learn review: review source github unavailable (`gh repo view` failed); pass --gh-repo or --no-github");
+      ctx.io.err(
+        "ak learn review: review source github unavailable (`gh repo view` failed); pass --gh-repo or --no-github",
+      );
     } else {
-      events.push(...eventsFromGithub(github, repo, github.pullRequests(repo, options.prs ?? [], options.since), project));
+      events.push(
+        ...eventsFromGithub(github, repo, github.pullRequests(repo, options.prs ?? [], options.since), project),
+      );
     }
   }
   let maxId = 0;

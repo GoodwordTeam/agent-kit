@@ -28,7 +28,8 @@ export function checkUpstreamCommit(fmHome: string, upstream: Upstream): Check {
   const known = git(fmHome, ["cat-file", "-e", `${upstream.commit}^{commit}`]);
   if (known.code !== 0) return fail(id, `${fmHome} does not contain upstream commit ${upstream.commit}`);
   const ancestor = git(fmHome, ["merge-base", "--is-ancestor", upstream.commit, "HEAD"]);
-  if (ancestor.code !== 0) return fail(id, `HEAD of ${fmHome} does not descend from upstream commit ${upstream.commit}`);
+  if (ancestor.code !== 0)
+    return fail(id, `HEAD of ${fmHome} does not descend from upstream commit ${upstream.commit}`);
   return pass(id, `HEAD descends from ${upstream.commit}`);
 }
 
@@ -49,7 +50,10 @@ export function checkPatchApplied(fmHome: string, upstream: Upstream): Check {
   const scratch = mkdtempSync(join(tmpdir(), "ak-fm-index-"));
   const env = { GIT_INDEX_FILE: join(scratch, "index") };
   try {
-    for (const args of [["read-tree", "HEAD"], ["add", "-A"]]) {
+    for (const args of [
+      ["read-tree", "HEAD"],
+      ["add", "-A"],
+    ]) {
       const r = git(fmHome, args, env);
       if (r.code !== 0) return fail(id, `cannot read ${fmHome}'s working tree: ${r.stderr.trim()}`);
     }
@@ -84,10 +88,18 @@ export function checkNoMistakesConfig(project: string): Check {
   const ref = ["origin/HEAD", "main", "master"].find(
     (r) => git(project, ["rev-parse", "--verify", "--quiet", `${r}^{commit}`]).code === 0,
   );
-  if (ref === undefined) return fail(id, `${project} has no resolvable default branch (origin/HEAD, main or master), so the trusted .no-mistakes.yaml cannot be read`);
+  if (ref === undefined)
+    return fail(
+      id,
+      `${project} has no resolvable default branch (origin/HEAD, main or master), so the trusted .no-mistakes.yaml cannot be read`,
+    );
   const file = `${ref}:.no-mistakes.yaml`;
   const shown = git(project, ["show", file]);
-  if (shown.code !== 0) return fail(id, `${file} is missing in ${project}; the default branch must declare auto_fix.test, auto_fix.lint and auto_fix.ci as 0`);
+  if (shown.code !== 0)
+    return fail(
+      id,
+      `${file} is missing in ${project}; the default branch must declare auto_fix.test, auto_fix.lint and auto_fix.ci as 0`,
+    );
   let doc: unknown;
   try {
     doc = parseYaml(shown.text);
@@ -145,7 +157,8 @@ export function checkBundle(bundleDir: string): Check {
 export function checkHost(akRoot: string, host: Host): Check {
   const id = "host-capabilities";
   const table = loadCapabilityTable(akRoot);
-  if (!table.available) return fail(id, "the host capability table is unavailable, so no host capability could be checked");
+  if (!table.available)
+    return fail(id, "the host capability table is unavailable, so no host capability could be checked");
   const wanted = ["isolated-review-context", "independent-context"];
   const states = wanted.map((cap) => [cap, table.status.get(cap)] as const);
   const missing = states.filter(([, s]) => s === undefined || s === "not-provided");

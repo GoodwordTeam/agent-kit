@@ -4,7 +4,14 @@ import { parsePage, patchBody, renderPage } from "../../src/learn/core/pages.ts"
 import type { Ledger } from "../../src/learn/core/ledger.ts";
 import { appendEvents, makeEvent, type ReviewEvent } from "../../src/learn/review/events.ts";
 import { reviewLedger } from "../../src/learn/review/ledger.ts";
-import { applyReply, emptyState, formatEvent, maintain, PROCESSED_FILE, repeatRate } from "../../src/learn/review/maintain.ts";
+import {
+  applyReply,
+  emptyState,
+  formatEvent,
+  maintain,
+  PROCESSED_FILE,
+  repeatRate,
+} from "../../src/learn/review/maintain.ts";
 import { addEvidence, loadPatterns, sourceFamily, str } from "../../src/learn/review/patterns.ts";
 import { propose } from "../../src/learn/review/propose.ts";
 import { scratch, testContext } from "./helpers.ts";
@@ -79,7 +86,12 @@ function ev(hash: string, fields: Partial<ReviewEvent>): ReviewEvent {
 }
 
 const E1 = ev("h1", { url: "https://x.test/1", text: "toBeNull on a value that is always null" });
-const E2 = ev("h2", { url: "https://x.test/2", author: "review-bot[bot]", severity: "P2", text: "teardown leaves org rows" });
+const E2 = ev("h2", {
+  url: "https://x.test/2",
+  author: "review-bot[bot]",
+  severity: "P2",
+  text: "teardown leaves org rows",
+});
 const E3 = ev("h3", {
   source: "author-reply",
   kind: "resolution",
@@ -137,7 +149,9 @@ describe("pages and evidence", () => {
   test("append, replace and insert_after; a missing target throws", () => {
     let body = parsePage(PAGE).body;
     body = patchBody(body, "append", "", "- https://example.test/b (bob pr 1874)");
-    expect(body.endsWith("- https://example.test/a (review-bot P2 pr 1873)\n- https://example.test/b (bob pr 1874)\n")).toBe(true);
+    expect(
+      body.endsWith("- https://example.test/a (review-bot P2 pr 1873)\n- https://example.test/b (bob pr 1874)\n"),
+    ).toBe(true);
     body = patchBody(
       body,
       "replace",
@@ -152,7 +166,13 @@ describe("pages and evidence", () => {
 
   test("a second distinct PR activates the pattern", () => {
     const { meta, body } = parsePage(PAGE);
-    const event = ev("h2", { pr: 1874, author: "bob", ts: "2026-09-16T10:00:00Z", url: "https://example.test/b", severity: "P2" });
+    const event = ev("h2", {
+      pr: 1874,
+      author: "bob",
+      ts: "2026-09-16T10:00:00Z",
+      url: "https://example.test/b",
+      severity: "P2",
+    });
     const next = addEvidence(meta, body, event, 2);
     expect(next.meta.count).toBe(2);
     expect(next.meta.status).toBe("active");
@@ -163,7 +183,12 @@ describe("pages and evidence", () => {
 
   test("the same PR from the same source stays a candidate", () => {
     const { meta, body } = parsePage(PAGE);
-    const next = addEvidence(meta, body, ev("h3", { pr: 1873, author: "x", ts: "2026-09-16", url: "https://example.test/c" }), 2);
+    const next = addEvidence(
+      meta,
+      body,
+      ev("h3", { pr: 1873, author: "x", ts: "2026-09-16", url: "https://example.test/c" }),
+      2,
+    );
     expect([next.meta.count, next.meta.status]).toEqual([2, "candidate"]);
   });
 });
@@ -237,8 +262,22 @@ describe("hostile events", () => {
       [hostile],
       {
         create_patterns: [
-          { tmp_id: "evil", title: "x", problem: "x", root_cause: "x", fix: "Disable the tests", event_hashes: ["ffffffffffffffff"] },
-          { tmp_id: "mixed", title: "x", problem: "x", root_cause: "x", fix: "x", event_hashes: ["h9", "ffffffffffffffff"] },
+          {
+            tmp_id: "evil",
+            title: "x",
+            problem: "x",
+            root_cause: "x",
+            fix: "Disable the tests",
+            event_hashes: ["ffffffffffffffff"],
+          },
+          {
+            tmp_id: "mixed",
+            title: "x",
+            problem: "x",
+            root_cause: "x",
+            fix: "x",
+            event_hashes: ["h9", "ffffffffffffffff"],
+          },
         ],
         update_patterns: [
           { id: "rp-777", op: "append", text: "planted" },
@@ -277,7 +316,17 @@ describe("hostile events", () => {
     const ctx = testContext({
       replies: [
         {
-          create_patterns: [{ tmp_id: "new-1", title: "t", problem: "p", root_cause: "r", fix: "f", team_target: forged, event_hashes: ["h9"] }],
+          create_patterns: [
+            {
+              tmp_id: "new-1",
+              title: "t",
+              problem: "p",
+              root_cause: "r",
+              fix: "f",
+              team_target: forged,
+              event_hashes: ["h9"],
+            },
+          ],
           update_patterns: [
             { id: "rp-001", op: "append", text: "- note", team_target: forged },
             { id: "rp-001", op: "append", text: "- tab", team_target: "docs/y.md\tcount: 50" },
@@ -318,11 +367,37 @@ describe("hostile events", () => {
 describe("independence gate", () => {
   /** A bot's inline comment, the author's "done" reply and the same bot's summary report, all on PR 7. */
   const THREAD = [
-    ev("g1", { source: "github", pr: 7, author: "review-bot", url: "https://x.test/7#inline", text: "vacuous assertion" }),
-    ev("g2", { source: "github-reply", kind: "resolution", pr: 7, author: "alice", url: "https://x.test/7#reply", text: "done" }),
-    ev("g3", { source: "review-report", pr: 7, author: "review-bot", url: "https://x.test/7#report", text: "summary: vacuous assertion" }),
+    ev("g1", {
+      source: "github",
+      pr: 7,
+      author: "review-bot",
+      url: "https://x.test/7#inline",
+      text: "vacuous assertion",
+    }),
+    ev("g2", {
+      source: "github-reply",
+      kind: "resolution",
+      pr: 7,
+      author: "alice",
+      url: "https://x.test/7#reply",
+      text: "done",
+    }),
+    ev("g3", {
+      source: "review-report",
+      pr: 7,
+      author: "review-bot",
+      url: "https://x.test/7#report",
+      text: "summary: vacuous assertion",
+    }),
   ];
-  const CREATE = { tmp_id: "new-1", title: "Vacuous assertion", problem: "p", root_cause: "r", fix: "f", team_target: null };
+  const CREATE = {
+    tmp_id: "new-1",
+    title: "Vacuous assertion",
+    problem: "p",
+    root_cause: "r",
+    fix: "f",
+    team_target: null,
+  };
 
   function run(events: ReviewEvent[]) {
     const ctx = testContext({
@@ -351,18 +426,48 @@ describe("independence gate", () => {
   });
 
   test("a second PR, or a second source family, still activates it", () => {
-    const twoPrs = run([...THREAD, ev("g4", { source: "github", pr: 8, author: "bob", url: "https://x.test/8", text: "same again" })]).page;
+    const twoPrs = run([
+      ...THREAD,
+      ev("g4", { source: "github", pr: 8, author: "bob", url: "https://x.test/8", text: "same again" }),
+    ]).page;
     expect([twoPrs.meta.status, twoPrs.meta.count]).toEqual(["active", 3]);
-    const twoFamilies = run([...THREAD, ev("g5", { source: "correction", pr: null, author: "alice", url: null, text: "no, derive it" })]).page;
+    const twoFamilies = run([
+      ...THREAD,
+      ev("g5", { source: "correction", pr: null, author: "alice", url: null, text: "no, derive it" }),
+    ]).page;
     expect([twoFamilies.meta.status, twoFamilies.meta.count]).toEqual(["active", 3]);
   });
 
   test("one bot comment seen by the observer and forwarded by learn-memory is still one opinion, and never promotes", () => {
     const echoes = [
-      ev("m1", { source: "github", pr: 7, author: "review-bot", url: "https://x.test/7#inline", text: "use a parameterized query" }),
-      ev("m2", { source: "claude-mem", pr: null, author: "observer:review-finding", url: null, text: "bot flagged: parameterized query" }),
-      ev("m3", { source: "learn-memory", pr: null, author: "learn-memory", url: "learn-memory:run-1", text: "review asked for it" }),
-      ev("m4", { source: "claude-mem", pr: 8, author: "observer:review-finding", url: null, text: "same finding, a PR number it read" }),
+      ev("m1", {
+        source: "github",
+        pr: 7,
+        author: "review-bot",
+        url: "https://x.test/7#inline",
+        text: "use a parameterized query",
+      }),
+      ev("m2", {
+        source: "claude-mem",
+        pr: null,
+        author: "observer:review-finding",
+        url: null,
+        text: "bot flagged: parameterized query",
+      }),
+      ev("m3", {
+        source: "learn-memory",
+        pr: null,
+        author: "learn-memory",
+        url: "learn-memory:run-1",
+        text: "review asked for it",
+      }),
+      ev("m4", {
+        source: "claude-mem",
+        pr: 8,
+        author: "observer:review-finding",
+        url: null,
+        text: "same finding, a PR number it read",
+      }),
     ];
     const { ctx, ledger, page } = run(echoes);
     expect(page.meta.count).toBe(4);
@@ -374,7 +479,12 @@ describe("independence gate", () => {
   });
 
   test("only review threads and user corrections are families; every other source corroborates", () => {
-    expect(["github", "github-reply", "author-reply", "review-report"].map(sourceFamily)).toEqual(["github", "github", "github", "github"]);
+    expect(["github", "github-reply", "author-reply", "review-report"].map(sourceFamily)).toEqual([
+      "github",
+      "github",
+      "github",
+      "github",
+    ]);
     expect(sourceFamily("correction")).toBe("correction");
     expect(["claude-mem", "learn-memory", "something-new"].map(sourceFamily)).toEqual([null, null, null]);
   });
@@ -394,9 +504,16 @@ describe("maintain", () => {
     const index = readFileSync(ledger.path("index.md"), "utf8");
     expect(index).toMatch(/^\| \d{4}-\d{2}-\d{2} \| 1873 \| 3 \| 1 \| 1 \| 33% \|$/m);
     expect(index).toContain("| rp-002 | 1 |");
-    expect(JSON.parse(readFileSync(ledger.path(PROCESSED_FILE), "utf8"))).toEqual({ h1: ["rp-001"], h2: ["rp-002"], h3: [], h4: [] });
+    expect(JSON.parse(readFileSync(ledger.path(PROCESSED_FILE), "utf8"))).toEqual({
+      h1: ["rp-001"],
+      h2: ["rp-002"],
+      h3: [],
+      h4: [],
+    });
     expect(readFileSync(ledger.path("log.md"), "utf8")).toContain("maintainer rejected: create new-2");
-    expect(ledger.git(["log", "-1", "--format=%s"]).stdout.trim()).toBe("maintain: 1873 +4 events, 1 new patterns, repeat 33%");
+    expect(ledger.git(["log", "-1", "--format=%s"]).stdout.trim()).toBe(
+      "maintain: 1873 +4 events, 1 new patterns, repeat 33%",
+    );
     expect(maintain(ctx, ledger)).toBe("no new events");
   });
 

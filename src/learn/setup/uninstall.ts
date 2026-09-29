@@ -110,7 +110,9 @@ export function uninstall(ctx: LearnContext, deps: SetupDeps, options: { purge?:
     rmSync(ctx.config.runtimeDir, { recursive: true, force: true });
     ctx.io.out(`${ctx.config.runtimeDir}: purged`);
   } else {
-    ctx.io.out(`ledgers under ${join(ctx.config.configDir, "projects")}/*/agent-kit were kept (they are your data; --purge removes them)`);
+    ctx.io.out(
+      `ledgers under ${join(ctx.config.configDir, "projects")}/*/agent-kit were kept (they are your data; --purge removes them)`,
+    );
   }
   return 0;
 }

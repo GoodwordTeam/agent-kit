@@ -60,7 +60,10 @@ function rulesOf(issues: Array<{ rule: string }>): string[] {
 }
 
 function run(doc: Record<string, unknown>, others: Record<string, unknown>[] = []) {
-  const all = [{ file: "templates/doc.json", doc }, ...others.map((d, i) => ({ file: `templates/other-${i}.json`, doc: d }))];
+  const all = [
+    { file: "templates/doc.json", doc },
+    ...others.map((d, i) => ({ file: `templates/other-${i}.json`, doc: d })),
+  ];
   return checkDocument("templates/doc.json", doc, indexDocuments(all));
 }
 
@@ -184,8 +187,22 @@ function decision(extra: Record<string, unknown> = {}): Record<string, unknown> 
       { id: "seat-b", filled_by: "reviewer-b", independent: true, may_implement: false },
     ],
     judgments: [
-      { seat: "seat-a", by: "reviewer-a", choice: "ship", rationale: "ok", unresolved_assumptions: [], escalate: false },
-      { seat: "seat-b", by: "reviewer-b", choice: "ship", rationale: "ok", unresolved_assumptions: [], escalate: false },
+      {
+        seat: "seat-a",
+        by: "reviewer-a",
+        choice: "ship",
+        rationale: "ok",
+        unresolved_assumptions: [],
+        escalate: false,
+      },
+      {
+        seat: "seat-b",
+        by: "reviewer-b",
+        choice: "ship",
+        rationale: "ok",
+        unresolved_assumptions: [],
+        escalate: false,
+      },
     ],
     agreement: true,
     authority_check: {
@@ -353,8 +370,18 @@ describe("event rules", () => {
   test("event.remote-side-effect-key-is-unique-and-read-back catches a duplicate key", () => {
     const doc = event({
       side_effects_performed: [
-        { effect: "pr-comment", at: "2026-09-19T00:00:00Z", idempotency_key: "k", read_back: { performed: true, confirmed: true } },
-        { effect: "pr-comment", at: "2026-09-19T00:00:01Z", idempotency_key: "k", read_back: { performed: true, confirmed: true } },
+        {
+          effect: "pr-comment",
+          at: "2026-09-19T00:00:00Z",
+          idempotency_key: "k",
+          read_back: { performed: true, confirmed: true },
+        },
+        {
+          effect: "pr-comment",
+          at: "2026-09-19T00:00:01Z",
+          idempotency_key: "k",
+          read_back: { performed: true, confirmed: true },
+        },
       ],
     });
     expect(rulesOf(run(doc))).toContain("event.remote-side-effect-key-is-unique-and-read-back");
@@ -377,7 +404,11 @@ function finding(extra: Record<string, unknown> = {}): Record<string, unknown> {
     lane: "code-review/correctness",
     fingerprint: {
       value: `sha256:${"f".repeat(64)}`,
-      inputs: { rule: "input-validation", symbol_or_path: "src/handler.ts", evidence_digest: `sha256:${"a".repeat(64)}` },
+      inputs: {
+        rule: "input-validation",
+        symbol_or_path: "src/handler.ts",
+        evidence_digest: `sha256:${"a".repeat(64)}`,
+      },
     },
     severity: "P1",
     confidence_anchor: 75,
@@ -397,7 +428,7 @@ describe("finding rules", () => {
 
   test("finding.fingerprint-stable-across-line-moves catches a line number in the identity inputs", () => {
     const doc = finding();
-    (((doc["fingerprint"] as Record<string, unknown>)["inputs"]) as Record<string, unknown>)["symbol_or_path"] =
+    ((doc["fingerprint"] as Record<string, unknown>)["inputs"] as Record<string, unknown>)["symbol_or_path"] =
       "src/handler.ts:42";
     expect(rulesOf(run(doc))).toContain("finding.fingerprint-stable-across-line-moves");
   });
@@ -560,8 +591,7 @@ describe("finding.evidence-digest-domain", () => {
   /** The shipped finding schema with `fields` widened by one member. */
   function schemaWithField(field: string): string {
     const schema = JSON.parse(readFileSync(join(SCHEMAS_DIR, "finding.schema.json"), "utf8"));
-    const node =
-      schema.properties.fingerprint.properties.inputs.properties.evidence_digest["x-digest-domain"];
+    const node = schema.properties.fingerprint.properties.inputs.properties.evidence_digest["x-digest-domain"];
     node.fields = [...node.fields, field];
     return JSON.stringify(schema);
   }
@@ -667,9 +697,9 @@ describe("project rules", () => {
   });
 
   test("project.kb-root-is-not-an-application-local-docs-tree catches an application-local docs root", () => {
-    expect(rulesOf(run(project({ kb: { ownership: "central", root: "docs/solutions", project_path: "demo" } })))).toContain(
-      "project.kb-root-is-not-an-application-local-docs-tree",
-    );
+    expect(
+      rulesOf(run(project({ kb: { ownership: "central", root: "docs/solutions", project_path: "demo" } }))),
+    ).toContain("project.kb-root-is-not-an-application-local-docs-tree");
   });
 
   test("project.test-pyramid-percentages-sum-to-100 catches a pyramid that does not sum", () => {
@@ -686,7 +716,12 @@ describe("project rules", () => {
   test("project.numeric-guidance-never-becomes-a-gate catches guidance promoted into a blocking constraint", () => {
     const doc = project({
       mandatory_constraints: [
-        { id: "pr-size-gate", requirement: "pr_size target_changed_lines is a hard limit", evidence_required: ["diff"], blocks: "ship" },
+        {
+          id: "pr-size-gate",
+          requirement: "pr_size target_changed_lines is a hard limit",
+          evidence_required: ["diff"],
+          blocks: "ship",
+        },
       ],
     });
     expect(rulesOf(run(doc))).toContain("project.numeric-guidance-never-becomes-a-gate");
@@ -705,7 +740,8 @@ describe("project rules", () => {
 
   test("project.standards-path-resolves-or-lane-returns-empty is checked against the tree", () => {
     const root = makeTree({
-      "catalog.yaml": "schema_version: 1\npackage:\n  id: ak\n  name: ak\n  version: 0.1.0\n  namespace: \"/ak:\"\n  default_profile: core\n",
+      "catalog.yaml":
+        'schema_version: 1\npackage:\n  id: ak\n  name: ak\n  version: 0.1.0\n  namespace: "/ak:"\n  default_profile: core\n',
       "templates/project.json": JSON.stringify(
         project({ standards: [{ id: "style", path: "docs/style.md", applies_to: ["**/*.ts"] }] }),
       ),
@@ -793,7 +829,13 @@ describe("review rules", () => {
       mode: "delta",
       verdict: "changes-requested",
       delta_scope: { boundary: "affected-behavior", affected_behavior: ["login"], excluded: ["callers"] },
-      new_findings: [{ finding: { id: "finding-9", hash: `sha256:${"a".repeat(64)}` }, novelty_evidence: [{ ref: "e" }], in_untouched_caller: true }],
+      new_findings: [
+        {
+          finding: { id: "finding-9", hash: `sha256:${"a".repeat(64)}` },
+          novelty_evidence: [{ ref: "e" }],
+          in_untouched_caller: true,
+        },
+      ],
     });
     expect(rulesOf(run(doc))).toContain("review.delta-scope-bounded-by-affected-behavior");
   });

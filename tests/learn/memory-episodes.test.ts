@@ -17,14 +17,44 @@ const H = 3_600_000;
 
 function fixture(path: string): void {
   const mem = new MemFixture(path);
-  const s1 = mem.session({ sid: "s1", project: "app", platform: "claude", started: NOW - 14 * D - H, completed: NOW - 14 * D });
+  const s1 = mem.session({
+    sid: "s1",
+    project: "app",
+    platform: "claude",
+    started: NOW - 14 * D - H,
+    completed: NOW - 14 * D,
+  });
   const s2 = mem.session({ sid: "s2", project: "app/wt", platform: "codex", started: NOW - H, completed: NOW });
   mem.session({ sid: "s3", project: "app", started: NOW - 7 * H }); // stale active: ends at its last observation
   mem.session({ sid: "s4", project: "app", started: NOW - 2 * H }); // still active: excluded
   mem.session({ sid: "s5", project: "other", started: NOW - D, completed: NOW - D + H }); // other project: excluded
-  mem.observation({ sid: "s1", project: "app", type: "discovery", title: "t", tokens: 1000, filesModified: ["a.ts"], at: NOW - 14 * D - H / 2 });
-  mem.observation({ sid: "s1", project: "app", type: "review-finding", title: "t", tokens: 3000, filesModified: ["b.ts"], at: NOW - 14 * D });
-  mem.observation({ sid: "s2", project: "app/wt", type: "change", title: "t", tokens: 2000, filesModified: ["a.ts", "c.ts"], at: NOW - H / 2 });
+  mem.observation({
+    sid: "s1",
+    project: "app",
+    type: "discovery",
+    title: "t",
+    tokens: 1000,
+    filesModified: ["a.ts"],
+    at: NOW - 14 * D - H / 2,
+  });
+  mem.observation({
+    sid: "s1",
+    project: "app",
+    type: "review-finding",
+    title: "t",
+    tokens: 3000,
+    filesModified: ["b.ts"],
+    at: NOW - 14 * D,
+  });
+  mem.observation({
+    sid: "s2",
+    project: "app/wt",
+    type: "change",
+    title: "t",
+    tokens: 2000,
+    filesModified: ["a.ts", "c.ts"],
+    at: NOW - H / 2,
+  });
   mem.observation({ sid: "s3", project: "app", type: "discovery", title: "t", tokens: 500, at: NOW - 7 * H });
   mem.observation({ sid: "s4", project: "app", type: "discovery", title: "t", tokens: 500, at: NOW - H });
   mem.observation({ sid: "s5", project: "other", type: "discovery", title: "t", tokens: 500, at: NOW - D });
@@ -34,7 +64,13 @@ function fixture(path: string): void {
   mem.prompt({ sessionDbId: s1, content: "s1", n: 2, text: "p" });
   mem.prompt({ sessionDbId: s2, content: "s2", n: 1, text: "p" });
   // Only tool use records d.ts.
-  mem.toolUse({ sid: "s1", project: "app", tool: "Edit", input: { file_path: "d.ts", old_string: "x" }, at: NOW - 14 * D });
+  mem.toolUse({
+    sid: "s1",
+    project: "app",
+    tool: "Edit",
+    input: { file_path: "d.ts", old_string: "x" },
+    at: NOW - 14 * D,
+  });
   mem.toolUse({ sid: "s1", project: "app", tool: "Read", input: { file_path: "never-counted.ts" }, at: NOW - 14 * D }); // reads are not edits
   mem.toolUse({ sid: "s2", project: "app/wt", tool: "Write", input: { file_path: "a.ts" }, at: NOW }); // no double count
   mem.close();
@@ -68,9 +104,21 @@ describe("episodes", () => {
     const by = new Map(fresh.map((episode) => [episode.sid, episode]));
     expect([...by.keys()].sort()).toEqual(["s1", "s2", "s3"]);
     const s1 = by.get("s1")!;
-    expect([s1.platform, s1.prompts, s1.obs, s1.tokens, s1.files_modified]).toEqual(["claude", 2, 2, 4000, ["a.ts", "b.ts", "d.ts"]]);
+    expect([s1.platform, s1.prompts, s1.obs, s1.tokens, s1.files_modified]).toEqual([
+      "claude",
+      2,
+      2,
+      4000,
+      ["a.ts", "b.ts", "d.ts"],
+    ]);
     expect(by.get("s2")!.files_modified).toEqual(["a.ts", "c.ts"]);
-    expect([s1.request, s1.completed, s1.failure_signals, s1.corrections, s1.review_events]).toEqual(["fix the thing", true, 1, 1, 1]);
+    expect([s1.request, s1.completed, s1.failure_signals, s1.corrections, s1.review_events]).toEqual([
+      "fix the thing",
+      true,
+      1,
+      1,
+      1,
+    ]);
     expect([s1.started, s1.ended]).toEqual([NOW - 14 * D - H, NOW - 14 * D]);
     expect(by.get("s3")!.ended).toBe(NOW - 7 * H);
     expect(by.get("s2")!.completed).toBe(false);

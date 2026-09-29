@@ -4,7 +4,13 @@ import { createHash } from "node:crypto";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { DOCUMENT_FILE, DOCUMENT_REFERENCE, checkProvenance, parseGLocator, parseLocatorField } from "../src/validation/provenance.ts";
+import {
+  DOCUMENT_FILE,
+  DOCUMENT_REFERENCE,
+  checkProvenance,
+  parseGLocator,
+  parseLocatorField,
+} from "../src/validation/provenance.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
 import { writeAdaptations } from "../src/packaging/build.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -46,7 +52,12 @@ function ctxFor(files: Record<string, string>) {
 }
 
 /** A real donor clone: the pin check shells out to git, so the test does too. */
-function makeDonorRepo(root: string, dir: string, files: Record<string, string>, links: Record<string, string> = {}): string {
+function makeDonorRepo(
+  root: string,
+  dir: string,
+  files: Record<string, string>,
+  links: Record<string, string> = {},
+): string {
   const full = join(root, dir);
   mkdirSync(full, { recursive: true });
   const git = (...args: string[]) => execFileSync("git", ["-C", full, ...args], { encoding: "utf8" });
@@ -251,7 +262,8 @@ describe("donor provenance", () => {
   test("a malformed source locator is an error", () => {
     const ctx = ctxFor({
       "provenance/upstream.lock.yaml": lockFor("0".repeat(40)),
-      "provenance/adaptations.d/batch-1.yaml": "adaptations:\n  - path: skills/adapted/SKILL.md\n    source: not-a-locator\n",
+      "provenance/adaptations.d/batch-1.yaml":
+        "adaptations:\n  - path: skills/adapted/SKILL.md\n    source: not-a-locator\n",
       "provenance/conversation-map.yaml": CONVERSATION_MAP,
     });
     expect(checkProvenance(ctx).some((i) => i.rule === "provenance.malformed-source")).toBe(true);
@@ -315,19 +327,26 @@ describe("donor provenance", () => {
 
 describe("conversation provenance", () => {
   test("a conversation-origin entry with a valid in-range locator passes", () => {
-    const ctx = ctxFor({ "provenance/conversation-map.yaml": CONVERSATION_MAP, "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n" });
+    const ctx = ctxFor({
+      "provenance/conversation-map.yaml": CONVERSATION_MAP,
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    });
     expect(checkProvenance(ctx).filter((i) => i.rule.startsWith("provenance.g-locator"))).toEqual([]);
   });
 
   test("a conversation-origin entry with no map row is an error", () => {
-    const ctx = ctxFor({ "provenance/conversation-map.yaml": "capabilities: []\n", "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n" });
+    const ctx = ctxFor({
+      "provenance/conversation-map.yaml": "capabilities: []\n",
+      "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
+    });
     const issue = checkProvenance(ctx).find((i) => i.rule === "provenance.missing-conversation-origin");
     expect(issue?.message).toContain("invented");
   });
 
   test("a locator past the end of the transcript is an error naming the bound", () => {
     const ctx = ctxFor({
-      "provenance/conversation-map.yaml": "capabilities:\n  - id: invented-capability\n    disposition: retained\n    destination: skills/invented\n    origin: conversation\n    locator: G:L9999\n",
+      "provenance/conversation-map.yaml":
+        "capabilities:\n  - id: invented-capability\n    disposition: retained\n    destination: skills/invented\n    origin: conversation\n    locator: G:L9999\n",
       "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
     });
     const issue = checkProvenance(ctx).find((i) => i.rule === "provenance.g-locator-out-of-range");
@@ -337,7 +356,8 @@ describe("conversation provenance", () => {
 
   test("an inverted range is an error", () => {
     const ctx = ctxFor({
-      "provenance/conversation-map.yaml": "capabilities:\n  - id: invented-capability\n    disposition: retained\n    destination: skills/invented\n    origin: conversation\n    locator: G:L200-100\n",
+      "provenance/conversation-map.yaml":
+        "capabilities:\n  - id: invented-capability\n    disposition: retained\n    destination: skills/invented\n    origin: conversation\n    locator: G:L200-100\n",
       "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
     });
     expect(checkProvenance(ctx).some((i) => i.rule === "provenance.g-locator-invalid")).toBe(true);
@@ -536,7 +556,9 @@ ${fields}
       "provenance/conversation-map.yaml": mapWith(fields),
       "provenance/adaptations.d/batch-1.yaml": "adaptations: []\n",
     });
-    return checkProvenance(ctx).filter((i) => i.rule.startsWith("provenance.amalgam") || i.rule === "provenance.fabricated-source");
+    return checkProvenance(ctx).filter(
+      (i) => i.rule.startsWith("provenance.amalgam") || i.rule === "provenance.fabricated-source",
+    );
   }
 
   const WELL_FORMED = `    disposition: retained
@@ -591,7 +613,9 @@ ${fields}
     const issue = amalgamIssues(`    disposition: retained
     destination: skills/invented
     origin: amalgam
-    locator: amalgam skills/adapted + skills/adapted`).find((i) => i.rule === "provenance.amalgam-destination-outside-pair");
+    locator: amalgam skills/adapted + skills/adapted`).find(
+      (i) => i.rule === "provenance.amalgam-destination-outside-pair",
+    );
     expect(issue?.message).toContain("skills/invented");
   });
 
@@ -631,7 +655,9 @@ capabilities:
   });
 
   test("the parenthetical form resolves on its number", () => {
-    expect(rowIssues("plan §9 (Milestone 7)").filter((i) => i.rule === "provenance.document-reference-unresolved")).toEqual([]);
+    expect(
+      rowIssues("plan §9 (Milestone 7)").filter((i) => i.rule === "provenance.document-reference-unresolved"),
+    ).toEqual([]);
   });
 
   test("an absent plan is a skip when a row cites a section, not a pass", () => {
@@ -894,7 +920,8 @@ describe("every keyword the grammar admits resolves somewhere", () => {
   // the thing it claims to cover, and then agrees with it by construction.
   function keywordsInGrammar(): string[] {
     const alternation = /\^\((([a-z]+\|)*[a-z]+)\)/.exec(DOCUMENT_REFERENCE.source);
-    if (alternation?.[1] === undefined) throw new Error("could not read the keyword alternation out of DOCUMENT_REFERENCE");
+    if (alternation?.[1] === undefined)
+      throw new Error("could not read the keyword alternation out of DOCUMENT_REFERENCE");
     return alternation[1].split("|");
   }
 
@@ -982,7 +1009,9 @@ describe("a section cited in a rationale names its document", () => {
   });
 
   test("plan §N resolves and passes", () => {
-    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Recorded conflict: plan §5.5's enum stands.") })).toEqual([]);
+    expect(
+      issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Recorded conflict: plan §5.5's enum stands.") }),
+    ).toEqual([]);
   });
 
   test("plan §N naming a section the plan does not have is an error", () => {
@@ -1058,7 +1087,9 @@ describe("a section cited in a rationale names its document", () => {
   test("with no plan and no rationale citing a section, nothing is skipped", () => {
     // Nothing to check is not the same as something unchecked. A skip here
     // would report an instrument failure on a tree that has no subject for it.
-    expect(issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Severity and owner routing.") }, null)).toEqual([]);
+    expect(
+      issuesFor({ "provenance/adaptations.d/batch-1.yaml": fragment("Severity and owner routing.") }, null),
+    ).toEqual([]);
   });
 
   test("a section reference in a key the merge drops is not this rule's subject", () => {

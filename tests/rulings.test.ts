@@ -26,8 +26,7 @@ const ROW = (id: string, binds = "", scenario = 3, discharged = "[workflow]") =>
   `  - id: ${id}\n    tension: they disagreed\n    ruling: >-\n      this is what the repository does\n    discharged_in: ${discharged}\n${binds}    scenario: ${scenario}\n    coverage: direct\n`;
 
 /** The vocabulary source. Only the one `$defs` entry the discharge check reads. */
-const COMMON = (values: string[]) =>
-  JSON.stringify({ $defs: { skill_section: { enum: values } } }, null, 2);
+const COMMON = (values: string[]) => JSON.stringify({ $defs: { skill_section: { enum: values } } }, null, 2);
 
 /** The ten SKILL.md sections, as schemas/common.schema.json declares them. */
 const SECTIONS = [
@@ -420,7 +419,9 @@ describe("universal is a claim binds has to keep", () => {
   test("a universal kind whose binds group set-equals that catalog section passes", () => {
     const ctx = ctxFor({
       "catalog.yaml": DECLARES_THREE,
-      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[roles]"))),
+      [RULINGS_FILE]: rulings(
+        ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[roles]")),
+      ),
     });
     expect(errors(checkRulings(ctx)).filter((i) => i.rule.startsWith("rulings.universal"))).toEqual([]);
   });
@@ -440,7 +441,9 @@ describe("universal is a claim binds has to keep", () => {
   test("an id in the universal group that the section does not declare is named as extra", () => {
     const ctx = ctxFor({
       "catalog.yaml": DECLARES_THREE,
-      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma, ghost]\n", "[roles]"))),
+      [RULINGS_FILE]: rulings(
+        ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma, ghost]\n", "[roles]")),
+      ),
     });
     const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.universal-binds-mismatch");
     expect(issue?.message).toContain("extra");
@@ -471,7 +474,9 @@ describe("universal is a claim binds has to keep", () => {
   test("a universal kind that is not a catalog section is an error", () => {
     const ctx = ctxFor({
       "catalog.yaml": DECLARES_THREE,
-      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[rolez]"))),
+      [RULINGS_FILE]: rulings(
+        ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[rolez]")),
+      ),
     });
     const issue = errors(checkRulings(ctx)).find((i) => i.rule === "rulings.unknown-universal-kind");
     expect(issue?.message).toContain("rolez");
@@ -488,7 +493,9 @@ describe("universal is a claim binds has to keep", () => {
   test("universal survives the load so another reader sees the claim, not just the census", () => {
     const root = makeTree({
       "catalog.yaml": DECLARES_THREE,
-      [RULINGS_FILE]: rulings(ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[roles]"))),
+      [RULINGS_FILE]: rulings(
+        ROW("governs-every-seat", block("      roles: [alpha, beta, review/gamma]\n", "[roles]")),
+      ),
     });
     expect(loadRulings(root).rows[0]?.universal).toEqual(["roles"]);
   });
@@ -599,7 +606,10 @@ describe("a file with no catalog entry is reachable from binds (AUTHORING 12.3)"
   test("doctrine is not a catalog section, so universal: [doctrine] is still refused", () => {
     const ctx = ctxFor({
       "policies/resolved-conflicts.yaml": rulings(
-        ROW("one-thing", "    universal: [doctrine]\n    binds:\n      doctrine: [protocols/invocation-authority.md]\n"),
+        ROW(
+          "one-thing",
+          "    universal: [doctrine]\n    binds:\n      doctrine: [protocols/invocation-authority.md]\n",
+        ),
       ),
       "protocols/invocation-authority.md": `${DOCTRINE}\nSee ruling \`one-thing\`.\n`,
     });

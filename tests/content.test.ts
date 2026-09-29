@@ -48,12 +48,9 @@ describe("model and pricing denylist", () => {
   });
 
   test("the exempt prefixes are exactly provenance/, research/ and the scanner's own definition", () => {
-    expect([...DENYLIST_EXEMPT_PREFIXES].sort()).toEqual([
-      "provenance/",
-      "research/",
-      SCANNER_DEFINITION_FILE,
-      "tests/",
-    ].sort());
+    expect([...DENYLIST_EXEMPT_PREFIXES].sort()).toEqual(
+      ["provenance/", "research/", SCANNER_DEFINITION_FILE, "tests/"].sort(),
+    );
   });
 
   test("ordinary English in a skill body is not flagged", () => {

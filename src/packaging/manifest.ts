@@ -127,7 +127,10 @@ export const EMPTY_MANIFEST: SkillManifest = {
 };
 
 /** `packaging.hosts[]` as `adapter -> row`, plus the adapters declared twice. */
-function hostRows(packaging: Record<string, unknown>): { hosts: Record<string, HostPackaging>; duplicateHosts: string[] } {
+function hostRows(packaging: Record<string, unknown>): {
+  hosts: Record<string, HostPackaging>;
+  duplicateHosts: string[];
+} {
   const hosts: Record<string, HostPackaging> = {};
   const duplicateHosts: string[] = [];
   const rows = Array.isArray(packaging["hosts"]) ? (packaging["hosts"] as unknown[]) : [];

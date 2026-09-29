@@ -2,7 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { run } from "../../src/learn/core/proc.ts";
-import { catalogSkills, frontmatter, installedSkills, rosterSection, skillsUnder } from "../../src/learn/skills/roster.ts";
+import {
+  catalogSkills,
+  frontmatter,
+  installedSkills,
+  rosterSection,
+  skillsUnder,
+} from "../../src/learn/skills/roster.ts";
 import { skillsLedger } from "../../src/learn/skills/learn.ts";
 import { writeJson } from "../../src/learn/core/store.ts";
 import { gitRepo, scratch, testContext } from "./helpers.ts";
@@ -58,7 +64,9 @@ describe("frontmatter", () => {
   test("folded multi-line description joins into one line, other keys kept", () => {
     const fm = frontmatter(FOLDED);
     expect(fm.name).toBe("careful-review");
-    expect(fm.description).toBe("Review a pushed PR with calibrated severity. Use for “careful review” or “would this pass”.");
+    expect(fm.description).toBe(
+      "Review a pushed PR with calibrated severity. Use for “careful review” or “would this pass”.",
+    );
     expect(fm["allowed-tools"]).toBe("Read");
   });
 
@@ -80,7 +88,9 @@ describe("installed skills", () => {
     expect(skillsUnder(root)).toEqual([join(root, "deslop-voice", "SKILL.md"), join(root, "kill-slop", "SKILL.md")]);
     const skills = installedSkills(root);
     expect(skills.map((s) => s.name)).toEqual(["deslop-voice", "kill-slop"]);
-    expect(skills[1]!.description).toBe("Stop coding agents from shipping sloppy code. Use when the user mentions slop.");
+    expect(skills[1]!.description).toBe(
+      "Stop coding agents from shipping sloppy code. Use when the user mentions slop.",
+    );
   });
 
   test("disable-model-invocation marks a skill human-only", () => {
@@ -116,7 +126,11 @@ describe("rosterSection", () => {
     skill(global, "kill-slop", QUOTED);
     skill(global, "beta", "---\nname: beta\ndescription: A shadowing copy.\n---\n");
     skill(global, "ship-it", "---\nname: ship-it\ndescription: Ship.\ndisable-model-invocation: true\n---\n");
-    skill(join(repo, ".claude", "skills"), "repo-thing", "---\nname: repo-thing\ndescription: Only in this repository.\n---\n");
+    skill(
+      join(repo, ".claude", "skills"),
+      "repo-thing",
+      "---\nname: repo-thing\ndescription: Only in this repository.\n---\n",
+    );
     const text = rosterSection(ctx, repo, { packageRoot: fixtureCatalog(), width: 40 });
     expect(text).toBe(
       [
@@ -147,7 +161,9 @@ describe("rosterSection", () => {
       seen_sessions: {},
     });
     const text = rosterSection(ctx, repo, { packageRoot: fixtureCatalog() });
-    expect(text).toContain(`- rerun-bot-review [sk-001]: Re-request a stale bot review. \`${ledger.path("candidates", "sk-001.md")}\``);
+    expect(text).toContain(
+      `- rerun-bot-review [sk-001]: Re-request a stale bot review. \`${ledger.path("candidates", "sk-001.md")}\``,
+    );
     expect(text).not.toContain("gone");
   });
 

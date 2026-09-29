@@ -23,7 +23,9 @@ function files(dir: string, root = dir): string[] {
 export function treeHash(dir: string): string {
   const outer = createHash("sha256");
   for (const rel of files(dir).sort()) {
-    const inner = createHash("sha256").update(readFileSync(join(dir, rel))).digest("hex");
+    const inner = createHash("sha256")
+      .update(readFileSync(join(dir, rel)))
+      .digest("hex");
     outer.update(`${rel}\0${inner}\n`);
   }
   return outer.digest("hex");
@@ -36,7 +38,8 @@ export interface Pin {
 
 function trusted(path: string, hex: string): Pin | string {
   const found = treeHash(path);
-  if (found !== hex) return `pin ${path} holds content hashing to ${found}; refusing a pin whose contents do not match its name`;
+  if (found !== hex)
+    return `pin ${path} holds content hashing to ${found}; refusing a pin whose contents do not match its name`;
   return { hash: `sha256:${hex}`, path };
 }
 

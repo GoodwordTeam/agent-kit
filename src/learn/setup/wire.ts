@@ -87,7 +87,12 @@ export interface HookDoc {
  * verb whose command line differs (the package moved) is updated in place.
  * Returns true when the document changed.
  */
-export function ensureHook(doc: HookDoc, event: string, command: string, options: { matcher?: string; timeout?: number } = {}): boolean {
+export function ensureHook(
+  doc: HookDoc,
+  event: string,
+  command: string,
+  options: { matcher?: string; timeout?: number } = {},
+): boolean {
   const timeout = options.timeout ?? 10;
   doc.hooks ??= {};
   const entries = (doc.hooks[event] ??= []);
@@ -128,7 +133,9 @@ export function dropHooks(doc: HookDoc): number {
 
 /** Count hooks of ours for one verb under one event. */
 export function countHook(doc: HookDoc, event: string, verb: string): number {
-  return (doc.hooks?.[event] ?? []).flatMap((entry) => entry.hooks ?? []).filter((hook) => ourHookVerb(hook.command) === verb).length;
+  return (doc.hooks?.[event] ?? [])
+    .flatMap((entry) => entry.hooks ?? [])
+    .filter((hook) => ourHookVerb(hook.command) === verb).length;
 }
 
 /**
@@ -277,7 +284,9 @@ export function wireMem(ctx: LearnContext, deps: SetupDeps): boolean {
     return false;
   }
   writeJsonWithBackup(settingsPath, doc);
-  ctx.io.out(`${settingsPath}: CLAUDE_MEM_CONTEXT_OBSERVATIONS=${CONTEXT_OBSERVATIONS}, mode=${String(doc.CLAUDE_MEM_MODE ?? "unchanged")}`);
+  ctx.io.out(
+    `${settingsPath}: CLAUDE_MEM_CONTEXT_OBSERVATIONS=${CONTEXT_OBSERVATIONS}, mode=${String(doc.CLAUDE_MEM_MODE ?? "unchanged")}`,
+  );
   return true;
 }
 
@@ -295,7 +304,9 @@ export function restartWorker(ctx: LearnContext, deps: SetupDeps): void {
   }
   const result = deps.run([runner, script, "restart"]);
   const last = result.stdout.trim().split("\n").at(-1) ?? "";
-  ctx.io.out(`claude-mem worker: ${result.code === 0 && last !== "" ? last : `restart failed; run it by hand: ${runner} ${script} restart`}`);
+  ctx.io.out(
+    `claude-mem worker: ${result.code === 0 && last !== "" ? last : `restart failed; run it by hand: ${runner} ${script} restart`}`,
+  );
 }
 
 export function wire(ctx: LearnContext, deps: SetupDeps, options: WireOptions = {}): number {
@@ -319,7 +330,8 @@ export function wire(ctx: LearnContext, deps: SetupDeps, options: WireOptions = 
   if (mem) {
     const changed = wireMem(ctx, deps);
     if (changed && options.restartWorker === true) restartWorker(ctx, deps);
-    else if (changed) ctx.io.out("restart the claude-mem worker for the new settings to apply (or rerun with --restart-worker)");
+    else if (changed)
+      ctx.io.out("restart the claude-mem worker for the new settings to apply (or rerun with --restart-worker)");
   }
   return 0;
 }

@@ -18,11 +18,19 @@ describe("ak learn hook never fails a session", () => {
 
   test("an unknown hook verb exits 0, never 2", () => {
     const { io } = capture();
-    expect(runLearn(["hook", "renamed-later"], { cwd: scratch(), io, env: { ...process.env, CLAUDE_CONFIG_DIR: scratch() } })).toBe(0);
+    expect(
+      runLearn(["hook", "renamed-later"], {
+        cwd: scratch(),
+        io,
+        env: { ...process.env, CLAUDE_CONFIG_DIR: scratch() },
+      }),
+    ).toBe(0);
   });
 
   test("outside hooks, an unknown verb is still a usage error", () => {
     const { io } = capture();
-    expect(runLearn(["memory", "nope"], { cwd: scratch(), io, env: { ...process.env, CLAUDE_CONFIG_DIR: scratch() } })).toBe(2);
+    expect(
+      runLearn(["memory", "nope"], { cwd: scratch(), io, env: { ...process.env, CLAUDE_CONFIG_DIR: scratch() } }),
+    ).toBe(2);
   });
 });

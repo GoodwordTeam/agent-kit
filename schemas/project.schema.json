@@ -216,7 +216,10 @@
             "additionalProperties": false,
             "required": ["system", "role"],
             "properties": {
-              "system": { "description": "Same id shape as the system of record's, so the exact comparison in `project.single-tracker-system-of-record` cannot be dodged by spelling.", "$ref": "common.schema.json#/$defs/kebab_id" },
+              "system": {
+                "description": "Same id shape as the system of record's, so the exact comparison in `project.single-tracker-system-of-record` cannot be dodged by spelling.",
+                "$ref": "common.schema.json#/$defs/kebab_id"
+              },
               "role": { "const": "projection" },
               "url": { "type": "string", "format": "uri" }
             }
@@ -270,7 +273,10 @@
         "allOf": [
           {
             "description": "Production credentials are a sensitive action (common#/$defs/sensitive_action) and are never available by default (plan 7.2).",
-            "if": { "properties": { "secrets_policy": { "const": "production-approved" } }, "required": ["secrets_policy"] },
+            "if": {
+              "properties": { "secrets_policy": { "const": "production-approved" } },
+              "required": ["secrets_policy"]
+            },
             "then": {
               "required": ["approval"],
               "properties": { "approval": { "properties": { "authority": { "const": "explicit" } } } }

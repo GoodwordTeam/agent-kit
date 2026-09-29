@@ -176,7 +176,8 @@ export const UNIVERSAL_NEVER_ROWS: ReadonlyArray<GovernedNeverRow> = [
   {
     ruling: "closure-requires-independent-verification",
     clauses: ["independent verification closes a finding"],
-    description: "Only independent verification closes a finding: reading a patch is the author's confidence, not a receipt.",
+    description:
+      "Only independent verification closes a finding: reading a patch is the author's confidence, not a receipt.",
   },
   {
     ruling: "required-lane-failure-is-unavailable",
@@ -204,7 +205,8 @@ export const AUTHORSHIP_PLAIN_ROW: GovernedNeverRow = {
 export const AUTHORSHIP_CONVERSE_ROW: GovernedNeverRow = {
   ruling: null,
   clauses: ["a finding, a receipt, a review record or a ticket", "never closes or approves what it produced"],
-  description: "the converse authorship row, naming what this seat writes and ruling out a finding, a receipt, a review record or a ticket",
+  description:
+    "the converse authorship row, naming what this seat writes and ruling out a finding, a receipt, a review record or a ticket",
 };
 
 /**
@@ -224,7 +226,8 @@ export const PRODUCING_SEATS: ReadonlyArray<string> = ["implementer", "plan-revi
 export const STANDARDS_GROUNDING_ROW: GovernedNeverRow = {
   ruling: null,
   clauses: ["cites an actual project rule or returns empty", "never an invented preference"],
-  description: "the standards-grounding row, \"cites an actual project rule or returns empty; an absent standard is never an invented preference\"",
+  description:
+    'the standards-grounding row, "cites an actual project rule or returns empty; an absent standard is never an invented preference"',
 };
 
 /** The seat §12.2 names, because it carries no tier of its own to derive from. */
@@ -303,7 +306,10 @@ function hasAntiRationalizationTable(text: string): boolean {
       .split("|")
       .map((c) => c.trim())
       .filter((c) => c.length > 0);
-    if (cells.length === 3 && cells.every((c, i) => c.toLowerCase() === (ANTI_RATIONALIZATION_COLUMNS[i] as string).toLowerCase())) {
+    if (
+      cells.length === 3 &&
+      cells.every((c, i) => c.toLowerCase() === (ANTI_RATIONALIZATION_COLUMNS[i] as string).toLowerCase())
+    ) {
       return true;
     }
   }
@@ -326,7 +332,9 @@ export function citedRulings(text: string): string[] {
  * matches wherever the author happened to break the line.
  */
 export function neverRows(text: string): string[] {
-  return listItems(text).map(normalizeRow).filter((row) => row.length > 0);
+  return listItems(text)
+    .map(normalizeRow)
+    .filter((row) => row.length > 0);
 }
 
 /**
@@ -356,11 +364,7 @@ export function listItems(text: string): string[] {
 }
 
 function normalizeRow(text: string): string {
-  return text
-    .replace(/[`*_]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  return text.replace(/[`*_]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 /** A row satisfies a governed row when it carries the citation, if any, and every clause. */
@@ -457,12 +461,7 @@ function blockForm(lines: ReadonlyArray<string>): string {
 
 /** Wording without its punctuation or markup: the bar a quoted row is held to. */
 function looseForm(text: string): string {
-  return text
-    .replace(/[`*"]/g, "")
-    .replace(/;/g, ".")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  return text.replace(/[`*"]/g, "").replace(/;/g, ".").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 /**
@@ -805,7 +804,13 @@ function checkOneBody(
   if (section === "skills" || section === "protocols") {
     const skill = section === "skills";
     issues.push(
-      ...checkSections(file, sections, skill ? SKILL_SECTIONS : PROTOCOL_SECTIONS, skill ? SKILL_FORBIDDEN : PROTOCOL_FORBIDDEN, true),
+      ...checkSections(
+        file,
+        sections,
+        skill ? SKILL_SECTIONS : PROTOCOL_SECTIONS,
+        skill ? SKILL_FORBIDDEN : PROTOCOL_FORBIDDEN,
+        true,
+      ),
     );
     const gates = sections.find((s) => s.heading === "## Hard gates");
     if (gates !== undefined && !hasAntiRationalizationTable(gates.text)) {
@@ -994,7 +999,10 @@ export function counterpartFamilies(root: string): {
   for (const raw of lines.slice(start + 2)) {
     const line = raw.trim();
     if (!line.startsWith("|")) break;
-    const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
     const seat = cells[0] === undefined ? [] : [...cells[0].matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
     const counterparts = cells[1] === undefined ? [] : [...cells[1].matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
     if (seat.length !== 1 || seat[0] === undefined || counterparts.length === 0) continue;
@@ -1141,11 +1149,47 @@ function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, 
  * number it cannot read is left alone rather than guessed at.
  */
 const CARDINALS: ReadonlyArray<string> = [
-  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
-  "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three", "twenty-four", "twenty-five",
-  "twenty-six", "twenty-seven", "twenty-eight", "twenty-nine", "thirty", "thirty-one", "thirty-two",
-  "thirty-three", "thirty-four", "thirty-five", "thirty-six", "thirty-seven", "thirty-eight", "thirty-nine", "forty",
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+  "twenty",
+  "twenty-one",
+  "twenty-two",
+  "twenty-three",
+  "twenty-four",
+  "twenty-five",
+  "twenty-six",
+  "twenty-seven",
+  "twenty-eight",
+  "twenty-nine",
+  "thirty",
+  "thirty-one",
+  "thirty-two",
+  "thirty-three",
+  "thirty-four",
+  "thirty-five",
+  "thirty-six",
+  "thirty-seven",
+  "thirty-eight",
+  "thirty-nine",
+  "forty",
 ];
 
 const CENSUS_SENTENCE = /\b([A-Za-z-]+) seats? of ([A-Za-z-]+) are named here\b/;

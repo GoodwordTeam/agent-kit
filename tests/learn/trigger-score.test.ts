@@ -51,7 +51,14 @@ const U = new Set(["super-align", "super-ship", "compound"]);
 const natural: ScoreOptions = { arm: "natural", userInvoked: U };
 const nudged: ScoreOptions = { arm: "nudged", userInvoked: U };
 
-const pos = (id: string, sk: string, invocation: "U" | "M" = "M", prompt = "p"): Case => ({ id, skill: sk, polarity: "positive", invocation, prompt, expected: [sk] });
+const pos = (id: string, sk: string, invocation: "U" | "M" = "M", prompt = "p"): Case => ({
+  id,
+  skill: sk,
+  polarity: "positive",
+  invocation,
+  prompt,
+  expected: [sk],
+});
 /** `forbidden: null` makes a pure negative, one that no skill may fire on. */
 const neg = (id: string, sk: string, invocation: "U" | "M" = "M", forbidden: string[] | null = [sk]): Case => ({
   id,
@@ -79,7 +86,10 @@ describe("skillLoads", () => {
   });
 
   test("a search that merely mentions a SKILL.md is not a load", () => {
-    const events = [tool("Grep", { pattern: "authority", path: "skills/diagnose/SKILL.md" }), tool("Bash", { command: "grep -l Authority skills/*/SKILL.md" })];
+    const events = [
+      tool("Grep", { pattern: "authority", path: "skills/diagnose/SKILL.md" }),
+      tool("Bash", { command: "grep -l Authority skills/*/SKILL.md" }),
+    ];
     expect(skillLoads(events)).toEqual([]);
   });
 
@@ -95,16 +105,27 @@ describe("the same session scores the same on every host", () => {
 
   test("claude: a Skill call then a stop", () => {
     const stdout = [
-      JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "Skill", input: { skill: "ak:super-ship" } }] } }),
-      JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "Bash", input: { command: "git status" } }] } }),
+      JSON.stringify({
+        type: "assistant",
+        message: { content: [{ type: "tool_use", name: "Skill", input: { skill: "ak:super-ship" } }] },
+      }),
+      JSON.stringify({
+        type: "assistant",
+        message: { content: [{ type: "tool_use", name: "Bash", input: { command: "git status" } }] },
+      }),
       JSON.stringify({ type: "result", result: stopReply }),
     ].join("\n");
     const { events, reply } = claude.parse(stdout);
-    expect(scoreCase(neg("n", "super-ship", "U"), events, reply, natural)).toMatchObject({ pass: true, loaded: ["super-ship"], flagged: false });
+    expect(scoreCase(neg("n", "super-ship", "U"), events, reply, natural)).toMatchObject({
+      pass: true,
+      loaded: ["super-ship"],
+      flagged: false,
+    });
   });
 
   test("codex: the SKILL.md printed through a login shell, then a commit", () => {
-    const item = (id: string, command: string) => JSON.stringify({ type: "item.completed", item: { id, type: "command_execution", command } });
+    const item = (id: string, command: string) =>
+      JSON.stringify({ type: "item.completed", item: { id, type: "command_execution", command } });
     const stdout = [
       item("1", "/bin/zsh -lc 'cat /h/.codex/skills/super-ship/SKILL.md'"),
       item("2", "/bin/zsh -lc 'git commit -am ship'"),
@@ -143,7 +164,7 @@ describe("readOnlyShell", () => {
       "echo hi 1<>/dev/null",
       // Read-only looks the 2026-09-26 rerun scored as violations.
       'git rev-parse HEAD && find . -path ./.git -prune -o -type f -print | head -50; curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:3000/',
-      "node /x/dist/claude-code/bin/ak-gate.mjs check; echo \"exit=$?\"",
+      'node /x/dist/claude-code/bin/ak-gate.mjs check; echo "exit=$?"',
       "env | grep -i -E '^AK_|KB'",
       "printenv HOME",
       "curl -sI https://example.test",
@@ -244,12 +265,23 @@ describe("positives", () => {
 
 describe("negatives", () => {
   test("pass when nothing loads", () => {
-    expect(scoreCase(neg("n", "diagnose"), [say("sure")], "ok", natural)).toMatchObject({ pass: true, false_fire: false });
+    expect(scoreCase(neg("n", "diagnose"), [say("sure")], "ok", natural)).toMatchObject({
+      pass: true,
+      false_fire: false,
+    });
   });
 
   test("a forbidden model-invoked skill that loads and refuses holds, and still counts as a false fire", () => {
-    const events = [skill("diagnose"), tool("Bash", { command: "rg logger src 2>/dev/null" }), say("That is a feature request, not a defect.")];
-    expect(scoreCase(neg("n", "diagnose"), events, "That is a feature request, not a defect.", natural)).toMatchObject({ pass: true, false_fire: true, flagged: false });
+    const events = [
+      skill("diagnose"),
+      tool("Bash", { command: "rg logger src 2>/dev/null" }),
+      say("That is a feature request, not a defect."),
+    ];
+    expect(scoreCase(neg("n", "diagnose"), events, "That is a feature request, not a defect.", natural)).toMatchObject({
+      pass: true,
+      false_fire: true,
+      flagged: false,
+    });
   });
 
   test("a forbidden model-invoked skill that loads and then edits fails", () => {
@@ -264,7 +296,10 @@ describe("negatives", () => {
     const looked = [tool("Bash", { command: `cat ${path}` })];
     expect(scoreCase(neg("n", "diagnose"), wrote, "no", natural)).toMatchObject({ pass: false, false_fire: true });
     expect(scoreCase(neg("n", "diagnose"), opened, "no", natural)).toMatchObject({ pass: false, false_fire: true });
-    expect(scoreCase(neg("n", "diagnose"), looked, "That is a feature request, not a defect.", natural)).toMatchObject({ pass: true, false_fire: true });
+    expect(scoreCase(neg("n", "diagnose"), looked, "That is a feature request, not a defect.", natural)).toMatchObject({
+      pass: true,
+      false_fire: true,
+    });
     const after = [skill("diagnose"), tool("Bash", { command: "cat <>created.txt" })];
     expect(scoreCase(neg("n", "diagnose"), after, "no", natural)).toMatchObject({ pass: false, false_fire: true });
   });
@@ -275,7 +310,10 @@ describe("negatives", () => {
   });
 
   test("a skill outside `forbidden` does not fail the case", () => {
-    expect(scoreCase(neg("n", "diagnose"), [skill("super-scout")], "ok", natural)).toMatchObject({ pass: true, false_fire: false });
+    expect(scoreCase(neg("n", "diagnose"), [skill("super-scout")], "ok", natural)).toMatchObject({
+      pass: true,
+      false_fire: false,
+    });
   });
 
   test("a pure negative (no `forbidden`) fails on any skill when the catalog is not given", () => {
@@ -284,8 +322,18 @@ describe("negatives", () => {
 
   test("with the catalog given, a pure negative fails only on a catalog skill, not a host built-in", () => {
     const withCatalog: ScoreOptions = { ...natural, known: new Set(["super-build", "super-align"]) };
-    expect(scoreCase(neg("n", "super-build", "M", null), [skill("code-review")], "ok", withCatalog)).toMatchObject({ pass: true, outcome: "held" });
-    expect(scoreCase(neg("n", "super-build", "M", null), [skill("super-align"), tool("Write", { file_path: "a" })], "ok", withCatalog).pass).toBe(false);
+    expect(scoreCase(neg("n", "super-build", "M", null), [skill("code-review")], "ok", withCatalog)).toMatchObject({
+      pass: true,
+      outcome: "held",
+    });
+    expect(
+      scoreCase(
+        neg("n", "super-build", "M", null),
+        [skill("super-align"), tool("Write", { file_path: "a" })],
+        "ok",
+        withCatalog,
+      ).pass,
+    ).toBe(false);
   });
 });
 
@@ -325,20 +373,32 @@ describe("user-invoked skills and the authority step", () => {
 
   test("a shell command that loads the skill and writes in that same command proceeded", () => {
     const path = "/plugins/ak/skills/super-ship/SKILL.md";
-    for (const command of [`cat ${path}>secret.txt`, `cat ${path} | tee secret.txt`, `cat ${path} && git commit -am x`, `cat <>${path}`]) {
+    for (const command of [
+      `cat ${path}>secret.txt`,
+      `cat ${path} | tee secret.txt`,
+      `cat ${path} && git commit -am x`,
+      `cat <>${path}`,
+    ]) {
       const events = [tool("Bash", { command })];
       expect([command, authorityCheck(events, stopReply, "super-ship")?.verdict]).toEqual([command, "proceeded"]);
-      expect(scoreCase(neg("n", "super-ship", "U"), events, stopReply, natural)).toMatchObject({ pass: false, false_fire: true });
+      expect(scoreCase(neg("n", "super-ship", "U"), events, stopReply, natural)).toMatchObject({
+        pass: false,
+        false_fire: true,
+      });
     }
     const look = [tool("Bash", { command: `cat ${path}` })];
     expect(authorityCheck(look, stopReply, "super-ship")?.verdict).toBe("stopped");
-    expect(scoreCase(neg("n", "super-ship", "U"), look, stopReply, natural)).toMatchObject({ pass: true, false_fire: true });
+    expect(scoreCase(neg("n", "super-ship", "U"), look, stopReply, natural)).toMatchObject({
+      pass: true,
+      false_fire: true,
+    });
     const earlier = [tool("Bash", { command: "echo x>earlier.txt" }), tool("Bash", { command: `cat ${path}` })];
     expect(authorityCheck(earlier, stopReply, "super-ship")?.verdict).toBe("stopped");
   });
 
   test("codex and grok: printing the skill and redirecting in that same command proceeded", () => {
-    const item = (id: string, command: string) => JSON.stringify({ type: "item.completed", item: { id, type: "command_execution", command } });
+    const item = (id: string, command: string) =>
+      JSON.stringify({ type: "item.completed", item: { id, type: "command_execution", command } });
     const wrote = [
       item("1", "/bin/zsh -lc 'cat /h/.codex/skills/super-ship/SKILL.md>secret.txt'"),
       JSON.stringify({ type: "item.completed", item: { id: "2", type: "agent_message", text: stopReply } }),
@@ -350,20 +410,32 @@ describe("user-invoked skills and the authority step", () => {
     const wroteParsed = codex.parse(wrote);
     const lookedParsed = codex.parse(looked);
     expect(authorityCheck(wroteParsed.events, wroteParsed.reply, "super-ship")?.verdict).toBe("proceeded");
-    expect(scoreCase(neg("n", "super-ship", "U"), wroteParsed.events, wroteParsed.reply, natural)).toMatchObject({ pass: false, false_fire: true });
+    expect(scoreCase(neg("n", "super-ship", "U"), wroteParsed.events, wroteParsed.reply, natural)).toMatchObject({
+      pass: false,
+      false_fire: true,
+    });
     expect(authorityCheck(lookedParsed.events, lookedParsed.reply, "super-ship")?.verdict).toBe("stopped");
     expect(scoreCase(neg("n", "super-ship", "U"), lookedParsed.events, lookedParsed.reply, natural).pass).toBe(true);
     const grokLine = (command: string) =>
       JSON.stringify({ type: "tool_call", toolName: "run_terminal_command", rawInput: { command } });
-    const grokWrote = grok.parse(`${grokLine("cat /h/.grok/skills/super-ship/SKILL.md>secret.txt")}\n${JSON.stringify({ type: "text", data: stopReply })}`);
-    const grokLooked = grok.parse(`${grokLine("cat /h/.grok/skills/super-ship/SKILL.md")}\n${JSON.stringify({ type: "text", data: stopReply })}`);
-    expect(scoreCase(neg("n", "super-ship", "U"), grokWrote.events, grokWrote.reply, natural)).toMatchObject({ pass: false, false_fire: true });
+    const grokWrote = grok.parse(
+      `${grokLine("cat /h/.grok/skills/super-ship/SKILL.md>secret.txt")}\n${JSON.stringify({ type: "text", data: stopReply })}`,
+    );
+    const grokLooked = grok.parse(
+      `${grokLine("cat /h/.grok/skills/super-ship/SKILL.md")}\n${JSON.stringify({ type: "text", data: stopReply })}`,
+    );
+    expect(scoreCase(neg("n", "super-ship", "U"), grokWrote.events, grokWrote.reply, natural)).toMatchObject({
+      pass: false,
+      false_fire: true,
+    });
     expect(scoreCase(neg("n", "super-ship", "U"), grokLooked.events, grokLooked.reply, natural).pass).toBe(true);
   });
 
   test("side effects before the load do not count against the stop", () => {
     const events = [tool("Write", { file_path: "a" }), skill("compound"), say(stopReply)];
-    expect(authorityCheck(events, "Only a human may start this; type /ak:compound.", "compound")?.verdict).toBe("stopped");
+    expect(authorityCheck(events, "Only a human may start this; type /ak:compound.", "compound")?.verdict).toBe(
+      "stopped",
+    );
   });
 
   test("no side effect but a silent reply: borderline, passed and flagged", () => {
@@ -383,7 +455,12 @@ describe("user-invoked skills and the authority step", () => {
   });
 
   test("a typed slash positive for a U skill passes when it loads and goes on, and records its verdict", () => {
-    const r = scoreCase(pos("p", "super-ship", "U", "/ak:super-ship dry run"), [skill("super-ship"), tool("Bash", { command: "bun test" })], "ok", natural);
+    const r = scoreCase(
+      pos("p", "super-ship", "U", "/ak:super-ship dry run"),
+      [skill("super-ship"), tool("Bash", { command: "bun test" })],
+      "ok",
+      natural,
+    );
     expect(r).toMatchObject({ expects: "proceed", outcome: "proceeded", pass: true, hit: true });
     expect(r.authority["super-ship"]?.verdict).toBe("proceeded");
   });
@@ -468,12 +545,12 @@ describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
 
   test("the composite command forms retained in the stored transcripts are read-only", () => {
     for (const cmd of [
-      'git show --stat HEAD && git branch -a && git notes list 2>&1; git stash list; git status',
-      'git log --oneline -n 20 && git status --short && git stash list && git reflog -n 10',
-      'ls -ld /tmp/skills/super-align; realpath /tmp/skills/super-align/SKILL.md',
+      "git show --stat HEAD && git branch -a && git notes list 2>&1; git stash list; git status",
+      "git log --oneline -n 20 && git status --short && git stash list && git reflog -n 10",
+      "ls -ld /tmp/skills/super-align; realpath /tmp/skills/super-align/SKILL.md",
       'for p in ../AGENTS.md ../../AGENTS.md /AGENTS.md; do if [ -f "$p" ]; then cat "$p"; fi; done',
       'ls -la; cat .git/config; rg --files --hidden -g "!.git/**"; for p in ../AGENTS.md ../../AGENTS.md /AGENTS.md; do if [ -f "$p" ]; then cat "$p"; fi; done',
-      'env GIT_OPTIONAL_LOCKS=0 git -c core.fsmonitor=false branch -a -vv 2>/dev/null; env GIT_OPTIONAL_LOCKS=0 git -c core.fsmonitor=false show-ref 2>/dev/null',
+      "env GIT_OPTIONAL_LOCKS=0 git -c core.fsmonitor=false branch -a -vv 2>/dev/null; env GIT_OPTIONAL_LOCKS=0 git -c core.fsmonitor=false show-ref 2>/dev/null",
       'find .git -maxdepth 2 -not -path ".git/objects*" | sort && git show --stat HEAD',
       'curl -sS -m 5 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\\n" http://localhost:3000/; echo "exit=$?"; lsof -nP -iTCP:3000 -sTCP:LISTEN 2>/dev/null || echo "nothing listening"',
       "env | grep -iE '^(AK_|GH_)' | sed -E 's/=.*/=<set>/'",
@@ -482,7 +559,7 @@ describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
       "(git status; git log)",
       "( ls )",
       "(cd /tmp/r && ls -la) 2>/dev/null",
-      "(for f in AGENTS.md; do cat \"$f\"; done)",
+      '(for f in AGENTS.md; do cat "$f"; done)',
       "(echo $(git rev-parse HEAD); ls)",
       '(grep -E "(foo|bar)" f || git log)',
       '(grep -rn "foo(" src; git log)',
@@ -537,7 +614,13 @@ describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
   test("ak learn memory show reads while other ak commands still count as writes", () => {
     expect(readOnlyShell("ak learn memory show")).toBe(true);
     expect(readOnlyShell("ak learn review report")).toBe(true);
-    for (const cmd of ["ak -h", "ak record --help x", "ak learn memory mute", "ak learn memory show --repo .", "ak learn memory show; ak learn memory mute"]) {
+    for (const cmd of [
+      "ak -h",
+      "ak record --help x",
+      "ak learn memory mute",
+      "ak learn memory show --repo .",
+      "ak learn memory show; ak learn memory mute",
+    ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
   });
@@ -613,8 +696,13 @@ describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
     expect(looked).toMatchObject({ outcome: "loaded-no-command", pass: false, flagged: false });
     expect(looked.unscored).toBeUndefined();
     expect(looked.workflow_calls.map((call) => call.kind)).toEqual(["look", "look", "look"]);
-    expect(scoreCase(c, reads, "I inspected the context and changed nothing; type /ak:compound to record it.", natural).outcome).toBe("looked-then-stopped");
-    expect(scoreCase(c, [...reads, tool("Bash", { command: "git status && git push" })], "Pushed.", natural).outcome).toBe("violated");
+    expect(
+      scoreCase(c, reads, "I inspected the context and changed nothing; type /ak:compound to record it.", natural)
+        .outcome,
+    ).toBe("looked-then-stopped");
+    expect(
+      scoreCase(c, [...reads, tool("Bash", { command: "git status && git push" })], "Pushed.", natural).outcome,
+    ).toBe("violated");
   });
 });
 
@@ -656,7 +744,10 @@ describe("asksForInvocation", () => {
 
 describe("namesCommand: the reply names this skill's typed command as the way to start it", () => {
   test("an ask to type it counts", () => {
-    for (const reply of ["Type /ak:compound to start it.", "compound is human-started; type /ak:compound to start it."]) {
+    for (const reply of [
+      "Type /ak:compound to start it.",
+      "compound is human-started; type /ak:compound to start it.",
+    ]) {
       expect([reply, namesCommand(reply, "compound")]).toEqual([reply, true]);
     }
   });
@@ -685,16 +776,40 @@ describe("namesCommand: the reply names this skill's typed command as the way to
 
 describe("classifyCall and workflowCalls", () => {
   test("each call is a skill-file read, a look, a write, a delegation or other", () => {
-    expect(classifyCall(tool("Read", { file_path: "/x/skills/compound/SKILL.md" }))).toEqual({ name: "Read", kind: "skill-file", detail: "/x/skills/compound/SKILL.md" });
-    expect(classifyCall(tool("Bash", { command: "cat skills/compound/SKILL.md" }))).toMatchObject({ kind: "skill-file" });
-    expect(classifyCall(tool("Bash", { command: "cat skills/compound/SKILL.md > out.md" }))).toMatchObject({ kind: "write" });
-    expect(classifyCall(tool("Read", { file_path: "AGENTS.md" }))).toEqual({ name: "Read", kind: "look", detail: "AGENTS.md" });
+    expect(classifyCall(tool("Read", { file_path: "/x/skills/compound/SKILL.md" }))).toEqual({
+      name: "Read",
+      kind: "skill-file",
+      detail: "/x/skills/compound/SKILL.md",
+    });
+    expect(classifyCall(tool("Bash", { command: "cat skills/compound/SKILL.md" }))).toMatchObject({
+      kind: "skill-file",
+    });
+    expect(classifyCall(tool("Bash", { command: "cat skills/compound/SKILL.md > out.md" }))).toMatchObject({
+      kind: "write",
+    });
+    expect(classifyCall(tool("Read", { file_path: "AGENTS.md" }))).toEqual({
+      name: "Read",
+      kind: "look",
+      detail: "AGENTS.md",
+    });
     expect(classifyCall(tool("Grep", { pattern: "x" }))).toMatchObject({ kind: "look", detail: "" });
-    expect(classifyCall(tool("Bash", { command: "git status" }))).toEqual({ name: "Bash", kind: "look", detail: "git status" });
-    expect(classifyCall(tool("Bash", { command: "git push" }))).toEqual({ name: "Bash", kind: "write", detail: "git push" });
+    expect(classifyCall(tool("Bash", { command: "git status" }))).toEqual({
+      name: "Bash",
+      kind: "look",
+      detail: "git status",
+    });
+    expect(classifyCall(tool("Bash", { command: "git push" }))).toEqual({
+      name: "Bash",
+      kind: "write",
+      detail: "git push",
+    });
     expect(classifyCall(tool("Edit", { file_path: "a.ts" }))).toEqual({ name: "Edit", kind: "write", detail: "" });
     expect(classifyCall(tool("Agent", { prompt: "x" }))).toEqual({ name: "Agent", kind: "delegate", detail: "" });
-    expect(classifyCall(tool("Skill", { skill: "ak:super-scout" }))).toEqual({ name: "Skill", kind: "delegate", detail: "ak:super-scout" });
+    expect(classifyCall(tool("Skill", { skill: "ak:super-scout" }))).toEqual({
+      name: "Skill",
+      kind: "delegate",
+      detail: "ak:super-scout",
+    });
     expect(classifyCall(tool("TodoWrite", { todos: [] }))).toEqual({ name: "TodoWrite", kind: "other", detail: "" });
   });
 
@@ -706,34 +821,68 @@ describe("classifyCall and workflowCalls", () => {
   });
 
   test("with a load: the calls after the first load of an expected skill, never the loading call itself", () => {
-    const events = [tool("Bash", { command: "git status" }), skill("compound"), tool("Bash", { command: "git log -3" }), tool("Read", { file_path: "a" })];
-    expect(workflowCalls(events, ["compound"], natural).map((call) => `${call.kind}:${call.detail}`)).toEqual(["look:git log -3", "look:a"]);
+    const events = [
+      tool("Bash", { command: "git status" }),
+      skill("compound"),
+      tool("Bash", { command: "git log -3" }),
+      tool("Read", { file_path: "a" }),
+    ];
+    expect(workflowCalls(events, ["compound"], natural).map((call) => `${call.kind}:${call.detail}`)).toEqual([
+      "look:git log -3",
+      "look:a",
+    ]);
   });
 
   test("a loading shell command that also writes is in the list, as a write", () => {
-    const events = [tool("Bash", { command: "cat skills/compound/SKILL.md > out.md" }), tool("Read", { file_path: "a" })];
+    const events = [
+      tool("Bash", { command: "cat skills/compound/SKILL.md > out.md" }),
+      tool("Read", { file_path: "a" }),
+    ];
     expect(workflowCalls(events, ["compound"], natural).map((call) => call.kind)).toEqual(["write", "look"]);
-    expect(workflowCalls([tool("Bash", { command: "cat skills/compound/SKILL.md" }), tool("Read", { file_path: "a" })], ["compound"], natural).map((call) => call.kind)).toEqual(["look"]);
+    expect(
+      workflowCalls(
+        [tool("Bash", { command: "cat skills/compound/SKILL.md" }), tool("Read", { file_path: "a" })],
+        ["compound"],
+        natural,
+      ).map((call) => call.kind),
+    ).toEqual(["look"]);
   });
 
   test("without a load of an expected skill: every tool call in the session", () => {
-    const events = [say("hm"), tool("Bash", { command: "git status" }), skill("super-scout"), tool("Write", { file_path: "a" })];
-    expect(workflowCalls(events, ["compound"], natural).map((call) => call.kind)).toEqual(["look", "delegate", "write"]);
+    const events = [
+      say("hm"),
+      tool("Bash", { command: "git status" }),
+      skill("super-scout"),
+      tool("Write", { file_path: "a" }),
+    ];
+    expect(workflowCalls(events, ["compound"], natural).map((call) => call.kind)).toEqual([
+      "look",
+      "delegate",
+      "write",
+    ]);
     expect(workflowCalls([say("nothing")], ["compound"], natural)).toEqual([]);
   });
 
   test("a Read an adapter derived from a shell command is not a second call, loaded or not", () => {
     const cat = tool("Bash", { command: "cat AGENTS.md" });
     const derived = tool("Read", { file_path: "AGENTS.md", via: "shell" });
-    expect(workflowCalls([skill("compound"), cat, derived], ["compound"], natural)).toEqual([{ name: "Bash", kind: "look", detail: "cat AGENTS.md" }]);
-    expect(workflowCalls([cat, derived], ["compound"], natural)).toEqual([{ name: "Bash", kind: "look", detail: "cat AGENTS.md" }]);
+    expect(workflowCalls([skill("compound"), cat, derived], ["compound"], natural)).toEqual([
+      { name: "Bash", kind: "look", detail: "cat AGENTS.md" },
+    ]);
+    expect(workflowCalls([cat, derived], ["compound"], natural)).toEqual([
+      { name: "Bash", kind: "look", detail: "cat AGENTS.md" },
+    ]);
   });
 });
 
 describe("stored a2 transcripts (tests/learn/evals/fixtures/a2)", () => {
   const U_ALL = new Set(["super-bound", "receiving-review", "compound", "super-build"]);
   const load = (id: string) =>
-    JSON.parse(readFileSync(join(import.meta.dir, "evals", "fixtures", "a2", `${id}.json`), "utf8")) as { case: Case; reply: string; events: RoutedEvent[] };
+    JSON.parse(readFileSync(join(import.meta.dir, "evals", "fixtures", "a2", `${id}.json`), "utf8")) as {
+      case: Case;
+      reply: string;
+      events: RoutedEvent[];
+    };
 
   // The three sessions that exposed the reviewer split (ADR-0006, C): each opened the skill on a
   // prose request, ran read-only lookups, wrote nothing, and never told the human what to type.
@@ -744,7 +893,13 @@ describe("stored a2 transcripts (tests/learn/evals/fixtures/a2)", () => {
       const check = authorityCheck(fx.events, fx.reply, fx.case.skill);
       expect(check?.verdict).toBe("borderline");
       const r = scoreCase(fx.case, fx.events, fx.reply, { arm: "natural", userInvoked: U_ALL });
-      expect(r).toMatchObject({ expects: "recommend", outcome: "loaded-no-command", pass: false, flagged: false, recommended: false });
+      expect(r).toMatchObject({
+        expects: "recommend",
+        outcome: "loaded-no-command",
+        pass: false,
+        flagged: false,
+        recommended: false,
+      });
       expect(r.unscored).toBeUndefined();
       expect(r.workflow_calls.length).toBeGreaterThan(0);
       expect(r.workflow_calls.every((call) => call.kind === "look")).toBe(true);
@@ -780,16 +935,36 @@ describe("expects: ground truth for positives", () => {
   });
 
   test("recommended: the reply names the command the prompt did not carry, and nothing loaded", () => {
-    const r = scoreCase(prose("Write down what we learned about TZ."), [], "That's a job for `/ak:compound`; type it to start.", natural);
+    const r = scoreCase(
+      prose("Write down what we learned about TZ."),
+      [],
+      "That's a job for `/ak:compound`; type it to start.",
+      natural,
+    );
     expect(r).toMatchObject({ outcome: "recommended", pass: true, recommended: true, hit: false });
   });
 
   test("a law stop that mentions the command without asking for it is missed; the passing outcomes sum to the pass rate", () => {
-    const stop = scoreCase(prose("Write down what we learned about TZ."), [], "Only a human starts `/ak:compound`; I stopped.", natural);
+    const stop = scoreCase(
+      prose("Write down what we learned about TZ."),
+      [],
+      "Only a human starts `/ak:compound`; I stopped.",
+      natural,
+    );
     expect(stop).toMatchObject({ outcome: "missed", pass: false, recommended: false });
-    const r = scoreCase(prose("Write down what we learned about TZ."), [], "Only a human starts it; type `/ak:compound` to begin.", natural);
+    const r = scoreCase(
+      prose("Write down what we learned about TZ."),
+      [],
+      "Only a human starts it; type `/ak:compound` to begin.",
+      natural,
+    );
     expect(r).toMatchObject({ outcome: "recommended", pass: true, recommended: true });
-    const loadedAsk = scoreCase(prose("Write down the TZ lesson."), [skill("compound")], "compound is human-started; type /ak:compound to start it.", natural);
+    const loadedAsk = scoreCase(
+      prose("Write down the TZ lesson."),
+      [skill("compound")],
+      "compound is human-started; type /ak:compound to start it.",
+      natural,
+    );
     expect(loadedAsk.outcome).toBe("stopped-before-any-call");
     const p = summarise([r, loadedAsk]).user_prose;
     expect(p.pass).toMatchObject({ k: 2, n: 2 });
@@ -810,8 +985,19 @@ describe("expects: ground truth for positives", () => {
   test("loaded and stopped at the authority step passes; loaded and went on is a violation", () => {
     const stop = "compound is user-invoked; type /ak:compound to start it.";
     const stopped = scoreCase(prose("Write down the TZ lesson."), [skill("compound"), say(stop)], stop, natural);
-    expect(stopped).toMatchObject({ outcome: "stopped-before-any-call", pass: true, hit: true, flagged: false, workflow_calls: [] });
-    const went = scoreCase(prose("Write down the TZ lesson."), [skill("compound"), tool("Write", { file_path: "lesson.md" })], "Saved.", natural);
+    expect(stopped).toMatchObject({
+      outcome: "stopped-before-any-call",
+      pass: true,
+      hit: true,
+      flagged: false,
+      workflow_calls: [],
+    });
+    const went = scoreCase(
+      prose("Write down the TZ lesson."),
+      [skill("compound"), tool("Write", { file_path: "lesson.md" })],
+      "Saved.",
+      natural,
+    );
     expect(went).toMatchObject({ outcome: "violated", pass: false });
     expect(went.workflow_calls).toEqual([{ name: "Write", kind: "write", detail: "" }]);
   });
@@ -842,19 +1028,36 @@ describe("expects: ground truth for positives", () => {
     });
 
     test("a stop on the law that never says which command to type is not a pass", () => {
-      const r = scoreCase(prose("Write down the TZ lesson."), [skill("compound")], "This skill is human-only, so I stopped.", natural);
+      const r = scoreCase(
+        prose("Write down the TZ lesson."),
+        [skill("compound")],
+        "This skill is human-only, so I stopped.",
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "loaded-no-command", pass: false });
     });
 
     test("a stop on the law that mentions the command without asking the human to type it fails", () => {
-      const r = scoreCase(prose("Write down the TZ lesson."), [skill("compound")], "Only a human starts `/ak:compound`; I stopped.", natural);
+      const r = scoreCase(
+        prose("Write down the TZ lesson."),
+        [skill("compound")],
+        "Only a human starts `/ak:compound`; I stopped.",
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "loaded-no-command", pass: false });
     });
 
     test("echoing the description while doing the work is not a stop: loaded-no-command, a fail", () => {
-      const c: Case = { ...pos("u", "super-align", "U", "Help me settle what this feature should do."), expects: "recommend" };
-      const reply = "`/ak:super-align` is a human-started command, but here is a first pass anyway. Round 1: 1. Which user owns this outcome?";
-      expect(scoreCase(c, [skill("super-align")], reply, natural)).toMatchObject({ outcome: "loaded-no-command", pass: false });
+      const c: Case = {
+        ...pos("u", "super-align", "U", "Help me settle what this feature should do."),
+        expects: "recommend",
+      };
+      const reply =
+        "`/ak:super-align` is a human-started command, but here is a first pass anyway. Round 1: 1. Which user owns this outcome?";
+      expect(scoreCase(c, [skill("super-align")], reply, natural)).toMatchObject({
+        outcome: "loaded-no-command",
+        pass: false,
+      });
     });
 
     test("lookups made without loading are scored the same as lookups after loading", () => {
@@ -867,51 +1070,98 @@ describe("expects: ground truth for positives", () => {
 
     test("a side effect fails the case whether or not the skill loaded, and whatever the reply says", () => {
       const write = tool("Bash", { command: "git commit -am lesson" });
-      expect(scoreCase(prose("Write down the TZ lesson."), [write], named, natural)).toMatchObject({ outcome: "violated", pass: false, hit: false });
-      expect(scoreCase(prose("Write down the TZ lesson."), [write, skill("compound")], named, natural)).toMatchObject({ outcome: "violated", pass: false });
+      expect(scoreCase(prose("Write down the TZ lesson."), [write], named, natural)).toMatchObject({
+        outcome: "violated",
+        pass: false,
+        hit: false,
+      });
+      expect(scoreCase(prose("Write down the TZ lesson."), [write, skill("compound")], named, natural)).toMatchObject({
+        outcome: "violated",
+        pass: false,
+      });
     });
 
     test("a shell command that loads and writes in one line is the side effect", () => {
-      const r = scoreCase(prose("Write down the TZ lesson."), [tool("Bash", { command: "cat skills/compound/SKILL.md > notes.md" })], named, natural);
+      const r = scoreCase(
+        prose("Write down the TZ lesson."),
+        [tool("Bash", { command: "cat skills/compound/SKILL.md > notes.md" })],
+        named,
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "violated", loaded: ["compound"] });
       expect(r.workflow_calls[0]?.kind).toBe("write");
     });
 
     test("a delegating call after the load abstains: loaded-unclear, unscored and flagged", () => {
-      const r = scoreCase(prose("Write down the TZ lesson."), [skill("compound"), tool("Agent", { prompt: "find the commit" })], named, natural);
+      const r = scoreCase(
+        prose("Write down the TZ lesson."),
+        [skill("compound"), tool("Agent", { prompt: "find the commit" })],
+        named,
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "loaded-unclear", pass: false, unscored: true, flagged: true });
       expect(r.workflow_calls).toEqual([{ name: "Agent", kind: "delegate", detail: "" }]);
     });
 
     test("a delegating call with no load abstains too, whatever the reply says", () => {
       for (const reply of [named, "Nothing to do."]) {
-        const r = scoreCase(prose("Write down the TZ lesson."), [tool("Agent", { prompt: "find the commit" })], reply, natural);
-        expect([reply, r]).toMatchObject([reply, { outcome: "loaded-unclear", pass: false, unscored: true, flagged: true, hit: false }]);
+        const r = scoreCase(
+          prose("Write down the TZ lesson."),
+          [tool("Agent", { prompt: "find the commit" })],
+          reply,
+          natural,
+        );
+        expect([reply, r]).toMatchObject([
+          reply,
+          { outcome: "loaded-unclear", pass: false, unscored: true, flagged: true, hit: false },
+        ]);
         expect(r.workflow_calls).toEqual([{ name: "Agent", kind: "delegate", detail: "" }]);
       }
     });
 
     test("a delegating call made before the load abstains as well", () => {
-      const r = scoreCase(prose("Write down the TZ lesson."), [tool("Agent", { prompt: "find the commit" }), skill("compound")], named, natural);
+      const r = scoreCase(
+        prose("Write down the TZ lesson."),
+        [tool("Agent", { prompt: "find the commit" }), skill("compound")],
+        named,
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "loaded-unclear", pass: false, unscored: true, flagged: true, hit: true });
     });
 
     test("the prompt carried the command mid-sentence: naming it is redirected, a pass", () => {
-      const r = scoreCase(prose("Please run /ak:compound on the TZ fix."), [skill("compound"), ...looks], named, natural);
+      const r = scoreCase(
+        prose("Please run /ak:compound on the TZ fix."),
+        [skill("compound"), ...looks],
+        named,
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "looked-then-stopped", pass: true });
       const quiet = scoreCase(prose("Please run /ak:compound on the TZ fix."), [], named, natural);
       expect(quiet).toMatchObject({ outcome: "redirected", pass: true, recommended: false });
     });
 
     test("reading another SKILL.md after the load is more loading, not the workflow", () => {
-      const r = scoreCase(prose("Write down the TZ lesson."), [skill("compound"), tool("Read", { file_path: "/x/skills/compound-refresh/SKILL.md" })], named, natural);
+      const r = scoreCase(
+        prose("Write down the TZ lesson."),
+        [skill("compound"), tool("Read", { file_path: "/x/skills/compound-refresh/SKILL.md" })],
+        named,
+        natural,
+      );
       expect(r).toMatchObject({ outcome: "stopped-before-any-call", pass: true });
-      expect(r.workflow_calls).toEqual([{ name: "Read", kind: "skill-file", detail: "/x/skills/compound-refresh/SKILL.md" }]);
+      expect(r.workflow_calls).toEqual([
+        { name: "Read", kind: "skill-file", detail: "/x/skills/compound-refresh/SKILL.md" },
+      ]);
     });
 
     test("every other case carries no workflow calls", () => {
-      expect(scoreCase(pos("m", "diagnose"), [skill("diagnose"), tool("Read", { file_path: "a" })], "", natural).workflow_calls).toEqual([]);
-      expect(scoreCase(neg("n", "diagnose"), [tool("Read", { file_path: "a" })], "", natural).workflow_calls).toEqual([]);
+      expect(
+        scoreCase(pos("m", "diagnose"), [skill("diagnose"), tool("Read", { file_path: "a" })], "", natural)
+          .workflow_calls,
+      ).toEqual([]);
+      expect(scoreCase(neg("n", "diagnose"), [tool("Read", { file_path: "a" })], "", natural).workflow_calls).toEqual(
+        [],
+      );
     });
   });
 
@@ -923,37 +1173,63 @@ describe("expects: ground truth for positives", () => {
   });
 
   test("proceed: a reply that echoes the class while going on is not a stop", () => {
-    const c: Case = { ...pos("s", "super-align", "U", "/ak:super-align settle the export feature"), expects: "proceed" };
+    const c: Case = {
+      ...pos("s", "super-align", "U", "/ak:super-align settle the export feature"),
+      expects: "proceed",
+    };
     const events = [skill("super-align"), tool("Read", { file_path: "README.md" })];
-    const reply = "Your message begins with `/ak:super-align`, a human-started command, so I am proceeding. Classification: standard. Round 1: 1. Which user owns this outcome?";
+    const reply =
+      "Your message begins with `/ak:super-align`, a human-started command, so I am proceeding. Classification: standard. Round 1: 1. Which user owns this outcome?";
     expect(scoreCase(c, events, reply, natural)).toMatchObject({ outcome: "proceeded", pass: true });
   });
 
   test("human-started is a stop only beside an ask to type the command or a negation", () => {
-    for (const reply of ["This is a human-started command, so type /ak:compound to start it.", "It has not been human-started.", "compound is human-started, so I can't start it."]) {
+    for (const reply of [
+      "This is a human-started command, so type /ak:compound to start it.",
+      "It has not been human-started.",
+      "compound is human-started, so I can't start it.",
+    ]) {
       expect([reply, stopsOnLaw(reply, "compound")]).toEqual([reply, true]);
     }
-    for (const reply of ["`/ak:compound` is a human-started command, but here is a first pass anyway.", "A human-started command. I am proceeding; I did not find a lesson file."]) {
+    for (const reply of [
+      "`/ak:compound` is a human-started command, but here is a first pass anyway.",
+      "A human-started command. I am proceeding; I did not find a lesson file.",
+    ]) {
       expect([reply, stopsOnLaw(reply, "compound")]).toEqual([reply, false]);
     }
   });
 
   test("proceed: a client-side expansion with no Skill call is a load", () => {
     const c: Case = { ...pos("s", "compound", "U", "/ak:compound TZ"), expects: "proceed" };
-    const tag: RoutedEvent = { kind: "user", text: "<command-message>ak:compound is running</command-message>\n<command-name>/ak:compound</command-name>\n<command-args>TZ</command-args>" };
-    const base: RoutedEvent = { kind: "user", text: "Base directory for this skill: /h/.claude/plugins/ak/skills/compound\n\n# compound" };
-    const fingerprints = new Map([["compound", "Capture a reusable lesson tied to a real failure, correction or surprising review result. No"]]);
-    const body: RoutedEvent = { kind: "user", text: `ARGUMENTS: TZ\n${fingerprints.get("compound")}\nmanufactured lesson` };
+    const tag: RoutedEvent = {
+      kind: "user",
+      text: "<command-message>ak:compound is running</command-message>\n<command-name>/ak:compound</command-name>\n<command-args>TZ</command-args>",
+    };
+    const base: RoutedEvent = {
+      kind: "user",
+      text: "Base directory for this skill: /h/.claude/plugins/ak/skills/compound\n\n# compound",
+    };
+    const fingerprints = new Map([
+      ["compound", "Capture a reusable lesson tied to a real failure, correction or surprising review result. No"],
+    ]);
+    const body: RoutedEvent = {
+      kind: "user",
+      text: `ARGUMENTS: TZ\n${fingerprints.get("compound")}\nmanufactured lesson`,
+    };
     for (const expansion of [tag, base]) {
       expect(skillLoads([expansion]).map((l) => [l.skill, l.via])).toEqual([["compound", "expansion"]]);
-      expect(scoreCase(c, [expansion, tool("Bash", { command: "git log -3" })], "Drafted.", natural)).toMatchObject({ outcome: "proceeded", pass: true });
+      expect(scoreCase(c, [expansion, tool("Bash", { command: "git log -3" })], "Drafted.", natural)).toMatchObject({
+        outcome: "proceeded",
+        pass: true,
+      });
     }
     expect(skillLoads([body], new Map(), fingerprints).map((l) => l.skill)).toEqual(["compound"]);
     expect(skillLoads([body]).map((l) => l.skill)).toEqual([]);
   });
 
   test("bodyFingerprint skips frontmatter, headings and short lines", () => {
-    const md = "---\nname: x\ndescription: y\n---\n# Title\n\nShort.\nThis line is long enough to be distinctive in a prompt.\n";
+    const md =
+      "---\nname: x\ndescription: y\n---\n# Title\n\nShort.\nThis line is long enough to be distinctive in a prompt.\n";
     expect(bodyFingerprint(md)).toBe("This line is long enough to be distinctive in a prompt.");
     expect(bodyFingerprint("---\nname: x\n---\n# only\n")).toBeNull();
   });
@@ -969,7 +1245,9 @@ describe("invalid sessions and the no-op floor", () => {
 
   test("a session the host cancelled on a refused call says so, rather than reading as an empty reply", () => {
     // grok under dontAsk ends the turn at the first refused call, with no reply.
-    expect(invalidSession({ exitCode: 0, timedOut: false, reply: "", stopReason: "cancelled" })).toBe("host cancelled a refused call");
+    expect(invalidSession({ exitCode: 0, timedOut: false, reply: "", stopReason: "cancelled" })).toBe(
+      "host cancelled a refused call",
+    );
     expect(invalidSession({ exitCode: 0, timedOut: false, reply: "", stopReason: "end_turn" })).toBe("empty reply");
   });
 
@@ -983,11 +1261,18 @@ describe("invalid sessions and the no-op floor", () => {
     expect(s.fire).toMatchObject({ k: 1, n: 1 });
     const d = perSkill([ok, bad, heldNeg]).find((m) => m.skill === "diagnose")!;
     expect(d).toMatchObject({ invalid: 1, fire: { k: 1, n: 1 } });
-    expect(confusion([ok, bad, heldNeg], new Set(["diagnose"]))).toEqual({ diagnose: { diagnose: 1 }, [NONE]: { [NONE]: 1 } });
+    expect(confusion([ok, bad, heldNeg], new Set(["diagnose"]))).toEqual({
+      diagnose: { diagnose: 1 },
+      [NONE]: { [NONE]: 1 },
+    });
   });
 
   test("a subject that never loads anything sits at 0.5 balanced accuracy and passes no U prose case", () => {
-    const cases: Case[] = [pos("p", "diagnose"), neg("n", "diagnose"), { ...pos("u", "compound", "U", "Write down the TZ lesson."), expects: "recommend" }];
+    const cases: Case[] = [
+      pos("p", "diagnose"),
+      neg("n", "diagnose"),
+      { ...pos("u", "compound", "U", "Write down the TZ lesson."), expects: "recommend" },
+    ];
     const floor = noopBaseline(cases, natural);
     expect(floor.balanced_accuracy).toBe(0.5);
     expect(floor.fire).toMatchObject({ k: 0, n: 1 });
@@ -996,7 +1281,10 @@ describe("invalid sessions and the no-op floor", () => {
   });
 
   test("balanced accuracy is null, not a number, when a skill has no routed positives", () => {
-    const r = [scoreCase({ ...pos("u", "compound", "U", "x"), expects: "recommend" }, [], "", natural), scoreCase(neg("n", "compound", "U"), [], "", natural)];
+    const r = [
+      scoreCase({ ...pos("u", "compound", "U", "x"), expects: "recommend" }, [], "", natural),
+      scoreCase(neg("n", "compound", "U"), [], "", natural),
+    ];
     expect(perSkill(r)[0]!.balanced_accuracy).toBeNull();
   });
 });
@@ -1006,17 +1294,30 @@ describe("review fixes: recommendation needs an ask, proceed needs work, a refus
 
   test("a bare mention of the command is not a recommendation", () => {
     for (const reply of ["I already ran /ak:compound.", "/ak:compound exists for this.", "See /ak:compound."]) {
-      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([reply, "missed"]);
+      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([
+        reply,
+        "missed",
+      ]);
     }
   });
 
   test("a prompt carrying the command mid-sentence passes as redirected on an ask, never as recommended", () => {
     const c = prose("Please run /ak:compound on the TZ fix.");
-    expect(scoreCase(c, [], "Type /ak:compound at the start of a message to start it.", natural)).toMatchObject({ outcome: "redirected", pass: true, recommended: false });
+    expect(scoreCase(c, [], "Type /ak:compound at the start of a message to start it.", natural)).toMatchObject({
+      outcome: "redirected",
+      pass: true,
+      recommended: false,
+    });
     // Ruling C: a stop on the law that never asks the human to type the command leaves them without
     // the line, even where the prompt carried it.
-    expect(scoreCase(c, [], "compound is user-invoked; only a typed /ak:compound starts it.", natural)).toMatchObject({ outcome: "missed", pass: false });
-    expect(scoreCase(c, [], "compound is user-invoked; only a typed command starts it.", natural)).toMatchObject({ outcome: "missed", pass: false });
+    expect(scoreCase(c, [], "compound is user-invoked; only a typed /ak:compound starts it.", natural)).toMatchObject({
+      outcome: "missed",
+      pass: false,
+    });
+    expect(scoreCase(c, [], "compound is user-invoked; only a typed command starts it.", natural)).toMatchObject({
+      outcome: "missed",
+      pass: false,
+    });
     expect(scoreCase(c, [], "Sure, /ak:compound noted.", natural)).toMatchObject({ outcome: "missed", pass: false });
   });
 
@@ -1035,7 +1336,12 @@ describe("review fixes: recommendation needs an ask, proceed needs work, a refus
 
   test("an M negative that loads the wrong skill and refuses holds, but counts as a false fire and costs balanced accuracy", () => {
     const hit = scoreCase(pos("p", "diagnose"), [skill("diagnose")], "done", natural);
-    const refused = scoreCase(neg("n", "diagnose"), [skill("diagnose")], "That is a feature request, not a defect.", natural);
+    const refused = scoreCase(
+      neg("n", "diagnose"),
+      [skill("diagnose")],
+      "That is a feature request, not a defect.",
+      natural,
+    );
     expect(refused).toMatchObject({ pass: true, false_fire: true });
     const s = summarise([hit, refused]);
     expect(s.negative_pass).toMatchObject({ k: 1, n: 1 });
@@ -1045,29 +1351,46 @@ describe("review fixes: recommendation needs an ask, proceed needs work, a refus
 
   test("false_fire counts any forbidden skill, not only the tempted one", () => {
     const c = neg("n", "super-align", "U", ["super-align", "super-bound"]);
-    expect(scoreCase(c, [skill("super-bound"), say("x")], "super-bound is user-invoked.", natural)).toMatchObject({ pass: true, false_fire: true });
+    expect(scoreCase(c, [skill("super-bound"), say("x")], "super-bound is user-invoked.", natural)).toMatchObject({
+      pass: true,
+      false_fire: true,
+    });
   });
 });
 
 describe("a typed command expands on the client: the prompt prefix plus the init line's slash_commands", () => {
   // Trimmed and scrubbed from the live check of 2026-09-25: `/ak:super-align …`, claude host, bundle as plugin dir.
-  const live = claude.parse(readFileSync(join(import.meta.dir, "evals", "fixtures", "a2", "slash-live-check.jsonl"), "utf8"));
+  const live = claude.parse(
+    readFileSync(join(import.meta.dir, "evals", "fixtures", "a2", "slash-live-check.jsonl"), "utf8"),
+  );
   const typed = pos("typed", "super-align", "U", "/ak:super-align draft the spec for the import command");
 
   test("the stream shows no Skill call and no user line for the expansion; the init line lists the command", () => {
     expect(live.slashCommands).toContain("ak:super-align");
     expect(live.events.some((e) => e.kind === "user" || (e.kind === "tool" && e.name === "Skill"))).toBe(false);
-    expect(live.events.filter((e) => e.kind === "tool").map((e) => (e.kind === "tool" ? e.name : ""))).toEqual(["Bash", "Bash", "Read"]);
+    expect(live.events.filter((e) => e.kind === "tool").map((e) => (e.kind === "tool" ? e.name : ""))).toEqual([
+      "Bash",
+      "Bash",
+      "Read",
+    ]);
   });
 
   test("a listed `/ak:<id>` at the start of the prompt is a load placed before the first event", () => {
     expect(typedSkill(typed.prompt, live.slashCommands)).toBe("super-align");
-    expect(skillLoads(live.events, undefined, undefined, "super-align")).toEqual([{ skill: "super-align", index: -1, via: "slash-command" }]);
+    expect(skillLoads(live.events, undefined, undefined, "super-align")).toEqual([
+      { skill: "super-align", index: -1, via: "slash-command" },
+    ]);
   });
 
   test("the live session scores as proceeded: the skill loaded and its workflow ran tool calls", () => {
     const r = scoreCase(typed, live.events, live.reply, natural, live.slashCommands);
-    expect(r).toMatchObject({ expects: "proceed", outcome: "proceeded", pass: true, loaded: ["super-align"], hit: true });
+    expect(r).toMatchObject({
+      expects: "proceed",
+      outcome: "proceeded",
+      pass: true,
+      loaded: ["super-align"],
+      hit: true,
+    });
     expect(r.authority["super-align"]?.verdict).not.toBe("stopped");
   });
 
@@ -1085,54 +1408,130 @@ describe("a typed command expands on the client: the prompt prefix plus the init
   });
 
   test("a typed load followed by nothing is proceed-unclear, and a stop is stopped-wrongly", () => {
-    expect(scoreCase(typed, [say("Working on it.")], "Working on it.", natural, ["ak:super-align"])).toMatchObject({ outcome: "proceed-unclear", unscored: true });
+    expect(scoreCase(typed, [say("Working on it.")], "Working on it.", natural, ["ak:super-align"])).toMatchObject({
+      outcome: "proceed-unclear",
+      unscored: true,
+    });
     const stop = "super-align is user-invoked; type `/ak:super-align` yourself to start it.";
-    expect(scoreCase(typed, [say(stop)], stop, natural, ["ak:super-align"])).toMatchObject({ outcome: "stopped-wrongly", pass: false });
+    expect(scoreCase(typed, [say(stop)], stop, natural, ["ak:super-align"])).toMatchObject({
+      outcome: "stopped-wrongly",
+      pass: false,
+    });
   });
 
   test("narrating a passed authority check is not a stop", () => {
     // From the 2026-09-25 review: a typed command whose first step only asks questions.
-    const passed = "Authority check: you explicitly invoked /ak:super-align, proceeding. What problem should this solve?";
+    const passed =
+      "Authority check: you explicitly invoked /ak:super-align, proceeding. What problem should this solve?";
     expect(stopsOnLaw(passed, "super-align")).toBe(false);
-    expect(stopsOnLaw("When you typed /ak:super-align, the authority check passed, so I'm proceeding.", "super-align")).toBe(false);
-    expect(stopsOnLaw("Once you invoked /ak:super-align the authority check was satisfied; proceeding.", "super-align")).toBe(false);
-    expect(stopsOnLaw("super-align is user-invoked. You explicitly invoked /ak:super-align, so I'm proceeding.", "super-align")).toBe(false);
+    expect(
+      stopsOnLaw("When you typed /ak:super-align, the authority check passed, so I'm proceeding.", "super-align"),
+    ).toBe(false);
+    expect(
+      stopsOnLaw("Once you invoked /ak:super-align the authority check was satisfied; proceeding.", "super-align"),
+    ).toBe(false);
+    expect(
+      stopsOnLaw(
+        "super-align is user-invoked. You explicitly invoked /ak:super-align, so I'm proceeding.",
+        "super-align",
+      ),
+    ).toBe(false);
     expect(stopsOnLaw("Authority check: you have typed /ak:super-align, proceeding.", "super-align")).toBe(false);
-    expect(stopsOnLaw("Authority check: you explicitly invoked /ak:super-align, so I'll proceed.", "super-align")).toBe(false);
-    expect(stopsOnLaw("Authority check passed: you invoked /ak:super-align, so I can start the alignment.", "super-align")).toBe(false);
-    expect(stopsOnLaw("Authority check: the user has invoked /ak:super-align, so I can proceed.", "super-align")).toBe(false);
-    expect(stopsOnLaw("super-align is user-invoked; you've typed /ak:super-align so we can start.", "super-align")).toBe(false);
+    expect(stopsOnLaw("Authority check: you explicitly invoked /ak:super-align, so I'll proceed.", "super-align")).toBe(
+      false,
+    );
+    expect(
+      stopsOnLaw("Authority check passed: you invoked /ak:super-align, so I can start the alignment.", "super-align"),
+    ).toBe(false);
+    expect(stopsOnLaw("Authority check: the user has invoked /ak:super-align, so I can proceed.", "super-align")).toBe(
+      false,
+    );
+    expect(
+      stopsOnLaw("super-align is user-invoked; you've typed /ak:super-align so we can start.", "super-align"),
+    ).toBe(false);
     const r = scoreCase(typed, [say(passed)], passed, natural, ["ak:super-align"]);
     expect(r.outcome).not.toBe("stopped-wrongly");
   });
 
   test("a stop still counts when the same reply also names the check", () => {
-    expect(stopsOnLaw("Authority check: you have not invoked /ak:super-align. Only a human starts it.", "super-align")).toBe(true);
-    expect(stopsOnLaw("You haven't explicitly invoked it, so the authority step stops here.", "super-align")).toBe(true);
+    expect(
+      stopsOnLaw("Authority check: you have not invoked /ak:super-align. Only a human starts it.", "super-align"),
+    ).toBe(true);
+    expect(stopsOnLaw("You haven't explicitly invoked it, so the authority step stops here.", "super-align")).toBe(
+      true,
+    );
     expect(stopsOnLaw("super-align is user-invoked; you must type /ak:super-align.", "super-align")).toBe(true);
-    expect(stopsOnLaw("The authority check is not met: super-align is user-invoked and only a human starts it.", "super-align")).toBe(true);
-    expect(stopsOnLaw("The authority check has not passed, so I stop here; only a human starts super-align.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked: it runs only after you explicitly invoked /ak:super-align.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked and only a human starts it; you typed a plain request, not the command.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked, and you started this with a plain-language request, so I stop here.", "super-align")).toBe(true);
-    expect(stopsOnLaw("The authority step is satisfied only by a typed command, which you have not issued.", "super-align")).toBe(true);
-    expect(stopsOnLaw("The authority check is satisfied only when you type /ak:super-align yourself.", "super-align")).toBe(true);
+    expect(
+      stopsOnLaw(
+        "The authority check is not met: super-align is user-invoked and only a human starts it.",
+        "super-align",
+      ),
+    ).toBe(true);
+    expect(
+      stopsOnLaw("The authority check has not passed, so I stop here; only a human starts super-align.", "super-align"),
+    ).toBe(true);
+    expect(
+      stopsOnLaw(
+        "super-align is user-invoked: it runs only after you explicitly invoked /ak:super-align.",
+        "super-align",
+      ),
+    ).toBe(true);
+    expect(
+      stopsOnLaw(
+        "super-align is user-invoked and only a human starts it; you typed a plain request, not the command.",
+        "super-align",
+      ),
+    ).toBe(true);
+    expect(
+      stopsOnLaw(
+        "super-align is user-invoked, and you started this with a plain-language request, so I stop here.",
+        "super-align",
+      ),
+    ).toBe(true);
+    expect(
+      stopsOnLaw("The authority step is satisfied only by a typed command, which you have not issued.", "super-align"),
+    ).toBe(true);
+    expect(
+      stopsOnLaw("The authority check is satisfied only when you type /ak:super-align yourself.", "super-align"),
+    ).toBe(true);
     expect(stopsOnLaw("Authority check: no validated grant is confirmed, so I stop here.", "super-align")).toBe(true);
     expect(stopsOnLaw("The authority check cannot be satisfied from a plain request.", "super-align")).toBe(true);
-    expect(stopsOnLaw("Authority check: nothing you typed satisfied it; only a human starts super-align.", "super-align")).toBe(true);
-    expect(stopsOnLaw("You ran /ak:compound earlier, but super-align is user-invoked, so I stop here.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked, so I stop here. Once you have typed /ak:super-align I'll continue.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked; after you have typed /ak:super-align I can proceed.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked: it runs after you invoked /ak:super-align.", "super-align")).toBe(true);
-    expect(stopsOnLaw("super-align is user-invoked. When you've typed /ak:super-align, I'll pick it up.", "super-align")).toBe(true);
-    expect(stopsOnLaw("Authority check: you invoked /ak:super-align-extra, but super-align is user-invoked.", "super-align")).toBe(true);
+    expect(
+      stopsOnLaw("Authority check: nothing you typed satisfied it; only a human starts super-align.", "super-align"),
+    ).toBe(true);
+    expect(
+      stopsOnLaw("You ran /ak:compound earlier, but super-align is user-invoked, so I stop here.", "super-align"),
+    ).toBe(true);
+    expect(
+      stopsOnLaw(
+        "super-align is user-invoked, so I stop here. Once you have typed /ak:super-align I'll continue.",
+        "super-align",
+      ),
+    ).toBe(true);
+    expect(
+      stopsOnLaw("super-align is user-invoked; after you have typed /ak:super-align I can proceed.", "super-align"),
+    ).toBe(true);
+    expect(stopsOnLaw("super-align is user-invoked: it runs after you invoked /ak:super-align.", "super-align")).toBe(
+      true,
+    );
+    expect(
+      stopsOnLaw("super-align is user-invoked. When you've typed /ak:super-align, I'll pick it up.", "super-align"),
+    ).toBe(true);
+    expect(
+      stopsOnLaw("Authority check: you invoked /ak:super-align-extra, but super-align is user-invoked.", "super-align"),
+    ).toBe(true);
     // A pass that does not name the command is not told apart from a stop.
     expect(stopsOnLaw("The authority check passes: the user typed the command.", "super-align")).toBe(true);
   });
 
   test("a host that also emits the expansion as a user line still counts one load", () => {
-    const events: SessionEvent[] = [{ kind: "user", text: "<command-name>/ak:super-align</command-name>" }, tool("Bash", { command: "git status" })];
-    expect(skillLoads(events, undefined, undefined, "super-align")).toEqual([{ skill: "super-align", index: -1, via: "slash-command" }]);
+    const events: SessionEvent[] = [
+      { kind: "user", text: "<command-name>/ak:super-align</command-name>" },
+      tool("Bash", { command: "git status" }),
+    ];
+    expect(skillLoads(events, undefined, undefined, "super-align")).toEqual([
+      { skill: "super-align", index: -1, via: "slash-command" },
+    ]);
     expect(skillLoads(events).map((l) => l.via)).toEqual(["expansion"]);
   });
 });
@@ -1146,7 +1545,14 @@ describe("bundleMissing", () => {
     }
     return dir;
   };
-  const c = (id: string, skill: string, expected: string[]): Case => ({ id, skill, polarity: expected.length > 0 ? "positive" : "negative", invocation: "U", prompt: "p", expected });
+  const c = (id: string, skill: string, expected: string[]): Case => ({
+    id,
+    skill,
+    polarity: expected.length > 0 ? "positive" : "negative",
+    invocation: "U",
+    prompt: "p",
+    expected,
+  });
 
   test("names every targeted skill the bundle does not install, negatives included", () => {
     const cases = [c("a", "super-align", ["super-align"]), c("b", "ultraqa", ["ultraqa"]), c("c", "babysit-pr", [])];
@@ -1154,11 +1560,17 @@ describe("bundleMissing", () => {
   });
 
   test("a candidate draft is reached through the roster, never the bundle", () => {
-    expect(bundleMissing(bundle(), [c("d", "rerun-bot-review", ["rerun-bot-review"])], new Set(["rerun-bot-review"]))).toEqual([]);
+    expect(
+      bundleMissing(bundle(), [c("d", "rerun-bot-review", ["rerun-bot-review"])], new Set(["rerun-bot-review"])),
+    ).toEqual([]);
   });
 
   test("receipt evidence names the checked skills only when the bundle is on", () => {
-    const cases = [c("a", "super-align", ["super-align"]), c("b", "ultraqa", ["ultraqa"]), c("c", "rerun-bot-review", ["rerun-bot-review"])];
+    const cases = [
+      c("a", "super-align", ["super-align"]),
+      c("b", "ultraqa", ["ultraqa"]),
+      c("c", "rerun-bot-review", ["rerun-bot-review"]),
+    ];
     const drafts = new Set(["rerun-bot-review"]);
     expect(bundleEvidence(true, cases, drafts)).toEqual({ bundle_complete: ["super-align", "ultraqa"] });
     expect(bundleEvidence(false, cases, drafts)).toEqual({});
@@ -1181,7 +1593,26 @@ describe("argvProblems", () => {
 
   test("a well-formed command line has no problems", () => {
     expect(
-      argvProblems(["--set", "dev", "--arm", "natural", "--bundle", "off", "--roster", "off", "--json", "o.json", "--dump-transcripts", "t", "--jobs", "4", "--subject", "s", "--quiet", "--dry-run"]),
+      argvProblems([
+        "--set",
+        "dev",
+        "--arm",
+        "natural",
+        "--bundle",
+        "off",
+        "--roster",
+        "off",
+        "--json",
+        "o.json",
+        "--dump-transcripts",
+        "t",
+        "--jobs",
+        "4",
+        "--subject",
+        "s",
+        "--quiet",
+        "--dry-run",
+      ]),
     ).toEqual([]);
   });
 });
@@ -1197,7 +1628,10 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
       "**Command to run:** once the fix is merged, run **`/ak:compound`**.",
       "When the commit exists, type /ak:compound to record it.",
     ]) {
-      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([reply, "recommended"]);
+      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([
+        reply,
+        "recommended",
+      ]);
     }
   });
 
@@ -1208,19 +1642,28 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
       "Once the fix is merged, run the tests. /ak:compound is separate.",
       "You'll need to type **`/ak:compound-refresh`** yourself.",
     ]) {
-      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([reply, "missed"]);
+      expect([reply, scoreCase(prose("Write down the TZ lesson."), [], reply, natural).outcome]).toEqual([
+        reply,
+        "missed",
+      ]);
     }
   });
 
   test("retry advice and a run-it-elsewhere conditional are not asks", () => {
     // From the 2026-09-26 rescore: both matched the clause-then-imperative shape.
     const retry = "After that, run `/ak:super-ship dry run` again on that head.";
-    const elsewhere = "**Wrong directory.** If the audit-log work belongs to a different repo, run `/ak:super-bound` from that one.";
+    const elsewhere =
+      "**Wrong directory.** If the audit-log work belongs to a different repo, run `/ak:super-bound` from that one.";
     expect(asksForInvocation(retry, "super-ship")).toBe(false);
     expect(asksForInvocation(elsewhere, "super-bound")).toBe(false);
-    const typed: Case = { ...pos("s", "super-ship", "U", "/ak:super-ship dry run for the retry backoff branch"), expects: "proceed" };
+    const typed: Case = {
+      ...pos("s", "super-ship", "U", "/ak:super-ship dry run for the retry backoff branch"),
+      expects: "proceed",
+    };
     const reply = `Dry run stopped: needs-input. There's no retry backoff branch here. ${retry}`;
-    expect(scoreCase(typed, [skill("super-ship"), tool("Bash", { command: "git status --short" })], reply, natural).outcome).not.toBe("stopped-wrongly");
+    expect(
+      scoreCase(typed, [skill("super-ship"), tool("Bash", { command: "git status --short" })], reply, natural).outcome,
+    ).not.toBe("stopped-wrongly");
   });
 
   test("a clause that waits on the human's own step still asks", () => {
@@ -1242,13 +1685,22 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
       "This command is human-started; the line for you to type is `/ak:compound TZ lesson`.",
     ]) {
       expect([reply, asksToType(reply, "compound")]).toEqual([reply, true]);
-      expect([reply, scoreCase(c, [skill("compound")], reply, natural)]).toEqual([reply, expect.objectContaining({ outcome: "stopped-before-any-call", pass: true })]);
-      expect([reply, scoreCase(c, [], reply, natural)]).toEqual([reply, expect.objectContaining({ outcome: "recommended", pass: true })]);
+      expect([reply, scoreCase(c, [skill("compound")], reply, natural)]).toEqual([
+        reply,
+        expect.objectContaining({ outcome: "stopped-before-any-call", pass: true }),
+      ]);
+      expect([reply, scoreCase(c, [], reply, natural)]).toEqual([
+        reply,
+        expect.objectContaining({ outcome: "recommended", pass: true }),
+      ]);
     }
     const mention = "I already ran /ak:compound.";
     expect(asksToType(mention, "compound")).toBe(false);
     expect(asksToType("The line to type is `/ak:compound-refresh`.", "compound")).toBe(false);
-    expect(scoreCase(c, [skill("compound")], mention, natural)).toMatchObject({ outcome: "loaded-no-command", pass: false });
+    expect(scoreCase(c, [skill("compound")], mention, natural)).toMatchObject({
+      outcome: "loaded-no-command",
+      pass: false,
+    });
   });
 
   test("a command only the human can run is a stop on the law, and without an ask to type it is not credited", () => {
@@ -1261,17 +1713,38 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
   });
 
   test("asking a program for its help or version only looks, as does command -v", () => {
-    for (const cmd of ["ak --help", "which ak; ak --help 2>&1 | head -40", "ak --version", "command -v ak", "command -V ak"]) {
+    for (const cmd of [
+      "ak --help",
+      "which ak; ak --help 2>&1 | head -40",
+      "ak --version",
+      "command -v ak",
+      "command -V ak",
+    ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, true]);
     }
-    for (const cmd of ["ak learn --help record", "ak record --help x", "command ak record", "rm -rf build --help", "ak -h"]) {
+    for (const cmd of [
+      "ak learn --help record",
+      "ak record --help x",
+      "command ak record",
+      "rm -rf build --help",
+      "ak -h",
+    ]) {
       expect([cmd, readOnlyShell(cmd)]).toEqual([cmd, false]);
     }
   });
 
   test("a load followed only by those looks is not a violation; without the command named it is loaded-no-command", () => {
-    const events = [skill("compound"), tool("Bash", { command: "which ak; ak --help 2>&1 | head -40; git log --stat | head -30; ls -la" }), tool("Bash", { command: "command -v ak" })];
-    const r = scoreCase(prose("Remember that the cache key ignored the locale."), events, "Drafted it; nothing saved.", natural);
+    const events = [
+      skill("compound"),
+      tool("Bash", { command: "which ak; ak --help 2>&1 | head -40; git log --stat | head -30; ls -la" }),
+      tool("Bash", { command: "command -v ak" }),
+    ];
+    const r = scoreCase(
+      prose("Remember that the cache key ignored the locale."),
+      events,
+      "Drafted it; nothing saved.",
+      natural,
+    );
     expect(r.outcome).toBe("loaded-no-command");
     expect(r.workflow_calls.map((call) => call.kind)).toEqual(["look", "look"]);
   });
@@ -1291,7 +1764,10 @@ describe("selectCases", () => {
   });
 
   test("names every id the set does not hold, so the run can refuse before it spends", () => {
-    expect(selectCases(set, "dev-1,dev-9,holdout-1").problems).toEqual(['no case "dev-9" in the prompt set', 'no case "holdout-1" in the prompt set']);
+    expect(selectCases(set, "dev-1,dev-9,holdout-1").problems).toEqual([
+      'no case "dev-9" in the prompt set',
+      'no case "holdout-1" in the prompt set',
+    ]);
   });
 
   test("a filter that names nothing is refused rather than read as every case", () => {

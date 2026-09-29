@@ -94,9 +94,7 @@ export interface LoadResult {
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function asStringList(value: unknown): string[] {
@@ -122,7 +120,16 @@ export function loadCatalog(root: string): LoadResult {
   const path = join(root, "catalog.yaml");
   const text = readTextIfPresent(path);
   if (text === null) {
-    return { catalog: null, issues: [error("catalog.missing", "catalog.yaml", "catalog.yaml not found; it is the source of truth for what must exist.")] };
+    return {
+      catalog: null,
+      issues: [
+        error(
+          "catalog.missing",
+          "catalog.yaml",
+          "catalog.yaml not found; it is the source of truth for what must exist.",
+        ),
+      ],
+    };
   }
 
   let doc: unknown;
@@ -130,7 +137,10 @@ export function loadCatalog(root: string): LoadResult {
     doc = parseYaml(text);
   } catch (cause) {
     const reason = cause instanceof Error ? cause.message : String(cause);
-    return { catalog: null, issues: [error("catalog.unparseable", "catalog.yaml", `catalog.yaml is not valid YAML: ${reason}`)] };
+    return {
+      catalog: null,
+      issues: [error("catalog.unparseable", "catalog.yaml", `catalog.yaml is not valid YAML: ${reason}`)],
+    };
   }
 
   const root_ = asRecord(doc);
@@ -170,7 +180,9 @@ export function loadCatalog(root: string): LoadResult {
         continue;
       }
       if (seen.has(id)) {
-        issues.push(error("catalog.duplicate-id", "catalog.yaml", `Section '${section}' declares id '${id}' more than once.`));
+        issues.push(
+          error("catalog.duplicate-id", "catalog.yaml", `Section '${section}' declares id '${id}' more than once.`),
+        );
         continue;
       }
       seen.add(id);
@@ -180,7 +192,11 @@ export function loadCatalog(root: string): LoadResult {
       if (statusRaw === "authored") status = "authored";
       else if (statusRaw !== "contract" && statusRaw !== undefined) {
         issues.push(
-          warning("catalog.unknown-status", "catalog.yaml", `Entry '${section}/${id}' has status '${String(statusRaw)}'; expected 'contract' or 'authored'.`),
+          warning(
+            "catalog.unknown-status",
+            "catalog.yaml",
+            `Entry '${section}/${id}' has status '${String(statusRaw)}'; expected 'contract' or 'authored'.`,
+          ),
         );
       }
 

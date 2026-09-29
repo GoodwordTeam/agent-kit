@@ -66,7 +66,9 @@ export function compileSchemas(root: string): SchemaSet {
     try {
       schema = JSON.parse(text);
     } catch (cause) {
-      issues.push(error("schemas.unparseable", file, `Not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`));
+      issues.push(
+        error("schemas.unparseable", file, `Not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`),
+      );
       continue;
     }
     if (schema === null || typeof schema !== "object") {
@@ -80,7 +82,13 @@ export function compileSchemas(root: string): SchemaSet {
     try {
       ajv.addSchema(schema);
     } catch (cause) {
-      issues.push(error("schemas.uncompilable", file, `ajv rejected the schema: ${cause instanceof Error ? cause.message : String(cause)}`));
+      issues.push(
+        error(
+          "schemas.uncompilable",
+          file,
+          `ajv rejected the schema: ${cause instanceof Error ? cause.message : String(cause)}`,
+        ),
+      );
     }
   }
 
@@ -92,7 +100,13 @@ export function compileSchemas(root: string): SchemaSet {
       if (validate !== undefined) validators.set(id, validate as ValidateFunction);
       else issues.push(error("schemas.uncompilable", file, `No compiled validator for $id ${$id}.`));
     } catch (cause) {
-      issues.push(error("schemas.uncompilable", file, `ajv could not compile it: ${cause instanceof Error ? cause.message : String(cause)}`));
+      issues.push(
+        error(
+          "schemas.uncompilable",
+          file,
+          `ajv could not compile it: ${cause instanceof Error ? cause.message : String(cause)}`,
+        ),
+      );
     }
   }
 
@@ -123,7 +137,9 @@ function loadDocument(root: string, file: string): { value: unknown } | { failur
     const value = file.endsWith(".json") ? JSON.parse(text) : parseYaml(text);
     return { value };
   } catch (cause) {
-    return { failure: error("schemas.document-unparseable", file, cause instanceof Error ? cause.message : String(cause)) };
+    return {
+      failure: error("schemas.document-unparseable", file, cause instanceof Error ? cause.message : String(cause)),
+    };
   }
 }
 

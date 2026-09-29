@@ -19,7 +19,8 @@ const BULLET_ID = /^- \[(rp-\d+)\]/;
 export function topRecent(bullets: readonly string[], ledger: Ledger, cap: number): string[] {
   if (bullets.length <= cap) return [...bullets];
   const rank = new Map<string, [string, number]>();
-  for (const pattern of loadPatterns(ledger).values()) rank.set(pattern.id, [str(pattern.meta, "last_seen"), num(pattern.meta, "count")]);
+  for (const pattern of loadPatterns(ledger).values())
+    rank.set(pattern.id, [str(pattern.meta, "last_seen"), num(pattern.meta, "count")]);
   const key = (bullet: string): [string, number] => rank.get(BULLET_ID.exec(bullet)?.[1] ?? "") ?? ["", 0];
   const ranked = [...bullets].sort((a, b) => {
     const [ka, kb] = [key(a), key(b)];
@@ -42,9 +43,14 @@ export function guardrailsSection(ctx: LearnContext, root: string): string {
   const parsed = Number.parseInt(ctx.env.AK_LEARN_GUARDRAILS_SHOWN ?? "", 10);
   const cap = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_SHOWN;
   const shown = topRecent(bullets, ledger, cap);
-  const lines = ["Review guardrails (recurring review findings in this repo; check the diff against these before asking for review):", ...shown];
+  const lines = [
+    "Review guardrails (recurring review findings in this repo; check the diff against these before asking for review):",
+    ...shown,
+  ];
   if (bullets.length > shown.length) {
-    lines.push(`(+${bullets.length - shown.length} more in ${ledger.path("guardrails.md")}; full pattern list in ${ledger.path("index.md")})`);
+    lines.push(
+      `(+${bullets.length - shown.length} more in ${ledger.path("guardrails.md")}; full pattern list in ${ledger.path("index.md")})`,
+    );
   }
 
   const index = readText(ledger.path("index.md"));

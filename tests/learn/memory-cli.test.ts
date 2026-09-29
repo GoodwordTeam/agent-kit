@@ -156,8 +156,13 @@ describe("rollback", () => {
     ledger.commit("nightly nightly-2026-09-21-2: +0 lessons");
     expect(rollbackWiki(ledger, first)).toStartWith("rolled back 1 file");
     expect(ledger.git(["rev-list", "--count", `${first}..HEAD`]).stdout.trim()).toBe("2");
-    expect(ledger.git(["show", "--name-only", "--format=", "HEAD"]).stdout.trim().split("\n").sort()).toEqual(["lessons.md", UNDONE_RUNS_FILE]);
-    expect(readJsonl<{ run: string }>(ledger.path(UNDONE_RUNS_FILE)).map((row) => row.run)).toEqual(["nightly-2026-09-21-2"]);
+    expect(ledger.git(["show", "--name-only", "--format=", "HEAD"]).stdout.trim().split("\n").sort()).toEqual([
+      "lessons.md",
+      UNDONE_RUNS_FILE,
+    ]);
+    expect(readJsonl<{ run: string }>(ledger.path(UNDONE_RUNS_FILE)).map((row) => row.run)).toEqual([
+      "nightly-2026-09-21-2",
+    ]);
     expect(ledger.git(["status", "--porcelain"]).stdout.trim()).toBe("");
   });
 

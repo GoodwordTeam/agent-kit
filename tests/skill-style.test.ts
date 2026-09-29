@@ -46,8 +46,12 @@ describe("skill-style: setup", () => {
   });
 
   test("isSkillStyleIssue matches only that prefix", () => {
-    expect(isSkillStyleIssue({ severity: "warning", rule: "skill-style.body-too-long", file: "x", message: "m" })).toBe(true);
-    expect(isSkillStyleIssue({ severity: "warning", rule: "budget.skill-over-target", file: "x", message: "m" })).toBe(false);
+    expect(isSkillStyleIssue({ severity: "warning", rule: "skill-style.body-too-long", file: "x", message: "m" })).toBe(
+      true,
+    );
+    expect(isSkillStyleIssue({ severity: "warning", rule: "budget.skill-over-target", file: "x", message: "m" })).toBe(
+      false,
+    );
   });
 
   test("a skill with no SKILL.md yet is silent here; completeness owns that", () => {
@@ -57,9 +61,19 @@ describe("skill-style: setup", () => {
 
 describe("skill-style: a clean skill triggers nothing", () => {
   const CLEAN = skill(
-    ["# Alpha", "", "Read the ticket and produce a short summary.", "", "## When to use", "", "Use when a ticket needs summarizing.", "", "## Not for", "", "Not for editing code."].join(
-      "\n",
-    ),
+    [
+      "# Alpha",
+      "",
+      "Read the ticket and produce a short summary.",
+      "",
+      "## When to use",
+      "",
+      "Use when a ticket needs summarizing.",
+      "",
+      "## Not for",
+      "",
+      "Not for editing code.",
+    ].join("\n"),
   );
 
   test("no skill-style issues on a short, plain, self-contained body", () => {
@@ -179,9 +193,19 @@ describe("skill-style: 5. selection text in the body", () => {
   });
 
   test("a 'When to use' section at or past the line threshold is a note", () => {
-    const body = ["# Alpha", "", "## When to use", "", "Line one.", "Line two.", "Line three.", "", "## Not for", "", "Nothing."].join(
-      "\n",
-    );
+    const body = [
+      "# Alpha",
+      "",
+      "## When to use",
+      "",
+      "Line one.",
+      "Line two.",
+      "Line three.",
+      "",
+      "## Not for",
+      "",
+      "Nothing.",
+    ].join("\n");
     const ctx = ctxFor({ "skills/alpha/SKILL.md": skill(body) });
     const issue = checkSkillStyle(ctx).find((i) => i.rule === "skill-style.selection-text-in-body");
     expect(issue?.severity).toBe("note");
@@ -270,7 +294,13 @@ describe("skill-style: 7. reference files over the line threshold with no table 
 describe("skill-style: 8. legacy phrases", () => {
   test("the phrase list is exactly these five", () => {
     expect([...LEGACY_PHRASES].sort()).toEqual(
-      ["before every edit", "hold all findings", "if in doubt, use", "show your reasoning", "think step by step"].sort(),
+      [
+        "before every edit",
+        "hold all findings",
+        "if in doubt, use",
+        "show your reasoning",
+        "think step by step",
+      ].sort(),
     );
   });
 

@@ -21,7 +21,11 @@ profiles:
     default: true
 `;
 
-const SKILL = wellFormedSkill("triage", "Sort incoming work into the smallest next action.", "Read the queue and pick one item.");
+const SKILL = wellFormedSkill(
+  "triage",
+  "Sort incoming work into the smallest next action.",
+  "Read the queue and pick one item.",
+);
 
 describe("the validation run", () => {
   test("every check is named and runs in a fixed order", () => {

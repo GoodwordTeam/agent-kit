@@ -150,7 +150,13 @@ export function extractUserMessages(transcript: string): string[] {
       if (content !== "" && shouldIncludeMessage(content)) out.push(content);
     } else if (Array.isArray(content)) {
       for (const item of content as Array<{ type?: unknown; text?: unknown }>) {
-        if (item?.type === "text" && typeof item.text === "string" && item.text !== "" && shouldIncludeMessage(item.text)) out.push(item.text);
+        if (
+          item?.type === "text" &&
+          typeof item.text === "string" &&
+          item.text !== "" &&
+          shouldIncludeMessage(item.text)
+        )
+          out.push(item.text);
       }
     }
   }
@@ -169,7 +175,13 @@ function usable(message: string): boolean {
  * once. claude-mem supplies the first prompt of sessions with no transcript.
  * Seen marks are written into `registry` and persisted only by the caller.
  */
-export function gatherSessions(ctx: LearnContext, root: string, days: number, registry: SkillRegistry, force = false): SessionSample[] {
+export function gatherSessions(
+  ctx: LearnContext,
+  root: string,
+  days: number,
+  registry: SkillRegistry,
+  force = false,
+): SessionSample[] {
   const cutoffMs = Date.now() - days * 86_400_000;
   const files = new Map<string, { path: string; mtime: number; size: number }>();
   for (const folder of new Set([projectFolderName(root), reflectFolderName(root)])) {
@@ -192,7 +204,9 @@ export function gatherSessions(ctx: LearnContext, root: string, days: number, re
   for (const [name, file] of [...files.entries()].sort((a, b) => a[1].mtime - b[1].mtime)) {
     const sid = name.slice(0, -".jsonl".length);
     if (!force && seen[sid] === file.size) continue;
-    const messages = extractUserMessages(file.path).map((m) => m.trim()).filter(usable);
+    const messages = extractUserMessages(file.path)
+      .map((m) => m.trim())
+      .filter(usable);
     seen[sid] = file.size;
     if (messages.length < 2) continue;
     out.push({ sid: sid.slice(0, 8), messages: messages.slice(0, 25) });
@@ -203,7 +217,8 @@ export function gatherSessions(ctx: LearnContext, root: string, days: number, re
       const have = new Set(out.map((sample) => sample.sid));
       for (const row of mem.sessionPrompts(memProject(ctx, root), cutoffMs)) {
         const sid = row.content_session_id;
-        if (!sid || have.has(sid.slice(0, 8)) || (!force && seen[sid] !== undefined) || !usable(row.user_prompt)) continue;
+        if (!sid || have.has(sid.slice(0, 8)) || (!force && seen[sid] !== undefined) || !usable(row.user_prompt))
+          continue;
         out.push({ sid: sid.slice(0, 8), messages: [row.user_prompt.trim()] });
         have.add(sid.slice(0, 8));
         seen[sid] = -1;
@@ -216,7 +231,11 @@ export function gatherSessions(ctx: LearnContext, root: string, days: number, re
 }
 
 /** Skill names already served: catalog, installed, and every candidate ever proposed. */
-export function existingSkills(ctx: LearnContext, root: string, packageRoot?: string): Array<{ name: string; description: string }> {
+export function existingSkills(
+  ctx: LearnContext,
+  root: string,
+  packageRoot?: string,
+): Array<{ name: string; description: string }> {
   const skills = [
     ...catalogSkills(packageRoot ?? PACKAGE_ROOT),
     ...installedSkills(join(ctx.config.configDir, "skills")),
@@ -224,7 +243,9 @@ export function existingSkills(ctx: LearnContext, root: string, packageRoot?: st
   ];
   const byName = new Map<string, string>();
   for (const skill of skills) if (!byName.has(skill.name)) byName.set(skill.name, skill.description);
-  return [...byName.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([name, description]) => ({ name, description }));
+  return [...byName.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([name, description]) => ({ name, description }));
 }
 
 export const SKILL_SCOUT_CONTRACT = `{"candidates": [{
@@ -241,7 +262,9 @@ Evidence must cite session ids exactly as given in the inputs and quote words th
 A candidate needs evidence from at least ${MIN_SESSIONS} different sessions. Return {"candidates": []} when nothing qualifies.`;
 
 function strings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && item.trim() !== "") : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim() !== "")
+    : [];
 }
 
 /** Shape-check the reply. Anything malformed is dropped whole. */
@@ -255,7 +278,10 @@ export function parseCandidates(reply: Record<string, unknown> | null): Proposed
     const evidence = Array.isArray(c.evidence)
       ? (c.evidence as unknown[]).flatMap((e) => {
           const item = e as { session?: unknown; quote?: unknown } | null;
-          return item !== null && typeof item === "object" && typeof item.session === "string" && typeof item.quote === "string"
+          return item !== null &&
+            typeof item === "object" &&
+            typeof item.session === "string" &&
+            typeof item.quote === "string"
             ? [{ session: item.session, quote: item.quote }]
             : [];
         })
@@ -283,7 +309,12 @@ export function kebabName(name: string): string {
 }
 
 function normalize(text: string): string {
-  return text.toLowerCase().replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
+  return text
+    .toLowerCase()
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /**
@@ -354,13 +385,18 @@ export function discover(ctx: LearnContext, root: string, options: DiscoverOptio
     const sessions = gatherSessions(ctx, root, options.days ?? DEFAULT_DAYS, registry, options.force === true);
     if (sessions.length < MIN_SESSIONS) return `only ${sessions.length} new sessions; nothing to analyse`;
     const existing = existingSkills(ctx, root, options.packageRoot);
-    let body = sessions.map((s) => `#### session ${s.sid}\n${s.messages.map((m) => `- ${m.slice(0, 300)}`).join("\n")}`).join("\n\n");
+    let body = sessions
+      .map((s) => `#### session ${s.sid}\n${s.messages.map((m) => `- ${m.slice(0, 300)}`).join("\n")}`)
+      .join("\n\n");
     if (body.length > SESSIONS_CHAR_CAP) body = body.slice(0, SESSIONS_CHAR_CAP);
     const prompt = buildPrompt(
       "skill-scout",
       SKILL_SCOUT_CONTRACT,
       [
-        { title: "Existing skills (never duplicate one)", body: existing.map((s) => `- ${s.name}: ${s.description.slice(0, 120)}`).join("\n") || "(none)" },
+        {
+          title: "Existing skills (never duplicate one)",
+          body: existing.map((s) => `- ${s.name}: ${s.description.slice(0, 120)}`).join("\n") || "(none)",
+        },
         { title: "Rejected names (never propose again)", body: registry.rejected.join(", ") || "(none)" },
         { title: `Sessions (${sessions.length}, repository ${basename(root)})`, body },
       ],
@@ -402,7 +438,9 @@ export function discover(ctx: LearnContext, root: string, options: DiscoverOptio
     }
     registry.last_discover = nowIso();
     saveRegistry(ledger, registry);
-    appendJsonl(ledger.path("raw", "discover.jsonl"), [{ at: registry.last_discover, sessions: sessions.length, proposed: proposed.length, kept: made }]);
+    appendJsonl(ledger.path("raw", "discover.jsonl"), [
+      { at: registry.last_discover, sessions: sessions.length, proposed: proposed.length, kept: made },
+    ]);
     ledger.commit(`discover: ${made.length} candidates from ${sessions.length} sessions`);
     return `analysed ${sessions.length} sessions; ${made.length} new candidates: ${made.join(", ") || "-"}`;
   } finally {

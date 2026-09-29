@@ -95,7 +95,10 @@ const mean = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0) / xs.lengt
  * cases are resampled with replacement and each keeps all its runs in both arms, so runs of one
  * case are never treated as independent evidence.
  */
-export function pairedBootstrap(cases: readonly PairedCase[], options: { iterations?: number; seed?: number; level?: number } = {}): BootstrapResult {
+export function pairedBootstrap(
+  cases: readonly PairedCase[],
+  options: { iterations?: number; seed?: number; level?: number } = {},
+): BootstrapResult {
   const iterations = options.iterations ?? 10_000;
   const seed = options.seed ?? 1;
   const level = options.level ?? 0.95;
@@ -153,8 +156,18 @@ export function kappaTable(ratings: Readonly<Record<string, Readonly<Record<stri
     for (let j = i + 1; j < raters.length; j++) {
       const ra = ratings[raters[i]!]!;
       const rb = ratings[raters[j]!]!;
-      const items = Object.keys(ra).filter((item) => item in rb).sort();
-      rows.push({ a: raters[i]!, b: raters[j]!, n: items.length, kappa: cohenKappa(items.map((x) => ra[x]!), items.map((x) => rb[x]!)) });
+      const items = Object.keys(ra)
+        .filter((item) => item in rb)
+        .sort();
+      rows.push({
+        a: raters[i]!,
+        b: raters[j]!,
+        n: items.length,
+        kappa: cohenKappa(
+          items.map((x) => ra[x]!),
+          items.map((x) => rb[x]!),
+        ),
+      });
     }
   }
   return rows;

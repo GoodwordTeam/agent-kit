@@ -37,7 +37,15 @@
       "description": "Written at decision level: no file paths and no code, except a fragment a prototype already settled exactly. Every section is present; a section with nothing in it is an empty list rather than an omission, so a reader can tell 'no non-goals' from 'non-goals never considered'.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["problem", "solution", "non_goals", "acceptance_criteria", "test_seams", "verification_commands", "out_of_scope"],
+      "required": [
+        "problem",
+        "solution",
+        "non_goals",
+        "acceptance_criteria",
+        "test_seams",
+        "verification_commands",
+        "out_of_scope"
+      ],
       "properties": {
         "problem": { "$ref": "common.schema.json#/$defs/nonempty_string" },
         "solution": { "$ref": "common.schema.json#/$defs/nonempty_string" },

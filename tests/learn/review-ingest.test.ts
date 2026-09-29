@@ -5,7 +5,13 @@ import type { RunResult } from "../../src/learn/core/proc.ts";
 import { reflectFolderName } from "../../src/learn/core/paths.ts";
 import { GitHubReviewSource, paginatedArray, type ReviewComment } from "../../src/learn/sources/github.ts";
 import { appendEvents, eventHash, loadEvents, makeEvent, parseSeverity } from "../../src/learn/review/events.ts";
-import { correctionEvent, githubCommentEvent, ingest, observationEvent, reportEvent } from "../../src/learn/review/ingest.ts";
+import {
+  correctionEvent,
+  githubCommentEvent,
+  ingest,
+  observationEvent,
+  reportEvent,
+} from "../../src/learn/review/ingest.ts";
 import { reviewLedger } from "../../src/learn/review/ledger.ts";
 import { gitRepo, MemFixture, scratch, testContext } from "./helpers.ts";
 
@@ -71,8 +77,14 @@ describe("github comment parsing", () => {
   });
 
   test("an issue comment counts only as a review report, and bot noise is dropped", () => {
-    const base = { html_url: "https://github.com/acme/app/pull/42#issuecomment-1", created_at: "2026-09-16T00:00:00Z", user: { login: "carol" } };
-    expect(reportEvent({ ...base, body: "## Review\n\n- the lock is taken late" }, 42, "s", "app")?.source).toBe("review-report");
+    const base = {
+      html_url: "https://github.com/acme/app/pull/42#issuecomment-1",
+      created_at: "2026-09-16T00:00:00Z",
+      user: { login: "carol" },
+    };
+    expect(reportEvent({ ...base, body: "## Review\n\n- the lock is taken late" }, 42, "s", "app")?.source).toBe(
+      "review-report",
+    );
     expect(reportEvent({ ...base, body: "thanks, merging" }, 42, "s", "app")).toBeNull();
     expect(reportEvent({ ...base, body: "## Review\nMergify Payload" }, 42, "s", "app")).toBeNull();
   });
@@ -172,8 +184,12 @@ describe("claude-mem observations", () => {
     ]);
     expect(finding.hash).toBe(eventHash("claude-mem", "obs:7"));
     expect(observationEvent(row({ type: "review-resolution" }), "app")!.kind).toBe("resolution");
-    expect(observationEvent(row({ type: "discovery", concepts: '["gotcha"]', title: "P2 finding on the cache" }), "app")).not.toBeNull();
-    expect(observationEvent(row({ type: "discovery", concepts: '["gotcha"]', title: "Bun caches lockfiles" }), "app")).toBeNull();
+    expect(
+      observationEvent(row({ type: "discovery", concepts: '["gotcha"]', title: "P2 finding on the cache" }), "app"),
+    ).not.toBeNull();
+    expect(
+      observationEvent(row({ type: "discovery", concepts: '["gotcha"]', title: "Bun caches lockfiles" }), "app"),
+    ).toBeNull();
     expect(observationEvent(row({ type: "discovery" }), "app")).toBeNull();
   });
 
@@ -189,12 +205,24 @@ describe("claude-mem observations", () => {
       title: "Reviewer: lock taken late",
       at: Date.parse("2026-09-10T00:00:00Z"),
     });
-    mem.observation({ sid: "s1", project: "app/wt", type: "discovery", title: "unrelated", at: Date.parse("2026-09-10T00:00:00Z") });
+    mem.observation({
+      sid: "s1",
+      project: "app/wt",
+      type: "discovery",
+      title: "unrelated",
+      at: Date.parse("2026-09-10T00:00:00Z"),
+    });
     const ctx = testContext({ env: { AK_LEARN_MEM_DB: memDb } });
     const ledger = reviewLedger(ctx.config, repo);
     expect(ingest(ctx, ledger, repo, { skipGithub: true }).fresh).toBe(1);
     expect(JSON.parse(readFileSync(ledger.path("raw/.watermark.json"), "utf8")).claude_mem_max_id).toBe(2);
-    mem.observation({ sid: "s2", project: "app", type: "review-finding", title: "Reviewer: second", at: Date.parse("2026-09-11T00:00:00Z") });
+    mem.observation({
+      sid: "s2",
+      project: "app",
+      type: "review-finding",
+      title: "Reviewer: second",
+      at: Date.parse("2026-09-11T00:00:00Z"),
+    });
     mem.close();
     expect(ingest(ctx, ledger, repo, { skipGithub: true }).fresh).toBe(1);
     expect(ledger.git(["log", "--format=%s"]).stdout).toContain("ingest: +1 events");
@@ -211,7 +239,11 @@ describe("ingest end to end", () => {
     writeFileSync(
       join(queueDir, "learnings-queue.json"),
       JSON.stringify([
-        { sentiment: "correction", message: "no, the fixtures live in tests/fixtures", timestamp: "2026-09-16T10:00:00Z" },
+        {
+          sentiment: "correction",
+          message: "no, the fixtures live in tests/fixtures",
+          timestamp: "2026-09-16T10:00:00Z",
+        },
         { sentiment: "positive", message: "great approach", timestamp: "2026-09-16T10:00:00Z" },
       ]),
     );
@@ -219,7 +251,8 @@ describe("ingest end to end", () => {
       const path = args[2] ?? "";
       if (args[0] === "pr") return ok(JSON.stringify({ number: 42, headRefOid: "abc", author: { login: "alice" } }));
       if (path.endsWith("pulls/42/comments")) return ok(JSON.stringify([FINDING]) + JSON.stringify([REPLY]));
-      if (path.endsWith("pulls/42/reviews")) return ok(JSON.stringify([{ body: "", html_url: "u", submitted_at: null, user: { login: "x" } }]));
+      if (path.endsWith("pulls/42/reviews"))
+        return ok(JSON.stringify([{ body: "", html_url: "u", submitted_at: null, user: { login: "x" } }]));
       return ok("[]");
     };
     const github = new GitHubReviewSource(repo, runner);
@@ -240,10 +273,18 @@ describe("ingest end to end", () => {
   test("a GitHub source that cannot be read is reported unavailable, not taken as no findings", () => {
     const repo = gitRepo(join(scratch(), "repo"));
     const ctx = testContext({ cwd: repo });
-    const github = new GitHubReviewSource(repo, (): RunResult => ({ code: 1, stdout: "", stderr: "no remote", timedOut: false }));
+    const github = new GitHubReviewSource(repo, (): RunResult => ({
+      code: 1,
+      stdout: "",
+      stderr: "no remote",
+      timedOut: false,
+    }));
     const result = ingest(ctx, reviewLedger(ctx.config, repo), repo, { github, skipMem: true, source: "codex" });
     expect(result.unavailable).toEqual(["github"]);
     expect(ctx.err.join("\n")).toContain("review source github unavailable");
-    expect(ingest(ctx, reviewLedger(ctx.config, repo), repo, { skipGithub: true, skipMem: true, source: "codex" }).unavailable).toEqual([]);
+    expect(
+      ingest(ctx, reviewLedger(ctx.config, repo), repo, { skipGithub: true, skipMem: true, source: "codex" })
+        .unavailable,
+    ).toEqual([]);
   });
 });

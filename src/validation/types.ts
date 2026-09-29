@@ -25,7 +25,9 @@ export interface Issue {
 }
 
 export function error(rule: string, file: string, message: string, line?: number): Issue {
-  return line === undefined ? { severity: "error", rule, file, message } : { severity: "error", rule, file, message, line };
+  return line === undefined
+    ? { severity: "error", rule, file, message }
+    : { severity: "error", rule, file, message, line };
 }
 
 export function warning(rule: string, file: string, message: string, line?: number): Issue {
@@ -35,7 +37,9 @@ export function warning(rule: string, file: string, message: string, line?: numb
 }
 
 export function note(rule: string, file: string, message: string, line?: number): Issue {
-  return line === undefined ? { severity: "note", rule, file, message } : { severity: "note", rule, file, message, line };
+  return line === undefined
+    ? { severity: "note", rule, file, message }
+    : { severity: "note", rule, file, message, line };
 }
 
 /**

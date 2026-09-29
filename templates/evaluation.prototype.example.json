@@ -46,13 +46,9 @@
   ],
   "choice": {
     "option": "list",
-    "adjustments": [
-      "Pin the last-changed service to the top."
-    ]
+    "adjustments": ["Pin the last-changed service to the top."]
   },
   "answer": "A list sorted by error rate, with the last-changed service pinned.",
   "settled_by": "human",
-  "open": [
-    "Whether the list scales past fifty services."
-  ]
+  "open": ["Whether the list scales past fifty services."]
 }

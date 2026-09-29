@@ -18,7 +18,17 @@ import type { Ledger } from "../core/ledger.ts";
 import { buildPrompt } from "../core/roles.ts";
 import { nowMs, readText, todayLocal, tokens } from "../core/store.ts";
 import type { ClaudeMemSource, ObservationRow, SummaryRow } from "../sources/claude-mem.ts";
-import { appendRun, citedIds, logLine, provenanceGate, readState, saveState, SECTIONS, sid8, splitLines } from "./ledger.ts";
+import {
+  appendRun,
+  citedIds,
+  logLine,
+  provenanceGate,
+  readState,
+  saveState,
+  SECTIONS,
+  sid8,
+  splitLines,
+} from "./ledger.ts";
 import { parseSecurityNotes, redact, SECURITY_KINDS, securityRecord, withSecurityRecord } from "./redact.ts";
 
 export const INPUT_CHARS = 60_000;
@@ -26,14 +36,22 @@ export const INPUT_CHARS = 60_000;
 /** Observation id, time, type, session, title, subtitle, and facts cut at 600 characters. */
 export function formatObservation(row: ObservationRow): string {
   const facts = (row.facts ?? "").trim();
-  const bits = [`obs:${row.id} ${row.created_at.slice(0, 16)} [${row.type}] ${sid8(row.memory_session_id)}`, `  ${row.title ?? ""}`];
+  const bits = [
+    `obs:${row.id} ${row.created_at.slice(0, 16)} [${row.type}] ${sid8(row.memory_session_id)}`,
+    `  ${row.title ?? ""}`,
+  ];
   if (row.subtitle) bits.push(`  ${row.subtitle}`);
   if (facts !== "") bits.push(`  facts: ${facts.slice(0, 600)}`);
   return `${bits.join("\n")}\n`;
 }
 
 /** Observations after the watermark, under the input cap. A zero watermark fills from the newest. Returned oldest first. */
-export function fetchNew(source: ClaudeMemSource, memProject: string, watermark: number, inputChars = INPUT_CHARS): ObservationRow[] {
+export function fetchNew(
+  source: ClaudeMemSource,
+  memProject: string,
+  watermark: number,
+  inputChars = INPUT_CHARS,
+): ObservationRow[] {
   const rows = source.observationsSince(memProject, watermark, { newestFirst: watermark === 0 });
   const out: ObservationRow[] = [];
   let used = 0;
@@ -89,7 +107,13 @@ export function reflectPrompt(
 }
 
 /** Why a reflected memory is unusable, or null. `reserve` is room kept for text the runtime adds after this check. */
-export function degenerate(text: string, previous: string, inputTokens: number, cap: number, reserve = 0): string | null {
+export function degenerate(
+  text: string,
+  previous: string,
+  inputTokens: number,
+  cap: number,
+  reserve = 0,
+): string | null {
   if (tokens(text) + reserve > 1.3 * cap) return "over cap";
   const lines = splitLines(text)
     .filter((line) => line.trim() !== "" && !line.startsWith("#"))
@@ -149,7 +173,8 @@ export function applyReflection(
   meta: Record<string, unknown> = {},
   inputs: ReflectInputs = {},
 ): ReflectResult {
-  const { memory: newText, security_notes } = typeof reply === "string" ? { memory: reply, security_notes: undefined } : reply;
+  const { memory: newText, security_notes } =
+    typeof reply === "string" ? { memory: reply, security_notes: undefined } : reply;
   const memoryPath = ledger.path("memory.md");
   const previous = existsSync(memoryPath) ? readText(memoryPath) : "";
   const allowed = new Set([...valid, ...citedIds(previous)]);
@@ -180,7 +205,10 @@ export function applyReflection(
   const meant = candidates - red.flagged;
   const lost = dropped + red.tokens;
   if (reason === null && meant > 0 && lost > meant / 2) {
-    reason = red.tokens === 0 ? `provenance dropped ${dropped}/${meant} lines` : `gates dropped ${lost}/${meant} lines (${dropped} provenance, ${red.tokens} redaction)`;
+    reason =
+      red.tokens === 0
+        ? `provenance dropped ${dropped}/${meant} lines`
+        : `gates dropped ${lost}/${meant} lines (${dropped} provenance, ${red.tokens} redaction)`;
   }
   if (reason !== null) {
     markAttempt(ledger);
@@ -191,7 +219,11 @@ export function applyReflection(
   }
   writeFileSync(memoryPath, text);
   const state = readState(ledger);
-  saveState(ledger, { ...state, last_obs_id_reflected: Math.max(state.last_obs_id_reflected ?? 0, maxObsId), last_reflect: nowMs() });
+  saveState(ledger, {
+    ...state,
+    last_obs_id_reflected: Math.max(state.last_obs_id_reflected ?? 0, maxObsId),
+    last_reflect: nowMs(),
+  });
   appendRun(ledger, {
     job: "reflect",
     status: "ok",
@@ -209,7 +241,13 @@ export function applyReflection(
   return { ok: true, reason: null, dropped, redacted };
 }
 
-export function reflect(ctx: LearnContext, source: ClaudeMemSource, ledger: Ledger, memProject: string, trigger = "tick"): string {
+export function reflect(
+  ctx: LearnContext,
+  source: ClaudeMemSource,
+  ledger: Ledger,
+  memProject: string,
+  trigger = "tick",
+): string {
   const watermark = readState(ledger).last_obs_id_reflected ?? 0;
   const observations = fetchNew(source, memProject, watermark);
   if (observations.length === 0) return "reflect: nothing new";

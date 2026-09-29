@@ -86,7 +86,8 @@ describe("schema compilation", () => {
   });
 
   test("a duplicate JSON key in a schema is reported with its line", () => {
-    const dup = '{\n  "$id": "https://agent-kit.local/schemas/dup.schema.json",\n  "type": "object",\n  "type": "string"\n}\n';
+    const dup =
+      '{\n  "$id": "https://agent-kit.local/schemas/dup.schema.json",\n  "type": "object",\n  "type": "string"\n}\n';
     const set = compileSchemas(makeTree({ "schemas/dup.schema.json": dup }));
     const issue = set.issues.find((i) => i.rule === "schemas.duplicate-json-key");
     expect(issue?.severity).toBe("error");
@@ -105,7 +106,9 @@ describe("schema compilation", () => {
       $ref: "missing.schema.json#/$defs/nope",
     });
     const set = compileSchemas(makeTree({ "schemas/bad.schema.json": bad }));
-    expect(set.issues.some((i) => i.rule === "schemas.uncompilable" && i.file === "schemas/bad.schema.json")).toBe(true);
+    expect(set.issues.some((i) => i.rule === "schemas.uncompilable" && i.file === "schemas/bad.schema.json")).toBe(
+      true,
+    );
   });
 });
 
@@ -140,7 +143,9 @@ describe("document validation against schemas", () => {
       "skills/alpha/skill.yaml": "id: alpha\n",
     });
     const issues = checkSchemas(ctx);
-    expect(issues.some((i) => i.rule === "schemas.document-invalid" && i.file === "skills/alpha/skill.yaml")).toBe(true);
+    expect(issues.some((i) => i.rule === "schemas.document-invalid" && i.file === "skills/alpha/skill.yaml")).toBe(
+      true,
+    );
   });
 
   test("validates a templates artifact against the schema its envelope names", () => {
@@ -163,7 +168,11 @@ describe("document validation against schemas", () => {
       "schemas/common.schema.json": COMMON,
       "schemas/ticket.schema.json": TICKET,
       "schemas/catalog.schema.json": CATALOG_SCHEMA,
-      "templates/example-ticket.json": JSON.stringify({ schema: "ticket", created_at: "2026-09-19T10:00:00Z", goal: "ship" }),
+      "templates/example-ticket.json": JSON.stringify({
+        schema: "ticket",
+        created_at: "2026-09-19T10:00:00Z",
+        goal: "ship",
+      }),
     });
     expect(checkSchemas(ctx).filter((i) => i.file === "templates/example-ticket.json")).toEqual([]);
   });
@@ -364,7 +373,9 @@ describe("the resolved-conflicts policy has a declared shape", () => {
   });
 
   test("a discharged_in member that is not a section name is refused", () => {
-    const issues = rulingsIssues(withRow("    discharged_in: [authority, hard-gates]\n", "    discharged_in: [authority, 3]\n"));
+    const issues = rulingsIssues(
+      withRow("    discharged_in: [authority, hard-gates]\n", "    discharged_in: [authority, 3]\n"),
+    );
     expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
     expect(issues[0]?.message).toContain("/conflicts/0/discharged_in/1");
   });
@@ -400,7 +411,9 @@ describe("the resolved-conflicts policy has a declared shape", () => {
   });
 
   test("a bare-string discharged_in is refused here as well as there", () => {
-    const issues = rulingsIssues(withRow("    discharged_in: [authority, hard-gates]\n", "    discharged_in: authority\n"));
+    const issues = rulingsIssues(
+      withRow("    discharged_in: [authority, hard-gates]\n", "    discharged_in: authority\n"),
+    );
     expect(issues.map((i) => i.rule)).toEqual(["schemas.document-invalid"]);
     expect(issues[0]?.message).toContain("must be array");
   });
@@ -453,7 +466,7 @@ describe("a case may carry the keys the host reads", () => {
   test("the execution keys the host reads are admitted", () => {
     const doc = WELL_FORMED_CASE.replace(
       "  max_turns: 8\n",
-      "  max_turns: 8\n  artifact_publish: false\n  append_system_prompt: be terse\n  env:\n    CI: \"1\"\n",
+      '  max_turns: 8\n  artifact_publish: false\n  append_system_prompt: be terse\n  env:\n    CI: "1"\n',
     );
     expect(caseIssues(evalsTree({ [FILE]: doc }), FILE)).toEqual([]);
   });
@@ -510,7 +523,10 @@ describe("a grader type in the enum carries the fields the host requires", () =>
 
   test("baseline with both fields is admitted", () => {
     expect(
-      caseIssues(grader("  - name: b\n    type: baseline\n    baseline_file: prior.json\n    criteria: matches\n"), FILE),
+      caseIssues(
+        grader("  - name: b\n    type: baseline\n    baseline_file: prior.json\n    criteria: matches\n"),
+        FILE,
+      ),
     ).toEqual([]);
   });
 
@@ -519,7 +535,9 @@ describe("a grader type in the enum carries the fields the host requires", () =>
   });
 
   test("file_exists with a path is admitted", () => {
-    expect(caseIssues(grader("  - name: f\n    type: file_exists\n    path: out/*.md\n    exists: false\n"), FILE)).toEqual([]);
+    expect(
+      caseIssues(grader("  - name: f\n    type: file_exists\n    path: out/*.md\n    exists: false\n"), FILE),
+    ).toEqual([]);
   });
 
   test("tool_order without after is refused", () => {
@@ -527,7 +545,9 @@ describe("a grader type in the enum carries the fields the host requires", () =>
   });
 
   test("tool_order with both is admitted", () => {
-    expect(caseIssues(grader("  - name: o\n    type: tool_order\n    before: Read\n    after: Edit\n"), FILE)).toEqual([]);
+    expect(caseIssues(grader("  - name: o\n    type: tool_order\n    before: Read\n    after: Edit\n"), FILE)).toEqual(
+      [],
+    );
   });
 });
 

@@ -38,10 +38,7 @@
       "repo": "example-org/example-service",
       "base_branch": "main",
       "work_branch_prefix": "example-run/",
-      "paths": [
-        "src/**",
-        "tests/**"
-      ]
+      "paths": ["src/**", "tests/**"]
     }
   ],
   "artifact_destinations": {
@@ -66,18 +63,8 @@
     "local-commit",
     "publish-lesson"
   ],
-  "denied_actions": [
-    "merge",
-    "deploy",
-    "production-credentials",
-    "force-push",
-    "history-rewrite"
-  ],
-  "checkpoints": [
-    "ticket-approval",
-    "finding-adjudication",
-    "lesson-publication"
-  ],
+  "denied_actions": ["merge", "deploy", "production-credentials", "force-push", "history-rewrite"],
+  "checkpoints": ["ticket-approval", "finding-adjudication", "lesson-publication"],
   "limits": {
     "fix_cycles": 2,
     "ci_repair_attempts": 3,
@@ -88,12 +75,7 @@
   },
   "budgets": {
     "provided_by": "runner",
-    "enforces": [
-      "fix-cycles",
-      "ci-repair-attempts",
-      "elapsed-minutes",
-      "tickets"
-    ],
+    "enforces": ["fix-cycles", "ci-repair-attempts", "elapsed-minutes", "tickets"],
     "on_exhaustion": "cap-reached"
   },
   "supervisors": {
@@ -129,10 +111,7 @@
     "return_control_to": "runner"
   },
   "cancellation": {
-    "cancellable_by": [
-      "human",
-      "runner"
-    ],
+    "cancellable_by": ["human", "runner"],
     "on_cancel": "preserve-artifacts"
   },
   "approvals": [

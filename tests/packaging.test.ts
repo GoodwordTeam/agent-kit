@@ -8,7 +8,13 @@ import { compileSchemas } from "../src/validation/schemas.ts";
 import { checkCompleteness } from "../src/validation/completeness.ts";
 import { HOST_IDS, RESTRICTIONS, loadHostCapabilities } from "../src/packaging/hosts.ts";
 import { MODE_CEILING_CHECK } from "../src/packaging/capability-table.ts";
-import { INSTALL_FILE, checkInstallConfig, describeInstall, loadAdapterSupplies, loadInstallConfig } from "../src/packaging/install.ts";
+import {
+  INSTALL_FILE,
+  checkInstallConfig,
+  describeInstall,
+  loadAdapterSupplies,
+  loadInstallConfig,
+} from "../src/packaging/install.ts";
 import { planBundle } from "../src/packaging/plan.ts";
 import { writeBundles, checkBundles } from "../src/packaging/build.ts";
 import { hasBlockingSkips, hasErrors } from "../src/validation/types.ts";
@@ -124,7 +130,8 @@ const BASE: Record<string, string> = {
     "",
   ].join("\n"),
   "skills/alpha/SKILL.md": `${HEAD("alpha")}\nFollow [tdd](../../protocols/tdd/PROTOCOL.md).\n`,
-  "skills/alpha/skill.yaml": "id: alpha\nversion: 0.1.0\ninvocation: U\nargument_hint: <ticket>\nallowed_tools: [Read, Grep]\n",
+  "skills/alpha/skill.yaml":
+    "id: alpha\nversion: 0.1.0\ninvocation: U\nargument_hint: <ticket>\nallowed_tools: [Read, Grep]\n",
   "skills/beta/SKILL.md": `${HEAD("beta")}\nPlain body.\n`,
   "skills/beta/skill.yaml": "id: beta\nversion: 0.1.0\ninvocation: M\n",
   "protocols/tdd/PROTOCOL.md": "# TDD\n\nSee [implementer](../../roles/implementer/ROLE.md).\n",
@@ -137,7 +144,8 @@ const BASE: Record<string, string> = {
   // A case for each fixture skill, because the corpus is scoped to the skills
   // the bundle installs and a fixture carrying one skill's cases cannot show
   // that scoping happening.
-  "evals/alpha/does-not-start-unasked/case.yaml": 'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
+  "evals/alpha/does-not-start-unasked/case.yaml":
+    'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
   "evals/beta/runs-when-asked/case.yaml": 'schema_version: "1.1"\nname: runs-when-asked\ntags: [positive]\n',
   NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n\nAdapted from MIT-licensed projects.\n",
   LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n\nPermission is hereby granted, free of charge...\n",
@@ -180,7 +188,8 @@ describe("host capability honesty", () => {
 
   test("an adapter CONTRACT.md may declare what the host actually enforces", () => {
     const ctx = ctxFor({
-      "adapters/codex/CONTRACT.md": "# Codex\n\n```yaml\nenforces:\n  - no-model-invocation\n  - filesystem-sandbox\n```\n",
+      "adapters/codex/CONTRACT.md":
+        "# Codex\n\n```yaml\nenforces:\n  - no-model-invocation\n  - filesystem-sandbox\n```\n",
     });
     const caps = loadHostCapabilities(ctx.root, "codex");
     expect([...caps.enforces].sort()).toEqual(["filesystem-sandbox", "no-model-invocation"]);
@@ -302,10 +311,25 @@ describe("bundle planning", () => {
   test("plugin.json carries host keys only; the build's own record sits beside it", () => {
     const plan = planBundle(ctxFor(), "claude-code", {});
     const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
-    expect(Object.keys(manifest)).toEqual(["name", "version", "description", "author", "license", "skills", "experimental"]);
+    expect(Object.keys(manifest)).toEqual([
+      "name",
+      "version",
+      "description",
+      "author",
+      "license",
+      "skills",
+      "experimental",
+    ]);
 
     const record = JSON.parse(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
-    expect(Object.keys(record).sort()).toEqual(["autonomy_rejected", "excluded", "host", "install", "modes", "profile"]);
+    expect(Object.keys(record).sort()).toEqual([
+      "autonomy_rejected",
+      "excluded",
+      "host",
+      "install",
+      "modes",
+      "profile",
+    ]);
   });
 
   test("transitive shared dependencies are copied under references/shared/", () => {
@@ -405,7 +429,11 @@ describe("bundle planning", () => {
       // The boundary: the fallback is guarded on a default being declared, not
       // applied unconditionally. Without this, a catalog with no default would
       // resolve to the empty string and select nothing.
-      const plan = planBundle(ctxFor({ ...gamma, "catalog.yaml": gamma["catalog.yaml"].replace("  default_profile: core\n", "") }), "claude-code", {});
+      const plan = planBundle(
+        ctxFor({ ...gamma, "catalog.yaml": gamma["catalog.yaml"].replace("  default_profile: core\n", "") }),
+        "claude-code",
+        {},
+      );
       const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
       expect(manifest.skills).toEqual(["./skills/alpha", "./skills/beta", "./skills/gamma"]);
       expect(recordOf(plan).profile).toBe("all");
@@ -486,7 +514,10 @@ describe("the identity fields the manifests are obliged to carry", () => {
     // well over a packager with those strings hardcoded, which is the shape
     // that cannot be kept in agreement with anything.
     const ctx = ctxFor({
-      "catalog.yaml": CATALOG.replace("author: agent-kit maintainers", "author: someone else").replace("license: MIT", "license: Apache-2.0"),
+      "catalog.yaml": CATALOG.replace("author: agent-kit maintainers", "author: someone else").replace(
+        "license: MIT",
+        "license: Apache-2.0",
+      ),
     });
     const manifest = JSON.parse(planBundle(ctx, "codex", {}).files.get(".codex-plugin/plugin.json")?.contents ?? "{}");
     expect(manifest.author).toEqual({ name: "someone else" });
@@ -496,7 +527,9 @@ describe("the identity fields the manifests are obliged to carry", () => {
   test("a catalog with no author fails the build rather than shipping a manifest without one", () => {
     const ctx = ctxFor({ "catalog.yaml": CATALOG.replace("  author: agent-kit maintainers\n", "") });
     const plan = planBundle(ctx, "claude-code", {});
-    const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes("author"));
+    const issue = plan.issues.find(
+      (i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes("author"),
+    );
     expect(issue?.severity).toBe("error");
     // The wording, not just the rule. Absent and blank are different facts with
     // different fixes, and `loadCatalog` is what keeps them apart by setting the
@@ -525,7 +558,10 @@ describe("the identity fields the manifests are obliged to carry", () => {
     // side has the key. Both bundles would ship describing nothing and agreeing
     // about it.
     const ctx = ctxFor({
-      "catalog.yaml": CATALOG.replace("  description: What the host is told, which is a different sentence again.\n", ""),
+      "catalog.yaml": CATALOG.replace(
+        "  description: What the host is told, which is a different sentence again.\n",
+        "",
+      ),
     });
     const missing = planBundle(ctx, "claude-code", {}).issues.filter(
       (i) => i.rule === "packaging.manifest-identity-missing",
@@ -557,7 +593,9 @@ describe("the identity fields the manifests are obliged to carry", () => {
       ["description", "  description: What the host is told, which is a different sentence again.\n"],
     ] as const) {
       const ctx = ctxFor({ "catalog.yaml": CATALOG.replace(line, "") });
-      const manifest = JSON.parse(planBundle(ctx, "claude-code", {}).files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+      const manifest = JSON.parse(
+        planBundle(ctx, "claude-code", {}).files.get(".claude-plugin/plugin.json")?.contents ?? "{}",
+      );
       expect(`no ${field}: ${field in manifest}`).toBe(`no ${field}: false`);
       for (const other of ["license", "author", "description"].filter((f) => f !== field)) {
         expect(`${field} missing, kept ${other}: ${other in manifest}`).toBe(`${field} missing, kept ${other}: true`);
@@ -591,7 +629,9 @@ describe("the identity fields the manifests are obliged to carry", () => {
     ] as const) {
       const ctx = ctxFor({ "catalog.yaml": CATALOG.replace(from, to) });
       const plan = planBundle(ctx, "claude-code", {});
-      const issue = plan.issues.find((i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes(field));
+      const issue = plan.issues.find(
+        (i) => i.rule === "packaging.manifest-identity-missing" && i.message.includes(field),
+      );
       expect(`${field}: ${issue?.severity}`).toBe(`${field}: error`);
       expect(`${field}: ${issue?.message.includes("declares a blank")}`).toBe(`${field}: true`);
       const manifest = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
@@ -634,7 +674,8 @@ describe("the two fields package.json is a party to, and the two it is not", () 
     return { "package.json": packageJson(doc) };
   };
 
-  const parity = (plan: ReturnType<typeof planBundle>) => plan.issues.filter((i) => i.rule === "packaging.manifest-parity");
+  const parity = (plan: ReturnType<typeof planBundle>) =>
+    plan.issues.filter((i) => i.rule === "packaging.manifest-parity");
   const blocked = (plan: ReturnType<typeof planBundle>) =>
     plan.issues.filter((i) => i.rule === "packaging.manifest-parity-unavailable");
 
@@ -696,7 +737,10 @@ describe("the two fields package.json is a party to, and the two it is not", () 
     const ctx = ctxFor({
       "catalog.yaml": CATALOG.replace("id: ak", "id: zzz")
         .replace("name: agent-kit", "name: Some Other Thing")
-        .replace("description: What the host is told, which is a different sentence again.", "description: Nine nine nine.")
+        .replace(
+          "description: What the host is told, which is a different sentence again.",
+          "description: Nine nine nine.",
+        )
         .replace("version: 0.1.0", "version: 9.9.9")
         .replace("license: MIT", "license: Apache-2.0"),
       ...PKG({ version: "9.9.9", license: "Apache-2.0" }),
@@ -800,7 +844,9 @@ describe("the two fields package.json is a party to, and the two it is not", () 
     // two are identical and `collapseDuplicates` in build.ts merges them. Named
     // for the generated manifest they would not be, and a four-field skew would
     // reach the reader as eight failures.
-    const rows = checkBundles(ctxFor(PKG({ version: "0.0.0" })), {}).filter((i) => i.rule === "packaging.manifest-parity");
+    const rows = checkBundles(ctxFor(PKG({ version: "0.0.0" })), {}).filter(
+      (i) => i.rule === "packaging.manifest-parity",
+    );
     expect(rows.length).toBe(1);
     expect(rows[0]?.file).toBe("package.json");
   });
@@ -1099,7 +1145,11 @@ describe("the two host bundles, compared", () => {
     // key today is asserted positively in the eval-corpus describe, not left
     // to this subtraction.
     const { claude, codex } = bundles();
-    const { skills: _enumerated, experimental: _corpus, ...claudeIdentity } = manifestIn(claude, ".claude-plugin/plugin.json");
+    const {
+      skills: _enumerated,
+      experimental: _corpus,
+      ...claudeIdentity
+    } = manifestIn(claude, ".claude-plugin/plugin.json");
     const { skills: _pointer, ...codexIdentity } = manifestIn(codex, ".codex-plugin/plugin.json");
     expect(Object.keys(claudeIdentity).length).toBeGreaterThan(0);
     expect(codexIdentity).toEqual(claudeIdentity);
@@ -1296,9 +1346,14 @@ protocols:`,
     // And it is gone as soon as one skill is real, which is the whole claim.
     const oneAuthored = {
       ...noneAuthored,
-      "catalog.yaml": (noneAuthored["catalog.yaml"] ?? "").replace("id: alpha\n    status: contract", "id: alpha\n    status: authored"),
+      "catalog.yaml": (noneAuthored["catalog.yaml"] ?? "").replace(
+        "id: alpha\n    status: contract",
+        "id: alpha\n    status: authored",
+      ),
     };
-    expect(planBundle(ctxFor(oneAuthored), "claude-code", {}).issues.some((i) => i.rule === "packaging.empty-bundle")).toBe(false);
+    expect(
+      planBundle(ctxFor(oneAuthored), "claude-code", {}).issues.some((i) => i.rule === "packaging.empty-bundle"),
+    ).toBe(false);
   });
 
   test("an included skill linking an excluded one fails the build rather than dangling", () => {
@@ -1382,16 +1437,21 @@ describe("the mode a skill is packaged in, per host", () => {
 
   const CC_AUTONOMOUS = "    - adapter: claude-code\n      mode: autonomous\n";
 
-  const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) => plan.decisions.find((d) => d.skill === skill);
+  const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) =>
+    plan.decisions.find((d) => d.skill === skill);
 
   test("the mode comes from this host's row, and the two hosts may differ", () => {
     // The property the old fixture could not express at all: `autonomy.modes`
     // was one flat list for every adapter, so two hosts could not disagree
     // about a skill even in principle.
-    const ctx = ctxFor(declaring("    - adapter: claude-code\n      mode: autonomous\n    - adapter: codex\n      mode: manual\n"));
+    const ctx = ctxFor(
+      declaring("    - adapter: claude-code\n      mode: autonomous\n    - adapter: codex\n      mode: manual\n"),
+    );
     expect(decisionFor(planBundle(ctx, "claude-code", {}), "beta")?.mode).toBe("autonomous");
     expect(decisionFor(planBundle(ctx, "codex", {}), "beta")?.mode).toBe("manual");
-    expect(planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents).toContain("mode: autonomous");
+    expect(planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents).toContain(
+      "mode: autonomous",
+    );
     expect(planBundle(ctx, "codex", {}).files.get("skills/beta/SKILL.md")?.contents).toContain("mode: manual");
   });
 
@@ -1416,7 +1476,10 @@ describe("the mode a skill is packaged in, per host", () => {
     const decision = decisionFor(plan, "beta");
     expect(decision?.mode).toBe("guided");
     expect(decision?.rejected).toEqual(["autonomous"]);
-    expect(decision?.unenforceable).toEqual(["the host does not scope writes to a grant.", "artifact-write is storage only."]);
+    expect(decision?.unenforceable).toEqual([
+      "the host does not scope writes to a grant.",
+      "artifact-write is storage only.",
+    ]);
     expect(plan.files.get("skills/beta/SKILL.md")?.contents).toContain("mode: guided");
   });
 
@@ -1445,9 +1508,7 @@ describe("the mode a skill is packaged in, per host", () => {
   });
 
   test("a declaration at the ceiling is not an error, so the check is not just 'autonomous fails'", () => {
-    const ctx = ctxFor(
-      requiring(["repository-read", "kb-write"], "    - adapter: claude-code\n      mode: guided\n"),
-    );
+    const ctx = ctxFor(requiring(["repository-read", "kb-write"], "    - adapter: claude-code\n      mode: guided\n"));
     const plan = planBundle(ctx, "claude-code", {});
     expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
     expect(decisionFor(plan, "beta")?.mode).toBe("guided");
@@ -1458,9 +1519,7 @@ describe("the mode a skill is packaged in, per host", () => {
     // `min(declared, ceiling)`, not `= ceiling`. A skill that asked for manual
     // and got raised to guided would have the packager overriding its author in
     // the permissive direction, which is the one direction no contract permits.
-    const ctx = ctxFor(
-      requiring(["repository-read", "kb-write"], "    - adapter: claude-code\n      mode: manual\n"),
-    );
+    const ctx = ctxFor(requiring(["repository-read", "kb-write"], "    - adapter: claude-code\n      mode: manual\n"));
     const plan = planBundle(ctx, "claude-code", {});
     expect(decisionFor(plan, "beta")?.mode).toBe("manual");
     expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
@@ -1470,7 +1529,9 @@ describe("the mode a skill is packaged in, per host", () => {
     // The control that stops "everything is capped" passing as the rule. Three
     // statuses are present and none of them is `not-provided`, so a ceiling
     // computed from anything short of `satisfied` would fail here.
-    const ctx = ctxFor(requiring(["repository-read", "process-exec", "artifact-write", "isolated-worktree"], CC_AUTONOMOUS));
+    const ctx = ctxFor(
+      requiring(["repository-read", "process-exec", "artifact-write", "isolated-worktree"], CC_AUTONOMOUS),
+    );
     const plan = planBundle(ctx, "claude-code", {});
     expect(decisionFor(plan, "beta")?.mode).toBe("autonomous");
     expect(plan.issues.some((i) => i.rule === "packaging.mode-above-ceiling")).toBe(false);
@@ -1551,14 +1612,18 @@ describe("the mode a skill is packaged in, per host", () => {
       ),
     );
     const record = recordOf(planBundle(ctx, "claude-code", {}));
-    expect(record.autonomy_rejected).toEqual([{ skill: "beta", unenforceable: ["the host does not scope writes to a grant."] }]);
+    expect(record.autonomy_rejected).toEqual([
+      { skill: "beta", unenforceable: ["the host does not scope writes to a grant."] },
+    ]);
   });
 
   test("the semantics the host cannot enforce travel into the skill's own frontmatter", () => {
     // Where a reader of the installed skill can see them. The field existed and
     // had never once been emitted, because its input could not exist.
     const ctx = ctxFor(
-      declaring("    - adapter: claude-code\n      mode: guided\n      unsupported:\n        - idempotency is not provided by the host.\n"),
+      declaring(
+        "    - adapter: claude-code\n      mode: guided\n      unsupported:\n        - idempotency is not provided by the host.\n",
+      ),
     );
     const body = planBundle(ctx, "claude-code", {}).files.get("skills/beta/SKILL.md")?.contents ?? "";
     expect(body).toContain("autonomy_unenforceable");
@@ -1571,7 +1636,9 @@ describe("the mode a skill is packaged in, per host", () => {
     // named an unenforceable semantic, which is most of them, and the field
     // would stop meaning that a claim was refused.
     const ctx = ctxFor(
-      declaring("    - adapter: claude-code\n      mode: guided\n      unsupported:\n        - the host does not scope writes to a grant.\n"),
+      declaring(
+        "    - adapter: claude-code\n      mode: guided\n      unsupported:\n        - the host does not scope writes to a grant.\n",
+      ),
     );
     const decision = decisionFor(planBundle(ctx, "claude-code", {}), "beta");
     expect(decision?.mode).toBe("guided");
@@ -1669,10 +1736,12 @@ describe("the mode a skill is packaged in, per host", () => {
  */
 describe("a U skill on a host that cannot suppress model invocation", () => {
   /** A skill.yaml for `alpha`, which the catalog declares U. */
-  const alpha = (rows: string, invocation = "invocation: U\n") =>
-    ({ "skills/alpha/skill.yaml": `id: alpha\nversion: 0.1.0\n${invocation}packaging:\n  hosts:\n${rows}` });
+  const alpha = (rows: string, invocation = "invocation: U\n") => ({
+    "skills/alpha/skill.yaml": `id: alpha\nversion: 0.1.0\n${invocation}packaging:\n  hosts:\n${rows}`,
+  });
 
-  const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) => plan.decisions.find((d) => d.skill === skill);
+  const decisionFor = (plan: ReturnType<typeof planBundle>, skill: string) =>
+    plan.decisions.find((d) => d.skill === skill);
 
   const BOTH_GUIDED = "    - adapter: claude-code\n      mode: guided\n    - adapter: codex\n      mode: guided\n";
 
@@ -1682,7 +1751,10 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     // would pass just as well against a packager that forced manual everywhere.
     // No default host enforces no-model-invocation now, so "elsewhere" is a
     // host that declares it does.
-    const ctx = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/claude-code/capabilities.yaml": "enforces: [no-model-invocation]\n" });
+    const ctx = ctxFor({
+      ...alpha(BOTH_GUIDED),
+      "adapters/claude-code/capabilities.yaml": "enforces: [no-model-invocation]\n",
+    });
     expect(decisionFor(planBundle(ctx, "codex", {}), "alpha")?.mode).toBe("manual");
     expect(decisionFor(planBundle(ctx, "claude-code", {}), "alpha")?.mode).toBe("guided");
     expect(planBundle(ctx, "codex", {}).files.get("skills/alpha/SKILL.md")?.contents).toContain("mode: manual");
@@ -1703,8 +1775,13 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     expect(issue?.message).toContain("guided");
     expect(issue?.message).toContain("codex");
     // And not on a host where the declaration is legal: one that enforces no-model-invocation.
-    const enforcing = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/claude-code/capabilities.yaml": "enforces: [no-model-invocation]\n" });
-    expect(planBundle(enforcing, "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
+    const enforcing = ctxFor({
+      ...alpha(BOTH_GUIDED),
+      "adapters/claude-code/capabilities.yaml": "enforces: [no-model-invocation]\n",
+    });
+    expect(planBundle(enforcing, "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(
+      false,
+    );
   });
 
   test("goes to manual, not to the guided that §4's downgrade alone would give it", () => {
@@ -1713,7 +1790,9 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     // answer, and this is the test that tells the two apart -- with only §4
     // built, the mode here reads `guided` and looks like a rule having worked.
     const ctx = ctxFor(
-      alpha("    - adapter: codex\n      mode: autonomous\n      unsupported:\n        - model invocation cannot be suppressed on this host.\n"),
+      alpha(
+        "    - adapter: codex\n      mode: autonomous\n      unsupported:\n        - model invocation cannot be suppressed on this host.\n",
+      ),
     );
     const decision = decisionFor(planBundle(ctx, "codex", {}), "alpha");
     expect(decision?.mode).toBe("manual");
@@ -1725,7 +1804,9 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     // The control. §3.1's subject is the U skill, whose whole protection on this
     // host is that a human asked for it; an M skill is startable by the model by
     // design and forcing it to manual would be a different package.
-    const ctx = ctxFor({ "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\npackaging:\n  hosts:\n${BOTH_GUIDED}` });
+    const ctx = ctxFor({
+      "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\npackaging:\n  hosts:\n${BOTH_GUIDED}`,
+    });
     expect(decisionFor(planBundle(ctx, "codex", {}), "beta")?.mode).toBe("guided");
     expect(planBundle(ctx, "codex", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
   });
@@ -1757,7 +1838,11 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
   });
 
   test("says nothing about a U skill that declares manual, which is what §3.1 asks for", () => {
-    const ctx = ctxFor(alpha("    - adapter: codex\n      mode: manual\n      unsupported:\n        - model invocation cannot be suppressed on this host.\n"));
+    const ctx = ctxFor(
+      alpha(
+        "    - adapter: codex\n      mode: manual\n      unsupported:\n        - model invocation cannot be suppressed on this host.\n",
+      ),
+    );
     const plan = planBundle(ctx, "codex", {});
     expect(decisionFor(plan, "alpha")?.mode).toBe("manual");
     expect(decisionFor(plan, "alpha")?.rejected).toEqual([]);
@@ -1776,7 +1861,10 @@ describe("a U skill on a host that cannot suppress model invocation", () => {
     expect(decisionFor(planBundle(off, "claude-code", {}), "alpha")?.mode).toBe("manual");
     expect(planBundle(off, "claude-code", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(true);
 
-    const on = ctxFor({ ...alpha(BOTH_GUIDED), "adapters/codex/capabilities.yaml": "enforces: [no-model-invocation]\n" });
+    const on = ctxFor({
+      ...alpha(BOTH_GUIDED),
+      "adapters/codex/capabilities.yaml": "enforces: [no-model-invocation]\n",
+    });
     expect(decisionFor(planBundle(on, "codex", {}), "alpha")?.mode).toBe("guided");
     expect(planBundle(on, "codex", {}).issues.some((i) => i.rule === "packaging.u-skill-not-manual")).toBe(false);
   });
@@ -1881,9 +1969,18 @@ describe("the adapters an install attaches, and what they lift", () => {
   );
 
   const supplyTable = (rows: string[]) =>
-    ["# adapter", "", "## 1. Capabilities", "", "| Capability | Unconfigured | What the refusal is |", "|---|---|---|", ...rows, "", "## 2. Next", ""].join(
-      "\n",
-    );
+    [
+      "# adapter",
+      "",
+      "## 1. Capabilities",
+      "",
+      "| Capability | Unconfigured | What the refusal is |",
+      "|---|---|---|",
+      ...rows,
+      "",
+      "## 2. Next",
+      "",
+    ].join("\n");
 
   const ADAPTERS: Record<string, string> = {
     "catalog.yaml": CATALOG_WITH_ADAPTERS,
@@ -1896,11 +1993,18 @@ describe("the adapters an install attaches, and what they lift", () => {
   const requiring = (caps: string[]) => ({
     "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\nrequires:\n${caps
       .map((c) => `  - ${c}\n`)
-      .join("")}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
+      .join(
+        "",
+      )}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
   });
 
   const ctxWith = (caps: string[], install?: string, extra: Record<string, string> = {}) =>
-    ctxFor({ ...ADAPTERS, ...requiring(caps), ...(install === undefined ? {} : { [INSTALL_FILE]: install }), ...extra });
+    ctxFor({
+      ...ADAPTERS,
+      ...requiring(caps),
+      ...(install === undefined ? {} : { [INSTALL_FILE]: install }),
+      ...extra,
+    });
 
   const modeOf = (plan: ReturnType<typeof planBundle>) => plan.decisions.find((d) => d.skill === "beta")?.mode;
   const rules = (plan: ReturnType<typeof planBundle>) => plan.issues.map((i) => i.rule);
@@ -1938,7 +2042,9 @@ describe("the adapters an install attaches, and what they lift", () => {
 
   test("trusted-evidence is a valid capability whose runner supply lifts the build ceiling on both hosts", () => {
     const files = {
-      "adapters/runner-contract/CONTRACT.md": supplyTable(["| `trusted-evidence` | `fails-closed` | Refuses autonomous evidence consumption |"]),
+      "adapters/runner-contract/CONTRACT.md": supplyTable([
+        "| `trusted-evidence` | `fails-closed` | Refuses autonomous evidence consumption |",
+      ]),
       "skills/beta/skill.yaml": `${requiring(["trusted-evidence"])["skills/beta/skill.yaml"]}    - adapter: codex\n      mode: autonomous\n`,
     };
     for (const host of HOST_IDS) {
@@ -1955,7 +2061,9 @@ describe("the adapters an install attaches, and what they lift", () => {
 
   test("an unknown adapter id is an error, and so is a host or an adapter that supplies nothing", () => {
     const ctx = ctxWith(["kb-write"], "attached: [knowledgebase, nope, codex, runner-contract]\n");
-    const unknown = loadInstallConfig(ctx.root, ctx.catalog).issues.filter((i) => i.rule === "packaging.install-unknown-adapter");
+    const unknown = loadInstallConfig(ctx.root, ctx.catalog).issues.filter(
+      (i) => i.rule === "packaging.install-unknown-adapter",
+    );
     expect(unknown.map((i) => i.severity)).toEqual(["error", "error", "error"]);
     expect(unknown.some((i) => i.message.includes("'nope'"))).toBe(true);
     expect(unknown.some((i) => i.message.includes("'codex' is a host"))).toBe(true);
@@ -2033,7 +2141,12 @@ describe("the adapters an install attaches, and what they lift", () => {
     });
     // adapters/tracker/CONTRACT.md §1: with no backend its refusal is kb-write's.
     const borrowed = Object.fromEntries(adapters.map((a) => [a.adapter, Object.fromEntries(a.fallsBackOn)]));
-    expect(borrowed).toEqual({ firstmate: {}, knowledgebase: {}, "runner-contract": {}, tracker: { "tracker-access": "kb-write" } });
+    expect(borrowed).toEqual({
+      firstmate: {},
+      knowledgebase: {},
+      "runner-contract": {},
+      tracker: { "tracker-access": "kb-write" },
+    });
   });
 });
 
@@ -2063,25 +2176,44 @@ describe("tracker-access follows the system-of-record chain", () => {
       "| `runner-grants` |",
       "| `tracker-access` | `not-provided` | See the tracker adapter |\n| `runner-grants` |",
     ),
-    "adapters/knowledgebase/CONTRACT.md": table("| Capability | Unconfigured | What the refusal is |", ["| `kb-write` | `fails-closed` | Refuses |"]),
-    "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, ["| `tracker-access` | `fails-closed` | `kb-write` | The knowledgebase's records, else a refusal |"]),
+    "adapters/knowledgebase/CONTRACT.md": table("| Capability | Unconfigured | What the refusal is |", [
+      "| `kb-write` | `fails-closed` | Refuses |",
+    ]),
+    "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, [
+      "| `tracker-access` | `fails-closed` | `kb-write` | The knowledgebase's records, else a refusal |",
+    ]),
   };
 
   const requiring = (caps: string[]) => ({
     "skills/beta/skill.yaml": `id: beta\nversion: 0.1.0\ninvocation: M\nrequires:\n${caps
       .map((c) => `  - ${c}\n`)
-      .join("")}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
+      .join(
+        "",
+      )}packaging:\n  generated_frontmatter:\n    disable-model-invocation: false\n  hosts:\n    - adapter: claude-code\n      mode: autonomous\n`,
   });
   const ctxWith = (install?: string, extra: Record<string, string> = {}) =>
-    ctxFor({ ...TREE_FILES, ...requiring(["repository-read", "tracker-access"]), ...(install === undefined ? {} : { [INSTALL_FILE]: install }), ...extra });
+    ctxFor({
+      ...TREE_FILES,
+      ...requiring(["repository-read", "tracker-access"]),
+      ...(install === undefined ? {} : { [INSTALL_FILE]: install }),
+      ...extra,
+    });
   const modeOf = (plan: ReturnType<typeof planBundle>) => plan.decisions.find((d) => d.skill === "beta")?.mode;
   const capped = (plan: ReturnType<typeof planBundle>) => plan.issues.find((i) => i.rule === "packaging.mode-capped");
 
   test("a configured backend lifts it with the knowledgebase attached", () => {
-    const plan = planBundle(ctxWith("attached: [knowledgebase, tracker]\ntracker:\n  backend: some-tracker\n"), "claude-code", {});
+    const plan = planBundle(
+      ctxWith("attached: [knowledgebase, tracker]\ntracker:\n  backend: some-tracker\n"),
+      "claude-code",
+      {},
+    );
     expect(modeOf(plan)).toBe("autonomous");
     expect(capped(plan)).toBeUndefined();
-    expect(recordOf(plan).install).toEqual({ file: INSTALL_FILE, attached: ["knowledgebase", "tracker"], backends: { tracker: "some-tracker" } });
+    expect(recordOf(plan).install).toEqual({
+      file: INSTALL_FILE,
+      attached: ["knowledgebase", "tracker"],
+      backends: { tracker: "some-tracker" },
+    });
   });
 
   test("a configured backend lifts it with the knowledgebase detached, because nothing is borrowed", () => {
@@ -2131,7 +2263,9 @@ describe("tracker-access follows the system-of-record chain", () => {
 
   test("an unreadable Falls back on cell is an error, and the row is not counted", () => {
     const ctx = ctxWith(undefined, {
-      "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, ["| `tracker-access` | `fails-closed` | the knowledgebase | Prose |"]),
+      "adapters/tracker/CONTRACT.md": table(WITH_FALLBACK, [
+        "| `tracker-access` | `fails-closed` | the knowledgebase | Prose |",
+      ]),
     });
     const { adapters, issues } = loadAdapterSupplies(ctx.root, ctx.catalog);
     expect(issues.map((i) => i.rule)).toEqual(["packaging.malformed-fallback"]);
@@ -2156,7 +2290,9 @@ describe("tracker-access follows the system-of-record chain", () => {
     expect(describe_("attached: [tracker]\n")).toBe(
       "ak.install.yaml: attached tracker; tracker: no backend, kb-write fallback, which no attached adapter supplies",
     );
-    expect(describe_("attached: [tracker]\ntracker:\n  backend: some-tracker\n")).toBe("ak.install.yaml: attached tracker; tracker: backend some-tracker");
+    expect(describe_("attached: [tracker]\ntracker:\n  backend: some-tracker\n")).toBe(
+      "ak.install.yaml: attached tracker; tracker: backend some-tracker",
+    );
     expect(describe_("attached: [knowledgebase]\n")).toBe("ak.install.yaml: attached knowledgebase");
   });
 });

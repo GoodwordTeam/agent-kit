@@ -48,7 +48,14 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
     const { home, upstream } = makeHome({ patched: true });
     const project = makeProject();
     const evidenceDir = makeDir();
-    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW };
+    const opts = {
+      akRoot: REPO,
+      bundleDir: makeBundle(),
+      pinsDir: makeDir(),
+      ledgerDir: makeDir(),
+      upstream,
+      now: FIXED_NOW,
+    };
 
     // Firstmate briefs the task; the patched fm-brief binds it.
     const bound = bind(
@@ -89,7 +96,11 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
 
     // Review: the correctness seat finds the empty path accepted. Its raw output
     // goes to the evidence store before synthesis.
-    const raw = store(evidenceDir, "raw-correctness-1.txt", "parse('') returns '' instead of rejecting the empty path\n");
+    const raw = store(
+      evidenceDir,
+      "raw-correctness-1.txt",
+      "parse('') returns '' instead of rejecting the empty path\n",
+    );
     const review = template("review.example.json");
     Object.assign(review, {
       id: "demo-review-1",
@@ -150,6 +161,8 @@ describe("fixture demo (mock evidence, dry-run): ticket to dry-run ship", () => 
     expect(line.line).toContain("evidence=demo-verification-2,demo-review-2");
 
     // A publish line needs a PR, and this binding cannot produce one.
-    expect(statusLine({ delivery: { action: "publish" } }, { outcome: "complete", at: 1, evidence: ["x"] }).ok).toBe(false);
+    expect(statusLine({ delivery: { action: "publish" } }, { outcome: "complete", at: 1, evidence: ["x"] }).ok).toBe(
+      false,
+    );
   });
 });

@@ -41,7 +41,9 @@ const prose = dev.cases.filter((c) => kindOf(c) === "user-prose");
 const negative = dev.cases.find((c) => kindOf(c) === "model-negative")!;
 const routed = dev.cases.find((c) => c.polarity === "positive" && c.invocation === "M")!;
 const draftSkills = new Set(dev.cases.flatMap((c) => (c.draft === undefined ? [] : [c.draft.name])));
-const bundledSkills = [...new Set(dev.cases.flatMap((c) => [c.skill, ...c.expected]).filter((skill) => !draftSkills.has(skill)))].sort();
+const bundledSkills = [
+  ...new Set(dev.cases.flatMap((c) => [c.skill, ...c.expected]).filter((skill) => !draftSkills.has(skill))),
+].sort();
 
 describe("stratifiedSample", () => {
   const rows = [
@@ -53,8 +55,17 @@ describe("stratifiedSample", () => {
   test("a stratum smaller than its share is taken whole and the rest split the remaining slots", () => {
     const { picked, strata } = stratifiedSample(rows, 20, 7);
     expect(picked).toHaveLength(20);
-    expect(strata).toEqual({ "missed/p1": { available: 50, taken: 9 }, "recommended/p2": { available: 50, taken: 9 }, "violated/p1": { available: 2, taken: 2 } });
-    expect(picked.filter((r) => r.stratum === "violated/p1").map((r) => r.id).sort()).toEqual(["rare-0", "rare-1"]);
+    expect(strata).toEqual({
+      "missed/p1": { available: 50, taken: 9 },
+      "recommended/p2": { available: 50, taken: 9 },
+      "violated/p1": { available: 2, taken: 2 },
+    });
+    expect(
+      picked
+        .filter((r) => r.stratum === "violated/p1")
+        .map((r) => r.id)
+        .sort(),
+    ).toEqual(["rare-0", "rare-1"]);
   });
 
   test("the same seed picks the same rows in the same order, whatever order the rows came in", () => {
@@ -69,7 +80,10 @@ describe("stratifiedSample", () => {
       { id: "y-0", stratum: "missed/p1", case: "case-y" },
       { id: "z-0", stratum: "missed/p1", case: "case-z" },
     ];
-    for (const seed of [1, 2, 3]) expect(new Set(stratifiedSample(skewed, 3, seed).picked.map((r) => r.case))).toEqual(new Set(["case-x", "case-y", "case-z"]));
+    for (const seed of [1, 2, 3])
+      expect(new Set(stratifiedSample(skewed, 3, seed).picked.map((r) => r.case))).toEqual(
+        new Set(["case-x", "case-y", "case-z"]),
+      );
   });
 
   test("asking for more than there is takes everything", () => {
@@ -96,17 +110,31 @@ describe("classification", () => {
     // A quiet load that never names the command is a fail, not an abstention.
     const quiet = scoreCase(c, [load], "Here is what I found.", scoring);
     expect(suggestedOf(quiet)).toMatchObject({ outcome: "loaded-no-command", verdict: "FAIL" });
-    expect(suggestedOf(scoreCase(c, [load], named, scoring))).toMatchObject({ outcome: "stopped-before-any-call", verdict: "PASS" });
+    expect(suggestedOf(scoreCase(c, [load], named, scoring))).toMatchObject({
+      outcome: "stopped-before-any-call",
+      verdict: "PASS",
+    });
     // Lookups are tolerated only when the reply then names the command, and the reason lists them.
     const looked = suggestedOf(scoreCase(c, [load, look], named, scoring));
     expect(looked).toMatchObject({ outcome: "looked-then-stopped", verdict: "PASS" });
     expect(looked.reason).toContain("calls: look Bash git status");
-    expect(suggestedOf(scoreCase(c, [load, look], "Here is what I found.", scoring))).toMatchObject({ outcome: "loaded-no-command", verdict: "FAIL" });
+    expect(suggestedOf(scoreCase(c, [load, look], "Here is what I found.", scoring))).toMatchObject({
+      outcome: "loaded-no-command",
+      verdict: "FAIL",
+    });
     const delegated = scoreCase(c, [load, { kind: "tool", name: "Agent", raw: "Agent", input: {} }], named, scoring);
     expect(suggestedOf(delegated)).toMatchObject({ outcome: "loaded-unclear", verdict: null });
-    const wrote = scoreCase(c, [load, { kind: "tool", name: "Write", raw: "Write", input: { file_path: "x" } }], named, scoring);
+    const wrote = scoreCase(
+      c,
+      [load, { kind: "tool", name: "Write", raw: "Write", input: { file_path: "x" } }],
+      named,
+      scoring,
+    );
     expect(suggestedOf(wrote)).toMatchObject({ outcome: "violated", verdict: "FAIL" });
-    expect(suggestedOf(scoreCase(c, [], "Nothing to do.", scoring))).toMatchObject({ outcome: "missed", verdict: "FAIL" });
+    expect(suggestedOf(scoreCase(c, [], "Nothing to do.", scoring))).toMatchObject({
+      outcome: "missed",
+      verdict: "FAIL",
+    });
     // Nothing loaded and the command named: recommended, or redirected where the prompt carried it.
     const unloaded = suggestedOf(scoreCase(c, [], named, scoring));
     expect(unloaded.verdict).toBe("PASS");
@@ -117,9 +145,15 @@ describe("classification", () => {
     const c = prose.find((x) => x.skill === "super-align")!;
     const load: SessionEvent = { kind: "tool", name: "Skill", raw: "Skill", input: { skill: "ak:super-align" } };
     const round = "Round 1: 1. Which user owns this outcome? 2. What result would count as success?";
-    expect(suggestedOf(scoreCase(c, [load], round, scoring))).toMatchObject({ outcome: "loaded-no-command", verdict: "FAIL" });
+    expect(suggestedOf(scoreCase(c, [load], round, scoring))).toMatchObject({
+      outcome: "loaded-no-command",
+      verdict: "FAIL",
+    });
     const pointed = `${round}\n\nsuper-align is human-started; type /ak:super-align to run the round for real.`;
-    expect(suggestedOf(scoreCase(c, [load], pointed, scoring))).toMatchObject({ outcome: "stopped-before-any-call", verdict: "PASS" });
+    expect(suggestedOf(scoreCase(c, [load], pointed, scoring))).toMatchObject({
+      outcome: "stopped-before-any-call",
+      verdict: "PASS",
+    });
   });
 });
 
@@ -135,9 +169,19 @@ function storedRun(): { receipt: string; copy: string; dumpDir: string; loadedCa
     { kind: "tool", name: "Skill", raw: "Skill", input: { skill: `ak:${loadedCase.expected[0]}` } },
     { kind: "tool", name: "Write", raw: "Write", input: { file_path: "notes.md" } },
   ];
-  writeFileSync(join(dumpDir, "subject-a", `${loadedCase.id}.json`), JSON.stringify({ case: loadedCase, scored: {}, reply: "Written.", events }));
+  writeFileSync(
+    join(dumpDir, "subject-a", `${loadedCase.id}.json`),
+    JSON.stringify({ case: loadedCase, scored: {}, reply: "Written.", events }),
+  );
   writeFileSync(join(dumpDir, "subject-a", "index.json"), JSON.stringify({ fired: 1 }));
-  const result = (c: Case, reply: string, loaded: string[], extra: Record<string, unknown> = {}) => ({ id: c.id, loaded, reply, timed_out: false, exit_code: 0, ...extra });
+  const result = (c: Case, reply: string, loaded: string[], extra: Record<string, unknown> = {}) => ({
+    id: c.id,
+    loaded,
+    reply,
+    timed_out: false,
+    exit_code: 0,
+    ...extra,
+  });
   const receipt = {
     receipt: {
       prompt_set: "trigger-dev",
@@ -169,7 +213,11 @@ function storedRun(): { receipt: string; copy: string; dumpDir: string; loadedCa
   return { receipt: file, copy, dumpDir, loadedCase };
 }
 
-function receiptVariant(source: string, name: string, change: (receipt: Record<string, unknown>) => Record<string, unknown>): string {
+function receiptVariant(
+  source: string,
+  name: string,
+  change: (receipt: Record<string, unknown>) => Record<string, unknown>,
+): string {
   const complete = JSON.parse(readFileSync(source, "utf8")) as { receipt: Record<string, unknown> };
   const file = join(scratch, "eligibility", `${name}.json`);
   mkdirSync(join(scratch, "eligibility"), { recursive: true });
@@ -180,7 +228,10 @@ function receiptVariant(source: string, name: string, change: (receipt: Record<s
 describe("loading stored runs and the label file", () => {
   test("a bundle-off receipt produces no candidates", () => {
     const run = storedRun();
-    const bundleOff = receiptVariant(run.receipt, "bundle-off", ({ bundle_complete: _, ...receipt }) => ({ ...receipt, bundle: "off" }));
+    const bundleOff = receiptVariant(run.receipt, "bundle-off", ({ bundle_complete: _, ...receipt }) => ({
+      ...receipt,
+      bundle: "off",
+    }));
     const loaded = loadRuns([bundleOff], scoring);
     expect(loaded.candidates).toEqual([]);
     expect(loaded.skipped).toEqual({ "bundle was not on": 5 });
@@ -188,15 +239,26 @@ describe("loading stored runs and the label file", () => {
 
   test("a legacy or incomplete bundle-on receipt produces no candidates", () => {
     const run = storedRun();
-    const legacyBundleOn = receiptVariant(run.receipt, "legacy-bundle-on", ({ bundle_complete: _, ...receipt }) => ({ ...receipt, bundle: "on" }));
-    const incompleteBundle = receiptVariant(run.receipt, "incomplete-bundle", (receipt) => ({ ...receipt, bundle_complete: bundledSkills.slice(1) }));
+    const legacyBundleOn = receiptVariant(run.receipt, "legacy-bundle-on", ({ bundle_complete: _, ...receipt }) => ({
+      ...receipt,
+      bundle: "on",
+    }));
+    const incompleteBundle = receiptVariant(run.receipt, "incomplete-bundle", (receipt) => ({
+      ...receipt,
+      bundle_complete: bundledSkills.slice(1),
+    }));
     const legacy = loadRuns([legacyBundleOn], scoring);
     expect(legacy.candidates).toEqual([]);
     expect(legacy.skipped).toEqual({ "bundle completeness was not recorded": 5 });
     const incomplete = loadRuns([incompleteBundle], scoring);
     expect(incomplete.candidates).toEqual([]);
-    expect(incomplete.skipped).toEqual({ [`bundle completeness does not cover the prompt set (${bundledSkills[0]})`]: 5 });
-    for (const inputs of [[legacyBundleOn, incompleteBundle, run.receipt], [run.receipt, incompleteBundle, legacyBundleOn]]) {
+    expect(incomplete.skipped).toEqual({
+      [`bundle completeness does not cover the prompt set (${bundledSkills[0]})`]: 5,
+    });
+    for (const inputs of [
+      [legacyBundleOn, incompleteBundle, run.receipt],
+      [run.receipt, incompleteBundle, legacyBundleOn],
+    ]) {
       const mixed = loadRuns(inputs, scoring);
       expect(mixed.candidates).toHaveLength(3);
       expect(mixed.skipped).toEqual({ "not decided by the heuristic graders": 1, "invalid session (exit 1)": 1 });
@@ -230,7 +292,10 @@ describe("loading stored runs and the label file", () => {
     expect(dumped).toMatchObject({ host: "codex", subject: "subject-a" });
     expect(dumped.events).toHaveLength(2);
     expect(dumped.scored.outcome).toBe("violated");
-    const quiet = loaded.candidates.filter((c) => c.events === null).map((c) => c.scored.outcome).sort();
+    const quiet = loaded.candidates
+      .filter((c) => c.events === null)
+      .map((c) => c.scored.outcome)
+      .sort();
     expect(quiet).toEqual(["held", "recommended"]);
   });
 
@@ -246,7 +311,11 @@ describe("loading stored runs and the label file", () => {
       expect(item.transcript).toContain(`[prompt] ${item.prompt}`);
     }
     const violated = labels.items.find((i) => i.stratum.startsWith("violated/"))!;
-    expect(violated).toMatchObject({ events_recorded: true, suggested: { verdict: "FAIL", outcome: "violated" }, kind: "user-prose" });
+    expect(violated).toMatchObject({
+      events_recorded: true,
+      suggested: { verdict: "FAIL", outcome: "violated" },
+      kind: "user-prose",
+    });
     expect(violated.transcript).toContain("[tool Write]");
     const held = labels.items.find((i) => i.kind === "model-negative")!;
     expect(held).toMatchObject({ stratum: "held-quiet/n1", events_recorded: false, suggested: { verdict: "PASS" } });
@@ -254,12 +323,23 @@ describe("loading stored runs and the label file", () => {
     const file = join(scratch, "round-trip", "labels.json");
     writeLabels(file, labels);
     expect(readLabels(file)).toEqual(labels);
-    expect(buildLabels(loadRuns(sources, scoring), { n: 80, seed: 1, sources }).items.map((i) => i.id)).toEqual(labels.items.map((i) => i.id));
+    expect(buildLabels(loadRuns(sources, scoring), { n: 80, seed: 1, sources }).items.map((i) => i.id)).toEqual(
+      labels.items.map((i) => i.id),
+    );
   });
 
   test("a label other than PASS, FAIL or null is refused on read", () => {
     const file = join(scratch, "bad-label.json");
-    const labels: LabelFile = { version: 1, criteria: CRITERIA, seed: 1, target: 1, sources: [], strata: {}, skipped: {}, items: [item("a", { label: "pass" as unknown as "PASS" })] };
+    const labels: LabelFile = {
+      version: 1,
+      criteria: CRITERIA,
+      seed: 1,
+      target: 1,
+      sources: [],
+      strata: {},
+      skipped: {},
+      items: [item("a", { label: "pass" as unknown as "PASS" })],
+    };
     writeFileSync(file, JSON.stringify(labels));
     expect(() => readLabels(file)).toThrow(/label must be PASS, FAIL or null/);
   });
@@ -286,7 +366,16 @@ function item(id: string, fields: Partial<LabelItem> = {}): LabelItem {
   };
 }
 
-const fileOf = (items: LabelItem[]): LabelFile => ({ version: 1, criteria: CRITERIA, seed: 1, target: items.length, sources: [], strata: {}, skipped: {}, items });
+const fileOf = (items: LabelItem[]): LabelFile => ({
+  version: 1,
+  criteria: CRITERIA,
+  seed: 1,
+  target: items.length,
+  sources: [],
+  strata: {},
+  skipped: {},
+  items,
+});
 
 describe("kappaReport", () => {
   const s = (verdict: "PASS" | "FAIL" | null) => ({ verdict, outcome: "recommended" as const, reason: "" });
@@ -303,14 +392,20 @@ describe("kappaReport", () => {
     expect(report).toMatchObject({ items: 5, labelled: 4, bar: 0.6 });
     // reviewer-c's invalid vote and the scorer's abstention drop item 4 from their rows; item 5 is unlabelled.
     const [b, c] = report.reviewer_vs_human;
-    expect(report.reviewer_vs_human.map((r) => [r.a, r.b, r.n])).toEqual([["reviewer-b", "human", 4], ["reviewer-c", "human", 3]]);
+    expect(report.reviewer_vs_human.map((r) => [r.a, r.b, r.n])).toEqual([
+      ["reviewer-b", "human", 4],
+      ["reviewer-c", "human", 3],
+    ]);
     expect(b!.kappa).toBe(1);
     expect(c!.kappa).toBeCloseTo(0.4, 10);
     expect(report.scorer_vs_human).toMatchObject({ a: "scorer", b: "human", n: 3 });
     expect(report.scorer_vs_human!.kappa).toBeCloseTo(0.4, 10);
     // Item 5 counts here although no human labelled it: b and c agree on 1 and 3 only, so κ is 0.
     expect(report.reviewer_pairs.map((r) => [r.a, r.b, r.n, r.kappa])).toEqual([["reviewer-b", "reviewer-c", 4, 0]]);
-    expect(report.scorer_vs_reviewers.map((r) => [r.a, r.b, r.n])).toEqual([["scorer", "reviewer-b", 4], ["scorer", "reviewer-c", 4]]);
+    expect(report.scorer_vs_reviewers.map((r) => [r.a, r.b, r.n])).toEqual([
+      ["scorer", "reviewer-b", 4],
+      ["scorer", "reviewer-c", 4],
+    ]);
     expect(report.scorer_vs_reviewers[1]!.kappa).toBe(1);
   });
 
@@ -329,7 +424,10 @@ describe("kappaReport", () => {
     ]);
     expect(report.scorer_vs_human).toEqual({ a: "scorer", b: "human", n: 0, kappa: null });
     expect(report.reviewer_pairs).toEqual([{ a: "reviewer-b", b: "reviewer-c", n: 3, kappa: 1 }]);
-    expect(report.scorer_vs_reviewers.map((r) => [r.b, r.n])).toEqual([["reviewer-b", 3], ["reviewer-c", 3]]);
+    expect(report.scorer_vs_reviewers.map((r) => [r.b, r.n])).toEqual([
+      ["reviewer-b", 3],
+      ["reviewer-c", 3],
+    ]);
     for (const r of report.scorer_vs_reviewers) expect(r.kappa).toBeCloseTo(0.4, 10);
   });
 });
@@ -347,7 +445,13 @@ describe("rescoreLabels", () => {
     const orphan = item("gone", { source: join(scratch, "runs", "gone.json#subject-a/x") });
     labels.items.push(orphan);
     const result = rescoreLabels(labels, loadRuns(sources, scoring));
-    expect(result.changed).toEqual([{ id: stale.id, from: { verdict: "FAIL", outcome: "missed", reason: "missed" }, to: current[labels.items.indexOf(stale)]! }]);
+    expect(result.changed).toEqual([
+      {
+        id: stale.id,
+        from: { verdict: "FAIL", outcome: "missed", reason: "missed" },
+        to: current[labels.items.indexOf(stale)]!,
+      },
+    ]);
     expect(result.missing).toEqual(["gone"]);
     expect(result.ineligible).toEqual([]);
     expect(result.labels.items.slice(0, -1).map((i) => i.suggested)).toEqual(current);
@@ -360,15 +464,23 @@ describe("rescoreLabels", () => {
   test("an item whose session is stored but ineligible is reported with the reason, apart from one that is gone", async () => {
     const run = storedRun();
     const sampled = buildLabels(loadRuns([run.receipt], scoring), { n: 80, seed: 1, sources: [run.receipt] });
-    const legacy = receiptVariant(run.receipt, "rescore-legacy", ({ bundle_complete: _, ...receipt }) => ({ ...receipt, bundle: "on" }));
+    const legacy = receiptVariant(run.receipt, "rescore-legacy", ({ bundle_complete: _, ...receipt }) => ({
+      ...receipt,
+      bundle: "on",
+    }));
     const orphan = item("gone", { source: join(scratch, "runs", "gone.json#subject-a/x") });
     const labels = { ...sampled, sources: [run.dumpDir], items: [...sampled.items, orphan] };
     const dumped = labels.items.find((i) => i.events_recorded)!;
-    for (const sources of [[run.dumpDir, legacy], [legacy, run.dumpDir]]) {
+    for (const sources of [
+      [run.dumpDir, legacy],
+      [legacy, run.dumpDir],
+    ]) {
       const result = rescoreLabels(labels, loadRuns(sources, scoring));
       expect(result.changed).toEqual([]);
       expect(result.missing).toEqual(["gone"]);
-      expect(result.ineligible).toEqual(sampled.items.map((i) => ({ id: i.id, why: "bundle completeness was not recorded" })));
+      expect(result.ineligible).toEqual(
+        sampled.items.map((i) => ({ id: i.id, why: "bundle completeness was not recorded" })),
+      );
       expect(result.labels.items).toEqual(labels.items);
     }
 
@@ -382,7 +494,9 @@ describe("rescoreLabels", () => {
     } finally {
       console.log = log;
     }
-    expect(lines).toContain(`  ${dumped.id} ineligible (transcript dump without an eligible owning receipt); left as it was`);
+    expect(lines).toContain(
+      `  ${dumped.id} ineligible (transcript dump without an eligible owning receipt); left as it was`,
+    );
     expect(lines).toContain("  gone not in the sources any more; left as it was");
     expect(lines.at(-1)).toBe(`rescored 0 of 4 item(s); 0 changed; 1 ineligible; 3 missing; wrote ${labelsFile}`);
   });
@@ -404,7 +518,11 @@ describe("gradeLabels", () => {
   const seat = (id: string, host: Seat["host"], model: string): Seat => ({ id, host, model });
   const matrix: Matrix = {
     subjects: [{ id: "subject-a", host: "claude", model: "bind-1" }],
-    reviewers: [seat("reviewer-a", "claude", "bind-1"), seat("reviewer-b", "codex", "bind-2"), seat("reviewer-c", "grok", "bind-3")],
+    reviewers: [
+      seat("reviewer-a", "claude", "bind-1"),
+      seat("reviewer-b", "codex", "bind-2"),
+      seat("reviewer-c", "grok", "bind-3"),
+    ],
     panels: { "independent-of": "subject", "min-reviewers": 2 },
   };
   const counting = () => {
@@ -436,7 +554,10 @@ describe("gradeLabels", () => {
     writeLabels(file, fileOf([item("1", { subject: "subject-default", host: "codex" })]));
     const run = await gradeLabels(file, { matrix, spend: false });
     expect(run.plan.resolved).toEqual({ "subject-default": "host default" });
-    expect(run.plan.panels[0]!.seats.find((s) => s.reviewer.id === "reviewer-b")).toMatchObject({ status: "unavailable", reason: "subject subject-default runs the codex default binding" });
+    expect(run.plan.panels[0]!.seats.find((s) => s.reviewer.id === "reviewer-b")).toMatchObject({
+      status: "unavailable",
+      reason: "subject subject-default runs the codex default binding",
+    });
     expect(run.plan.panels[0]!.members.map((m) => m.id)).toEqual(["reviewer-a", "reviewer-c"]);
     expect(run.plan.calls).toBe(2);
   });
@@ -445,18 +566,33 @@ describe("gradeLabels", () => {
     const file = join(scratch, "spend", "labels.json");
     writeLabels(file, fileOf([item("1", { label: "FAIL" }), item("2"), item("3")]));
     const { calls, judge } = counting();
-    const run = await gradeLabels(file, { matrix, spend: true, maxCalls: 5, judge, queue: join(scratch, "spend", "q.jsonl") });
+    const run = await gradeLabels(file, {
+      matrix,
+      spend: true,
+      maxCalls: 5,
+      judge,
+      queue: join(scratch, "spend", "q.jsonl"),
+    });
     expect(run).toMatchObject({ spent: true, calls: 4, graded: 2, deferred: 1 });
     expect(calls).toHaveLength(4);
     const after = readLabels(file);
-    expect(after.items[0]).toMatchObject({ label: "FAIL", votes: { "reviewer-b": "PASS", "reviewer-c": "PASS" }, panel_verdict: "PASS", graded_as: "subject-a" });
+    expect(after.items[0]).toMatchObject({
+      label: "FAIL",
+      votes: { "reviewer-b": "PASS", "reviewer-c": "PASS" },
+      panel_verdict: "PASS",
+      graded_as: "subject-a",
+    });
     expect(after.items[2]!.votes).toBeUndefined();
     const again = await gradeLabels(file, { matrix, spend: false });
     expect(again.plan.pending).toEqual({ "subject-a": [after.items[2]!.id] });
   });
 
   test("an invalid vote counts as graded unless --retry-invalid, which regrades only that seat, within max-calls", async () => {
-    const graded = { graded_as: "subject-a", panel_verdict: "needs-human" as const, reasons: { "reviewer-b": "no reply", "reviewer-c": "ok" } };
+    const graded = {
+      graded_as: "subject-a",
+      panel_verdict: "needs-human" as const,
+      reasons: { "reviewer-b": "no reply", "reviewer-c": "ok" },
+    };
     const file = join(scratch, "retry", "labels.json");
     writeLabels(
       file,
@@ -477,7 +613,14 @@ describe("gradeLabels", () => {
     expect(dry.plan).toMatchObject({ calls: 3, pending: { "subject-a": ["1", "2"] } });
 
     const retrying = counting();
-    const run = await gradeLabels(file, { matrix, spend: true, retryInvalid: true, maxCalls: 2, judge: retrying.judge, queue });
+    const run = await gradeLabels(file, {
+      matrix,
+      spend: true,
+      retryInvalid: true,
+      maxCalls: 2,
+      judge: retrying.judge,
+      queue,
+    });
     expect(retrying.calls).toEqual(["reviewer-b"]);
     expect(run).toMatchObject({ calls: 1, graded: 1, deferred: 1 });
     const after = readLabels(file);
@@ -497,18 +640,31 @@ describe("parseArgs", () => {
   test("grade spends only with --spend, and --max-calls without it is refused rather than ignored", () => {
     const dry = parseArgs(["grade", "--subject", "subject-a"]);
     expect("problems" in dry ? dry.problems : [...dry.switches]).toEqual([]);
-    expect(parseArgs(["grade", "--max-calls", "10"])).toEqual({ problems: ["--max-calls bounds a spending run; it means nothing without --spend"] });
+    expect(parseArgs(["grade", "--max-calls", "10"])).toEqual({
+      problems: ["--max-calls bounds a spending run; it means nothing without --spend"],
+    });
     const spend = parseArgs(["grade", "--spend", "--max-calls", "10"]);
     expect("problems" in spend ? spend.problems : [...spend.switches]).toEqual(["--spend"]);
   });
 
   test("an unknown flag, a missing value, a bad number or a missing source is an error", () => {
-    expect(parseArgs(["grade", "--spend", "--retry-invalid"])).toMatchObject({ switches: new Set(["--spend", "--retry-invalid"]) });
+    expect(parseArgs(["grade", "--spend", "--retry-invalid"])).toMatchObject({
+      switches: new Set(["--spend", "--retry-invalid"]),
+    });
     expect(parseArgs(["grade", "--spnd"])).toEqual({ problems: ["grade does not take --spnd"] });
-    expect(parseArgs(["sample", "--from"])).toEqual({ problems: ["--from needs a value", "sample needs at least one --from"] });
-    expect(parseArgs(["sample", "--from", "a", "--n", "eighty"])).toEqual({ problems: ["--n must be a whole number, not eighty"] });
-    expect(parseArgs(["label"])).toEqual({ problems: ['the first argument must be sample, grade, kappa or rescore, not "label"'] });
-    expect(parseArgs(["rescore", "--file", "a.json", "--out", "b.json"])).toMatchObject({ command: "rescore", values: { "--file": ["a.json"], "--out": ["b.json"] } });
+    expect(parseArgs(["sample", "--from"])).toEqual({
+      problems: ["--from needs a value", "sample needs at least one --from"],
+    });
+    expect(parseArgs(["sample", "--from", "a", "--n", "eighty"])).toEqual({
+      problems: ["--n must be a whole number, not eighty"],
+    });
+    expect(parseArgs(["label"])).toEqual({
+      problems: ['the first argument must be sample, grade, kappa or rescore, not "label"'],
+    });
+    expect(parseArgs(["rescore", "--file", "a.json", "--out", "b.json"])).toMatchObject({
+      command: "rescore",
+      values: { "--file": ["a.json"], "--out": ["b.json"] },
+    });
     expect(parseArgs(["rescore", "--spend"])).toEqual({ problems: ["rescore does not take --spend"] });
     const ok = parseArgs(["sample", "--from", "a", "--from", "b"]);
     expect("problems" in ok ? ok.problems : ok.values["--from"]).toEqual(["a", "b"]);

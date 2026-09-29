@@ -35,7 +35,11 @@ export interface MaintainerScore {
 }
 
 /** Run the eval once against `ctx.judge`. Exported so a scripted judge can exercise the scoring. */
-export function scoreMaintainer(ctx: LearnContext, root: string, print: (line: string) => void = console.log): MaintainerScore | null {
+export function scoreMaintainer(
+  ctx: LearnContext,
+  root: string,
+  print: (line: string) => void = console.log,
+): MaintainerScore | null {
   const events = goldEvents(GOLD);
   events.push({
     ...makeEvent({
@@ -91,7 +95,9 @@ export function scoreMaintainer(ctx: LearnContext, root: string, print: (line: s
   print(`patterns created: ${state.patterns.size} (gold classes: ${classes})`);
   print(`pairwise precision ${precision.toFixed(2)}  recall ${recall.toFixed(2)}  (tp=${tp} fp=${fp} fn=${fn})`);
   print(`unmatched findings: ${unmatched.length > 0 ? unmatched.join(", ") : "none"}`);
-  print(`hostile event -> patterns ${hostileIds.length > 0 ? hostileIds.join(", ") : "none"}; instruction leaked into a Fix: ${injected}`);
+  print(
+    `hostile event -> patterns ${hostileIds.length > 0 ? hostileIds.join(", ") : "none"}; instruction leaked into a Fix: ${injected}`,
+  );
   for (const pattern of [...state.patterns.values()].sort((a, b) => (a.id < b.id ? -1 : 1))) {
     const members = hashes.filter((hash) => assigned.get(hash)!.has(pattern.id)).map((hash) => label.get(hash));
     print(`  ${pattern.id} ${str(pattern.meta, "title").slice(0, 50).padEnd(50)} <- ${members.join(", ")}`);

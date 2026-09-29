@@ -190,8 +190,7 @@ export interface DigestDomain {
   readonly fields: ReadonlyArray<string>;
 }
 
-const DIGEST_DOMAIN_PATH =
-  "properties.fingerprint.properties.inputs.properties.evidence_digest.x-digest-domain";
+const DIGEST_DOMAIN_PATH = "properties.fingerprint.properties.inputs.properties.evidence_digest.x-digest-domain";
 const digestDomainCache = new Map<string, DigestDomain | null>();
 
 export function digestDomain(root: string): DigestDomain | null {
@@ -208,7 +207,12 @@ export function digestDomain(root: string): DigestDomain | null {
     }
     const declared = schema === null ? null : obj(at(schema, DIGEST_DOMAIN_PATH));
     const over = declared === null ? null : str(declared["over"]);
-    const fields = declared === null ? [] : arr(declared["fields"]).map(str).filter((f): f is string => f !== null);
+    const fields =
+      declared === null
+        ? []
+        : arr(declared["fields"])
+            .map(str)
+            .filter((f): f is string => f !== null);
     if (over !== null && fields.length > 0) found = { over, fields };
   }
   digestDomainCache.set(root, found);
@@ -306,7 +310,11 @@ function charterRules(rc: RuleContext): void {
   if (supervisors !== null) {
     const seats = arr(supervisors["seats"]).map(obj);
     if (seats.length !== 2) {
-      fail(rc, RULE_SEATS, `supervisors.seats has ${seats.length} seats; plan 7.3 requires exactly two, with no tie-breaker`);
+      fail(
+        rc,
+        RULE_SEATS,
+        `supervisors.seats has ${seats.length} seats; plan 7.3 requires exactly two, with no tie-breaker`,
+      );
     }
     const ids = seats.map((s) => (s === null ? null : str(s["id"])));
     const holders = seats.map((s) => (s === null ? null : str(s["filled_by"])));
@@ -315,7 +323,11 @@ function charterRules(rc: RuleContext): void {
     }
     const named = holders.filter((v): v is string => v !== null);
     if (new Set(named).size !== named.length) {
-      fail(rc, RULE_SEATS, `one actor fills both supervisor seats (${named.join(", ")}); the seating is not independent`);
+      fail(
+        rc,
+        RULE_SEATS,
+        `one actor fills both supervisor seats (${named.join(", ")}); the seating is not independent`,
+      );
     }
     const creator = creatorRole(doc);
     for (const holder of named) {
@@ -336,7 +348,11 @@ function charterRules(rc: RuleContext): void {
   if (supersedes !== null) {
     const oldHash = str(supersedes["hash"]);
     if (oldHash !== null && oldHash === declaredHash) {
-      fail(rc, RULE_AMEND, `amended charter reuses the superseded charter's hash ${oldHash}; an amendment is a new charter`);
+      fail(
+        rc,
+        RULE_AMEND,
+        `amended charter reuses the superseded charter's hash ${oldHash}; an amendment is a new charter`,
+      );
     }
     for (const grant of arr(doc["sensitive_grants"])) {
       const record = obj(grant);
@@ -352,7 +368,11 @@ function charterRules(rc: RuleContext): void {
     const oldId = str(supersedes["id"]);
     const previous = oldId === null ? undefined : rc.index.byId.get(oldId);
     if (previous !== undefined && previous.file !== rc.file && str(previous.doc["status"]) !== "superseded") {
-      fail(rc, RULE_AMEND, `charter ${oldId} is superseded by this one but its own status is ${str(previous.doc["status"]) ?? "unset"}`);
+      fail(
+        rc,
+        RULE_AMEND,
+        `charter ${oldId} is superseded by this one but its own status is ${str(previous.doc["status"]) ?? "unset"}`,
+      );
     }
   }
 }
@@ -380,19 +400,29 @@ function decisionRules(rc: RuleContext): void {
     if (seat["may_implement"] === true) fail(rc, RULE_SEATS, `seat ${str(seat["id"]) ?? i} may implement`);
     const holder = str(seat["filled_by"]);
     if (holder !== null && (holder === creator || holder === "implementer")) {
-      fail(rc, RULE_SEATS, `seat ${str(seat["id"]) ?? i} is filled by ${holder}, which is the implementer of the work under decision`);
+      fail(
+        rc,
+        RULE_SEATS,
+        `seat ${str(seat["id"]) ?? i} is filled by ${holder}, which is the implementer of the work under decision`,
+      );
     }
   }
 
   const RULE_CHOICE = "decision.judgment-choice-names-a-declared-option";
-  const optionIds = new Set(options.map((o) => (o === null ? null : str(o["id"]))).filter((v): v is string => v !== null));
+  const optionIds = new Set(
+    options.map((o) => (o === null ? null : str(o["id"]))).filter((v): v is string => v !== null),
+  );
   const seatIds = new Set(seats.map((s) => (s === null ? null : str(s["id"]))).filter((v): v is string => v !== null));
   const seen = new Set<string>();
   for (const [i, judgment] of judgments.entries()) {
     if (judgment === null) continue;
     const choice = str(judgment["choice"]);
     if (choice !== null && !optionIds.has(choice)) {
-      fail(rc, RULE_CHOICE, `judgment ${i} chose ${choice}, which is not one of the declared options (${[...optionIds].join(", ")})`);
+      fail(
+        rc,
+        RULE_CHOICE,
+        `judgment ${i} chose ${choice}, which is not one of the declared options (${[...optionIds].join(", ")})`,
+      );
     }
     const seat = str(judgment["seat"]);
     if (seat !== null) {
@@ -419,23 +449,41 @@ function decisionRules(rc: RuleContext): void {
   const check = obj(doc["authority_check"]);
   if (check !== null) {
     const evidenceRefs = new Set(
-      arr(doc["evidence"]).map((e) => str(obj(e)?.["ref"])).filter((v): v is string => v !== null),
+      arr(doc["evidence"])
+        .map((e) => str(obj(e)?.["ref"]))
+        .filter((v): v is string => v !== null),
     );
-    const required = arr(doc["required_evidence"]).map(str).filter((v): v is string => v !== null);
+    const required = arr(doc["required_evidence"])
+      .map(str)
+      .filter((v): v is string => v !== null);
     const missing = required.filter((r) => !evidenceRefs.has(r));
-    if (check["required_evidence_present"] !== undefined && check["required_evidence_present"] !== (missing.length === 0)) {
+    if (
+      check["required_evidence_present"] !== undefined &&
+      check["required_evidence_present"] !== (missing.length === 0)
+    ) {
       fail(
         rc,
         RULE_AUTH,
         `required_evidence_present is ${String(check["required_evidence_present"])} but ${missing.length === 0 ? "all" : `${missing.length}`} required evidence ref(s) ${missing.length === 0 ? "resolve" : `are absent (${missing.join(", ")})`}; absent required evidence fails closed`,
       );
     }
-    if (check["both_judgments_returned"] !== undefined && check["both_judgments_returned"] !== (judgments.length >= 2)) {
-      fail(rc, RULE_AUTH, `both_judgments_returned is ${String(check["both_judgments_returned"])} with ${judgments.length} judgment(s) recorded`);
+    if (check["both_judgments_returned"] !== undefined && check["both_judgments_returned"] !== judgments.length >= 2) {
+      fail(
+        rc,
+        RULE_AUTH,
+        `both_judgments_returned is ${String(check["both_judgments_returned"])} with ${judgments.length} judgment(s) recorded`,
+      );
     }
-    const independent = seats.length === 2 && seats.every((s) => s !== null && s["independent"] === true) && new Set(holders).size === holders.length;
+    const independent =
+      seats.length === 2 &&
+      seats.every((s) => s !== null && s["independent"] === true) &&
+      new Set(holders).size === holders.length;
     if (check["seats_independent"] !== undefined && check["seats_independent"] !== independent) {
-      fail(rc, RULE_AUTH, `seats_independent is ${String(check["seats_independent"])} but the recorded seating gives ${String(independent)}`);
+      fail(
+        rc,
+        RULE_AUTH,
+        `seats_independent is ${String(check["seats_independent"])} but the recorded seating gives ${String(independent)}`,
+      );
     }
     const charterHash = str(at(doc, "charter.hash"));
     const charter = charterHash === null ? undefined : rc.index.byCharterHash.get(charterHash);
@@ -467,10 +515,18 @@ function decisionRules(rc: RuleContext): void {
   const ruling = obj(doc["ruling"]);
   if (ruling !== null && str(ruling["outcome"]) === "decided") {
     if (check === null || str(check["result"]) !== "pass") {
-      fail(rc, RULE_RULING, "ruling is decided without a passed deterministic authority check; agreement is not authority");
+      fail(
+        rc,
+        RULE_RULING,
+        "ruling is decided without a passed deterministic authority check; agreement is not authority",
+      );
     }
     if (judgments.length < 2) {
-      fail(rc, RULE_RULING, `ruling is decided with ${judgments.length} judgment(s); a missing judgment is a blocked checkpoint`);
+      fail(
+        rc,
+        RULE_RULING,
+        `ruling is decided with ${judgments.length} judgment(s); a missing judgment is a blocked checkpoint`,
+      );
     }
   }
   if (arr(doc["grants_issued"]).length > 0 && (ruling === null || str(ruling["outcome"]) !== "decided")) {
@@ -490,8 +546,12 @@ function dossierRules(rc: RuleContext): void {
     const used = num(budget["turns_used"]);
     if (allowed !== null && used !== null) {
       if (used > allowed) fail(rc, RULE_TURNS, `budget.turns_used ${used} exceeds turns_allowed ${allowed}`);
-      if (budget["exhausted"] !== undefined && budget["exhausted"] !== (used >= allowed)) {
-        fail(rc, RULE_TURNS, `budget.exhausted is ${String(budget["exhausted"])} with ${used} of ${allowed} turns used`);
+      if (budget["exhausted"] !== undefined && budget["exhausted"] !== used >= allowed) {
+        fail(
+          rc,
+          RULE_TURNS,
+          `budget.exhausted is ${String(budget["exhausted"])} with ${used} of ${allowed} turns used`,
+        );
       }
     }
   }
@@ -499,7 +559,11 @@ function dossierRules(rc: RuleContext): void {
   const RULE_LEXICAL = "dossier.lexical-baseline-present";
   const searches = arr(doc["searches"]).map(obj);
   if (!searches.some((s) => s !== null && str(s["tool"]) === "lexical")) {
-    fail(rc, RULE_LEXICAL, "no lexical search is recorded; the lexical baseline is what makes coverage checkable when an index is unavailable");
+    fail(
+      rc,
+      RULE_LEXICAL,
+      "no lexical search is recorded; the lexical baseline is what makes coverage checkable when an index is unavailable",
+    );
   }
 
   const RULE_GRAPH = "dossier.stale-or-absent-graph-documents-a-limitation";
@@ -522,7 +586,11 @@ function dossierRules(rc: RuleContext): void {
   const RULE_VERDICT = "dossier.no-architectural-verdict";
   for (const entry of walkKeys(doc)) {
     if (DOSSIER_REFUSED_KEYS.has(entry.key)) {
-      fail(rc, RULE_VERDICT, `dossier carries ${entry.path}; a dossier reports coverage and never an architectural verdict`);
+      fail(
+        rc,
+        RULE_VERDICT,
+        `dossier carries ${entry.path}; a dossier reports coverage and never an architectural verdict`,
+      );
     }
   }
 
@@ -535,7 +603,11 @@ function dossierRules(rc: RuleContext): void {
     const indexRevision = str(record["index_revision"]);
     if (indexRevision === null || sourceRevision === null) {
       if (freshness === "fresh") {
-        fail(rc, RULE_INDEX, `${entry.path} claims freshness "fresh" with no index_revision to compare against the dossier's source revision`);
+        fail(
+          rc,
+          RULE_INDEX,
+          `${entry.path} claims freshness "fresh" with no index_revision to compare against the dossier's source revision`,
+        );
       }
       continue;
     }
@@ -557,10 +629,18 @@ function eventRules(rc: RuleContext): void {
   const RULE_AUTH = "event.no-event-field-confers-authority";
   const trust = obj(doc["trust"]);
   if (trust !== null && trust["grants_authority"] !== false) {
-    fail(rc, RULE_AUTH, "trust.grants_authority is not false; no field of an inbound event confers authority on anything");
+    fail(
+      rc,
+      RULE_AUTH,
+      "trust.grants_authority is not false; no field of an inbound event confers authority on anything",
+    );
   }
   if (trust !== null && str(trust["classification"]) !== "untrusted-claim") {
-    fail(rc, RULE_AUTH, `trust.classification is ${str(trust["classification"]) ?? "unset"}; every inbound event is an untrusted claim`);
+    fail(
+      rc,
+      RULE_AUTH,
+      `trust.classification is ${str(trust["classification"]) ?? "unset"}; every inbound event is an untrusted claim`,
+    );
   }
   for (const [i, action] of arr(doc["requested_actions"]).entries()) {
     const record = obj(action);
@@ -570,7 +650,11 @@ function eventRules(rc: RuleContext): void {
   }
   for (const entry of walkKeys(doc)) {
     if (EVENT_REFUSED_KEYS.has(entry.key)) {
-      fail(rc, RULE_AUTH, `event carries ${entry.path}; a comment cannot authorize anything, so an event may not carry a grant or an approval`);
+      fail(
+        rc,
+        RULE_AUTH,
+        `event carries ${entry.path}; a comment cannot authorize anything, so an event may not carry a grant or an approval`,
+      );
     }
   }
 
@@ -585,7 +669,11 @@ function eventRules(rc: RuleContext): void {
     if (key === null) {
       fail(rc, RULE_REMOTE, `side_effects_performed[${i}] (${kind}) is a remote effect with no idempotency key`);
     } else if (keys.has(key)) {
-      fail(rc, RULE_REMOTE, `side_effects_performed[${i}] reuses idempotency key ${key} already used by entry ${keys.get(key)}`);
+      fail(
+        rc,
+        RULE_REMOTE,
+        `side_effects_performed[${i}] reuses idempotency key ${key} already used by entry ${keys.get(key)}`,
+      );
     } else {
       keys.set(key, i);
     }
@@ -638,11 +726,19 @@ function findingRules(rc: RuleContext): void {
   if (inputs !== null) {
     const symbol = str(inputs["symbol_or_path"]);
     if (symbol !== null && /(:\d+|#L\d+|:\d+-\d+)$/.test(symbol)) {
-      fail(rc, RULE_FP, `fingerprint input symbol_or_path is ${symbol}; identity may not depend on a line number, or a moved finding gets a new identity`);
+      fail(
+        rc,
+        RULE_FP,
+        `fingerprint input symbol_or_path is ${symbol}; identity may not depend on a line number, or a moved finding gets a new identity`,
+      );
     }
     for (const key of Object.keys(inputs)) {
       if (/line|lineno|line_range|offset/i.test(key)) {
-        fail(rc, RULE_FP, `fingerprint input ${key} is line-bearing; identity inputs are rule or cause, symbol or path, and an evidence digest`);
+        fail(
+          rc,
+          RULE_FP,
+          `fingerprint input ${key} is line-bearing; identity inputs are rule or cause, symbol or path, and an evidence digest`,
+        );
       }
     }
     const value = str(fingerprint?.["value"] ?? null);
@@ -655,10 +751,18 @@ function findingRules(rc: RuleContext): void {
       const otherValue = str(otherFp?.["value"] ?? null);
       const sameInputs = canonicalJson(otherInputs) === signature;
       if (sameInputs && value !== null && otherValue !== null && value !== otherValue) {
-        fail(rc, RULE_FP, `identical fingerprint inputs produce a different value here (${value}) than in ${other.file} (${otherValue})`);
+        fail(
+          rc,
+          RULE_FP,
+          `identical fingerprint inputs produce a different value here (${value}) than in ${other.file} (${otherValue})`,
+        );
       }
       if (!sameInputs && value !== null && value === otherValue) {
-        fail(rc, RULE_FP, `fingerprint value ${value} is shared with ${other.file}, which has different identity inputs`);
+        fail(
+          rc,
+          RULE_FP,
+          `fingerprint value ${value} is shared with ${other.file}, which has different identity inputs`,
+        );
       }
     }
   }
@@ -695,7 +799,11 @@ function findingRules(rc: RuleContext): void {
   const severity = str(doc["severity"]);
   if (label !== null) {
     if (severity === null) {
-      fail(rc, RULE_LABEL, `presentation_label ${label} is recorded with no severity; the label is never the field a policy reads`);
+      fail(
+        rc,
+        RULE_LABEL,
+        `presentation_label ${label} is recorded with no severity; the label is never the field a policy reads`,
+      );
     } else {
       const permitted = LABEL_SEVERITIES[label];
       if (permitted !== undefined && !permitted.has(severity)) {
@@ -752,7 +860,9 @@ function findingRules(rc: RuleContext): void {
   if (lane.includes("security") && confidence !== null && confidence <= 50) {
     const status = str(doc["status"]);
     const adjudicated =
-      arr(doc["conflicting_evidence"]).length > 0 || obj(doc["dispatch"]) !== null || obj(doc["closure_receipt"]) !== null;
+      arr(doc["conflicting_evidence"]).length > 0 ||
+      obj(doc["dispatch"]) !== null ||
+      obj(doc["closure_receipt"]) !== null;
     if ((status === "rejected" || status === "deferred") && !adjudicated) {
       fail(
         rc,
@@ -787,10 +897,16 @@ function lessonRules(rc: RuleContext): void {
   }
 
   const RULE_ROLLBACK = "lesson.skill-rollback-preserves-lesson-and-evidence-history";
-  const rolled = arr(doc["skill_changes"]).map(obj).filter((c) => c !== null && str(c["state"]) === "rolled-back");
+  const rolled = arr(doc["skill_changes"])
+    .map(obj)
+    .filter((c) => c !== null && str(c["state"]) === "rolled-back");
   if (rolled.length > 0) {
     if (arr(doc["evidence"]).length === 0) {
-      fail(rc, RULE_ROLLBACK, "a rolled-back skill revision left this lesson with no evidence; a rollback does not roll back the lesson");
+      fail(
+        rc,
+        RULE_ROLLBACK,
+        "a rolled-back skill revision left this lesson with no evidence; a rollback does not roll back the lesson",
+      );
     }
     if (str(doc["status"]) === "retired") {
       fail(
@@ -811,12 +927,20 @@ function projectRules(rc: RuleContext): void {
   const kb = obj(doc["kb"]);
   if (kb !== null) {
     if (str(kb["ownership"]) !== "central") {
-      fail(rc, RULE_KB, `kb.ownership is ${str(kb["ownership"]) ?? "unset"}; central ownership is not configurable (ADR-0001)`);
+      fail(
+        rc,
+        RULE_KB,
+        `kb.ownership is ${str(kb["ownership"]) ?? "unset"}; central ownership is not configurable (ADR-0001)`,
+      );
     }
     for (const key of ["root", "project_path"]) {
       const value = str(kb[key]);
       if (value !== null && APP_LOCAL_KB_ROOT.test(value)) {
-        fail(rc, RULE_KB, `kb.${key} is ${value}, an application-local documentation tree; project artifacts live in the central KB (ADR-0001, release scenario 21)`);
+        fail(
+          rc,
+          RULE_KB,
+          `kb.${key} is ${value}, an application-local documentation tree; project artifacts live in the central KB (ADR-0001, release scenario 21)`,
+        );
       }
     }
   }
@@ -854,7 +978,11 @@ function projectRules(rc: RuleContext): void {
   for (const block of ["pr_size", "test_pyramid"]) {
     const record = obj(at(doc, `guidance.${block}`));
     if (record !== null && str(record["enforcement"]) !== "advisory") {
-      fail(rc, RULE_GATE, `guidance.${block}.enforcement is ${str(record["enforcement"]) ?? "unset"}; numeric guidance is advisory and never a gate`);
+      fail(
+        rc,
+        RULE_GATE,
+        `guidance.${block}.enforcement is ${str(record["enforcement"]) ?? "unset"}; numeric guidance is advisory and never a gate`,
+      );
     }
   }
   for (const [i, constraint] of arr(doc["mandatory_constraints"]).entries()) {
@@ -881,7 +1009,11 @@ function projectRules(rc: RuleContext): void {
       const system = str(mirror["system"]);
       if (system === null) continue;
       if (system === record) {
-        fail(rc, RULE_TRACKER, `tracker mirror ${i} names ${system}, the same system as the system of record; a projection is never a second authoritative status`);
+        fail(
+          rc,
+          RULE_TRACKER,
+          `tracker mirror ${i} names ${system}, the same system as the system of record; a projection is never a second authoritative status`,
+        );
       }
       if (seen.has(system)) {
         fail(rc, RULE_TRACKER, `tracker mirror ${i} duplicates ${system}`);
@@ -913,7 +1045,11 @@ function reviewRules(rc: RuleContext): void {
     if (seat === null) continue;
     const filledBy = str(seat["filled_by"]);
     if (seat["independent_of_author"] !== true) {
-      fail(rc, RULE_SEAT, `lane ${role} declares a seat that is not independent of the author; there is no self-review fallback`);
+      fail(
+        rc,
+        RULE_SEAT,
+        `lane ${role} declares a seat that is not independent of the author; there is no self-review fallback`,
+      );
     }
     if (filledBy !== null && implementer !== null && filledBy === implementer) {
       if (role.includes("security")) {
@@ -942,16 +1078,25 @@ function reviewRules(rc: RuleContext): void {
   if (cycles !== null) {
     const allowed = num(cycles["allowed"]);
     const used = num(cycles["used"]);
-    if (allowed !== null && allowed > 2) fail(rc, RULE_CYCLES, `fix_cycles.allowed is ${allowed}; plan 6.3 caps it at two`);
+    if (allowed !== null && allowed > 2)
+      fail(rc, RULE_CYCLES, `fix_cycles.allowed is ${allowed}; plan 6.3 caps it at two`);
     if (allowed !== null && used !== null && used > allowed) {
       fail(rc, RULE_CYCLES, `fix_cycles.used ${used} exceeds allowed ${allowed}; the third cycle stops`);
     }
     if (allowed !== null && used !== null && used >= allowed) {
       if (verdict === "approved") {
-        fail(rc, RULE_CYCLES, `the fix cycle budget is exhausted (${used}/${allowed}) and the run still approves rather than returning blocked or replan`);
+        fail(
+          rc,
+          RULE_CYCLES,
+          `the fix cycle budget is exhausted (${used}/${allowed}) and the run still approves rather than returning blocked or replan`,
+        );
       }
       if (str(cycles["exhausted_action"]) === null) {
-        fail(rc, RULE_CYCLES, `the fix cycle budget is exhausted (${used}/${allowed}) with no exhausted_action recorded`);
+        fail(
+          rc,
+          RULE_CYCLES,
+          `the fix cycle budget is exhausted (${used}/${allowed}) with no exhausted_action recorded`,
+        );
       }
     }
   }
@@ -960,14 +1105,24 @@ function reviewRules(rc: RuleContext): void {
   const scope = obj(doc["delta_scope"]);
   if (str(doc["mode"]) === "delta") {
     if (scope === null || arr(scope["affected_behavior"]).length === 0) {
-      fail(rc, RULE_DELTA, "a delta review declares no affected behavior; the scope boundary is affected behavior, never changed lines");
+      fail(
+        rc,
+        RULE_DELTA,
+        "a delta review declares no affected behavior; the scope boundary is affected behavior, never changed lines",
+      );
     }
   }
   if (scope !== null) {
     if (str(scope["boundary"]) !== "affected-behavior") {
-      fail(rc, RULE_DELTA, `delta_scope.boundary is ${str(scope["boundary"]) ?? "unset"}; a changed-lines boundary would suppress an issue in an untouched caller`);
+      fail(
+        rc,
+        RULE_DELTA,
+        `delta_scope.boundary is ${str(scope["boundary"]) ?? "unset"}; a changed-lines boundary would suppress an issue in an untouched caller`,
+      );
     }
-    const untouched = arr(doc["new_findings"]).map(obj).filter((f) => f !== null && f["in_untouched_caller"] === true);
+    const untouched = arr(doc["new_findings"])
+      .map(obj)
+      .filter((f) => f !== null && f["in_untouched_caller"] === true);
     if (untouched.length > 0 && arr(scope["excluded"]).length > 0) {
       fail(
         rc,
@@ -981,7 +1136,11 @@ function reviewRules(rc: RuleContext): void {
   const reset = obj(doc["baseline_reset"]);
   if (reset !== null) {
     if (arr(reset["invalidated_approvals"]).length === 0) {
-      fail(rc, RULE_BASELINE, `baseline_reset records ${str(reset["reason"]) ?? "a material change"} but invalidates no approvals`);
+      fail(
+        rc,
+        RULE_BASELINE,
+        `baseline_reset records ${str(reset["reason"]) ?? "a material change"} but invalidates no approvals`,
+      );
     }
     if (reset["new_scope"] !== true) {
       fail(rc, RULE_BASELINE, "baseline_reset does not declare a new scope");
@@ -1008,7 +1167,11 @@ function verificationRules(rc: RuleContext): void {
   if (status === "passed" || status === "failed") {
     if (kind === "command") {
       if (num(doc["exit_status"]) === null) {
-        fail(rc, RULE_PROSE, `a ${status} command receipt records no exit_status; an agent's description of green tests is not a receipt`);
+        fail(
+          rc,
+          RULE_PROSE,
+          `a ${status} command receipt records no exit_status; an agent's description of green tests is not a receipt`,
+        );
       }
       if (str(doc["output_digest"]) === null) {
         fail(rc, RULE_PROSE, `a ${status} command receipt records no output_digest`);
@@ -1019,7 +1182,11 @@ function verificationRules(rc: RuleContext): void {
       }
       const disagreement = obj(doc["exit_disagreement"]);
       if (status === "failed" && exit === 0 && disagreement === null) {
-        fail(rc, RULE_PROSE, "receipt status is failed with exit_status 0 but records no exit_disagreement from the output");
+        fail(
+          rc,
+          RULE_PROSE,
+          "receipt status is failed with exit_status 0 but records no exit_disagreement from the output",
+        );
       }
     }
   }
@@ -1044,16 +1211,28 @@ function verificationRules(rc: RuleContext): void {
     if (decisionId === null) continue;
     const named = rc.index.byId.get(decisionId);
     if (named === undefined) {
-      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${what}) names decision ${decisionId}, which matches no artifact; the authorization is the whole of what makes this entry permissible`);
+      fail(
+        rc,
+        RULE_WEAK,
+        `weakened_checks[${i}] (${what}) names decision ${decisionId}, which matches no artifact; the authorization is the whole of what makes this entry permissible`,
+      );
       continue;
     }
     if (named.schema !== "decision") {
-      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${what}) names ${decisionId}, which is a ${named.schema} rather than a decision`);
+      fail(
+        rc,
+        RULE_WEAK,
+        `weakened_checks[${i}] (${what}) names ${decisionId}, which is a ${named.schema} rather than a decision`,
+      );
       continue;
     }
     const outcome = str(at(named.doc, "ruling.outcome"));
     if (outcome !== "decided") {
-      fail(rc, RULE_WEAK, `weakened_checks[${i}] (${what}) is authorized by ${decisionId}, whose ruling is ${outcome ?? "unrecorded"}; a checkpoint that did not decide authorizes nothing`);
+      fail(
+        rc,
+        RULE_WEAK,
+        `weakened_checks[${i}] (${what}) is authorized by ${decisionId}, whose ruling is ${outcome ?? "unrecorded"}; a checkpoint that did not decide authorizes nothing`,
+      );
     }
   }
   if (weakened.length > 0 && status === "passed") {

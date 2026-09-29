@@ -49,12 +49,17 @@ export function buildPanel(matrix: Pick<Matrix, "reviewers" | "panels">, subject
   const decisions = new Map<string, SeatDecision>();
   const candidates: Seat[] = [];
   for (const reviewer of matrix.reviewers) {
-    if (reviewer.id === subject.id) decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: "is the subject" });
-    else if (reviewer.model === subject.model) decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: `bound like subject ${subject.id}` });
+    if (reviewer.id === subject.id)
+      decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: "is the subject" });
+    else if (reviewer.model === subject.model)
+      decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: `bound like subject ${subject.id}` });
     else if (subject.model === undefined && reviewer.host === subject.host) {
-      decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: `subject ${subject.id} runs the ${subject.host} default binding` });
-    }
-    else candidates.push(reviewer);
+      decisions.set(reviewer.id, {
+        reviewer,
+        status: "unavailable",
+        reason: `subject ${subject.id} runs the ${subject.host} default binding`,
+      });
+    } else candidates.push(reviewer);
   }
   const members: Seat[] = [];
   const rank = (r: Seat) => (members.some((m) => m.host === r.host) ? 2 : 0) + (r.host === subject.host ? 1 : 0);
@@ -64,7 +69,8 @@ export function buildPanel(matrix: Pick<Matrix, "reviewers" | "panels">, subject
     const [next] = candidates.splice(best, 1);
     const reviewer = next!;
     const twin = members.find((m) => m.model === reviewer.model);
-    if (twin !== undefined) decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: `bound like ${twin.id}, already seated` });
+    if (twin !== undefined)
+      decisions.set(reviewer.id, { reviewer, status: "unavailable", reason: `bound like ${twin.id}, already seated` });
     else if (members.length >= size) decisions.set(reviewer.id, { reviewer, status: "unused", reason: "panel full" });
     else {
       members.push(reviewer);
@@ -74,7 +80,14 @@ export function buildPanel(matrix: Pick<Matrix, "reviewers" | "panels">, subject
   const seats = matrix.reviewers.map((r) => decisions.get(r.id)!);
   const hosts = [...new Set(members.map((m) => m.host))];
   if (members.length < min) {
-    return { subject, status: "unavailable", members, seats, hosts, reason: `${members.length} independent reviewer(s) for ${subject.id}, ${min} required` };
+    return {
+      subject,
+      status: "unavailable",
+      members,
+      seats,
+      hosts,
+      reason: `${members.length} independent reviewer(s) for ${subject.id}, ${min} required`,
+    };
   }
   return { subject, status: "available", members, seats, hosts };
 }
@@ -118,7 +131,13 @@ export interface QueueRow {
 /** A transcript as the judge reads it: tool calls and messages in order, then the final reply. */
 export function renderTranscript(transcript: SessionResult | string): string {
   if (typeof transcript === "string") return transcript;
-  const lines = transcript.events.map((e) => (e.kind === "tool" ? `[tool ${e.name}] ${JSON.stringify(e.input).slice(0, 400)}` : e.kind === "user" ? `[user] ${e.text.slice(0, 400)}` : `[assistant] ${e.text}`));
+  const lines = transcript.events.map((e) =>
+    e.kind === "tool"
+      ? `[tool ${e.name}] ${JSON.stringify(e.input).slice(0, 400)}`
+      : e.kind === "user"
+        ? `[user] ${e.text.slice(0, 400)}`
+        : `[assistant] ${e.text}`,
+  );
   return [...lines, `[final reply] ${transcript.reply}`].join("\n");
 }
 
@@ -146,7 +165,8 @@ export function parseVote(reply: string): { vote: Vote; reason: string } {
     try {
       const value = JSON.parse(text) as { verdict?: unknown; reason?: unknown };
       const verdict = typeof value.verdict === "string" ? value.verdict.toUpperCase() : "";
-      if (verdict === "PASS" || verdict === "FAIL") return { vote: verdict, reason: typeof value.reason === "string" ? value.reason : "" };
+      if (verdict === "PASS" || verdict === "FAIL")
+        return { vote: verdict, reason: typeof value.reason === "string" ? value.reason : "" };
     } catch {
       continue;
     }
@@ -159,7 +179,13 @@ export const hostJudge: Judge = async (reviewer, prompt) => {
   const { adapterFor, runSubject } = await import("./subjects/index.ts");
   const cwd = realpathSync(mkdtempSync(join(tmpdir(), "ak-judge-")));
   try {
-    const result = await runSubject(adapterFor(reviewer.host), reviewer.id, reviewer.model, { prompt, cwd, env: cleanEnv(), timeoutMs: 180_000, maxTurns: 1 });
+    const result = await runSubject(adapterFor(reviewer.host), reviewer.id, reviewer.model, {
+      prompt,
+      cwd,
+      env: cleanEnv(),
+      timeoutMs: 180_000,
+      maxTurns: 1,
+    });
     return result.reply;
   } finally {
     rmSync(cwd, { recursive: true, force: true });
@@ -175,9 +201,15 @@ function sampled(item: string, every: number | undefined): boolean {
  * Grade one transcript. Unanimous PASS or FAIL is the verdict. Any disagreement, or a reply with no
  * readable verdict, is `needs-human` and goes to the queue. An unavailable panel grades nothing.
  */
-export async function grade(panel: Panel, transcript: SessionResult | string, criteria: string, options: GradeOptions): Promise<Grade> {
+export async function grade(
+  panel: Panel,
+  transcript: SessionResult | string,
+  criteria: string,
+  options: GradeOptions,
+): Promise<Grade> {
   const base = { item: options.item, subject: panel.subject.id };
-  if (panel.status === "unavailable") return { ...base, verdict: "unavailable", votes: {}, reasons: {}, reason: panel.reason ?? "panel unavailable" };
+  if (panel.status === "unavailable")
+    return { ...base, verdict: "unavailable", votes: {}, reasons: {}, reason: panel.reason ?? "panel unavailable" };
   const text = renderTranscript(transcript);
   const prompt = judgePrompt(text, criteria);
   const judge = options.judge ?? hostJudge;
@@ -193,11 +225,33 @@ export async function grade(panel: Panel, transcript: SessionResult | string, cr
   const only = distinct.size === 1 ? [...distinct][0]! : undefined;
   const verdict: Grade["verdict"] = only === "PASS" || only === "FAIL" ? only : "needs-human";
   if (verdict === "needs-human" || sampled(options.item, options.calibrateEvery)) {
-    const row: QueueRow = { item: options.item, subject: panel.subject.id, criteria, transcript: text, votes, reasons, panel_verdict: verdict, label: null };
+    const row: QueueRow = {
+      item: options.item,
+      subject: panel.subject.id,
+      criteria,
+      transcript: text,
+      votes,
+      reasons,
+      panel_verdict: verdict,
+      label: null,
+    };
     mkdirSync(dirname(options.queue), { recursive: true });
     appendFileSync(options.queue, `${JSON.stringify(row)}\n`);
   }
-  return { ...base, verdict, votes, reasons, ...(verdict === "needs-human" ? { reason: only === "invalid" || distinct.has("invalid") ? "a reviewer gave no readable verdict" : "reviewers disagree" } : {}) };
+  return {
+    ...base,
+    verdict,
+    votes,
+    reasons,
+    ...(verdict === "needs-human"
+      ? {
+          reason:
+            only === "invalid" || distinct.has("invalid")
+              ? "a reviewer gave no readable verdict"
+              : "reviewers disagree",
+        }
+      : {}),
+  };
 }
 
 export function readQueue(queue: string): QueueRow[] {

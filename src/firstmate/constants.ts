@@ -24,7 +24,10 @@ export function defaultUpstream(akRoot: string): Upstream {
   return {
     commit: UPSTREAM_COMMIT,
     patch: PATCH_ID,
-    stack: PATCH_STACK.map((id) => ({ id, file: join(akRoot, "adapters/firstmate/upstream", UPSTREAM_COMMIT, `${id}.patch`) })),
+    stack: PATCH_STACK.map((id) => ({
+      id,
+      file: join(akRoot, "adapters/firstmate/upstream", UPSTREAM_COMMIT, `${id}.patch`),
+    })),
   };
 }
 

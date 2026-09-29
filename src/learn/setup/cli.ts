@@ -20,14 +20,19 @@ export function createSetupArea(depsFor: (ctx: LearnContext) => SetupDeps = defa
         run: (_args, ctx) => doctor(ctx, depsFor(ctx)),
       },
       wire: {
-        usage: "setup wire [--host claude|codex] [--no-mem] [--restart-worker]  merge hook entries and claude-mem settings",
+        usage:
+          "setup wire [--host claude|codex] [--no-mem] [--restart-worker]  merge hook entries and claude-mem settings",
         run: (args, ctx) => {
           const host = flag(args, "host");
           if (host !== undefined && host !== "claude" && host !== "codex") {
             ctx.io.err("ak learn setup wire: --host is claude or codex");
             return 2;
           }
-          return wire(ctx, depsFor(ctx), { host, noMem: args.flags.has("no-mem"), restartWorker: args.flags.has("restart-worker") });
+          return wire(ctx, depsFor(ctx), {
+            host,
+            noMem: args.flags.has("no-mem"),
+            restartWorker: args.flags.has("restart-worker"),
+          });
         },
       },
       schedule: {
@@ -42,7 +47,8 @@ export function createSetupArea(depsFor: (ctx: LearnContext) => SetupDeps = defa
         },
       },
       seed: {
-        usage: "setup seed --repo P [--since YYYY-MM-DD]      register a repo, create its ledgers, dry-run the first ingest",
+        usage:
+          "setup seed --repo P [--since YYYY-MM-DD]      register a repo, create its ledgers, dry-run the first ingest",
         run: (args, ctx) => {
           const repo = flag(args, "repo");
           if (repo === undefined) {
@@ -50,7 +56,10 @@ export function createSetupArea(depsFor: (ctx: LearnContext) => SetupDeps = defa
             return 2;
           }
           const since = flag(args, "since");
-          return seed(ctx, repo, { ...(since === undefined ? {} : { since }), skipGithub: args.flags.has("no-github") });
+          return seed(ctx, repo, {
+            ...(since === undefined ? {} : { since }),
+            skipGithub: args.flags.has("no-github"),
+          });
         },
       },
       verify: {

@@ -3,7 +3,12 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import { loadCatalog } from "../src/catalog/load.ts";
-import { SCHEMA_RULE_IMPLEMENTATIONS, checkSchemaRuleCoverage, collectValidatorRules, isPending } from "../src/validation/rulemap.ts";
+import {
+  SCHEMA_RULE_IMPLEMENTATIONS,
+  checkSchemaRuleCoverage,
+  collectValidatorRules,
+  isPending,
+} from "../src/validation/rulemap.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const REPO = join(import.meta.dir, "..");
@@ -110,7 +115,12 @@ describe("a pending rule is declared, not missing", () => {
       "schemas/thing.schema.json": JSON.stringify({
         $id: "thing.schema.json",
         type: "object",
-        properties: { a: { type: "string", "x-validator-rule": ["finding.synthesis-may-only-worsen-a-grade", "review.third-fix-cycle-stops"] } },
+        properties: {
+          a: {
+            type: "string",
+            "x-validator-rule": ["finding.synthesis-may-only-worsen-a-grade", "review.third-fix-cycle-stops"],
+          },
+        },
       }),
     });
     const issues = checkSchemaRuleCoverage(ctx);
@@ -122,7 +132,9 @@ describe("a pending rule is declared, not missing", () => {
   test("the coverage count is reported against this repository's real schemas", () => {
     const { catalog } = loadCatalog(REPO);
     if (catalog === null) return;
-    const count = checkSchemaRuleCoverage({ root: REPO, catalog }).find((i) => i.rule === "schemas.validator-rule-coverage");
+    const count = checkSchemaRuleCoverage({ root: REPO, catalog }).find(
+      (i) => i.rule === "schemas.validator-rule-coverage",
+    );
     expect(count?.message).toMatch(/^\d+ rules, \d+ implemented, \d+ declared pending\.$/);
   });
 });
