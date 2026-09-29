@@ -197,13 +197,17 @@ describe("every signal cites a rule its pack states", () => {
   for (const pack of packIds) {
     test(`${pack}: each signal's rule exists, and each rule has a signal or a stated exemption`, () => {
       const rules = ruleIdsOf(pack);
-      const cited = builtinSignalsFor(pack).map((s) => s.rule);
+      const signals = builtinSignalsFor(pack);
+      const named = signals.flatMap((s) => s.rules);
+      // matchedRules counts sufficient evidence only, so a rule reached only by
+      // a supporting signal can never be cited by a selection.
+      const cited = signals.filter((s) => s.weight === "sufficient").flatMap((s) => s.rules);
       const exempt = Object.keys(SEMANTIC_ONLY_RULES[pack] ?? {});
-      expect(cited.filter((rule) => !rules.includes(rule))).toEqual([]);
+      expect(named.filter((rule) => !rules.includes(rule))).toEqual([]);
       expect(exempt.filter((rule) => !rules.includes(rule))).toEqual([]);
-      // An exemption is for a rule no signal can reach; one that also has a
-      // signal is a stale exemption.
-      expect(exempt.filter((rule) => cited.includes(rule))).toEqual([]);
+      // An exemption is for a rule no signal can reach; one that any signal
+      // names is a stale exemption.
+      expect(exempt.filter((rule) => named.includes(rule))).toEqual([]);
       expect(rules.filter((rule) => !cited.includes(rule) && !exempt.includes(rule))).toEqual([]);
     });
   }
@@ -211,9 +215,32 @@ describe("every signal cites a rule its pack states", () => {
   test("a selection cites the rules its sufficient evidence matched", () => {
     const ctx = ctxFor({ "db/migrations/002_drop.sql": "ALTER TABLE t DROP COLUMN legacy;\n" });
     const data = attach(ctx, "db/migrations/002_drop.sql").selections.find((s) => s.pack === "pack-data");
-    expect(data?.matchedRules).toEqual(["destructive-schema-step", "migration-artifact"]);
+    expect(data?.matchedRules).toEqual(["data-transform-script", "destructive-schema-step", "migration-artifact"]);
     expect(data?.rationale).toContain("destructive-schema-step");
-    expect(data?.evidence.every((e) => data.matchedRules.includes(e.rule))).toBe(true);
+    const sufficient = data?.evidence.filter((e) => e.weight === "sufficient") ?? [];
+    expect([...new Set(sufficient.flatMap((e) => e.rules))].sort()).toEqual([...(data?.matchedRules ?? [])]);
+  });
+
+  test("an observation consistent with several rules cites each of them", () => {
+    const deps = attach(ctxFor(), "package.json").selections.find((s) => s.pack === "pack-deps");
+    expect(deps?.matchedRules).toEqual(["install-policy-change", "new-dependency", "version-bump"]);
+  });
+
+  test("supporting evidence alone adds no rule to a selection", () => {
+    const ctx = ctxFor({ "notes/plan.md": "We will retire the v1 client.\n" });
+    const del = attach(ctx, "notes/plan.md").selections.find((s) => s.pack === "pack-delete");
+    // The prose-file signal names deprecation-or-replacement too, but is only supporting.
+    expect(del?.matchedRules).toEqual(["removal"]);
+    expect(del?.evidence.some((e) => e.weight === "supporting")).toBe(true);
+  });
+
+  test("a ticket whose goal is a defect fix selects pack-test by rule bug-fix", () => {
+    const ticket = (goal: string) =>
+      JSON.stringify({ schema: "ticket", type: "implementation", goal, write_ownership: { paths: [], interfaces: [] } });
+    const ctx = ctxFor({ "work/fix.json": ticket("fix the regression in invoice totals"), "work/add.json": ticket("add an export button") });
+    const fix = attach(ctx, "work/fix.json").selections.find((s) => s.pack === "pack-test");
+    expect(fix?.matchedRules).toEqual(["bug-fix"]);
+    expect(packs(attach(ctx, "work/add.json"))).not.toContain("pack-test");
   });
 
   test("the printed result names the matched rules", () => {

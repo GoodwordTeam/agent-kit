@@ -9,8 +9,12 @@
  * This table is the whole lookup. `packs/<id>/pack.yaml` states each pack's
  * activation rules in words, and its schema admits no signal list, so the
  * deterministic half of those rules lives here as code and nothing on disk can
- * add to it or switch it off. Each signal names the `activation.rules[].id` it
- * implements, so a selection cites the rule a reader can find in the pack.
+ * add to it or switch it off. Each signal names every `activation.rules[].id`
+ * its observation is evidence for, so a selection cites the rules a reader can
+ * find in the pack. One path or token is often evidence for several rules at
+ * once (a manifest may add, bump or re-policy a dependency), and naming only
+ * one would claim a precision the observation does not have. A rule in
+ * `SEMANTIC_ONLY_RULES` is never cited: no observation here tells it apart.
  */
 
 export type SignalKind = "path-regex" | "content-regex" | "field-present" | "field-regex";
@@ -25,8 +29,8 @@ export interface Signal {
   readonly value?: string;
   readonly weight: SignalWeight;
   readonly note: string;
-  /** The `activation.rules[].id` in this pack's pack.yaml that the signal implements. */
-  readonly rule: string;
+  /** Every `activation.rules[].id` in this pack's pack.yaml the observation is evidence for. */
+  readonly rules: readonly string[];
 }
 
 export interface PackSignals {
@@ -54,9 +58,6 @@ export const SEMANTIC_ONLY_RULES: Readonly<Record<string, Readonly<Record<string
   "pack-secure": {
     "untrusted-input-sink": "whether untrusted data reaches a sink is data flow across code, not a pattern in one file",
   },
-  "pack-test": {
-    "bug-fix": "whether a change fixes a reported defect is the ticket's intent, not a property of the files",
-  },
 };
 
 const SOURCE_FILE = String.raw`\.(ts|tsx|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|swift|scala|c|cc|cpp|h|hpp|cs|php|ex|exs)$`;
@@ -70,42 +71,42 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`(^|/)(api|apis|routes?|controllers?|endpoints?|handlers?|graphql|grpc|proto|openapi|swagger|contracts?)([/._-]|$)`,
         weight: "sufficient",
         note: "path names a public interface surface",
-        rule: "public-boundary-shape",
+        rules: ["public-boundary-shape", "public-signature-with-callers", "state-changing-endpoint-retry"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`\.(proto|graphql|graphqls)$`,
         weight: "sufficient",
         note: "interface definition language file",
-        rule: "public-boundary-shape",
+        rules: ["public-boundary-shape"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(^|\n)\s*(openapi|swagger)\s*:`,
         weight: "sufficient",
         note: "document declares an OpenAPI/Swagger contract",
-        rule: "public-boundary-shape",
+        rules: ["public-boundary-shape"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(RestController|RequestMapping|app\.(get|post|put|patch|delete)\(|router\.(get|post|put|patch|delete)\(|export\s+(async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)\b)`,
         weight: "sufficient",
         note: "code declares a request handler with an observable response shape",
-        rule: "public-boundary-shape",
+        rules: ["public-boundary-shape"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(app\.(post|put|patch|delete)\(|router\.(post|put|patch|delete)\(|export\s+(async\s+)?function\s+(POST|PUT|PATCH|DELETE)\b)`,
         weight: "sufficient",
         note: "code declares a handler for a state-changing method",
-        rule: "state-changing-endpoint-retry",
+        rules: ["public-boundary-shape", "state-changing-endpoint-retry"],
       },
       {
         kind: "field-present",
         pattern: "write_ownership.interfaces",
         weight: "sufficient",
         note: "artifact names interfaces it defines, consumes or changes",
-        rule: "public-signature-with-callers",
+        rules: ["public-boundary-shape", "public-signature-with-callers"],
       },
     ],
   },
@@ -114,52 +115,59 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
     signals: [
       {
         kind: "path-regex",
-        pattern: String.raw`(^|/)(migrations?|migrate|db|database)([/._-]|$)`,
+        pattern: String.raw`(^|/)(migrations?|migrate)([/._-]|$)`,
         weight: "sufficient",
         note: "path names schema migration work",
-        rule: "migration-artifact",
+        rules: ["migration-artifact"],
+      },
+      {
+        kind: "path-regex",
+        pattern: String.raw`(^|/)(db|database)([/._-]|$)`,
+        weight: "sufficient",
+        note: "path names database work: a migration or a script run against stored data",
+        rules: ["migration-artifact", "data-transform-script"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`(^|/)(backfills?|seeds?)([/._-]|$)`,
         weight: "sufficient",
         note: "path names a job that writes stored rows",
-        rule: "data-transform-script",
+        rules: ["data-transform-script"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`\.sql$`,
         weight: "sufficient",
         note: "SQL statement file",
-        rule: "migration-artifact",
+        rules: ["migration-artifact", "data-transform-script"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(CREATE\s+TABLE|ALTER\s+TABLE|ADD\s+COLUMN|create_table|add_column|addColumn)\b`,
         weight: "sufficient",
         note: "content changes a persistent schema",
-        rule: "migration-artifact",
+        rules: ["migration-artifact"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(DROP\s+TABLE|DROP\s+COLUMN|RENAME\s+COLUMN|remove_column|dropColumn)\b`,
         weight: "sufficient",
         note: "content drops or renames a table or column",
-        rule: "destructive-schema-step",
+        rules: ["destructive-schema-step", "migration-artifact"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\bbackfill\b`,
         weight: "sufficient",
         note: "content rewrites stored rows",
-        rule: "data-transform-script",
+        rules: ["data-transform-script"],
       },
       {
         kind: "field-present",
         pattern: "write_ownership.migration_sequence",
         weight: "sufficient",
         note: "artifact claims a global migration sequence",
-        rule: "migration-artifact",
+        rules: ["migration-artifact"],
       },
     ],
   },
@@ -171,14 +179,14 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`(@[Dd]eprecated|\bdeprecat(e|ed|es|ing|ion)\b|\bsunset\b)`,
         weight: "sufficient",
         note: "content states a deprecation",
-        rule: "deprecation-or-replacement",
+        rules: ["deprecation-or-replacement"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(\bremoval\s+plan\b|\bretire(d|s|ment)?\b|\btombstone\b)`,
         weight: "sufficient",
         note: "content states a removal",
-        rule: "removal",
+        rules: ["removal"],
       },
       {
         kind: "field-regex",
@@ -186,14 +194,14 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         value: String.raw`\b(remove|delete|deprecate|retire|sunset|decommission)\b`,
         weight: "sufficient",
         note: "artifact goal is a removal",
-        rule: "removal",
+        rules: ["removal", "deprecation-or-replacement"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`\.(md|markdown|txt|rst)$`,
         weight: "supporting",
         note: "prose file; removal intent is often stated in prose, but the file type alone is not evidence",
-        rule: "deprecation-or-replacement",
+        rules: ["deprecation-or-replacement", "removal"],
       },
     ],
   },
@@ -205,28 +213,28 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`(^|/)(package\.json|Gemfile|requirements\.txt|Pipfile|go\.mod|Cargo\.toml|pom\.xml|build\.gradle|build\.gradle\.kts|composer\.json|mix\.exs)$`,
         weight: "sufficient",
         note: "dependency manifest",
-        rule: "new-dependency",
+        rules: ["new-dependency", "version-bump", "install-policy-change"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`(^|/)(package-lock\.json|bun\.lock|bun\.lockb|yarn\.lock|pnpm-lock\.yaml|Gemfile\.lock|poetry\.lock|Pipfile\.lock|go\.sum|Cargo\.lock|composer\.lock)$`,
         weight: "sufficient",
         note: "lockfile: resolved versions",
-        rule: "version-bump",
+        rules: ["version-bump", "new-dependency", "install-policy-change"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`(^|/)(\.tool-versions|Dockerfile)$`,
         weight: "sufficient",
         note: "declared toolchain or install environment",
-        rule: "install-policy-change",
+        rules: ["install-policy-change"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(dependencies|devDependencies|peerDependencies)\b\s*:`,
         weight: "sufficient",
         note: "document declares dependency sets",
-        rule: "new-dependency",
+        rules: ["new-dependency", "version-bump"],
       },
     ],
   },
@@ -238,49 +246,49 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`(^|/)(components?|ui|views?|pages?|frontend|client)([/._-]|$)`,
         weight: "sufficient",
         note: "path names a user-facing surface",
-        rule: "interactive-ui",
+        rules: ["interactive-ui", "styles-and-layout", "async-ui-state"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`(^|/)(styles?|stylesheets?)([/._-]|$)`,
         weight: "sufficient",
         note: "path names styles",
-        rule: "styles-and-layout",
+        rules: ["styles-and-layout"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(<template>|\baria-[a-z]+=)`,
         weight: "sufficient",
         note: "content renders an interactive surface",
-        rule: "interactive-ui",
+        rules: ["interactive-ui"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(className=|@media\b|styled\.|\btailwind\b)`,
         weight: "sufficient",
         note: "content styles a user-facing surface",
-        rule: "styles-and-layout",
+        rules: ["styles-and-layout"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`(\buseState\b|\buseEffect\b)`,
         weight: "sufficient",
         note: "content holds client state or effects",
-        rule: "async-ui-state",
+        rules: ["async-ui-state"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`\.(tsx|jsx|vue|svelte|html)$`,
         weight: "supporting",
         note: "view file type",
-        rule: "interactive-ui",
+        rules: ["interactive-ui", "styles-and-layout", "async-ui-state"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`\.(css|scss|sass|less)$`,
         weight: "supporting",
         note: "stylesheet file type",
-        rule: "styles-and-layout",
+        rules: ["styles-and-layout"],
       },
     ],
   },
@@ -292,21 +300,21 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`\b(p9[59]|latency\s+budget|performance\s+budget|throughput\s+target|memory\s+budget)\b`,
         weight: "sufficient",
         note: "a performance budget is stated",
-        rule: "budgeted-change",
+        rules: ["budgeted-change"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(benchmark|flame\s*graph|N\+1)\b`,
         weight: "sufficient",
         note: "a measurement is cited",
-        rule: "measured-problem",
+        rules: ["measured-problem"],
       },
       {
         kind: "field-present",
         pattern: "performance_budget",
         weight: "sufficient",
         note: "artifact carries a performance budget",
-        rule: "budgeted-change",
+        rules: ["budgeted-change"],
       },
     ],
   },
@@ -318,35 +326,35 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`(^|/)(auth|authn|authz|security|session|permissions?|entitlements?|tenancy|tenant|login)([/._-]|$)`,
         weight: "sufficient",
         note: "path names an access-control boundary",
-        rule: "authn-authz-change",
+        rules: ["authn-authz-change"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`(^|/)(secrets?|crypto|payments?|billing|password)([/._-]|$)`,
         weight: "sufficient",
         note: "path names secrets or sensitive data",
-        rule: "secret-or-sensitive-data",
+        rules: ["secret-or-sensitive-data"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(Authorization|authenticat(e|ed|ion)|authoriz(e|ed|ation)|jwt|oauth|bearer|tenant_id|principal|rbac|acl)\b`,
         weight: "sufficient",
         note: "content handles identity or access control",
-        rule: "authn-authz-change",
+        rules: ["authn-authz-change"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(api[_-]?key|secret[_-]?key|private[_-]?key|password)\b`,
         weight: "sufficient",
         note: "content handles credentials",
-        rule: "secret-or-sensitive-data",
+        rules: ["secret-or-sensitive-data"],
       },
       {
         kind: "content-regex",
         pattern: String.raw`\b(csrf|xsrf)\b`,
         weight: "sufficient",
         note: "content configures request-forgery protection",
-        rule: "trust-boundary-config",
+        rules: ["trust-boundary-config"],
       },
       {
         kind: "field-regex",
@@ -354,7 +362,7 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         value: String.raw`\b(auth|token|session|permission|credential)`,
         weight: "sufficient",
         note: "artifact owns an interface on a security boundary",
-        rule: "authn-authz-change",
+        rules: ["authn-authz-change"],
       },
     ],
   },
@@ -366,21 +374,29 @@ export const BUILTIN_SIGNALS: readonly PackSignals[] = [
         pattern: String.raw`(^|/)(tests?|__tests__|spec|specs)([/._-]|$)`,
         weight: "sufficient",
         note: "path names a test tree",
-        rule: "test-change",
+        rules: ["test-change"],
       },
       {
         kind: "path-regex",
         pattern: String.raw`\.(test|spec)\.[a-z]+$`,
         weight: "sufficient",
         note: "test file",
-        rule: "test-change",
+        rules: ["test-change"],
       },
       {
         kind: "path-regex",
         pattern: SOURCE_FILE,
         weight: "sufficient",
         note: "source file: new or changed behavior needs named verification",
-        rule: "behavior-change",
+        rules: ["behavior-change"],
+      },
+      {
+        kind: "field-regex",
+        pattern: "goal",
+        value: String.raw`\b(fix|fixes|fixed|bug|defect|regression)\b`,
+        weight: "sufficient",
+        note: "artifact goal is a defect fix",
+        rules: ["bug-fix"],
       },
     ],
   },

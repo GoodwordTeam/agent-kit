@@ -2636,11 +2636,14 @@ any of them fails `schemas.document-invalid`. Three things are this contract's:
 3. **A manifest carries no signals and no switch.** The schema admits neither an `enabled` key nor an
    `activation.signals` list, so a manifest carrying either fails validation, and `ak attach` reads
    neither. Its classifier-free lookup is the built-in signal table in `src/attach/signals.ts`,
-   which is code and is not edited from a pack batch. Each signal names the `activation.rules[].id`
-   it implements, and a selection cites those ids. A rule no signal can observe is listed in
+   which is code and is not edited from a pack batch. Each signal names every
+   `activation.rules[].id` its observation is evidence for, and a selection cites the union of the
+   ids its sufficient evidence names. A rule no signal can observe is listed in
    `SEMANTIC_ONLY_RULES` there, with the reason. `tests/attach.test.ts` fails when a rule has
-   neither a signal nor an exemption, or when a signal names a rule the pack does not state, so
-   adding or renaming a rule id needs a change to that table too.
+   neither a sufficient signal nor an exemption, or when a signal names a rule the pack does not
+   state, so adding or renaming a rule id needs a change to that table too. The `matched_rules` in
+   a pack's `expected.yaml` are a phase selector's reading of the whole change, semantic rules
+   included, and are not `ak attach` output.
 
 **Required sections, in this order, at `##`.** §12.5 declined a heading set because reference packs
 share no shape. Domain packs do: the schema requires the same members of all eight, and each member

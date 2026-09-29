@@ -29,8 +29,8 @@ export interface Evidence {
   readonly weight: SignalWeight;
   readonly matched: string;
   readonly note: string;
-  /** The pack's `activation.rules[].id` the signal implements. */
-  readonly rule: string;
+  /** The pack's `activation.rules[].id`s the observation is evidence for. */
+  readonly rules: readonly string[];
   readonly line?: number;
 }
 
@@ -166,7 +166,7 @@ function evaluate(signal: Signal, loaded: LoadedSubject): Evidence | null {
     pattern: signal.pattern,
     weight: signal.weight,
     note: signal.note,
-    rule: signal.rule,
+    rules: signal.rules,
   };
 
   if (signal.kind === "path-regex") {
@@ -237,13 +237,13 @@ export function attach(ctx: CheckContext, input: string): AttachResult {
     }
 
     const evidence = [...sufficient, ...supporting];
-    const matchedRules = [...new Set(sufficient.map((e) => e.rule))].sort();
+    const matchedRules = [...new Set(sufficient.flatMap((e) => e.rules))].sort();
     const reasons = sufficient.map((e) => e.note).join("; ");
     selections.push({
       pack,
       matchedRules,
       evidence,
-      rationale: `${pack} selected on ${loaded.subject.kind} ${loaded.subject.path} by rule ${matchedRules.join(", ")}: ${reasons}`,
+      rationale: `${pack} selected on ${loaded.subject.kind} ${loaded.subject.path} by rules ${matchedRules.join(", ")}: ${reasons}`,
     });
   }
 
@@ -264,7 +264,7 @@ export function formatAttachResult(result: AttachResult): string[] {
     lines.push(`    why: ${selection.rationale}`);
     for (const e of selection.evidence) {
       const where = e.line === undefined ? "" : `:${e.line}`;
-      lines.push(`    - ${e.weight} ${e.kind}${where} [${e.rule}] ${e.note} -- matched ${JSON.stringify(e.matched)}`);
+      lines.push(`    - ${e.weight} ${e.kind}${where} [${e.rules.join(", ")}] ${e.note} -- matched ${JSON.stringify(e.matched)}`);
     }
   }
   for (const entry of result.skipped) {
