@@ -28,8 +28,9 @@ graders:
     weight: 1
     criteria: >-
       Cases are derived across the hostile classes rather than from the happy path, and a class with
-      no applicable case is recorded as not applicable in the cycle record rather than omitted. A
-      run that writes no cycle record passes.
+      no applicable case is recorded as not applicable in the cycle record rather than omitted. If
+      the run writes no cycle record, the not-applicable part passes; the derivation of cases is
+      still judged on the calls the run makes.
   - name: names-each-inapplicable-class
     type: llm
     weight: 1
