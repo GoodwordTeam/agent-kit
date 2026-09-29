@@ -204,6 +204,21 @@ describe("the plan record", () => {
     expect(validate({ ...base, slices: [] })).toBe(false);
   });
 
+  test("the approval's binding, the specification's own hash, is required", () => {
+    const { specification_hash: _, ...unbound } = base;
+    expect(validate(unbound)).toBe(false);
+  });
+
+  test("a specification with no acceptance criterion is refused", () => {
+    expect(validate({ ...base, specification: { ...spec, acceptance_criteria: [] } })).toBe(false);
+  });
+
+  test("a slice is an implementation or a decision, nothing else", () => {
+    const slices = base.slices as Array<Record<string, unknown>>;
+    expect(validate({ ...base, slices: [{ ...slices[0], type: "decision" }] })).toBe(true);
+    expect(validate({ ...base, slices: [{ ...slices[0], type: "epic" }] })).toBe(false);
+  });
+
   test("the bound.run draft and the published record are the only states", () => {
     expect(validate({ ...base, status: "draft" })).toBe(true);
     expect(validate({ ...base, status: "approved" })).toBe(false);
@@ -249,6 +264,28 @@ describe("the ship evidence", () => {
     expect(validate({ ...bare, status: "needs-input" })).toBe(false);
     expect(validate({ ...bare, status: "needs-input", reason: "No review verdict binds to this head." })).toBe(true);
   });
+
+  test("only a ship stopped for input may leave its head unnamed", () => {
+    const { payload: _, preflight: __, effects: ___, ...bare } = base;
+    const reason = "The head to ship is not named.";
+    expect(validate({ ...bare, source_revision: null, status: "needs-input", reason })).toBe(true);
+    expect(validate({ ...bare, source_revision: null, status: "failed", reason })).toBe(false);
+    expect(validate({ ...base, source_revision: null })).toBe(false);
+  });
+
+  test("a release check names the check it ran", () => {
+    const { name: _, ...unnamed } = preflight[2]!;
+    expect(validate({ ...base, preflight: [preflight[0], preflight[1], unnamed] })).toBe(false);
+  });
+
+  test("a remote effect without its read-back is refused", () => {
+    const { read_back: _, ...unread } = effects[0]!;
+    expect(validate({ ...base, effects: [unread, effects[1]] })).toBe(false);
+  });
+
+  test("a merge is not an effect this record admits", () => {
+    expect(validate({ ...base, effects: [...effects, { ...effects[1], effect: "merge" }] })).toBe(false);
+  });
 });
 
 describe("the run ledger", () => {
@@ -274,6 +311,10 @@ describe("the run ledger", () => {
   test("a ruling reads what, why and what it costs if wrong", () => {
     const ruling = { what: "Approve.", why: "Both seats agreed and the charter lists it." };
     expect(validate({ ...base, entries: [{ ...entries[0], ruling }] })).toBe(false);
+  });
+
+  test("a ruling carries no answered flag", () => {
+    expect(validate({ ...base, entries: [{ ...entries[0], answered: true }, entries[1]] })).toBe(false);
   });
 
   test("an escalation carries no ruling", () => {
