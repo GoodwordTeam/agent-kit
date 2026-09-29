@@ -108,7 +108,6 @@ export function checkCatalogRules(ctx: CheckContext): Issue[] {
   return issues;
 }
 
-/** The keys of a profile's `includes.capabilities` that list capability ids; `note` is prose. */
 /** `$defs/capability` from schemas/common.schema.json, or null when it cannot be read. */
 function capabilityVocabulary(root: string): Set<string> | null {
   const text = readTextIfPresent(join(root, "schemas/common.schema.json"));
