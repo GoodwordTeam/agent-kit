@@ -97,8 +97,8 @@ const BASE: Record<string, string> = {
   // `adapters/codex/CONTRACT.md` §3 states that it carries no per-capability
   // difference and that a second copy would be "a second thing to keep in step".
   //
-  // Six rows rather than the real sixteen, covering all four statuses and both
-  // capabilities that actually block anything in this tree. Deliberately not a
+  // A handful of rows rather than the real table, covering all four statuses
+  // and the capabilities that actually block anything in this tree. Deliberately not a
   // copy of §3: a fixture that mirrored it would drift, and the one test that
   // needs §3 to be complete measures the real file against the real schema
   // enum, in tests/capability-table.test.ts.
@@ -115,6 +115,7 @@ const BASE: Record<string, string> = {
     "| `isolated-worktree` | `convention-only` | Not host-confined |",
     "| `kb-write` | `not-provided` | Transport only |",
     "| `runner-grants` | `not-provided` | No grant validator |",
+    "| `trusted-evidence` | `not-provided` | Worker cannot attest its own evidence |",
     "",
     "## 4. Host-capability honesty",
     "",
@@ -1935,6 +1936,23 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(rules(plan)).not.toContain("packaging.mode-capped");
   });
 
+  test("trusted-evidence is a valid capability whose runner supply lifts the build ceiling on both hosts", () => {
+    const files = {
+      "adapters/runner-contract/CONTRACT.md": supplyTable(["| `trusted-evidence` | `fails-closed` | Refuses autonomous evidence consumption |"]),
+      "skills/beta/skill.yaml": `${requiring(["trusted-evidence"])["skills/beta/skill.yaml"]}    - adapter: codex\n      mode: autonomous\n`,
+    };
+    for (const host of HOST_IDS) {
+      const withRunner = planBundle(ctxWith([], undefined, files), host, {});
+      expect(modeOf(withRunner)).toBe("autonomous");
+      expect(rules(withRunner)).not.toContain("packaging.mode-capped");
+      expect(rules(withRunner)).not.toContain("packaging.mode-above-ceiling");
+
+      const hostAlone = planBundle(ctxWith([], "attached: []\n", files), host, {});
+      expect(modeOf(hostAlone)).toBe("guided");
+      expect(rules(hostAlone)).toContain("packaging.mode-capped");
+    }
+  });
+
   test("an unknown adapter id is an error, and so is a host or an adapter that supplies nothing", () => {
     const ctx = ctxWith(["kb-write"], "attached: [knowledgebase, nope, codex, runner-contract]\n");
     const unknown = loadInstallConfig(ctx.root, ctx.catalog).issues.filter((i) => i.rule === "packaging.install-unknown-adapter");
@@ -1997,7 +2015,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(describeInstall(loadInstallConfig(empty.root, empty.catalog))).toBe("ak.install.yaml: attached none");
   });
 
-  test("the real contracts supply kb-write, runner-grants, firstmate-supervision and tracker-access, and only the tracker borrows", () => {
+  test("the real contracts supply kb-write, runner capabilities, firstmate-supervision and tracker-access, and only the tracker borrows", () => {
     // The only case reading this repository, and it reads the contracts, never
     // an install file: loadAdapterSupplies does not open one.
     const { catalog } = loadCatalog(REPO);
@@ -2010,7 +2028,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(byAdapter).toEqual({
       firstmate: ["firstmate-supervision"],
       knowledgebase: ["kb-write"],
-      "runner-contract": ["runner-grants"],
+      "runner-contract": ["runner-grants", "trusted-evidence"],
       tracker: ["tracker-access"],
     });
     // adapters/tracker/CONTRACT.md §1: with no backend its refusal is kb-write's.
