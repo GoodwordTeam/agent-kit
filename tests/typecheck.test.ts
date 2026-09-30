@@ -13,9 +13,10 @@
  *
  * Three assertions and not one. "`tsc` exits 0" is true of a tree that
  * typechecks and equally true of a `tsc` that checked nothing, so the exit code
- * is paired with a population check (every file in `src/` and `tests/` is in the
- * checked set) and a positive control (the binary still reports a planted
- * error). Each answers a different way the first one can be a lie.
+ * is paired with a population check (every file in `src/`, `tests/` and the top
+ * of `tools/oxlint/` is in the checked set) and a positive control (the binary
+ * still reports a planted error). Each answers a different way the first one can
+ * be a lie.
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -51,6 +52,24 @@ function sourcesUnder(dir: string): string[] {
   };
   walk(join(REPO, dir));
   return out;
+}
+
+/**
+ * The `.ts` files directly in a directory, repo-relative, without descending.
+ *
+ * `tools/oxlint/*.ts` is this repository's own lint tooling and `tsconfig.json`
+ * includes it with a non-recursive glob on purpose: the vendored plugin one
+ * directory down is upstream's code and is not held to this tree's `strict`.
+ */
+function sourcesDirectlyIn(dir: string): string[] {
+  return readdirSync(join(REPO, dir), { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+    .map((entry) => join(dir, entry.name));
+}
+
+/** Every file `tsconfig.json`'s `include` claims to cover, spelled here independently of it. */
+function owned(): string[] {
+  return [...sourcesUnder("src"), ...sourcesUnder("tests"), ...sourcesDirectlyIn(join("tools", "oxlint"))];
 }
 
 /**
@@ -107,24 +126,26 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     expect(run.status).toBe(0);
   });
 
-  test("every file in src/ and tests/ is in the checked set", () => {
+  test("every file in src/, tests/ and tools/oxlint/ is in the checked set", () => {
     // The population check. A clean typecheck over zero files is byte-identical
     // to a clean typecheck over the whole tree, and `include` is a glob that can
     // silently stop matching a new directory.
     const checked = checkedSet(REPO);
 
-    const owned = [...sourcesUnder("src"), ...sourcesUnder("tests")];
-    expect(owned.length).toBeGreaterThan(30);
-    expect(owned.filter((file) => !checked.has(file))).toEqual([]);
+    const files = owned();
+    expect(files.length).toBeGreaterThan(30);
+    expect(files.filter((file) => !checked.has(file))).toEqual([]);
 
     // And the exclusion is the one documented in `tsconfig.json`, not a wider
-    // one that happens to still satisfy the line above. Checked files this
-    // repository owns also include `tools/oxlint/*.ts`; anything the
-    // config started excluding beyond fixtures would drop out of `owned` and
-    // pass silently without this.
-    expect(owned.filter((file) => file.startsWith("tests/fixtures"))).toEqual([]);
-    expect(owned.some((file) => file.startsWith("src/"))).toBe(true);
-    expect(owned.some((file) => file.startsWith("tests/"))).toBe(true);
+    // one that happens to still satisfy the line above. Each directory the
+    // config claims to cover contributes at least one file, and the vendored
+    // plugin contributes none, so `owned` is the set the config documents
+    // rather than whatever happens to be reachable from it.
+    expect(files.filter((file) => file.startsWith("tests/fixtures"))).toEqual([]);
+    expect(files.some((file) => file.startsWith("src/"))).toBe(true);
+    expect(files.some((file) => file.startsWith("tests/"))).toBe(true);
+    expect(files.some((file) => file.startsWith("tools/oxlint/"))).toBe(true);
+    expect(files.filter((file) => file.startsWith("tools/oxlint/anti-slop/"))).toEqual([]);
   });
 
   test("the population check survives being reached through a symlink", () => {
@@ -140,9 +161,9 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     symlinkSync(REPO, link);
 
     const checked = checkedSet(link);
-    const owned = [...sourcesUnder("src"), ...sourcesUnder("tests")];
-    expect(owned.length).toBeGreaterThan(30);
-    expect(owned.filter((file) => !checked.has(file))).toEqual([]);
+    const files = owned();
+    expect(files.length).toBeGreaterThan(30);
+    expect(files.filter((file) => !checked.has(file))).toEqual([]);
   });
 
   test("a planted error is still reported, so exit 0 means something", () => {
