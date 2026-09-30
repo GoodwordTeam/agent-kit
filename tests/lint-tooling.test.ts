@@ -315,4 +315,47 @@ describe("baseline growth since the merge base", () => {
     expect(run.status).toBe(2);
     expect(run.out).toContain("no merge base");
   });
+
+  test("--root inside the repository resolves to its top, and a --root with no value is a usage error", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 1 } }),
+    });
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 2 } }));
+    commit(root, "grow");
+    expect(check(join(root, "src")).out).toContain("src/a.ts: r 1 -> 2");
+    const bare = spawnSync("bun", [GROWTH, "base", "--root"], { encoding: "utf8" });
+    expect(bare.status).toBe(2);
+  });
+
+  test("a merge base with no baseline counts every recorded violation as growth, and says so", () => {
+    const root = repo({ ".oxlintrc.json": ONE_RULE, "src/a.ts": LOAD, "tools/oxlint/.keep": "" });
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 1 } }));
+    commit(root, "first baseline");
+    const run = check(root);
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("has no tools/oxlint/baseline.json");
+  });
+
+  test("an uncommitted baseline edit is measured, not the last commit", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 1 } }),
+    });
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 2 } }));
+    expect(check(root).status).toBe(1);
+  });
+
+  test("a staged rename not yet committed carries its counts", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 2 } }),
+    });
+    gitIn(root, "mv", "src/a.ts", "src/b.ts");
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/b.ts": { r: 2 } }));
+    expect(check(root).status).toBe(0);
+  });
 });

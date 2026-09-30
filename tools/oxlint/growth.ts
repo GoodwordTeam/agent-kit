@@ -5,9 +5,10 @@
  * the one at the merge base of <base-ref> and fails when any file and rule recorded more.
  *
  * Growth passes in the two cases `--allow-growth` exists for, and only those. A renamed file may carry
- * its old path's counts to the new path; "renamed" is what `git diff -M` pairs, which needs the new file
- * to be at least half the old one, so commit a move before rewriting the file. A change to `.oxlintrc.json` means a rule is being adopted, so
- * growth passes and the baseline diff is what the reviewer reads.
+ * its old path's counts to the new path. "Renamed" is what `git diff -M` pairs between the merge base
+ * and the tree, which takes at least 50% similar content; a file rewritten past that in the same branch
+ * reads as new, so land the move on main before the rewrite. A change to `.oxlintrc.json` means a rule
+ * is being adopted, so growth passes and the baseline diff is what the reviewer reads.
  *
  *   bun tools/oxlint/growth.ts [--root <dir>] <base-ref>
  */
