@@ -6,7 +6,8 @@
  * current findings. The config cases copy the repository's `.oxfmtrc.json` and `.oxlintrc.json` into a
  * temp root and run the real binaries: the formatter case pins the failure that shaped the ignore
  * list (oxfmt read `__MARKER__` in a Markdown fixture as bold and rewrote it), and the linter case
- * pins that the vendored anti-slop plugin actually loads.
+ * pins that the vendored anti-slop plugin actually loads. The growth cases drive `tools/oxlint/growth.ts`
+ * against temp git repos whose first commit is tagged as the merge base.
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -17,6 +18,7 @@ import { lint, readBaseline } from "../tools/oxlint/ratchet.ts";
 
 const REPO = resolve(import.meta.dir, "..");
 const RATCHET = join(REPO, "tools", "oxlint", "ratchet.ts");
+const GROWTH = join(REPO, "tools", "oxlint", "growth.ts");
 const BIN = join(REPO, "node_modules", ".bin");
 
 function tree(files: Record<string, string>): string {
@@ -163,5 +165,98 @@ describe("the repository's tool configs", () => {
     symlinkSync(join(REPO, "node_modules"), join(root, "node_modules"));
     const floating = lint(root, ["src"]).filter((d) => d.rule === "typescript(no-floating-promises)");
     expect(floating.map((d) => d.line)).toEqual([2]);
+  });
+});
+
+const BASELINE_PATH = "tools/oxlint/baseline.json";
+const recorded = (counts: Record<string, Record<string, number>>) => `${JSON.stringify(counts, null, 2)}\n`;
+
+function gitIn(root: string, ...args: string[]) {
+  const run = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: root, encoding: "utf8" });
+  if (run.status !== 0) throw new Error(`git ${args.join(" ")}: ${run.stderr}`);
+}
+
+/** A temp repo whose first commit is tagged `base`, standing in for the merge base with main. */
+function repo(files: Record<string, string>): string {
+  const root = tree(files);
+  gitIn(root, "init", "-q", "-b", "main");
+  commit(root, "base");
+  gitIn(root, "tag", "base");
+  return root;
+}
+
+function commit(root: string, message: string) {
+  gitIn(root, "add", "-A");
+  gitIn(root, "commit", "-q", "-m", message);
+}
+
+function check(root: string) {
+  const run = spawnSync("bun", [GROWTH, "--root", root, "base"], { encoding: "utf8" });
+  return { status: run.status, out: `${run.stdout}${run.stderr}` };
+}
+
+const LOAD = "export const load = () => 1;\n".repeat(20);
+
+describe("baseline growth since the merge base", () => {
+  test("a count raised by hand fails, naming the file, the rule and the merge base's count", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 1 } }),
+    });
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 2 } }));
+    commit(root, "grow");
+    const run = check(root);
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("src/a.ts: r 1 -> 2");
+  });
+
+  test("a new file entered into the baseline fails", () => {
+    const root = repo({ ".oxlintrc.json": ONE_RULE, "src/a.ts": LOAD, [BASELINE_PATH]: recorded({}) });
+    writeFileSync(join(root, "src/b.ts"), "export const b = 2;\n");
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/b.ts": { r: 1 } }));
+    commit(root, "new file with a violation");
+    expect(check(root).status).toBe(1);
+  });
+
+  test("a renamed file carries its counts to the new path, and no more", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 3 } }),
+    });
+    spawnSync("git", ["mv", "src/a.ts", "src/loader.ts"], { cwd: root });
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/loader.ts": { r: 3 } }));
+    commit(root, "rename");
+    expect(check(root).status).toBe(0);
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/loader.ts": { r: 4 } }));
+    commit(root, "grow after rename");
+    const run = check(root);
+    expect(run.status).toBe(1);
+    expect(run.out).toContain("src/loader.ts: r 3 -> 4");
+  });
+
+  test("growth passes when .oxlintrc.json changed, because a rule is being adopted", () => {
+    const root = repo({ ".oxlintrc.json": ONE_RULE, "src/a.ts": LOAD, [BASELINE_PATH]: recorded({}) });
+    writeFileSync(
+      join(root, ".oxlintrc.json"),
+      JSON.stringify({ plugins: ["eslint"], rules: { "eslint/no-var": "error" } }),
+    );
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { "eslint(no-var)": 5 } }));
+    commit(root, "adopt no-var");
+    const run = check(root);
+    expect(run.status).toBe(0);
+    expect(run.out).toContain("src/a.ts: eslint(no-var) 0 -> 5");
+  });
+
+  test("a baseline that only shrank passes", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 3 } }),
+    });
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 1 } }));
+    commit(root, "shrink");
+    expect(check(root).status).toBe(0);
   });
 });

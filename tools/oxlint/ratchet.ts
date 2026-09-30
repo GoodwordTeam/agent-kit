@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path";
 import Ajv2020, { type JSONSchemaType } from "ajv/dist/2020.js";
 
 /** file -> rule -> violations. */
-type Counts = Map<string, Map<string, number>>;
+export type Counts = Map<string, Map<string, number>>;
 
 interface Diagnostic {
   file: string;
@@ -96,7 +96,7 @@ const validReport = ajv.compile(REPORT_SCHEMA);
 const validBaseline = ajv.compile(BASELINE_SCHEMA);
 
 const OXLINT = join(import.meta.dir, "..", "..", "node_modules", ".bin", "oxlint");
-const BASELINE = join("tools", "oxlint", "baseline.json");
+export const BASELINE = join("tools", "oxlint", "baseline.json");
 
 /** Run oxlint with the root's own config and return its diagnostics. A run that produced no report throws. */
 export function lint(root: string, paths: readonly string[]): Diagnostic[] {
@@ -132,15 +132,20 @@ export function count(diagnostics: readonly Diagnostic[]): Counts {
   return counts;
 }
 
+/** Parse baseline text through the schema; `source` names where it came from in the error. */
+export function parseBaseline(text: string, source: string = BASELINE): Counts {
+  const parsed: unknown = JSON.parse(text);
+  if (!validBaseline(parsed)) {
+    const detail = (validBaseline.errors ?? []).map((e) => `${e.instancePath || "(root)"} ${e.message ?? ""}`);
+    throw new Error(`${source} is malformed: ${detail.join("; ")}`);
+  }
+  return new Map(Object.entries(parsed).map(([path, rules]) => [path, new Map(Object.entries(rules))]));
+}
+
 export function readBaseline(root: string): Counts {
   const file = join(root, BASELINE);
   if (!existsSync(file)) return new Map();
-  const parsed: unknown = JSON.parse(readFileSync(file, "utf8"));
-  if (!validBaseline(parsed)) {
-    const detail = (validBaseline.errors ?? []).map((e) => `${e.instancePath || "(root)"} ${e.message ?? ""}`);
-    throw new Error(`${BASELINE} is malformed: ${detail.join("; ")}`);
-  }
-  return new Map(Object.entries(parsed).map(([path, rules]) => [path, new Map(Object.entries(rules))]));
+  return parseBaseline(readFileSync(file, "utf8"));
 }
 
 /** Code-unit order, so the baseline's key order never depends on the machine's locale. */
