@@ -40,6 +40,8 @@ const scoring: ScoreOptions = { arm: "natural", userInvoked };
 const prose = dev.cases.filter((c) => kindOf(c) === "user-prose");
 const negative = dev.cases.find((c) => kindOf(c) === "model-negative")!;
 const routed = dev.cases.find((c) => c.polarity === "positive" && c.invocation === "M")!;
+const draftSkills = new Set(dev.cases.flatMap((c) => (c.draft === undefined ? [] : [c.draft.name])));
+const bundledSkills = [...new Set(dev.cases.flatMap((c) => [c.skill, ...c.expected]).filter((skill) => !draftSkills.has(skill)))].sort();
 
 describe("stratifiedSample", () => {
   const rows = [
@@ -123,7 +125,14 @@ function storedRun(): { receipt: string; copy: string; dumpDir: string; loadedCa
   writeFileSync(join(dumpDir, "subject-a", "index.json"), JSON.stringify({ fired: 1 }));
   const result = (c: Case, reply: string, loaded: string[], extra: Record<string, unknown> = {}) => ({ id: c.id, loaded, reply, timed_out: false, exit_code: 0, ...extra });
   const receipt = {
-    receipt: { prompt_set: "trigger-dev", prompt_set_sha256: dev.sha256, arm: "natural", argv: ["bun", "trigger-eval.ts", "--json", "runs/r.json", "--dump-transcripts", "runs/r-t"] },
+    receipt: {
+      prompt_set: "trigger-dev",
+      prompt_set_sha256: dev.sha256,
+      arm: "natural",
+      bundle: "on",
+      bundle_complete: bundledSkills,
+      argv: ["bun", "trigger-eval.ts", "--json", "runs/r.json", "--dump-transcripts", "runs/r-t"],
+    },
     subjects: [
       {
         subject: "subject-a",
@@ -146,7 +155,58 @@ function storedRun(): { receipt: string; copy: string; dumpDir: string; loadedCa
   return { receipt: file, copy, dumpDir, loadedCase };
 }
 
+function receiptVariant(source: string, name: string, change: (receipt: Record<string, unknown>) => Record<string, unknown>): string {
+  const complete = JSON.parse(readFileSync(source, "utf8")) as { receipt: Record<string, unknown> };
+  const file = join(scratch, "eligibility", `${name}.json`);
+  mkdirSync(join(scratch, "eligibility"), { recursive: true });
+  writeFileSync(file, JSON.stringify({ ...complete, receipt: change(complete.receipt) }));
+  return file;
+}
+
 describe("loading stored runs and the label file", () => {
+  test("a bundle-off receipt produces no candidates", () => {
+    const run = storedRun();
+    const bundleOff = receiptVariant(run.receipt, "bundle-off", ({ bundle_complete: _, ...receipt }) => ({ ...receipt, bundle: "off" }));
+    const loaded = loadRuns([bundleOff], scoring);
+    expect(loaded.candidates).toEqual([]);
+    expect(loaded.skipped).toEqual({ "bundle was not on": 5 });
+  });
+
+  test("a legacy or incomplete bundle-on receipt produces no candidates", () => {
+    const run = storedRun();
+    const legacyBundleOn = receiptVariant(run.receipt, "legacy-bundle-on", ({ bundle_complete: _, ...receipt }) => ({ ...receipt, bundle: "on" }));
+    const incompleteBundle = receiptVariant(run.receipt, "incomplete-bundle", (receipt) => ({ ...receipt, bundle_complete: bundledSkills.slice(1) }));
+    const legacy = loadRuns([legacyBundleOn], scoring);
+    expect(legacy.candidates).toEqual([]);
+    expect(legacy.skipped).toEqual({ "bundle completeness was not recorded": 5 });
+    const incomplete = loadRuns([incompleteBundle], scoring);
+    expect(incomplete.candidates).toEqual([]);
+    expect(incomplete.skipped).toEqual({ [`bundle completeness does not cover the prompt set (${bundledSkills[0]})`]: 5 });
+    for (const inputs of [[legacyBundleOn, incompleteBundle, run.receipt], [run.receipt, incompleteBundle, legacyBundleOn]]) {
+      const mixed = loadRuns(inputs, scoring);
+      expect(mixed.candidates).toHaveLength(3);
+      expect(mixed.skipped).toEqual({ "not decided by the heuristic graders": 1, "invalid session (exit 1)": 1 });
+    }
+  });
+
+  test("a receipt that recorded absolute run paths still owns its dump", () => {
+    const run = storedRun();
+    const absolute = receiptVariant(run.receipt, "absolute-paths", (receipt) => ({
+      ...receipt,
+      argv: ["bun", "trigger-eval.ts", "--json", run.receipt, "--dump-transcripts", run.dumpDir],
+    }));
+    const loaded = loadRuns([run.dumpDir, absolute], scoring);
+    expect(loaded.candidates).toHaveLength(3);
+    expect(loaded.candidates.find((c) => c.case.id === run.loadedCase.id)!.events).toHaveLength(2);
+  });
+
+  test("a transcript dump without its eligible owning receipt produces no candidates", () => {
+    const run = storedRun();
+    const loaded = loadRuns([run.dumpDir], scoring);
+    expect(loaded.candidates).toEqual([]);
+    expect(loaded.skipped).toEqual({ "transcript dump without an eligible owning receipt": 1 });
+  });
+
   test("a receipt joins its dump, counts each session once, and keeps only the rows the heuristics decide", () => {
     const run = storedRun();
     const loaded = loadRuns([run.dumpDir, run.receipt, run.copy], scoring);
@@ -275,11 +335,42 @@ describe("rescoreLabels", () => {
     const result = rescoreLabels(labels, loadRuns(sources, scoring));
     expect(result.changed).toEqual([{ id: stale.id, from: { verdict: "FAIL", outcome: "missed", reason: "missed" }, to: current[labels.items.indexOf(stale)]! }]);
     expect(result.missing).toEqual(["gone"]);
+    expect(result.ineligible).toEqual([]);
     expect(result.labels.items.slice(0, -1).map((i) => i.suggested)).toEqual(current);
     // Votes, labels and the orphan are left alone, and the input is not mutated.
     expect(result.labels.items.find((i) => i.id === stale.id)!.votes).toEqual({ "reviewer-b": "PASS" });
     expect(result.labels.items.at(-1)).toEqual(orphan);
     expect(stale.suggested.outcome).toBe("missed");
+  });
+
+  test("an item whose session is stored but ineligible is reported with the reason, apart from one that is gone", async () => {
+    const run = storedRun();
+    const sampled = buildLabels(loadRuns([run.receipt], scoring), { n: 80, seed: 1, sources: [run.receipt] });
+    const legacy = receiptVariant(run.receipt, "rescore-legacy", ({ bundle_complete: _, ...receipt }) => ({ ...receipt, bundle: "on" }));
+    const orphan = item("gone", { source: join(scratch, "runs", "gone.json#subject-a/x") });
+    const labels = { ...sampled, sources: [run.dumpDir], items: [...sampled.items, orphan] };
+    const dumped = labels.items.find((i) => i.events_recorded)!;
+    for (const sources of [[run.dumpDir, legacy], [legacy, run.dumpDir]]) {
+      const result = rescoreLabels(labels, loadRuns(sources, scoring));
+      expect(result.changed).toEqual([]);
+      expect(result.missing).toEqual(["gone"]);
+      expect(result.ineligible).toEqual(sampled.items.map((i) => ({ id: i.id, why: "bundle completeness was not recorded" })));
+      expect(result.labels.items).toEqual(labels.items);
+    }
+
+    const labelsFile = join(scratch, "rescore-ineligible", "labels.json");
+    writeLabels(labelsFile, labels);
+    const lines: string[] = [];
+    const log = console.log;
+    console.log = (line: string) => void lines.push(line);
+    try {
+      expect(await main(["rescore"], labelsFile)).toBe(0);
+    } finally {
+      console.log = log;
+    }
+    expect(lines).toContain(`  ${dumped.id} ineligible (transcript dump without an eligible owning receipt); left as it was`);
+    expect(lines).toContain("  gone not in the sources any more; left as it was");
+    expect(lines.at(-1)).toBe(`rescored 0 of 4 item(s); 0 changed; 1 ineligible; 3 missing; wrote ${labelsFile}`);
   });
 
   test("the rescore command reads the default label file when given only --out, and writes nowhere else", async () => {

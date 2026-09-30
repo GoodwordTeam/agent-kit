@@ -12,9 +12,13 @@
  *
  * FILE defaults to `.work/calibration/labels.json`, the matrix to `.work/eval-matrix.yaml`.
  *
- * sample   Reads stored runs. A PATH is a trigger-eval receipt (its `--json` output) or a
- *          transcript dump directory (its `--dump-transcripts` output: `<subject>/<case-id>.json`,
- *          or one subject directory). A receipt holds every case's reply; the run dumped events
+ * sample   Reads stored runs. A PATH is a trigger-eval receipt (its `--json` output), optionally
+ *          accompanied by its transcript dump directory (`--dump-transcripts` output:
+ *          `<subject>/<case-id>.json`, or one subject directory). Calibration admits only a
+ *          bundle-on receipt whose `bundle_complete` skills cover its recorded prompt set; old
+ *          receipts without that evidence and dumps without an eligible owning receipt are left
+ *          out, with the reason. A dump path must not be reused across runs.
+ *          A receipt holds every case's reply; the run dumped events
  *          only for sessions that loaded a skill, and the receipt's own argv names that dump, so
  *          a case with a dump is rescored from its events and a case without one is rescored as a
  *          session with no tool calls recorded. That is exact for everything the scorer reads when
@@ -49,8 +53,10 @@
  *          out of their rows. Without human labels the figures measure agreement, not correctness.
  * rescore  Re-applies the current scorer to each item's stored session, read again from the
  *          file's `sources`, and replaces `suggested`; labels, votes and transcripts are left as
- *          they are. It prints each item whose verdict or outcome changed and each item whose
- *          session is no longer in its sources (left untouched). Writes in place unless `--out`.
+ *          they are. Sessions are read through the same gate as `sample`. It prints each item
+ *          whose verdict or outcome changed, each item whose session is stored but left out, with
+ *          the reason, and each item whose session is no longer in its sources (both left
+ *          untouched). Writes in place unless `--out`.
  *
  * The scorer's verdict is `suggested`, mapped onto `CRITERIA`: recommended, redirected,
  * loaded-and-stopped and a held negative pass; violated, missed and a fired negative fail;
@@ -60,7 +66,7 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { loadCatalog } from "../../../src/catalog/load.ts";
 import { run } from "../../../src/learn/core/proc.ts";
 import { PACKAGE_ROOT } from "../../../src/learn/core/roles.ts";
@@ -68,7 +74,7 @@ import { loadMatrix, MATRIX_FILE, type Matrix, type Seat, type Subject } from ".
 import { buildPanel, grade, type Grade, type Judge, type Panel, type Vote } from "./panel.ts";
 import { type KappaRow, kappaTable, rng } from "./stats.ts";
 import type { HostKind, SessionEvent } from "./subjects/types.ts";
-import { bodyFingerprint, type Case, expectsOf, type Outcome, parsePromptSet, type ScoreOptions, type Scored, scoreCase } from "./trigger-eval.ts";
+import { bodyFingerprint, bundleTargets, type Case, expectsOf, type Outcome, parsePromptSet, type ScoreOptions, type Scored, scoreCase } from "./trigger-eval.ts";
 
 /** What the human and every reviewer judge each item against. */
 export const CRITERIA = [
@@ -287,7 +293,15 @@ interface Dump {
 }
 
 interface Receipt {
-  receipt: { prompt_set: string; prompt_set_sha256: string; arm?: string; argv?: string[]; revision?: string };
+  receipt: {
+    prompt_set: string;
+    prompt_set_sha256: string;
+    arm?: string;
+    argv?: string[];
+    revision?: string;
+    bundle?: string;
+    bundle_complete?: string[];
+  };
   subjects: { subject: string; host: HostKind; results: { id: string; loaded: string[]; reply: string; invalid?: string; timed_out?: boolean; exit_code?: number }[] }[];
 }
 
@@ -323,13 +337,45 @@ function dumpFiles(dir: string): { subject: string; file: string }[] {
     .flatMap((subject) => dumpFiles(join(dir, subject)).map((x) => ({ ...x, subject })));
 }
 
+function bundleProblem(receipt: Receipt["receipt"], cases: ReadonlyMap<string, Case> | null): string | null {
+  if (receipt.bundle !== "on") return "bundle was not on";
+  if (!Array.isArray(receipt.bundle_complete)) return "bundle completeness was not recorded";
+  if (cases === null) return "bundle completeness cannot be matched to the recorded prompt set";
+  const drafts = new Set([...cases.values()].flatMap((c) => (c.draft === undefined ? [] : [c.draft.name])));
+  const checked = new Set(receipt.bundle_complete);
+  const missing = bundleTargets([...cases.values()], drafts).filter((skill) => !checked.has(skill));
+  return missing.length === 0 ? null : `bundle completeness does not cover the prompt set (${missing.join(", ")})`;
+}
+
+function receiptPaths(path: string, receipt: Receipt["receipt"]): { runId: string; dumpDir?: string } {
+  const jsonArg = argOf(receipt.argv, "--json");
+  const dumpArg = argOf(receipt.argv, "--dump-transcripts");
+  let root: string | undefined;
+  for (let dir = dirname(path); jsonArg !== undefined; dir = dirname(dir)) {
+    if (existsSync(resolve(dir, jsonArg))) {
+      root = dir;
+      break;
+    }
+    if (dirname(dir) === dir) break;
+  }
+  return {
+    runId: root !== undefined && jsonArg !== undefined ? resolve(root, jsonArg) : path,
+    ...(root !== undefined && dumpArg !== undefined && existsSync(resolve(root, dumpArg)) ? { dumpDir: resolve(root, dumpArg) } : {}),
+  };
+}
+
+const UNOWNED_DUMP = "transcript dump without an eligible owning receipt";
+
 export interface Loaded {
   candidates: Candidate[];
   skipped: Record<string, number>;
+  /** Each stored session left out, by source, with the reason `skipped` counts it under. */
+  ineligible: Map<string, string>;
 }
 
 /**
- * Every stored session under `paths`, rescored with `scoring`. A receipt's run is identified by
+ * Every eligible stored session under `paths`, rescored with `scoring`; the rest are in
+ * `ineligible` with the reason. A receipt's run is identified by
  * the `--json` path in its argv, resolved against the nearest ancestor where it exists, so a
  * rescored copy of a receipt names the same sessions as the original.
  */
@@ -341,7 +387,7 @@ export function loadRuns(paths: readonly string[], scoring: ScoreOptions): Loade
   const add = (cand: Candidate) => {
     const known = seen.get(cand.source);
     if (known === undefined) seen.set(cand.source, cand);
-    // A dump directory read on its own does not name its host; a receipt for the same session does.
+    // A dump input does not name its host; its eligible receipt for the same session does.
     else if (known.host === null) known.host = cand.host;
   };
   const fromDump = (subject: string, host: HostKind | null, file: string, arm: ScoreOptions["arm"]) => {
@@ -351,38 +397,42 @@ export function loadRuns(paths: readonly string[], scoring: ScoreOptions): Loade
     if (kindOf(dump.case) === null) return skip(file, "not decided by the heuristic graders");
     add({ source: file, subject, host, case: dump.case, events: dump.events, reply: dump.reply, scored: scoreCase(dump.case, dump.events, dump.reply, { ...scoring, arm }) });
   };
+  const receipts = new Map<string, { data: Receipt; cases: Map<string, Case> | null; problem: string | null; runId: string; dumpDir?: string }>();
+  for (const raw of paths) {
+    const path = resolve(raw);
+    if (!existsSync(path) || statSync(path).isDirectory()) continue;
+    const data = JSON.parse(readFileSync(path, "utf8")) as Receipt;
+    if (data.receipt === undefined || !Array.isArray(data.subjects)) throw new Error(`calibrate: ${raw} is neither a transcript dump directory nor a trigger-eval receipt`);
+    const cases = promptSetOf(data.receipt);
+    receipts.set(path, { data, cases, problem: bundleProblem(data.receipt, cases), ...receiptPaths(path, data.receipt) });
+  }
+  const ownedDumps = [...receipts.values()].filter((receipt) => receipt.problem === null).flatMap((receipt) => (receipt.dumpDir === undefined ? [] : [receipt.dumpDir]));
   for (const raw of paths) {
     const path = resolve(raw);
     if (!existsSync(path)) throw new Error(`calibrate: ${raw} does not exist`);
     if (statSync(path).isDirectory()) {
-      for (const { subject, file } of dumpFiles(path)) fromDump(subject, null, file, scoring.arm);
+      const owned = ownedDumps.some((dumpDir) => path === dumpDir || path.startsWith(`${dumpDir}${sep}`));
+      for (const { subject, file } of dumpFiles(path)) {
+        if (owned) fromDump(subject, null, file, scoring.arm);
+        else if (!skippedBy.has(file)) skip(file, UNOWNED_DUMP);
+      }
       continue;
     }
-    const data = JSON.parse(readFileSync(path, "utf8")) as Receipt;
-    if (data.receipt === undefined || !Array.isArray(data.subjects)) throw new Error(`calibrate: ${raw} is neither a transcript dump directory nor a trigger-eval receipt`);
-    const cases = promptSetOf(data.receipt);
+    const { data, cases, problem, runId, dumpDir } = receipts.get(path)!;
     const arm = data.receipt.arm === "nudged" ? "nudged" : "natural";
-    const jsonArg = argOf(data.receipt.argv, "--json");
-    const dumpArg = argOf(data.receipt.argv, "--dump-transcripts");
-    let root: string | undefined;
-    for (let dir = dirname(path); jsonArg !== undefined; dir = dirname(dir)) {
-      if (existsSync(join(dir, jsonArg))) {
-        root = dir;
-        break;
-      }
-      if (dirname(dir) === dir) break;
-    }
-    const runId = root !== undefined && jsonArg !== undefined ? join(root, jsonArg) : path;
-    const dumpDir = root !== undefined && dumpArg !== undefined && existsSync(join(root, dumpArg)) ? join(root, dumpArg) : undefined;
     for (const subject of data.subjects) {
       for (const result of subject.results) {
         const dumpFile = dumpDir === undefined ? undefined : join(dumpDir, subject.subject, `${result.id}.json`);
-        if (dumpFile !== undefined && existsSync(dumpFile)) {
+        const source = dumpFile !== undefined && existsSync(dumpFile) ? dumpFile : `${runId}#${subject.subject}/${result.id}`;
+        if (problem !== null) {
+          if ((skippedBy.get(source) ?? UNOWNED_DUMP) === UNOWNED_DUMP) skip(source, problem);
+          continue;
+        }
+        if (source === dumpFile) {
           fromDump(subject.subject, subject.host, dumpFile, arm);
           continue;
         }
-        const source = `${runId}#${subject.subject}/${result.id}`;
-        const c = cases?.get(result.id);
+        const c = cases!.get(result.id);
         if (c === undefined) {
           skip(source, "case not in the prompt set the receipt recorded");
           continue;
@@ -404,9 +454,10 @@ export function loadRuns(paths: readonly string[], scoring: ScoreOptions): Loade
       }
     }
   }
+  const ineligible = new Map([...skippedBy].filter(([source]) => !seen.has(source)));
   const skipped: Record<string, number> = {};
-  for (const why of skippedBy.values()) skipped[why] = (skipped[why] ?? 0) + 1;
-  return { candidates: [...seen.values()], skipped };
+  for (const why of ineligible.values()) skipped[why] = (skipped[why] ?? 0) + 1;
+  return { candidates: [...seen.values()], skipped, ineligible };
 }
 
 /** Build the label file from loaded sessions. */
@@ -437,8 +488,10 @@ export interface Rescored {
   labels: LabelFile;
   /** Items whose suggested verdict or outcome changed. */
   changed: { id: string; from: Suggested; to: Suggested }[];
-  /** Items whose session `loaded` does not hold; their suggestion is left as it was. */
+  /** Items whose session `loaded` neither holds nor left out; their suggestion is left as it was. */
   missing: string[];
+  /** Items whose session is stored but was left out of `loaded`, with the reason; their suggestion is left as it was. */
+  ineligible: { id: string; why: string }[];
 }
 
 /** The label file with each item's `suggested` taken from its session in `loaded`, rescored. Does not mutate `labels`. */
@@ -446,17 +499,20 @@ export function rescoreLabels(labels: LabelFile, loaded: Loaded): Rescored {
   const bySource = new Map(loaded.candidates.map((c) => [c.source, c]));
   const changed: Rescored["changed"] = [];
   const missing: string[] = [];
+  const ineligible: Rescored["ineligible"] = [];
   const items = labels.items.map((item) => {
     const cand = bySource.get(item.source);
     if (cand === undefined) {
-      missing.push(item.id);
+      const why = loaded.ineligible.get(item.source);
+      if (why === undefined) missing.push(item.id);
+      else ineligible.push({ id: item.id, why });
       return item;
     }
     const to = suggestedOf(cand.scored);
     if (to.verdict !== item.suggested.verdict || to.outcome !== item.suggested.outcome) changed.push({ id: item.id, from: item.suggested, to });
     return { ...item, suggested: to };
   });
-  return { labels: { ...labels, items }, changed, missing };
+  return { labels: { ...labels, items }, changed, missing, ineligible };
 }
 
 /** The scoring the sample rescores with: the catalog's user-invoked skills, ids and body fingerprints. */
@@ -735,9 +791,10 @@ export async function main(argv: string[], labelsFile = LABELS_FILE): Promise<nu
     const result = rescoreLabels(labels, loadRuns(labels.sources, catalogScoring()));
     const show = (x: Suggested) => `${x.verdict ?? "abstain"} (${x.outcome})`;
     for (const c of result.changed) console.log(`  ${c.id} ${labels.items.find((i) => i.id === c.id)!.stratum.padEnd(24)} ${show(c.from)} -> ${show(c.to)}`);
+    for (const { id, why } of result.ineligible) console.log(`  ${id} ineligible (${why}); left as it was`);
     for (const id of result.missing) console.log(`  ${id} not in the sources any more; left as it was`);
     writeLabels(out, result.labels);
-    console.log(`rescored ${labels.items.length - result.missing.length} of ${labels.items.length} item(s); ${result.changed.length} changed; wrote ${out}`);
+    console.log(`rescored ${labels.items.length - result.ineligible.length - result.missing.length} of ${labels.items.length} item(s); ${result.changed.length} changed; ${result.ineligible.length} ineligible; ${result.missing.length} missing; wrote ${out}`);
     return 0;
   }
 

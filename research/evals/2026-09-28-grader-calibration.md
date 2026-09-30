@@ -33,6 +33,17 @@ The short answer:
 | Donors | `.donors/` present |
 | Spend | none. Everything here reads stored transcripts and stored votes |
 
+This is a historical instrument. Current `calibrate.ts` sampling admits only bundle-on receipts
+whose `bundle_complete` skill ids cover the recorded prompt set. Legacy receipts in this sample
+carry no such attestation and are no longer eligible; a transcript dump is accepted only alongside
+its eligible owning receipt. A dump path must not be reused across runs: dump files carry no run
+identity, so a reused path mixes one run's sessions into another's.
+
+The `rescore` commands below and in the 2026-09-29 follow-up no longer reproduce. `rescore` reads
+sessions through the same gate as `sample`, and the receipts this label file was sampled from
+carry no bundle completeness, so nothing shows the subject had the skills installed. Run now, the
+command leaves each of those items as it was and reports it as ineligible with that reason.
+
 The commands:
 
 ```
@@ -199,7 +210,8 @@ with its own scorer turns 10 rows that passed at run time, on the full reply, in
   still count labelled items only.
 - **`calibrate.ts rescore`**: re-reads each item's session from the file's sources, applies the
   current scorer, and replaces `suggested`. Labels, votes and transcripts stay. It prints each
-  change and each item whose session is gone. This replaces the one-off rescore script.
+  change, each item whose session is stored but ineligible, with the reason, and each item whose
+  session is gone. This replaces the one-off rescore script.
 
 ## Shell-classifier follow-up rescore, 2026-09-29
 
@@ -233,8 +245,8 @@ output with the same SHA-256, so the figures hold for the shipped scorer.
   show it. The criteria need to say whether running a skill's workflow in chat is acting.
 - **The loaded-unclear mapping.** `calibrate.ts` passes a loaded-unclear with no delegating call.
   The panel agreed on 20, failed 4 and split on 6. That is most, not all.
-- **"Not installed" refusals.** Items 6 and 9 turn down a prompt that names the command because
-  the skill is missing. The criteria do not say whether that counts as a redirect.
+- **Historical "not installed" refusals.** Items 6 and 9 came from receipts that are no longer
+  eligible, so they are no longer calibration evidence; they are not reinterpreted as redirects.
 - **Reviewer splits.** The 9 split items (6 loaded-unclear, 3 missed) were not ruled on.
 - **The 2026-09-25 prose figures.** Their replies were stored cut at 280 characters, and no
   grader can recover the tail. A comparison against those runs needs a rerun, not a rescore.
