@@ -38,13 +38,20 @@ function env(over: Partial<Parameters<typeof bind>[1]> = {}) {
 }
 
 function failed(checks: { id: string; ok: boolean }[]): string[] {
-  return checks.filter((c) => !c.ok).map((c) => c.id);
+  return checks
+    .values()
+    .filter((c) => !c.ok)
+    .map((c) => c.id)
+    .toArray();
 }
 
 describe("preflight", () => {
   test("passes on a patched home, a trusted no-mistakes config and a mock evidence store", () => {
     const { home, project, opts } = env();
-    const result = preflight({ fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts);
+    const result = preflight(
+      { fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      opts,
+    );
     expect(failed(result.checks)).toEqual([]);
     expect(result.ok).toBe(true);
   });
@@ -66,14 +73,20 @@ describe("preflight", () => {
       { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW },
     );
     expect(failed(result.checks)).toEqual(["patch-applied"]);
-    expect(result.checks.find((c) => c.id === "patch-applied")!.detail).toContain("0002-agent-kit-audit is not applied");
+    expect(result.checks.find((c) => c.id === "patch-applied")!.detail).toContain(
+      "0002-agent-kit-audit is not applied",
+    );
   });
 
   test("the stack is checked in a scratch index: a committed stack passes and the home's index is untouched", () => {
     const { home, upstream } = makeHome({ patched: true });
     const staged = gitIn(home, "diff", "--cached", "--name-only");
     const check = checkPatchApplied(home, upstream);
-    expect(check).toEqual({ id: "patch-applied", ok: true, detail: "0001-agent-kit-mode, 0002-agent-kit-audit are applied" });
+    expect(check).toEqual({
+      id: "patch-applied",
+      ok: true,
+      detail: "0001-agent-kit-mode, 0002-agent-kit-audit are applied",
+    });
     expect(gitIn(home, "diff", "--cached", "--name-only")).toBe(staged);
     expect(gitIn(home, "status", "--porcelain")).toBe("M bin/fm-dod-lib.sh");
     gitIn(home, "commit", "-qam", "apply 0001 and 0002");
@@ -91,7 +104,10 @@ describe("preflight", () => {
 
   test("the knowledgebase evidence store fails closed: no knowledgebase exists", () => {
     const { home, project, opts } = env();
-    const result = preflight({ fmHome: home, project, host: "claude-code", evidence: { store: "kb", location: "kb://x" } }, opts);
+    const result = preflight(
+      { fmHome: home, project, host: "claude-code", evidence: { store: "kb", location: "kb://x" } },
+      opts,
+    );
     expect(failed(result.checks)).toEqual(["evidence"]);
     expect(result.checks.find((c) => c.id === "evidence")?.detail).toContain("fails closed");
   });
@@ -99,12 +115,18 @@ describe("preflight", () => {
   test("a no-mistakes config that lets a gate commit a fix is refused, and so is a missing one", () => {
     const { home, opts } = env();
     const loose = makeProject("commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 3\n  ci: 0\n");
-    const r1 = preflight({ fmHome: home, project: loose, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts);
+    const r1 = preflight(
+      { fmHome: home, project: loose, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      opts,
+    );
     expect(failed(r1.checks)).toEqual(["no-mistakes-auto-fix"]);
     expect(r1.checks.find((c) => c.id === "no-mistakes-auto-fix")?.detail).toContain("lint");
 
     const none = makeProject("commands:\n  test: bun test\n");
-    const r2 = preflight({ fmHome: home, project: none, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts);
+    const r2 = preflight(
+      { fmHome: home, project: none, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      opts,
+    );
     expect(failed(r2.checks)).toEqual(["no-mistakes-auto-fix"]);
   });
 
@@ -116,7 +138,15 @@ describe("preflight", () => {
     expect(p.ok).toBe(false);
     expect(failed(p.checks)).toEqual(["no-mistakes-auto-fix"]);
     const b = bind(
-      { fmHome: home, taskId: "T-9", project, mode: "agent-kit", host: "claude-code", evidence, bindingOut: join(home, "data/T-9/binding.json") },
+      {
+        fmHome: home,
+        taskId: "T-9",
+        project,
+        mode: "agent-kit",
+        host: "claude-code",
+        evidence,
+        bindingOut: join(home, "data/T-9/binding.json"),
+      },
       opts,
     );
     expect(b.ok).toBe(false);
@@ -127,7 +157,8 @@ describe("preflight", () => {
     const { home, opts } = env();
     const good = "commands:\n  test: bun test\nauto_fix:\n  test: 0\n  lint: 0\n  ci: 0\n";
     const check = (project: string) =>
-      preflight({ fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts).checks;
+      preflight({ fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts)
+        .checks;
 
     const worktreeOnly = makeProject("commands:\n  test: bun test\n");
     writeFileSync(join(worktreeOnly, ".no-mistakes.yaml"), good);
@@ -155,7 +186,10 @@ describe("preflight", () => {
 
   test("host capabilities are read from the host contract and a partial status is reported, not hidden", () => {
     const { home, project, opts } = env();
-    const r = preflight({ fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } }, opts);
+    const r = preflight(
+      { fmHome: home, project, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      opts,
+    );
     const host = r.checks.find((c) => c.id === "host-capabilities");
     expect(host?.ok).toBe(true);
     expect(host?.detail).toContain("isolated-review-context=partial");
@@ -168,13 +202,26 @@ describe("bind", () => {
     const { home, project, opts } = env();
     const out = join(home, "data/T-1/agent-kit-binding.json");
     const r = bind(
-      { fmHome: home, taskId: "T-1", project, mode: "agent-kit", bindingOut: out, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      {
+        fmHome: home,
+        taskId: "T-1",
+        project,
+        mode: "agent-kit",
+        bindingOut: out,
+        host: "claude-code",
+        evidence: { store: "mock", location: makeDir() },
+      },
       opts,
     );
     expect(r.ok).toBe(true);
     const binding = JSON.parse(readFileSync(out, "utf8"));
     expect(validateBinding(REPO, binding)).toEqual([]);
-    expect(binding.delivery).toEqual({ action: "dry-run", transport: "no-mistakes", skip: ["review", "document", "rebase"], merge: false });
+    expect(binding.delivery).toEqual({
+      action: "dry-run",
+      transport: "no-mistakes",
+      skip: ["review", "document", "rebase"],
+      merge: false,
+    });
     expect(binding.child_budget.max_depth).toBe(1);
     expect(binding.child_budget.charged_to).toBe(binding.run_id);
     expect(binding.work_source).toEqual({ kind: "firstmate-brief", ref: join(home, "data/T-1/brief.md") });
@@ -192,7 +239,14 @@ describe("bind", () => {
 
   test("the same task and inputs yield the same run id; a moved snapshot yields a different one", () => {
     const { home, project, opts } = env();
-    const args = { fmHome: home, taskId: "T-2", project, mode: "agent-kit", host: "claude-code" as const, evidence: { store: "mock" as const, location: makeDir() } };
+    const args = {
+      fmHome: home,
+      taskId: "T-2",
+      project,
+      mode: "agent-kit",
+      host: "claude-code" as const,
+      evidence: { store: "mock" as const, location: makeDir() },
+    };
     const a = bind({ ...args, bindingOut: join(home, "data/T-2/a.json") }, opts);
     const b = bind({ ...args, bindingOut: join(home, "data/T-2/b.json") }, opts);
     expect(a.binding?.run_id).toBe(b.binding?.run_id);
@@ -227,7 +281,14 @@ describe("bind", () => {
 
   test("the pinned bundle does not change when the kit is rebuilt", () => {
     const { home, project, opts } = env();
-    const args = { fmHome: home, taskId: "T-3", project, mode: "agent-kit", host: "claude-code" as const, evidence: { store: "mock" as const, location: makeDir() } };
+    const args = {
+      fmHome: home,
+      taskId: "T-3",
+      project,
+      mode: "agent-kit",
+      host: "claude-code" as const,
+      evidence: { store: "mock" as const, location: makeDir() },
+    };
     const first = bind({ ...args, bindingOut: join(home, "data/T-3/binding.json") }, opts);
     writeFileSync(join(opts.bundleDir, "skills/super-ship/SKILL.md"), "---\nname: super-ship\n---\nchanged\n");
     const pinned = readFileSync(join(first.binding!.skill_bundle.path, "skills/super-ship/SKILL.md"), "utf8");
@@ -241,7 +302,15 @@ describe("bind", () => {
     fs.rmSync(join(opts.bundleDir, "bin"), { recursive: true });
     const bindingOut = join(home, "data/T-5/binding.json");
     const r = bind(
-      { fmHome: home, taskId: "T-5", project, mode: "agent-kit", host: "claude-code", bindingOut, evidence: { store: "mock", location: makeDir() } },
+      {
+        fmHome: home,
+        taskId: "T-5",
+        project,
+        mode: "agent-kit",
+        host: "claude-code",
+        bindingOut,
+        evidence: { store: "mock", location: makeDir() },
+      },
       opts,
     );
     expect(r.ok).toBe(false);
@@ -251,11 +320,27 @@ describe("bind", () => {
 
   test("refuses a mode other than agent-kit, a knowledgebase store, an unpatched home and a binding the worker could write", () => {
     const { home, project, opts } = env();
-    const base = { fmHome: home, taskId: "T-4", project, host: "claude-code" as const, bindingOut: join(home, "data/T-4/binding.json") };
-    expect(bind({ ...base, mode: "no-mistakes", evidence: { store: "mock", location: makeDir() } }, opts).ok).toBe(false);
+    const base = {
+      fmHome: home,
+      taskId: "T-4",
+      project,
+      host: "claude-code" as const,
+      bindingOut: join(home, "data/T-4/binding.json"),
+    };
+    expect(bind({ ...base, mode: "no-mistakes", evidence: { store: "mock", location: makeDir() } }, opts).ok).toBe(
+      false,
+    );
     expect(bind({ ...base, mode: "agent-kit", evidence: { store: "kb", location: "kb://x" } }, opts).ok).toBe(false);
     expect(
-      bind({ ...base, mode: "agent-kit", bindingOut: join(project, "binding.json"), evidence: { store: "mock", location: makeDir() } }, opts).ok,
+      bind(
+        {
+          ...base,
+          mode: "agent-kit",
+          bindingOut: join(project, "binding.json"),
+          evidence: { store: "mock", location: makeDir() },
+        },
+        opts,
+      ).ok,
     ).toBe(false);
     const unpatched = makeHome({ patched: false });
     expect(
@@ -272,17 +357,35 @@ describe("bind", () => {
     const location = makeDir();
     expect(install({ fmHome: home, evidence: { store: "mock", location } }, opts).ok).toBe(true);
     const r = bind(
-      { fmHome: home, taskId: "T-5", project, mode: "agent-kit", host: "claude-code", bindingOut: join(home, "data/T-5/binding.json") },
+      {
+        fmHome: home,
+        taskId: "T-5",
+        project,
+        mode: "agent-kit",
+        host: "claude-code",
+        bindingOut: join(home, "data/T-5/binding.json"),
+      },
       opts,
     );
     expect(r.ok).toBe(true);
-    expect(r.binding?.evidence).toEqual({ store: "mock", location, label: "mock evidence store: fixture demonstration, not a knowledgebase" });
+    expect(r.binding?.evidence).toEqual({
+      store: "mock",
+      location,
+      label: "mock evidence store: fixture demonstration, not a knowledgebase",
+    });
   });
 
   test("with no evidence store configured anywhere, bind fails closed on the knowledgebase", () => {
     const { home, project, opts } = env();
     const r = bind(
-      { fmHome: home, taskId: "T-6", project, mode: "agent-kit", host: "claude-code", bindingOut: join(home, "data/T-6/binding.json") },
+      {
+        fmHome: home,
+        taskId: "T-6",
+        project,
+        mode: "agent-kit",
+        host: "claude-code",
+        bindingOut: join(home, "data/T-6/binding.json"),
+      },
       opts,
     );
     expect(r.ok).toBe(false);
@@ -294,7 +397,15 @@ describe("binding schema", () => {
   function good(): Record<string, unknown> {
     const { home, project, opts } = env();
     const r = bind(
-      { fmHome: home, taskId: "T-7", project, mode: "agent-kit", host: "claude-code", bindingOut: join(home, "data/T-7/b.json"), evidence: { store: "mock", location: makeDir() } },
+      {
+        fmHome: home,
+        taskId: "T-7",
+        project,
+        mode: "agent-kit",
+        host: "claude-code",
+        bindingOut: join(home, "data/T-7/b.json"),
+        evidence: { store: "mock", location: makeDir() },
+      },
       opts,
     );
     return JSON.parse(JSON.stringify(r.binding));
@@ -344,7 +455,10 @@ describe("install and remove", () => {
     ]);
     const envText = readFileSync(join(home, "config/agent-kit.env"), "utf8");
     // Patch 0001's parser (bin/fm-agent-kit-lib.sh) refuses any key but these three, each once.
-    const keys = envText.split("\n").filter((l) => l !== "" && !l.startsWith("#")).map((l) => l.slice(0, l.indexOf("=")));
+    const keys = envText
+      .split("\n")
+      .filter((l) => l !== "" && !l.startsWith("#"))
+      .map((l) => l.slice(0, l.indexOf("=")));
     expect(keys.sort()).toEqual(["AK_FIRSTMATE_BIN", "AK_FIRSTMATE_PATCH", "AK_FIRSTMATE_WORKER_SETTINGS"]);
     expect(readFileSync(join(home, "config/agent-kit/evidence.env"), "utf8")).toContain("AK_FIRSTMATE_EVIDENCE=mock\n");
     expect(envText).toContain("AK_FIRSTMATE_PATCH=0001-agent-kit-mode\n");
@@ -379,7 +493,14 @@ describe("install and remove", () => {
 
   test("refuses an unpatched home, and refuses to overwrite a file it did not write", () => {
     const unpatched = makeHome({ patched: false });
-    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream: unpatched.upstream, now: FIXED_NOW };
+    const opts = {
+      akRoot: REPO,
+      bundleDir: makeBundle(),
+      pinsDir: makeDir(),
+      ledgerDir: makeDir(),
+      upstream: unpatched.upstream,
+      now: FIXED_NOW,
+    };
     expect(install({ fmHome: unpatched.home }, opts).ok).toBe(false);
     expect(existsSync(join(unpatched.home, "config/agent-kit.env"))).toBe(false);
 
@@ -410,12 +531,22 @@ describe("status", () => {
       "needs-decision [at=1] [key=fix-cap-run-1]: fix-cycle cap reached; blocked or replan; open findings=f1,f2",
     );
     expect(statusLine(dry, { outcome: "failed", at: 1, reason: "tests red" }).line).toBe("failed [at=1]: tests red");
-    expect(statusLine(dry, { outcome: "cancelled", at: 1, by: "captain" }).line).toBe("failed [at=1]: cancelled: captain");
+    expect(statusLine(dry, { outcome: "cancelled", at: 1, by: "captain" }).line).toBe(
+      "failed [at=1]: cancelled: captain",
+    );
   });
 
   test("a child in an unknown state wins over every other outcome and keeps ownership", () => {
     for (const outcome of ["complete", "failed", "cancelled"] as const) {
-      const r = statusLine(publish, { outcome, at: 2, pr: "https://x/pr/1", evidence: ["r1"], unknownChild: "c-3", reason: "x", by: "y" });
+      const r = statusLine(publish, {
+        outcome,
+        at: 2,
+        pr: "https://x/pr/1",
+        evidence: ["r1"],
+        unknownChild: "c-3",
+        reason: "x",
+        by: "y",
+      });
       expect(r.line).toBe("blocked [at=2]: child c-3 state unknown");
     }
   });
@@ -442,7 +573,18 @@ describe("the ak firstmate command", () => {
 
   test("preflight against a home without the real upstream commit refuses and exits 1", () => {
     const { home } = makeHome({ patched: true });
-    const r = run(["firstmate", "preflight", "--fm-home", home, "--project", makeProject(), "--evidence", "mock", "--evidence-location", makeDir()]);
+    const r = run([
+      "firstmate",
+      "preflight",
+      "--fm-home",
+      home,
+      "--project",
+      makeProject(),
+      "--evidence",
+      "mock",
+      "--evidence-location",
+      makeDir(),
+    ]);
     expect(r.code).toBe(1);
     expect(r.out.join("\n")).toMatch(/FAIL\s+upstream-commit/);
   });
@@ -450,7 +592,18 @@ describe("the ak firstmate command", () => {
   test("status reads a binding file and prints one line", () => {
     const { home, project, opts } = env();
     const out = join(home, "data/T-8/binding.json");
-    bind({ fmHome: home, taskId: "T-8", project, mode: "agent-kit", host: "claude-code", bindingOut: out, evidence: { store: "mock", location: makeDir() } }, opts);
+    bind(
+      {
+        fmHome: home,
+        taskId: "T-8",
+        project,
+        mode: "agent-kit",
+        host: "claude-code",
+        bindingOut: out,
+        evidence: { store: "mock", location: makeDir() },
+      },
+      opts,
+    );
     // complete is audited first, which tests/firstmate/status.test.ts covers against a temp ledger.
     const r = run(["firstmate", "status", out, "failed", "--reason", "tests red", "--at", "5"]);
     expect(r.code).toBe(0);

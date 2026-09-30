@@ -11,7 +11,13 @@ import { join } from "node:path";
 
 import { runCli } from "../../src/cli.ts";
 import { loadCatalog } from "../../src/catalog/load.ts";
-import { defaultEvidenceDir, PRE_SHIP_GATES, takeSnapshot, type Gate, type GateRecord } from "../../src/lifecycle/gate.ts";
+import {
+  defaultEvidenceDir,
+  PRE_SHIP_GATES,
+  takeSnapshot,
+  type Gate,
+  type GateRecord,
+} from "../../src/lifecycle/gate.ts";
 import { GATE_FILE, planBundle } from "../../src/packaging/plan.ts";
 import { artifactHash } from "../../src/util/hash.ts";
 import { makeTree } from "../helpers/tree.ts";
@@ -21,7 +27,13 @@ const REPO = join(import.meta.dir, "..", "..");
 function git(cwd: string, ...args: string[]): string {
   const p = Bun.spawnSync(["git", ...args], {
     cwd,
-    env: { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@example.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@example.invalid" },
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: "t",
+      GIT_AUTHOR_EMAIL: "t@example.invalid",
+      GIT_COMMITTER_NAME: "t",
+      GIT_COMMITTER_EMAIL: "t@example.invalid",
+    },
   });
   if (p.exitCode !== 0) throw new Error(`git ${args.join(" ")}: ${p.stderr.toString()}`);
   return p.stdout.toString().trim();
@@ -187,7 +199,13 @@ describe("ak lifecycle check, standalone", () => {
     const checked = ak(dir, "check", "--json");
     expect(checked.code).toBe(0);
     const decision = JSON.parse(checked.out.join("\n"));
-    expect(decision).toMatchObject({ run_id: run, transition: "ship", outcome: "allowed", trust: "worker-attested", reasons: [] });
+    expect(decision).toMatchObject({
+      run_id: run,
+      transition: "ship",
+      outcome: "allowed",
+      trust: "worker-attested",
+      reasons: [],
+    });
     expect(readdirSync(join(defaultEvidenceDir(dir), run, "decisions"))).toHaveLength(1);
   });
 
@@ -247,7 +265,16 @@ describe("ak lifecycle check, standalone", () => {
     git(dir, "commit", "-qam", "fix");
 
     record(dir, "build-checks", "review-full", "review-readiness");
-    const recorded = ak(dir, "record", "--gate", "verify", "--receipt", leftover, "--receipt", receipt(dir, run, ticketPath));
+    const recorded = ak(
+      dir,
+      "record",
+      "--gate",
+      "verify",
+      "--receipt",
+      leftover,
+      "--receipt",
+      receipt(dir, run, ticketPath),
+    );
     expect(recorded.code).toBe(0);
     expect(recorded.err).toContain(leftover);
     expect(recorded.err).toContain(before);
@@ -264,7 +291,16 @@ describe("ak lifecycle check, standalone", () => {
     git(dir, "commit", "-qam", "next head");
     record(dir, "build-checks", "review-full", "review-readiness");
     const id = "verification-new-head";
-    expect(ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath, { id, status: "failed", exit_status: 1 })).code).toBe(0);
+    expect(
+      ak(
+        dir,
+        "record",
+        "--gate",
+        "verify",
+        "--receipt",
+        receipt(dir, run, ticketPath, { id, status: "failed", exit_status: 1 }),
+      ).code,
+    ).toBe(0);
     expect(ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath, { id })).code).toBe(0);
     expect(ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath)).code).toBe(0);
     const checked = ak(dir, "check");
@@ -339,7 +375,10 @@ describe("ak lifecycle check, standalone", () => {
   }, 15_000);
 
   test("a ticket ref binds by id and artifact hash, with or without a schema, and never another schema", () => {
-    for (const [schema, code] of [[undefined, 0], ["charter", 1]] as const) {
+    for (const [schema, code] of [
+      [undefined, 0],
+      ["charter", 1],
+    ] as const) {
       const dir = repo();
       const ticketPath = ticket(dir, `ticket-ref-${schema ?? "bare"}`);
       const run = ak(dir, "open", "--ticket", ticketPath).out[0]!.replace(/^opened run /, "");
@@ -371,7 +410,9 @@ describe("ak lifecycle check, standalone", () => {
     const run = ak(dir, "open", "--ticket", ticketPath).out[0]!.replace(/^opened run /, "");
     record(dir, "build-checks", "review-full", "review-readiness");
     const id = "verification-corrected";
-    expect(ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath, { id, check: undefined })).code).toBe(0);
+    expect(
+      ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath, { id, check: undefined })).code,
+    ).toBe(0);
     const defective = ak(dir, "check");
     expect(defective.code).toBe(1);
     expect(defective.err).toContain("refused: evidence unknown-check");
@@ -386,7 +427,16 @@ describe("ak lifecycle check, standalone", () => {
     const run = ak(dir, "open", "--ticket", ticketPath).out[0]!.replace(/^opened run /, "");
     record(dir, "build-checks", "review-full", "review-readiness");
     const id = "verification-sticky";
-    expect(ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath, { id, status: "failed", exit_status: 1 })).code).toBe(0);
+    expect(
+      ak(
+        dir,
+        "record",
+        "--gate",
+        "verify",
+        "--receipt",
+        receipt(dir, run, ticketPath, { id, status: "failed", exit_status: 1 }),
+      ).code,
+    ).toBe(0);
     expect(ak(dir, "record", "--gate", "verify", "--receipt", receipt(dir, run, ticketPath, { id })).code).toBe(0);
     const checked = ak(dir, "check");
     expect(checked.code).toBe(1);
@@ -438,7 +488,9 @@ describe("ak lifecycle check, standalone", () => {
     const latest: Partial<Record<Gate, GateRecord>> = {};
     for (const gate of ["verify", "review-full"] as const) {
       const evidence = join(defaultEvidenceDir(dir), "feature", gate);
-      const files = readdirSync(evidence).filter((name) => name.endsWith(".json")).sort();
+      const files = readdirSync(evidence)
+        .filter((name) => name.endsWith(".json"))
+        .sort();
       expect(files).toHaveLength(2);
       for (const [index, file] of files.entries()) {
         const path = join(evidence, file);
@@ -455,7 +507,9 @@ describe("ak lifecycle check, standalone", () => {
     for (const gate of ["verify", "review-full"] as const) {
       const snapshot = latest[gate]!.snapshot;
       const named = `${snapshot.revision.slice(0, 12)}/${snapshot.diff_hash.replace(/^sha256:/, "").slice(0, 12)}`;
-      expect(r.err).toContain(gate === "verify" ? `the latest record is for ${named}` : `the full review is for ${named}`);
+      expect(r.err).toContain(
+        gate === "verify" ? `the latest record is for ${named}` : `the full review is for ${named}`,
+      );
     }
   });
 
@@ -487,7 +541,9 @@ describe("ak lifecycle check, standalone", () => {
     const checked = ak(dir, "check");
     expect(checked.code).toBe(0);
     expect(checked.out[0]).toContain(`ok: run ${run}`);
-    expect(readdirSync(join(defaultEvidenceDir(dir), run, "review-full")).filter((name) => name.endsWith(".json"))).toHaveLength(1);
+    expect(
+      readdirSync(join(defaultEvidenceDir(dir), run, "review-full")).filter((name) => name.endsWith(".json")),
+    ).toHaveLength(1);
   });
 
   test("build-checks from another line of history does not count", () => {
@@ -499,7 +555,9 @@ describe("ak lifecycle check, standalone", () => {
     record(dir, "verify", "review-full", "review-readiness");
     const r = ak(dir, "check");
     expect(r.code).toBe(1);
-    expect(r.err).toContain("refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor");
+    expect(r.err).toContain(
+      "refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor",
+    );
   });
 
   test("a branch name reused after its run was merged does not inherit that run's records", () => {
@@ -516,7 +574,9 @@ describe("ak lifecycle check, standalone", () => {
     record(dir, "verify", "review-delta", "review-readiness");
     const r = ak(dir, "check");
     expect(r.code).toBe(1);
-    expect(r.err).toContain("refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor");
+    expect(r.err).toContain(
+      "refused: gate build-checks has no current evidence (every record is for a revision that is not an ancestor",
+    );
     expect(r.err).toContain("since it left main at");
     expect(r.err).toContain("refused: gate review-full has no current evidence");
   });
@@ -570,7 +630,9 @@ describe("ak lifecycle check, standalone", () => {
 
     const inherited = ak(dir, "check");
     expect(inherited.code).toBe(0);
-    expect(inherited.err).toContain("note: build-checks for run feature was recorded before this branch last took main (");
+    expect(inherited.err).toContain(
+      "note: build-checks for run feature was recorded before this branch last took main (",
+    );
 
     git(dir, "reset", "-q", "--hard", "origin/main");
     writeFileSync(join(dir, "src/a.js"), "export const a = 8;\n");
@@ -664,7 +726,10 @@ describe("ak lifecycle check, standalone", () => {
   });
 
   test("a run opened on a branch that starts with a separator is one a receipt can name", () => {
-    for (const [branch, shape] of [["_wip", /^wip-[0-9a-f]{12}$/], ["__", /^[0-9a-f]{12}$/]] as const) {
+    for (const [branch, shape] of [
+      ["_wip", /^wip-[0-9a-f]{12}$/],
+      ["__", /^[0-9a-f]{12}$/],
+    ] as const) {
       const dir = repo();
       git(dir, "checkout", "-q", "-b", branch);
       const ticketPath = ticket(dir, "separator-branch");
@@ -822,7 +887,9 @@ describe("the gate a bundle carries", () => {
   test("both byte-identical packaged gates enforce the strengthened evidence cases", () => {
     const { catalog } = loadCatalog(REPO);
     if (catalog === null) throw new Error("no catalog");
-    const contents = (["claude-code", "codex"] as const).map((host) => planBundle({ root: REPO, catalog }, host, {}).files.get(GATE_FILE)!.contents);
+    const contents = (["claude-code", "codex"] as const).map(
+      (host) => planBundle({ root: REPO, catalog }, host, {}).files.get(GATE_FILE)!.contents,
+    );
     expect(contents[0]).toBe(contents[1]);
 
     for (const [index, host] of (["claude-code", "codex"] as const).entries()) {
@@ -834,18 +901,28 @@ describe("the gate a bundle carries", () => {
         const ticketPath = ticket(dir, id);
         const opened = node(dir, "open", "--ticket", ticketPath);
         expect(opened.exitCode).toBe(0);
-        const run = opened.stdout.toString().trim().replace(/^opened run /, "");
-        for (const gate of ["build-checks", "review-full", "review-readiness"]) expect(node(dir, "record", "--gate", gate).exitCode).toBe(0);
+        const run = opened.stdout
+          .toString()
+          .trim()
+          .replace(/^opened run /, "");
+        for (const gate of ["build-checks", "review-full", "review-readiness"])
+          expect(node(dir, "record", "--gate", gate).exitCode).toBe(0);
         return { dir, ticketPath, run, node: (...argv: string[]) => node(dir, ...argv) };
       };
 
       const legacy = repo();
-      for (const gate of PRE_SHIP_GATES) expect(node(legacy, "record", "--gate", gate, "--run", "legacy").exitCode).toBe(0);
+      for (const gate of PRE_SHIP_GATES)
+        expect(node(legacy, "record", "--gate", gate, "--run", "legacy").exitCode).toBe(0);
       expect(node(legacy, "check", "--run", "legacy").exitCode).toBe(0);
-      expect(node(legacy, "check", "--run", "legacy", "--evidence").stderr.toString()).toContain("evidence unavailable");
+      expect(node(legacy, "check", "--run", "legacy", "--evidence").stderr.toString()).toContain(
+        "evidence unavailable",
+      );
 
       const allowed = start(`${host}-allowed`);
-      expect(allowed.node("record", "--gate", "verify", "--receipt", receipt(allowed.dir, allowed.run, allowed.ticketPath)).exitCode).toBe(0);
+      expect(
+        allowed.node("record", "--gate", "verify", "--receipt", receipt(allowed.dir, allowed.run, allowed.ticketPath))
+          .exitCode,
+      ).toBe(0);
       expect(JSON.parse(allowed.node("check", "--json").stdout.toString()).outcome).toBe("allowed");
 
       const missing = start(`${host}-missing`);
@@ -854,12 +931,17 @@ describe("the gate a bundle carries", () => {
 
       const task = start(`${host}-wrong-task`);
       const otherTask = { ticket: { id: "other", schema: "ticket", hash: `sha256:${"e".repeat(64)}` } };
-      expect(task.node("record", "--gate", "verify", "--receipt", receipt(task.dir, task.run, task.ticketPath, otherTask)).exitCode).toBe(0);
+      expect(
+        task.node("record", "--gate", "verify", "--receipt", receipt(task.dir, task.run, task.ticketPath, otherTask))
+          .exitCode,
+      ).toBe(0);
       expect(task.node("check").stderr.toString()).toContain("evidence wrong-task");
 
       const revision = start(`${host}-wrong-revision`);
       const snapshot = takeSnapshot(revision.dir) as Exclude<ReturnType<typeof takeSnapshot>, string>;
-      const stale = receipt(revision.dir, revision.run, revision.ticketPath, { source_revision: { ...snapshot, revision: "e".repeat(40) } });
+      const stale = receipt(revision.dir, revision.run, revision.ticketPath, {
+        source_revision: { ...snapshot, revision: "e".repeat(40) },
+      });
       const skipped = revision.node("record", "--gate", "verify", "--receipt", stale);
       expect(skipped.exitCode).toBe(0);
       expect(skipped.stderr.toString()).toContain("e".repeat(40));
@@ -886,24 +968,49 @@ describe("the gate a bundle carries", () => {
         const hash = target === "receipt" ? gate.evidence[0].hash : receiptDoc.output_digest;
         const stored = join(defaultEvidenceDir(scenario.dir), scenario.run, "artifacts", hash.replace(/^sha256:/, ""));
         writeFileSync(stored, Buffer.concat([readFileSync(stored), Buffer.from("x")]));
-        expect(scenario.node("check").stderr.toString()).toContain(target === "receipt" ? "digest-mismatch" : "output-missing");
+        expect(scenario.node("check").stderr.toString()).toContain(
+          target === "receipt" ? "digest-mismatch" : "output-missing",
+        );
       }
 
       const unstable = start(`${host}-unstable`);
-      expect(unstable.node("record", "--gate", "verify", "--receipt", receipt(unstable.dir, unstable.run, unstable.ticketPath, { status: "failed", exit_status: 1 })).exitCode).toBe(0);
-      expect(unstable.node("record", "--gate", "verify", "--receipt", receipt(unstable.dir, unstable.run, unstable.ticketPath)).exitCode).toBe(0);
+      expect(
+        unstable.node(
+          "record",
+          "--gate",
+          "verify",
+          "--receipt",
+          receipt(unstable.dir, unstable.run, unstable.ticketPath, { status: "failed", exit_status: 1 }),
+        ).exitCode,
+      ).toBe(0);
+      expect(
+        unstable.node(
+          "record",
+          "--gate",
+          "verify",
+          "--receipt",
+          receipt(unstable.dir, unstable.run, unstable.ticketPath),
+        ).exitCode,
+      ).toBe(0);
       expect(unstable.node("check").stderr.toString()).toContain("evidence unstable: AC-1");
 
       const deltaDir = repo();
       const deltaTicket = ticket(deltaDir, `${host}-delta`);
-      const deltaRun = node(deltaDir, "open", "--ticket", deltaTicket).stdout.toString().trim().replace(/^opened run /, "");
+      const deltaRun = node(deltaDir, "open", "--ticket", deltaTicket)
+        .stdout.toString()
+        .trim()
+        .replace(/^opened run /, "");
       expect(node(deltaDir, "record", "--gate", "build-checks").exitCode).toBe(0);
-      expect(node(deltaDir, "record", "--gate", "verify", "--receipt", receipt(deltaDir, deltaRun, deltaTicket)).exitCode).toBe(0);
+      expect(
+        node(deltaDir, "record", "--gate", "verify", "--receipt", receipt(deltaDir, deltaRun, deltaTicket)).exitCode,
+      ).toBe(0);
       expect(node(deltaDir, "record", "--gate", "review-full").exitCode).toBe(0);
       git(deltaDir, "add", `${host}-delta.json`);
       git(deltaDir, "commit", "-qam", "first head");
       writeFileSync(join(deltaDir, "src/a.js"), "export const a = 12;\n");
-      expect(node(deltaDir, "record", "--gate", "verify", "--receipt", receipt(deltaDir, deltaRun, deltaTicket)).exitCode).toBe(0);
+      expect(
+        node(deltaDir, "record", "--gate", "verify", "--receipt", receipt(deltaDir, deltaRun, deltaTicket)).exitCode,
+      ).toBe(0);
       expect(node(deltaDir, "record", "--gate", "review-delta").exitCode).toBe(0);
       expect(node(deltaDir, "record", "--gate", "review-readiness").exitCode).toBe(0);
       expect(node(deltaDir, "check").exitCode).toBe(0);

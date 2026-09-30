@@ -28,7 +28,14 @@ export function parseFrontmatter(text: string): Frontmatter {
     }
   }
   if (close === -1) {
-    return { present: true, data: {}, body: text, bodyStartLine: 1, keyLines: {}, error: "unterminated frontmatter block" };
+    return {
+      present: true,
+      data: {},
+      body: text,
+      bodyStartLine: 1,
+      keyLines: {},
+      error: "unterminated frontmatter block",
+    };
   }
 
   const raw = lines.slice(1, close).join("\n");

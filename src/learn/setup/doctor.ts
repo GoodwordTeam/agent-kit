@@ -29,10 +29,30 @@ export function doctorChecks(ctx: LearnContext, deps: SetupDeps): Check[] {
   return [
     { name: "bun", ok: deps.which("bun") !== null, hard: true, why: "runs `ak learn` from hooks and the scheduler" },
     { name: "git", ok: deps.which("git") !== null, hard: true, why: "every ledger is a git repository" },
-    { name: `judge (${ctx.config.judgeCommand[0] ?? "unset"})`, ok: judgeBinary(ctx, deps) !== null, hard: true, why: "the one judgement call; set AK_LEARN_JUDGE to change it" },
-    { name: "claude-mem db", ok: existsSync(ctx.config.memDb), hard: false, why: "observations for the memory loop and skill discovery" },
-    { name: "claude-mem worker script", ok: memWorkerScript(ctx, deps) !== null, hard: false, why: "restarting after a settings change" },
-    { name: "gh authenticated", ok: gh !== null && deps.run([gh, "auth", "status"]).code === 0, hard: false, why: "PR review threads for the review loop" },
+    {
+      name: `judge (${ctx.config.judgeCommand[0] ?? "unset"})`,
+      ok: judgeBinary(ctx, deps) !== null,
+      hard: true,
+      why: "the one judgement call; set AK_LEARN_JUDGE to change it",
+    },
+    {
+      name: "claude-mem db",
+      ok: existsSync(ctx.config.memDb),
+      hard: false,
+      why: "observations for the memory loop and skill discovery",
+    },
+    {
+      name: "claude-mem worker script",
+      ok: memWorkerScript(ctx, deps) !== null,
+      hard: false,
+      why: "restarting after a settings change",
+    },
+    {
+      name: "gh authenticated",
+      ok: gh !== null && deps.run([gh, "auth", "status"]).code === 0,
+      hard: false,
+      why: "PR review threads for the review loop",
+    },
   ];
 }
 
@@ -41,11 +61,15 @@ export function doctor(ctx: LearnContext, deps: SetupDeps): number {
   const width = Math.max(...checks.map((check) => check.name.length));
   for (const check of checks) {
     const state = check.ok ? "OK" : check.hard ? "MISSING" : "absent";
-    ctx.io.out(`  ${check.name.padEnd(width)}  ${state.padEnd(8)} ${(check.hard ? "hard" : "soft").padEnd(5)} ${check.why}`);
+    ctx.io.out(
+      `  ${check.name.padEnd(width)}  ${state.padEnd(8)} ${(check.hard ? "hard" : "soft").padEnd(5)} ${check.why}`,
+    );
   }
   ctx.io.out("");
   ctx.io.out("Resolved environment");
-  ctx.io.out(`  CLAUDE_CONFIG_DIR   ${ctx.config.configDir}${ctx.env.CLAUDE_CONFIG_DIR ? "" : "   (default, not exported)"}`);
+  ctx.io.out(
+    `  CLAUDE_CONFIG_DIR   ${ctx.config.configDir}${ctx.env.CLAUDE_CONFIG_DIR ? "" : "   (default, not exported)"}`,
+  );
   ctx.io.out(`  runtime state       ${ctx.config.runtimeDir}`);
   ctx.io.out(`  ak command          ${deps.ak.join(" ")}`);
   ctx.io.out(`  judge command       ${ctx.config.judgeCommand.join(" ")}`);

@@ -21,7 +21,9 @@ function writePage(ledger: Ledger, id: string, count: number, lastSeen: string, 
 }
 
 function withRuns(ledger: Ledger, rates: string[]): void {
-  const rows = rates.map((rate, i) => `| 2026-09-${String(10 + i).padStart(2, "0")} | ${i + 1} | 4 | 1 | 1 | ${rate} |`);
+  const rows = rates.map(
+    (rate, i) => `| 2026-09-${String(10 + i).padStart(2, "0")} | ${i + 1} | 4 | 1 | 1 | ${rate} |`,
+  );
   for (const row of rows) rebuildIndex(ledger, loadPatterns(ledger), row);
 }
 
@@ -91,7 +93,10 @@ describe("ak learn review", () => {
 
   test("run is ingest, maintain and propose under one lock; report shows the index and guardrails", () => {
     const repo = gitRepo(join(scratch(), "app"));
-    const ctx = testContext({ cwd: repo, replies: [(prompt) => FINDING_REPLY(/hash=([0-9a-f]{16})/.exec(prompt)![1]!)] });
+    const ctx = testContext({
+      cwd: repo,
+      replies: [(prompt) => FINDING_REPLY(/hash=([0-9a-f]{16})/.exec(prompt)![1]!)],
+    });
     const ledger = reviewLedger(ctx.config, repo);
     appendEvents(ledger, [
       makeEvent({
@@ -147,7 +152,10 @@ describe("ak learn review", () => {
     expect(ctx.out.at(-1)).toBe(`ledger: ${reviewLedgerDir(ctx.config, repo)}`);
     expect(run("report", ["--cwd", repo], ctx)).toBe(0);
     expect(ctx.out.at(-1)).toBe(`ledger: ${reviewLedgerDir(ctx.config, repo)}`);
-    expect(ingestOptions(parseLearnArgs(["--repo", repo, "--gh-repo", "acme/app", "--pr", "4,5"]), ctx)).toMatchObject({ repo: "acme/app", prs: [4, 5] });
+    expect(ingestOptions(parseLearnArgs(["--repo", repo, "--gh-repo", "acme/app", "--pr", "4,5"]), ctx)).toMatchObject({
+      repo: "acme/app",
+      prs: [4, 5],
+    });
     expect(ingestOptions(parseLearnArgs(["--gh-repo=acme/app"]), ctx).repo).toBe("acme/app");
     expect(ingestOptions(parseLearnArgs(["--repo", repo]), ctx).repo).toBeUndefined();
   });

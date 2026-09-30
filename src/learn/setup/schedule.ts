@@ -85,7 +85,9 @@ function xml(text: string): string {
 export function launchdPlist(ctx: LearnContext, deps: SetupDeps, intervalS: number): string {
   return renderTemplate("launchd.plist.tmpl", {
     label: LABEL,
-    arguments: tickArgv(deps).map((arg) => `    <string>${xml(arg)}</string>`).join("\n"),
+    arguments: tickArgv(deps)
+      .map((arg) => `    <string>${xml(arg)}</string>`)
+      .join("\n"),
     interval: intervalS,
     environment: unitEnvironment(ctx)
       .map(([key, value]) => `    <key>${xml(key)}</key>\n    <string>${xml(value)}</string>`)
@@ -111,13 +113,17 @@ export function systemdService(ctx: LearnContext, deps: SetupDeps): string {
 }
 
 export function systemdTimer(intervalS: number): string {
-  return renderTemplate("systemd.timer.tmpl", { minutes: Math.max(1, Math.round(intervalS / 60)), unit: `${LABEL}.service` });
+  return renderTemplate("systemd.timer.tmpl", {
+    minutes: Math.max(1, Math.round(intervalS / 60)),
+    unit: `${LABEL}.service`,
+  });
 }
 
 /** A crontab line. Intervals of an hour or more fire on the hour. Cron turns a bare `%` into a newline, so each is escaped. */
 export function cronLine(ctx: LearnContext, deps: SetupDeps, intervalS: number): string {
   const minutes = Math.max(1, Math.round(intervalS / 60));
-  const when = minutes < 60 ? `*/${minutes} * * * *` : `0 */${Math.max(1, Math.min(23, Math.round(minutes / 60)))} * * *`;
+  const when =
+    minutes < 60 ? `*/${minutes} * * * *` : `0 */${Math.max(1, Math.min(23, Math.round(minutes / 60)))} * * *`;
   const env = unitEnvironment(ctx).map(([key, value]) => `${key}=${shellQuote(value)}`);
   const command = `${[...env, ...tickArgv(deps).map(shellQuote)].join(" ")} >> ${shellQuote(schedulerLog(ctx))} 2>&1`;
   return `${when} ${command.replace(/%/g, "\\%")}`;
@@ -146,7 +152,11 @@ function writeIfChanged(ctx: LearnContext, path: string, text: string): void {
 }
 
 /** Write the unit for this machine's scheduler, and load it when asked. */
-export function schedule(ctx: LearnContext, deps: SetupDeps, options: { intervalS?: number; load?: boolean } = {}): number {
+export function schedule(
+  ctx: LearnContext,
+  deps: SetupDeps,
+  options: { intervalS?: number; load?: boolean } = {},
+): number {
   const intervalS = options.intervalS ?? DEFAULT_INTERVAL_S;
   const kind = schedulerKind(deps);
   mkdirSync(ctx.config.runtimeDir, { recursive: true });

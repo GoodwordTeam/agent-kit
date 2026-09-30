@@ -14,7 +14,16 @@ import { isUserInvoked, loadSkillManifest } from "./manifest.ts";
 import { resolveProfile } from "./profiles.ts";
 
 /** Trees that exist only in the source repository and are never installed. */
-const SOURCE_ONLY_PREFIXES = ["research/", "provenance/", "src/", "tests/", "dist/", ".donors/", ".work/", "node_modules/"];
+const SOURCE_ONLY_PREFIXES = [
+  "research/",
+  "provenance/",
+  "src/",
+  "tests/",
+  "dist/",
+  ".donors/",
+  ".work/",
+  "node_modules/",
+];
 
 /** Where the packager parks a copied shared dependency, preserving its source layout. */
 export const SHARED_ROOT = "references/shared";
@@ -417,7 +426,13 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     const bodyPath = entryBodyPath("skills", entry.id);
     const body = readTextIfPresent(join(root, bodyPath));
     if (body === null) {
-      issues.push(error("packaging.skill-body-missing", bodyPath, `Skill '${entry.id}' is included in the bundle but has no ${bodyPath}.`));
+      issues.push(
+        error(
+          "packaging.skill-body-missing",
+          bodyPath,
+          `Skill '${entry.id}' is included in the bundle but has no ${bodyPath}.`,
+        ),
+      );
       continue;
     }
 
@@ -469,7 +484,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
      * it is not an input to this decision.
      */
     const row = manifest.hosts[host];
-    const declared: SkillMode = row?.mode ?? "manual";
+    const declaredMode: SkillMode = row?.mode ?? "manual";
     const unenforceable = row?.unsupported ?? [];
 
     /**
@@ -497,24 +512,24 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
      * lift it (ruling `fail-closed-adapter-lifts-ceiling`).
      */
     const ceiling = ceilingFor(manifest.requires, capabilityTable, install.supply);
-    let mode: SkillMode = declared;
+    let mode: SkillMode = declaredMode;
     const onlyDetached = ceiling.blocking.length === 0 && ceiling.unknown.length === 0;
-    if (ceiling.mode !== null && autonomyRank(declared) > autonomyRank(ceiling.mode) && onlyDetached) {
+    if (ceiling.mode !== null && autonomyRank(declaredMode) > autonomyRank(ceiling.mode) && onlyDetached) {
       mode = ceiling.mode;
       issues.push(
         note(
           "packaging.mode-capped",
           `skills/${entry.id}/skill.yaml`,
-          `'${entry.id}' declares mode '${declared}' for adapter '${host}' and is packaged '${mode}' in this install. ${detachedReason(ceiling)}`,
+          `'${entry.id}' declares mode '${declaredMode}' for adapter '${host}' and is packaged '${mode}' in this install. ${detachedReason(ceiling)}`,
         ),
       );
-    } else if (ceiling.mode !== null && autonomyRank(declared) > autonomyRank(ceiling.mode)) {
+    } else if (ceiling.mode !== null && autonomyRank(declaredMode) > autonomyRank(ceiling.mode)) {
       mode = ceiling.mode;
       issues.push(
         error(
           "packaging.mode-above-ceiling",
           `skills/${entry.id}/skill.yaml`,
-          `'${entry.id}' declares mode '${declared}' for adapter '${host}', above the '${ceiling.mode}' its own requires[] allows. ${ceilingReason(ceiling)} adapters/claude-code/CONTRACT.md §4: a host that cannot enforce what an autonomous run requires exposes the skill in guided/manual mode and rejects autonomous mode. The bundle packages it '${mode}' regardless; declare '${ceiling.mode}' or less in the row, or drop the capability from requires[].`,
+          `'${entry.id}' declares mode '${declaredMode}' for adapter '${host}', above the '${ceiling.mode}' its own requires[] allows. ${ceilingReason(ceiling)} adapters/claude-code/CONTRACT.md §4: a host that cannot enforce what an autonomous run requires exposes the skill in guided/manual mode and rejects autonomous mode. The bundle packages it '${mode}' regardless; declare '${ceiling.mode}' or less in the row, or drop the capability from requires[].`,
         ),
       );
     }
@@ -550,7 +565,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
         error(
           "packaging.u-skill-not-manual",
           `skills/${entry.id}/skill.yaml`,
-          `'${entry.id}' is a U skill and its packaging.hosts[] row for adapter '${host}' declares mode '${declared}'. ${host} does not enforce no-model-invocation, so adapters/codex/CONTRACT.md §3.1 requires 'mode: manual' with the unsuppressible model invocation named in 'unsupported'. The bundle packages it manual regardless; fix the row so the declaration records the weakening instead of contradicting it.`,
+          `'${entry.id}' is a U skill and its packaging.hosts[] row for adapter '${host}' declares mode '${declaredMode}'. ${host} does not enforce no-model-invocation, so adapters/codex/CONTRACT.md §3.1 requires 'mode: manual' with the unsuppressible model invocation named in 'unsupported'. The bundle packages it manual regardless; fix the row so the declaration records the weakening instead of contradicting it.`,
         ),
       );
     }
@@ -559,7 +574,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     // had nothing rejected, and recording one would make `autonomy_rejected` a
     // list of every skill that named an unenforceable semantic -- which is most
     // of them -- and stop it meaning that a claim was refused.
-    const rejected = mode === declared ? [] : [declared];
+    const rejected = mode === declaredMode ? [] : [declaredMode];
     decisions.push({ skill: entry.id, mode, rejected, unenforceable });
 
     const canonical = parseFrontmatter(body);
@@ -675,7 +690,13 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   if (GATE_SKILLS.some((name) => emitted.includes(name))) {
     const text = readTextIfPresent(join(root, GATE_SOURCE));
     if (text === null) {
-      issues.push(error("packaging.gate-source-missing", GATE_SOURCE, `${GATE_SOURCE} is missing, so the bundle cannot carry the lifecycle gate its super-* skills record and check.`));
+      issues.push(
+        error(
+          "packaging.gate-source-missing",
+          GATE_SOURCE,
+          `${GATE_SOURCE} is missing, so the bundle cannot carry the lifecycle gate its super-* skills record and check.`,
+        ),
+      );
     } else {
       files.set(GATE_FILE, { path: GATE_FILE, contents: gateScript(text), source: GATE_SOURCE });
     }
@@ -698,7 +719,15 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   }
   files.set(BUILD_RECORD_FILE[host], {
     path: BUILD_RECORD_FILE[host],
-    contents: buildRecord(host, membership.profile, install, excluded, decisions, capabilities.enforces, capabilities.notes),
+    contents: buildRecord(
+      host,
+      membership.profile,
+      install,
+      excluded,
+      decisions,
+      capabilities.enforces,
+      capabilities.notes,
+    ),
   });
 
   return { host, profile: membership.profile, files: sortFiles(files), decisions, issues };
@@ -724,7 +753,12 @@ function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
  * ("Unknown field 'ak'. Claude Code ignores it at load time."), so anything this
  * package wants to record about its own build goes in `buildRecord` instead.
  */
-function manifestObject(ctx: CheckContext, host: HostId, skills: ReadonlyArray<string>, hasCorpus: boolean): Record<string, unknown> {
+function manifestObject(
+  ctx: CheckContext,
+  host: HostId,
+  skills: ReadonlyArray<string>,
+  hasCorpus: boolean,
+): Record<string, unknown> {
   const pkg = ctx.catalog.package;
   const manifest: Record<string, unknown> = {
     name: pkg.id,
@@ -1016,8 +1050,10 @@ function buildRecord(
     host: { id: host, enforces: [...enforces].sort(), notes: [...notes] },
     modes: decisions.map((d) => ({ skill: d.skill, mode: d.mode })),
     autonomy_rejected: decisions
+      .values()
       .filter((d) => d.rejected.length > 0)
-      .map((d) => ({ skill: d.skill, unenforceable: d.unenforceable })),
+      .map((d) => ({ skill: d.skill, unenforceable: d.unenforceable }))
+      .toArray(),
   };
   return `${JSON.stringify(record, null, 2)}\n`;
 }

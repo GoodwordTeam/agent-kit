@@ -3,22 +3,30 @@
   "version": "0.1.0-dev",
   "private": true,
   "description": "One engineering lifecycle amalgamated from eight donors (seven MIT, one Apache-2.0): seven super skills, packs, protocols and roles, installable as a Claude Code plugin under /ak:.",
-  "type": "module",
   "license": "MIT",
   "bin": {
     "ak": "./src/cli.ts"
   },
+  "type": "module",
   "scripts": {
     "ak": "bun run src/cli.ts",
     "validate": "bun run src/cli.ts validate",
     "build": "bun run src/cli.ts build",
     "attach": "bun run src/cli.ts attach",
-    "test": "bun test"
+    "test": "bun test",
+    "lint": "bun tools/oxlint/ratchet.ts src tests tools",
+    "lint:baseline": "bun tools/oxlint/ratchet.ts --update src tests tools",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check ."
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.86.0",
     "@types/bun": "latest",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "oxfmt": "0.71.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "7.0.2003",
     "typescript": "7.0.2",
     "yaml": "^2.9.1"
   }

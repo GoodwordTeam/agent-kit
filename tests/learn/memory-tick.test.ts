@@ -27,27 +27,42 @@ function run(state: MemoryState, now: Date, rest: Partial<DecideInput>): string[
 }
 
 describe("decide", () => {
-  test("idle with enough new tokens reflects", () => expect(run(fresh(), NOON, { idleS: 600, newTokens: 30_000, newObs: 40 })).toEqual(["reflect"]));
+  test("idle with enough new tokens reflects", () =>
+    expect(run(fresh(), NOON, { idleS: 600, newTokens: 30_000, newObs: 40 })).toEqual(["reflect"]));
 
-  test("busy does not reflect", () => expect(run(fresh(), NOON, { idleS: 30, newTokens: 30_000, newObs: 40 })).toEqual([]));
+  test("busy does not reflect", () =>
+    expect(run(fresh(), NOON, { idleS: 30, newTokens: 30_000, newObs: 40 })).toEqual([]));
 
   test("a six-hour gap reflects on any observation", () => {
     const state = { ...fresh(), last_reflect: NOON.getTime() - 7 * 3_600_000 };
     expect(run(state, NOON, { idleS: 30, newTokens: 100, newObs: 1 })).toEqual(["reflect"]);
   });
 
-  test("nightly at 02:10 with a new episode", () => expect(run(fresh(), NIGHT, { idleS: 60, unconsolidated: 1 })).toEqual(["nightly"]));
+  test("nightly at 02:10 with a new episode", () =>
+    expect(run(fresh(), NIGHT, { idleS: 60, unconsolidated: 1 })).toEqual(["nightly"]));
 
-  test("nightly not twice a day", () => expect(run({ ...fresh(), last_nightly: "2026-09-18" }, NIGHT, { idleS: 60, unconsolidated: 1 })).toEqual([]));
+  test("nightly not twice a day", () =>
+    expect(run({ ...fresh(), last_nightly: "2026-09-18" }, NIGHT, { idleS: 60, unconsolidated: 1 })).toEqual([]));
 
   test("a backlog runs nightly at any hour when idle", () =>
-    expect(run({ ...fresh(), last_nightly: "2026-09-18" }, NOON, { idleS: 600, unconsolidated: 25 })).toEqual(["nightly"]));
+    expect(run({ ...fresh(), last_nightly: "2026-09-18" }, NOON, { idleS: 600, unconsolidated: 25 })).toEqual([
+      "nightly",
+    ]));
 
   test("weekly when idle and a week has passed", () =>
-    expect(run({ ...fresh(), last_weekly: NOON.getTime() - 8 * 86_400_000 }, NOON, { idleS: 600 })).toEqual(["weekly"]));
+    expect(run({ ...fresh(), last_weekly: NOON.getTime() - 8 * 86_400_000 }, NOON, { idleS: 600 })).toEqual([
+      "weekly",
+    ]));
 
   test("muted runs nothing", () =>
-    expect(run({ ...fresh(), muted: true, last_weekly: 0 }, NIGHT, { idleS: 9999, newTokens: 99_999, newObs: 9, unconsolidated: 30 })).toEqual([]));
+    expect(
+      run({ ...fresh(), muted: true, last_weekly: 0 }, NIGHT, {
+        idleS: 9999,
+        newTokens: 99_999,
+        newObs: 9,
+        unconsolidated: 30,
+      }),
+    ).toEqual([]));
 
   test("force overrides everything, mute included", () => {
     expect(run({ muted: true }, NOON, { force: "all" })).toEqual(["reflect", "nightly", "weekly"]);
@@ -62,7 +77,13 @@ function fixtureProject() {
   const mem = new MemFixture(dbPath);
   const now = Date.now();
   mem.session({ sid: "cccc3333-0000", project: "shop", started: now - 86_400_000, completed: now - 86_400_000 + 1000 });
-  mem.observation({ sid: "cccc3333-0000", project: "shop", type: "discovery", title: "found it", at: now - 86_400_000 + 500 });
+  mem.observation({
+    sid: "cccc3333-0000",
+    project: "shop",
+    type: "discovery",
+    title: "found it",
+    at: now - 86_400_000 + 500,
+  });
   mem.toolUse({ sid: "cccc3333-0000", project: "shop", tool: "Bash", cwd: root, at: now - 86_400_000 + 500 });
   mem.close();
   return { root, ctx: testContext({ cwd: root, env: { AK_LEARN_MEM_DB: dbPath } }) };

@@ -28,14 +28,24 @@ export function checkSourceLinks(ctx: CheckContext): Issue[] {
       const resolved = resolveFromFile(file, link.target);
       if (resolved === null) {
         issues.push(
-          error("links.escapes-tree", file, `Reference '${link.target}' resolves outside the repository root.`, link.line),
+          error(
+            "links.escapes-tree",
+            file,
+            `Reference '${link.target}' resolves outside the repository root.`,
+            link.line,
+          ),
         );
         continue;
       }
       const full = join(ctx.root, resolved);
       if (!exists(full) && !isDir(full)) {
         issues.push(
-          error("links.broken-source", file, `Reference '${link.target}' does not resolve; '${resolved}' does not exist.`, link.line),
+          error(
+            "links.broken-source",
+            file,
+            `Reference '${link.target}' does not resolve; '${resolved}' does not exist.`,
+            link.line,
+          ),
         );
       }
     }
@@ -127,7 +137,9 @@ export function checkBundleLinks(ctx: CheckContext, options: BuildOptions): Issu
         const resolved = resolveFromFile(file.path, link.target);
         const where = `dist/${plan.host}/${file.path}`;
         if (resolved === null) {
-          issues.push(error("links.broken-bundle", where, `Reference '${link.target}' escapes the bundle root.`, link.line));
+          issues.push(
+            error("links.broken-bundle", where, `Reference '${link.target}' escapes the bundle root.`, link.line),
+          );
           continue;
         }
         if (present.has(resolved) || dirs.has(resolved)) continue;

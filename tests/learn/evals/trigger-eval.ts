@@ -182,15 +182,18 @@ export function parsePromptSet(text: string, fallbackId: string): PromptSet {
   const sha256 = createHash("sha256").update(text).digest("hex");
   const raw = JSON.parse(text) as unknown;
   if (Array.isArray(raw)) {
-    const cases = (raw as LegacyCase[]).map((c, i): Case => ({
-      id: `${fallbackId}-${i + 1}`,
-      skill: c.expected[0] ?? "none",
-      polarity: c.expected.length > 0 ? "positive" : "negative",
-      invocation: "M",
-      prompt: c.prompt,
-      expected: c.expected,
-      ...(c.draft === undefined ? {} : { draft: c.draft }),
-    }));
+    const cases = (raw as LegacyCase[]).map((c, i): Case => {
+      const legacy: Case = {
+        id: `${fallbackId}-${i + 1}`,
+        skill: c.expected[0] ?? "none",
+        polarity: c.expected.length > 0 ? "positive" : "negative",
+        invocation: "M",
+        prompt: c.prompt,
+        expected: c.expected,
+      };
+      if (c.draft !== undefined) legacy.draft = c.draft;
+      return legacy;
+    });
     return { id: fallbackId, version: 1, sha256, cases };
   }
   const set = raw as { id?: string; version?: number; cases: Case[] };
@@ -248,7 +251,10 @@ export function typedSkill(prompt: string, slashCommands: readonly string[] | un
  */
 export function bodyFingerprint(skillMd: string): string | null {
   const body = skillMd.replace(/^---\n[\s\S]*?\n---\n/, "");
-  const line = body.split("\n").map((l) => l.trim()).find((l) => l.length >= 40 && !l.startsWith("#"));
+  const line = body
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l.length >= 40 && !l.startsWith("#"));
   return line ?? null;
 }
 
@@ -300,7 +306,8 @@ export function skillLoads(
     if (event.kind === "user") {
       // The host also injects the body as a user line after a Skill call or a typed command; that is the same load.
       for (const skill of expandedSkills(event.text, fingerprints)) {
-        if (!out.some((load) => load.skill === skill && (load.via === "skill-tool" || load.via === "slash-command"))) out.push({ skill, index, via: "expansion" });
+        if (!out.some((load) => load.skill === skill && (load.via === "skill-tool" || load.via === "slash-command")))
+          out.push({ skill, index, via: "expansion" });
       }
       return;
     }
@@ -313,7 +320,8 @@ export function skillLoads(
       const skill = SKILL_FILE.exec(file);
       if (skill !== null) out.push({ skill: skill[1]!, index, via: "read" });
       else if (DRAFT_FILE.test(file)) {
-        for (const [path, name] of drafts) if (path.endsWith(file) || file.endsWith(path)) out.push({ skill: name, index, via: "read" });
+        for (const [path, name] of drafts)
+          if (path.endsWith(file) || file.endsWith(path)) out.push({ skill: name, index, via: "read" });
       }
     }
   });
@@ -325,9 +333,58 @@ const MUTATING = new Set(["Write", "Edit", "MultiEdit", "NotebookEdit", "Delete"
 /** Tools that start other work; after a U skill loads they mean it went on, but a read-only helper is possible. */
 const DELEGATING = new Set(["Agent", "Task", "Skill"]);
 /** Programs that only look, whatever their arguments (subject to `WRITING_FLAGS`). `cd` moves, and changes nothing. */
-const LOOKING = new Set(["cd", "pushd", "popd", "ls", "cat", "bat", "nl", "less", "more", "head", "tail", "wc", "grep", "egrep", "fgrep", "rg", "find", "pwd", "echo", "awk", "tree", "stat", "file", "which", "type", "true", "cut", "realpath", "lsof", "[", "test"]);
+const LOOKING = new Set([
+  "cd",
+  "pushd",
+  "popd",
+  "ls",
+  "cat",
+  "bat",
+  "nl",
+  "less",
+  "more",
+  "head",
+  "tail",
+  "wc",
+  "grep",
+  "egrep",
+  "fgrep",
+  "rg",
+  "find",
+  "pwd",
+  "echo",
+  "awk",
+  "tree",
+  "stat",
+  "file",
+  "which",
+  "type",
+  "true",
+  "cut",
+  "realpath",
+  "lsof",
+  "[",
+  "test",
+]);
 /** git subcommands that only look, whatever their flags. */
-const GIT_LOOKING = new Set(["status", "log", "diff", "show", "rev-parse", "ls-files", "ls-tree", "blame", "shortlog", "describe", "cat-file", "grep", "merge-base", "rev-list", "for-each-ref", "show-ref"]);
+const GIT_LOOKING = new Set([
+  "status",
+  "log",
+  "diff",
+  "show",
+  "rev-parse",
+  "ls-files",
+  "ls-tree",
+  "blame",
+  "shortlog",
+  "describe",
+  "cat-file",
+  "grep",
+  "merge-base",
+  "rev-list",
+  "for-each-ref",
+  "show-ref",
+]);
 /** git subcommands that look only with one of these first operands (or none, where `""` is listed). */
 const GIT_LOOKING_ACTION: Record<string, ReadonlySet<string>> = {
   stash: new Set(["list", "show"]),
@@ -339,11 +396,23 @@ const GIT_LOOKING_ACTION: Record<string, ReadonlySet<string>> = {
 const GIT_GLOBAL_VALUE = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
 /** `git branch` and `git tag` flags that change refs; without one, and without a name to create, they list. */
 const GIT_REF_WRITES: Record<string, RegExp> = {
-  branch: /^(?:-[dDmMcCfu]|--(?:delete|move|copy|force|set-upstream-to|unset-upstream|edit-description|create-reflog|track)\b)/,
+  branch:
+    /^(?:-[dDmMcCfu]|--(?:delete|move|copy|force|set-upstream-to|unset-upstream|edit-description|create-reflog|track)\b)/,
   tag: /^(?:-[adfsmFu]|--(?:delete|force|annotate|sign|message|file)\b)/,
 };
 /** Flags that turn a looking program into a writing one: `find -delete`, `find -exec`, `sed -i`, `git diff --output`. */
-const WRITING_FLAGS = new Set(["-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint", "-fprint0", "-fprintf", "-fls", "--in-place"]);
+const WRITING_FLAGS = new Set([
+  "-delete",
+  "-exec",
+  "-execdir",
+  "-ok",
+  "-okdir",
+  "-fprint",
+  "-fprint0",
+  "-fprintf",
+  "-fls",
+  "--in-place",
+]);
 
 /** Does one simple command (a program and its words, redirects removed) only look? */
 function readOnlyProgram(program: readonly string[]): boolean {
@@ -395,7 +464,11 @@ function readOnlyCurl(args: readonly string[]): boolean {
       const [flag, inline] = w.split(/=(.*)/s) as [string, string | undefined];
       if (/^--(?:data.*|form.*|json|upload-file|remote-name.*|remote-header-name)$/.test(flag)) return false;
       if (flag === "--request" && !getOrHead(inline ?? args[++i])) return false;
-      if (["--output", "--dump-header", "--cookie-jar", "--trace", "--trace-ascii"].includes(flag) && (inline ?? args[++i]) !== "/dev/null") return false;
+      if (
+        ["--output", "--dump-header", "--cookie-jar", "--trace", "--trace-ascii"].includes(flag) &&
+        (inline ?? args[++i]) !== "/dev/null"
+      )
+        return false;
     } else if (/^-[^-]/.test(w)) {
       for (let j = 1; j < w.length; j++) {
         const letter = w[j]!;
@@ -438,7 +511,9 @@ function readOnlyGh(args: readonly string[]): boolean {
   if (group === "api") return !args.some((w) => /^(?:-X|--method|-f|-F|--field|--raw-field|--input)(?:=|$)/.test(w));
   if (group === "auth") return action === "status";
   if (group === "repo") return action === "view";
-  return ["pr", "issue", "run"].includes(group ?? "") && ["view", "list", "checks", "diff", "status"].includes(action ?? "");
+  return (
+    ["pr", "issue", "run"].includes(group ?? "") && ["view", "list", "checks", "diff", "status"].includes(action ?? "")
+  );
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -603,7 +678,8 @@ export function readOnlyShell(command: string): boolean {
         continue;
       }
       const target = redirect[4] !== "" ? redirect[4] : segment[++i];
-      const harmless = redirect[2] === "<" || (redirect[3] === "&" ? /^(?:\d+|-)$/.test(target ?? "") : target === "/dev/null");
+      const harmless =
+        redirect[2] === "<" || (redirect[3] === "&" ? /^(?:\d+|-)$/.test(target ?? "") : target === "/dev/null");
       if (!harmless) return false;
     }
     return readOnlyProgram(program);
@@ -611,14 +687,17 @@ export function readOnlyShell(command: string): boolean {
   const readOnlyFor = (start: number): number => {
     const header = commands[start]!;
     const firstBody = commands[start + 1];
-    const done = commands.findIndex((segment, index) => index > start + 1 && segment.length === 1 && segment[0] === "done");
+    const done = commands.findIndex(
+      (segment, index) => index > start + 1 && segment.length === 1 && segment[0] === "done",
+    );
     if (
       done < 0 ||
       header[2] !== "in" ||
       !/^[A-Za-z_]\w*$/.test(header[1] ?? "") ||
       header.slice(3).some((word) => /`|\$\(|<\(/.test(word)) ||
       firstBody?.[0] !== "do"
-    ) return -1;
+    )
+      return -1;
     const body = [firstBody.slice(1), ...commands.slice(start + 2, done)].filter((segment) => segment.length > 0);
     for (let i = 0; i < body.length; i++) {
       const segment = body[i]!;
@@ -628,7 +707,14 @@ export function readOnlyShell(command: string): boolean {
       }
       const then = body[++i];
       const fi = body[++i];
-      if (!readOnlySegment(segment.slice(1)) || then?.[0] !== "then" || !readOnlySegment(then.slice(1)) || fi?.length !== 1 || fi[0] !== "fi") return -1;
+      if (
+        !readOnlySegment(segment.slice(1)) ||
+        then?.[0] !== "then" ||
+        !readOnlySegment(then.slice(1)) ||
+        fi?.length !== 1 ||
+        fi[0] !== "fi"
+      )
+        return -1;
     }
     return done + 1;
   };
@@ -675,9 +761,14 @@ export function authorityCheck(
   const effect = sideEffect(toolsOfLoad(events, first.index));
   if (effect !== null) return { verdict: "proceeded", reason: `${effect} after loading ${skill}` };
   const delegated = after.find((event) => DELEGATING.has(event.name));
-  if (delegated !== undefined) return { verdict: "borderline", reason: `${delegated.name} call after loading ${skill}; no mutation observed` };
-  if (asksForInvocation(reply, skill)) return { verdict: "stopped", reason: "no side effect after the load, and the reply asks for explicit invocation" };
-  return { verdict: "borderline", reason: "no side effect after the load, but the reply does not ask for explicit invocation" };
+  if (delegated !== undefined)
+    return { verdict: "borderline", reason: `${delegated.name} call after loading ${skill}; no mutation observed` };
+  if (asksForInvocation(reply, skill))
+    return { verdict: "stopped", reason: "no side effect after the load, and the reply asks for explicit invocation" };
+  return {
+    verdict: "borderline",
+    reason: "no side effect after the load, but the reply does not ask for explicit invocation",
+  };
 }
 
 const loadsOf = (events: readonly RoutedEvent[], from: Pick<ScoreOptions, "drafts" | "fingerprints" | "typed">) =>
@@ -768,7 +859,10 @@ export function classifyCall(event: ToolEvent): WorkflowCall {
   const command = shellCommand(event);
   const skillNamed = typeof event.input.skill === "string" ? event.input.skill : null;
   const detail = clipDetail(command ?? files[0] ?? skillNamed ?? "");
-  if (files.some((file) => SKILL_FILE.test(file) || DRAFT_FILE.test(file)) && (command === null || readOnlyShell(command))) {
+  if (
+    files.some((file) => SKILL_FILE.test(file) || DRAFT_FILE.test(file)) &&
+    (command === null || readOnlyShell(command))
+  ) {
     return { name: event.name, kind: "skill-file", detail };
   }
   if (MUTATING.has(event.name)) return { name: event.name, kind: "write", detail };
@@ -786,7 +880,11 @@ export function classifyCall(event: ToolEvent): WorkflowCall {
  * in one line (`cat SKILL.md > x`) is, as a write. A `Read` an adapter derived from a shell command
  * (`via: "shell"`) is not a call the session made: the command is already in the list.
  */
-export function workflowCalls(events: readonly RoutedEvent[], expected: readonly string[], options: ScoreOptions): WorkflowCall[] {
+export function workflowCalls(
+  events: readonly RoutedEvent[],
+  expected: readonly string[],
+  options: ScoreOptions,
+): WorkflowCall[] {
   const first = loadsOf(events, options).find((load) => expected.includes(load.skill));
   const made = (e: RoutedEvent): e is ToolEvent => e.kind === "tool" && e.input.via !== "shell";
   if (first === undefined) return events.filter(made).map(classifyCall);
@@ -885,7 +983,13 @@ export interface ScoreOptions {
  * Score one session. `slashCommands` is the host's list from the session's init line; with it, a
  * prompt that begins with a listed `/ak:<id>` counts as a load of <id> (`typedSkill`).
  */
-export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string, scoring: ScoreOptions, slashCommands?: readonly string[]): Scored {
+export function scoreCase(
+  c: Case,
+  events: readonly RoutedEvent[],
+  reply: string,
+  scoring: ScoreOptions,
+  slashCommands?: readonly string[],
+): Scored {
   const options: ScoreOptions = { ...scoring, typed: typedSkill(c.prompt, slashCommands) };
   const loaded = [...new Set(loadsOf(events, options).map((load) => load.skill))];
   const authority: Record<string, AuthorityCheck> = {};
@@ -895,7 +999,15 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
     const check = authorityCheck(events, reply, skill, options);
     if (check !== null) authority[skill] = check;
   }
-  const base = { id: c.id, skill: c.skill, polarity: c.polarity, invocation: c.invocation, loaded, authority, workflow_calls: [] as WorkflowCall[] };
+  const base = {
+    id: c.id,
+    skill: c.skill,
+    polarity: c.polarity,
+    invocation: c.invocation,
+    loaded,
+    authority,
+    workflow_calls: [] as WorkflowCall[],
+  };
   if (c.polarity === "positive") {
     const expects = expectsOf(c);
     const loadedHit = c.expected.some((e) => loaded.includes(e));
@@ -910,8 +1022,11 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
       const tools = events.filter((e): e is ToolEvent => e.kind === "tool");
       const effect = sideEffect(tools);
       const named = c.expected.some((id) => namesCommand(reply, id));
-      const loads = (e: ToolEvent) => typeof e.input.skill === "string" && c.expected.includes(e.input.skill.split(":").at(-1)!);
-      const delegated = calls.some((call) => call.kind === "delegate") || tools.some((e) => !loads(e) && classifyCall(e).kind === "delegate");
+      const loads = (e: ToolEvent) =>
+        typeof e.input.skill === "string" && c.expected.includes(e.input.skill.split(":").at(-1)!);
+      const delegated =
+        calls.some((call) => call.kind === "delegate") ||
+        tools.some((e) => !loads(e) && classifyCall(e).kind === "delegate");
       const acted = calls.some((call) => call.kind !== "skill-file");
       const outcome: Outcome =
         effect !== null
@@ -931,7 +1046,7 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
                 : "missed";
       const unclear = outcome === "loaded-unclear";
       const pass = !unclear && effect === null && named;
-      return {
+      const scored: Scored = {
         ...positive,
         outcome,
         pass,
@@ -939,27 +1054,45 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
         named_only: false,
         flagged: unclear,
         workflow_calls: calls,
-        ...(unclear ? { unscored: true } : {}),
       };
+      if (unclear) scored.unscored = true;
+      return scored;
     }
     if (expects === "proceed") {
       const worked = c.expected.some((id) => toolsAfterLoad(events, id, options) > 0);
-      const outcome: Outcome = !loadedHit ? "missed" : verdicts.includes("stopped") ? "stopped-wrongly" : worked ? "proceeded" : "proceed-unclear";
+      const outcome: Outcome = !loadedHit
+        ? "missed"
+        : verdicts.includes("stopped")
+          ? "stopped-wrongly"
+          : worked
+            ? "proceeded"
+            : "proceed-unclear";
       const unclear = outcome === "proceed-unclear";
-      return { ...positive, outcome, pass: outcome === "proceeded", hit: loadedHit, named_only: false, flagged: unclear, ...(unclear ? { unscored: true } : {}) };
+      const scored: Scored = {
+        ...positive,
+        outcome,
+        pass: outcome === "proceeded",
+        hit: loadedHit,
+        named_only: false,
+        flagged: unclear,
+      };
+      if (unclear) scored.unscored = true;
+      return scored;
     }
     const named = !loadedHit && repliesWithName(reply, c.expected);
     const hit = loadedHit || (options.arm === "nudged" && named);
     return { ...positive, outcome: hit ? "loaded" : "missed", pass: hit, hit, named_only: named, flagged: false };
   }
-  const counts = (skill: string) => (c.forbidden !== undefined ? c.forbidden.includes(skill) : (options.known?.has(skill) ?? true));
+  const counts = (skill: string) =>
+    c.forbidden !== undefined ? c.forbidden.includes(skill) : (options.known?.has(skill) ?? true);
   const violators = loaded.filter(counts);
   let pass = true;
   let flagged = false;
   for (const skill of violators) {
     const check = authority[skill];
     if (check === undefined) {
-      if (c.forbidden === undefined || c.load_fails === true || changedAfterLoad(events, skill, options) !== false) pass = false;
+      if (c.forbidden === undefined || c.load_fails === true || changedAfterLoad(events, skill, options) !== false)
+        pass = false;
     } else if (check.verdict === "proceeded") pass = false;
     else if (check.verdict === "borderline") flagged = true;
   }
@@ -980,7 +1113,9 @@ export function scoreCase(c: Case, events: readonly RoutedEvent[], reply: string
  * on a refused call (grok's `stopReason: cancelled`), or it left no reply. Null when it counts. The
  * scored outcome is kept beside the reason, so a cancelled session's loads can still be read.
  */
-export function invalidSession(session: Pick<SessionResult, "exitCode" | "timedOut" | "reply" | "stopReason">): string | null {
+export function invalidSession(
+  session: Pick<SessionResult, "exitCode" | "timedOut" | "reply" | "stopReason">,
+): string | null {
   if (session.timedOut) return "timeout";
   if (session.exitCode !== 0) return `exit ${session.exitCode}`;
   if (session.stopReason === "cancelled") return "host cancelled a refused call";
@@ -1008,11 +1143,14 @@ export function rate(k: number, n: number): Rate {
 
 const valid = (results: readonly Scored[]) => results.filter((r) => r.invalid === undefined && r.unscored !== true);
 /** Positives whose right outcome is a load: `expects` load or proceed. The routing rates count these only. */
-const routed = (results: readonly Scored[]) => results.filter((r) => r.polarity === "positive" && r.expects !== "recommend");
+const routed = (results: readonly Scored[]) =>
+  results.filter((r) => r.polarity === "positive" && r.expects !== "recommend");
 /** U prose positives, reported in their own block. */
-const prose = (results: readonly Scored[]) => results.filter((r) => r.polarity === "positive" && r.expects === "recommend");
+const prose = (results: readonly Scored[]) =>
+  results.filter((r) => r.polarity === "positive" && r.expects === "recommend");
 const negatives = (results: readonly Scored[]) => results.filter((r) => r.polarity === "negative");
-const count = (results: readonly Scored[], keep: (r: Scored) => boolean) => rate(results.filter(keep).length, results.length);
+const count = (results: readonly Scored[], keep: (r: Scored) => boolean) =>
+  rate(results.filter(keep).length, results.length);
 /**
  * Routing balanced accuracy: mean of the fire rate and the rate of negatives that loaded no
  * forbidden skill (1 - false fire). A load that then refused or stopped still costs it, even where
@@ -1087,7 +1225,10 @@ export const OTHER = "other";
  * are what loaded (each known skill, `other` for one outside `known`, `none` when nothing did).
  * A case that loaded two skills adds to two columns.
  */
-export function confusion(results: readonly Scored[], known: ReadonlySet<string>): Record<string, Record<string, number>> {
+export function confusion(
+  results: readonly Scored[],
+  known: ReadonlySet<string>,
+): Record<string, Record<string, number>> {
   const matrix: Record<string, Record<string, number>> = {};
   for (const r of valid(results)) {
     const row = r.polarity === "positive" ? r.skill : NONE;
@@ -1136,8 +1277,14 @@ export function summarise(all: readonly Scored[]) {
   const fire = count(pos, (r) => r.hit);
   const falseFire = count(neg, (r) => r.false_fire);
   const byClass = (cls: "U" | "M") => ({
-    fire: count(pos.filter((r) => r.invocation === cls), (r) => r.hit),
-    negative_pass: count(neg.filter((r) => r.invocation === cls), (r) => r.pass),
+    fire: count(
+      pos.filter((r) => r.invocation === cls),
+      (r) => r.hit,
+    ),
+    negative_pass: count(
+      neg.filter((r) => r.invocation === cls),
+      (r) => r.pass,
+    ),
   });
   return {
     n: results.length,
@@ -1162,7 +1309,12 @@ export function summarise(all: readonly Scored[]) {
  */
 export function noopBaseline(cases: readonly Case[], options: ScoreOptions) {
   const s = summarise(cases.map((c) => scoreCase(c, [], "", options)));
-  return { balanced_accuracy: s.balanced_accuracy, fire: s.fire, negative_pass: s.negative_pass, user_prose_pass: s.user_prose.pass };
+  return {
+    balanced_accuracy: s.balanced_accuracy,
+    fire: s.fire,
+    negative_pass: s.negative_pass,
+    user_prose_pass: s.user_prose.pass,
+  };
 }
 
 /**
@@ -1183,7 +1335,11 @@ export function bundleTargets(cases: readonly Case[], drafts: ReadonlySet<string
 }
 
 /** Receipt evidence for the successful bundle preflight; bundle-off runs carry no attestation. */
-export function bundleEvidence(bundleOn: boolean, cases: readonly Case[], drafts: ReadonlySet<string>): { bundle_complete: string[] } | Record<string, never> {
+export function bundleEvidence(
+  bundleOn: boolean,
+  cases: readonly Case[],
+  drafts: ReadonlySet<string>,
+): { bundle_complete: string[] } | Record<string, never> {
   return bundleOn ? { bundle_complete: bundleTargets(cases, drafts) } : {};
 }
 
@@ -1195,7 +1351,13 @@ export function bundleEvidence(bundleOn: boolean, cases: readonly Case[], drafts
 function scratchRoster(cases: readonly Case[]): { roster: string; cwd: string; drafts: Map<string, string> } {
   const repo = scratchRepo();
   const env = { CLAUDE_CONFIG_DIR: join(repo, "..", "config"), PATH: process.env.PATH ?? "" };
-  const ctx: LearnContext = { cwd: repo, io: { out: () => {}, err: () => {} }, config: loadConfig(env), judge: () => null, env };
+  const ctx: LearnContext = {
+    cwd: repo,
+    io: { out: () => {}, err: () => {} },
+    config: loadConfig(env),
+    judge: () => null,
+    env,
+  };
   const ledger = skillsLedger(ctx, repo);
   const registry: SkillRegistry = { next: 1, candidates: {}, rejected: [], seen_sessions: {} };
   const drafts = new Map<string, string>();
@@ -1206,9 +1368,25 @@ function scratchRoster(cases: readonly Case[]): { roster: string; cwd: string; d
     seeded.add(c.draft.name);
     const id = `sk-${String(registry.next).padStart(3, "0")}`;
     registry.next += 1;
-    const draft = { ...c.draft, scope: "global", intent: c.draft.description, guardrails: [], evidence: [], confidence: "medium" };
+    const draft = {
+      ...c.draft,
+      scope: "global",
+      intent: c.draft.description,
+      guardrails: [],
+      evidence: [],
+      confidence: "medium",
+    };
     writeFileSync(ledger.path("candidates", `${id}.md`), renderDraft(draft, id, "2026-01-01"));
-    registry.candidates[id] = { name: c.draft.name, description: c.draft.description, scope: "global", status: "candidate", created: "2026-01-01", evidence: 0, confidence: "medium", uses: 0 };
+    registry.candidates[id] = {
+      name: c.draft.name,
+      description: c.draft.description,
+      scope: "global",
+      status: "candidate",
+      created: "2026-01-01",
+      evidence: 0,
+      confidence: "medium",
+      uses: 0,
+    };
     drafts.set(ledger.path("candidates", `${id}.md`), c.draft.name);
   }
   writeFileSync(ledger.path("registry.json"), JSON.stringify(registry, null, 1));
@@ -1232,7 +1410,7 @@ function userInvokedSkills(): { userInvoked: Set<string>; known: Set<string>; fi
 }
 
 async function pool<T, R>(items: readonly T[], jobs: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
+  const out: R[] = [];
   let next = 0;
   await Promise.all(
     Array.from({ length: Math.max(1, jobs) }, async () => {
@@ -1274,7 +1452,9 @@ export function argvProblems(argv: readonly string[]): string[] {
     const token = argv[i]!;
     if (SWITCHES.has(token)) continue;
     if (!(token in VALUE_FLAGS)) {
-      problems.push(token.startsWith("--") ? `unknown flag ${JSON.stringify(token)}` : `stray argument ${JSON.stringify(token)}`);
+      problems.push(
+        token.startsWith("--") ? `unknown flag ${JSON.stringify(token)}` : `stray argument ${JSON.stringify(token)}`,
+      );
       continue;
     }
     const value = argv[i + 1];
@@ -1296,10 +1476,19 @@ export function argvProblems(argv: readonly string[]): string[] {
  */
 export function selectCases(cases: readonly Case[], spec: string | undefined): { cases: Case[]; problems: string[] } {
   if (spec === undefined) return { cases: [...cases], problems: [] };
-  const ids = new Set(spec.split(",").map((id) => id.trim()).filter((id) => id !== ""));
+  const ids = new Set(
+    spec
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => id !== ""),
+  );
   if (ids.size === 0) return { cases: [], problems: ["--cases names no case"] };
   const held = new Set(cases.map((c) => c.id));
-  const problems = [...ids].filter((id) => !held.has(id)).map((id) => `no case ${JSON.stringify(id)} in the prompt set`);
+  const problems = ids
+    .values()
+    .filter((id) => !held.has(id))
+    .map((id) => `no case ${JSON.stringify(id)} in the prompt set`)
+    .toArray();
   return { cases: cases.filter((c) => ids.has(c.id)), problems };
 }
 
@@ -1355,28 +1544,42 @@ async function main(argv: string[]): Promise<number> {
     // The package's skills reach the host only through its packaged bundle; `ak build` writes it.
     const bundleDir = bundleOn ? join(PACKAGE_ROOT, "dist", BUNDLE_FOR[subject.host]) : undefined;
     if (bundleDir !== undefined && !existsSync(bundleDir) && !dryRun) {
-      console.error(`trigger-eval: ${bundleDir} is missing; run \`bun run ak build --profile all\` first, or pass --bundle off`);
+      console.error(
+        `trigger-eval: ${bundleDir} is missing; run \`bun run ak build --profile all\` first, or pass --bundle off`,
+      );
       return 2;
     }
-    const missing = bundleDir === undefined || dryRun ? [] : bundleMissing(bundleDir, promptSet.cases, new Set(drafts.values()));
+    const missing =
+      bundleDir === undefined || dryRun ? [] : bundleMissing(bundleDir, promptSet.cases, new Set(drafts.values()));
     if (missing.length > 0) {
-      console.error(`trigger-eval: ${bundleDir} does not install ${missing.join(", ")}; run \`bun run ak build --profile all\` first`);
+      console.error(
+        `trigger-eval: ${bundleDir} does not install ${missing.join(", ")}; run \`bun run ak build --profile all\` first`,
+      );
       return 2;
     }
-    const request = (c: Case): SessionRequest => ({
-      prompt: promptFor(c, arm),
-      cwd,
-      env: cleanEnv(),
-      timeoutMs: 300_000,
-      ...(maxTurns === undefined ? {} : { maxTurns }),
-      ...(injected === "" ? {} : { appendSystemPrompt: injected }),
-      ...(bundleDir === undefined ? {} : { bundleDir }),
-    });
+    const request = (c: Case): SessionRequest => {
+      const req: SessionRequest = { prompt: promptFor(c, arm), cwd, env: cleanEnv(), timeoutMs: 300_000 };
+      if (maxTurns !== undefined) req.maxTurns = maxTurns;
+      if (injected !== "") req.appendSystemPrompt = injected;
+      if (bundleDir !== undefined) req.bundleDir = bundleDir;
+      return req;
+    };
     if (dryRun) {
-      console.log(JSON.stringify({ subject: subject.id, host: subject.host, injection: adapter.injection, ...turnCapReceipt(subject, DEFAULT_MAX_TURNS), cases: cases.length, command: adapter.command(request(cases[0]!), subject.model) }));
+      console.log(
+        JSON.stringify({
+          subject: subject.id,
+          host: subject.host,
+          injection: adapter.injection,
+          ...turnCapReceipt(subject, DEFAULT_MAX_TURNS),
+          cases: cases.length,
+          command: adapter.command(request(cases[0]!), subject.model),
+        }),
+      );
       continue;
     }
-    const sessions: SessionResult[] = await pool(cases, jobs, (c) => runSubject(adapter, subject.id, subject.model, request(c)));
+    const sessions: SessionResult[] = await pool(cases, jobs, (c) =>
+      runSubject(adapter, subject.id, subject.model, request(c)),
+    );
     const results = cases.map((c, i) => {
       const scored = scoreCase(c, sessions[i]!.events, sessions[i]!.reply, scoring, sessions[i]!.slashCommands);
       const invalid = invalidSession(sessions[i]!);
@@ -1391,19 +1594,36 @@ async function main(argv: string[]): Promise<number> {
       const all = results.map((r, i) => ({ r, s: sessions[i]!, c: cases[i]! }));
       const fired = all.filter(({ r }) => r.loaded.length > 0);
       for (const { r, s, c } of all) {
-        const checkAgainst = r.loaded.map((skill) => draftPaths.get(skill) ?? join(PACKAGE_ROOT, "skills", skill, "SKILL.md"));
-        writeFileSync(join(dir, `${c.id}.json`), JSON.stringify({ case: c, scored: r, check_against: checkAgainst, reply: s.reply, events: s.events }, null, 1));
+        const checkAgainst = r.loaded.map(
+          (skill) => draftPaths.get(skill) ?? join(PACKAGE_ROOT, "skills", skill, "SKILL.md"),
+        );
+        writeFileSync(
+          join(dir, `${c.id}.json`),
+          JSON.stringify(
+            { case: c, scored: r, check_against: checkAgainst, reply: s.reply, events: s.events },
+            null,
+            1,
+          ),
+        );
       }
       // A fixed sample of 20 for hand-checking, chosen by id hash so reruns pick the same cases.
       const sample = fired
         .map(({ c }) => c.id)
-        .sort((a, b) => createHash("sha256").update(a).digest("hex").localeCompare(createHash("sha256").update(b).digest("hex")))
+        .sort((a, b) =>
+          createHash("sha256").update(a).digest("hex").localeCompare(createHash("sha256").update(b).digest("hex")),
+        )
         .slice(0, 20);
-      writeFileSync(join(dir, "index.json"), JSON.stringify({ sessions: all.length, fired: fired.length, hand_check: sample }, null, 1));
+      writeFileSync(
+        join(dir, "index.json"),
+        JSON.stringify({ sessions: all.length, fired: fired.length, hand_check: sample }, null, 1),
+      );
     }
 
     const costs = sessions.flatMap((x) => (x.costUsd === undefined ? [] : [x.costUsd]));
-    const summary = { ...summarise(results), cost_usd: costs.length === 0 ? null : Math.round(costs.reduce((a, b) => a + b, 0) * 10_000) / 10_000 };
+    const summary = {
+      ...summarise(results),
+      cost_usd: costs.length === 0 ? null : Math.round(costs.reduce((a, b) => a + b, 0) * 10_000) / 10_000,
+    };
     report.push({
       subject: subject.id,
       host: subject.host,
@@ -1416,13 +1636,24 @@ async function main(argv: string[]): Promise<number> {
       summary,
       per_skill: perSkill(results),
       confusion: confusion(results, known),
-      results: results.map((r, i) => ({ ...r, reply: sessions[i]!.reply, timed_out: sessions[i]!.timedOut, exit_code: sessions[i]!.exitCode, cost_usd: sessions[i]!.costUsd ?? null })),
+      results: results.map((r, i) => ({
+        ...r,
+        reply: sessions[i]!.reply,
+        timed_out: sessions[i]!.timedOut,
+        exit_code: sessions[i]!.exitCode,
+        cost_usd: sessions[i]!.costUsd ?? null,
+      })),
     });
     if (!quiet) {
       for (const r of results.filter((x) => x.invalid !== undefined || !x.pass || x.flagged)) {
         const tag = r.invalid !== undefined ? "INVALID" : r.pass ? "FLAG" : "FAIL";
-        const calls = r.workflow_calls.length === 0 ? "" : ` calls=${JSON.stringify(r.workflow_calls.map((call) => `${call.kind}:${call.name}`))}`;
-        console.log(`[${tag} ${subject.id} ${r.polarity}] ${r.id} outcome=${r.outcome}${r.invalid === undefined ? "" : ` (${r.invalid})`} loaded=${JSON.stringify(r.loaded)}${calls} authority=${JSON.stringify(r.authority)}`);
+        const calls =
+          r.workflow_calls.length === 0
+            ? ""
+            : ` calls=${JSON.stringify(r.workflow_calls.map((call) => `${call.kind}:${call.name}`))}`;
+        console.log(
+          `[${tag} ${subject.id} ${r.polarity}] ${r.id} outcome=${r.outcome}${r.invalid === undefined ? "" : ` (${r.invalid})`} loaded=${JSON.stringify(r.loaded)}${calls} authority=${JSON.stringify(r.authority)}`,
+        );
       }
     }
   }
@@ -1441,11 +1672,21 @@ async function main(argv: string[]): Promise<number> {
     noop_baseline: noopBaseline(cases, scoring),
     argv: ["bun", "tests/learn/evals/trigger-eval.ts", ...argv],
     ...instrument,
-    subjects: report.map((r) => ({ subject: r.subject, host: r.host, injection: r.injection, max_turns: r.max_turns, bundle: r.bundle, leaks: r.leaks, observed_models: r.observed_models })),
+    subjects: report.map((r) => ({
+      subject: r.subject,
+      host: r.host,
+      injection: r.injection,
+      max_turns: r.max_turns,
+      bundle: r.bundle,
+      leaks: r.leaks,
+      observed_models: r.observed_models,
+    })),
   };
   const out = option(argv, "--json");
   if (out !== undefined) writeFileSync(out, JSON.stringify({ receipt, subjects: report }, null, 1));
-  console.log(JSON.stringify({ receipt, summaries: report.map((r) => ({ subject: r.subject, host: r.host, ...r.summary })) }));
+  console.log(
+    JSON.stringify({ receipt, summaries: report.map((r) => ({ subject: r.subject, host: r.host, ...r.summary })) }),
+  );
   return 0;
 }
 

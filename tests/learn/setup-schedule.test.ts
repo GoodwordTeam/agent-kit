@@ -6,16 +6,32 @@ import { loadConfig } from "../../src/learn/core/config.ts";
 import type { LearnContext } from "../../src/learn/core/context.ts";
 import { projectFolderName } from "../../src/learn/core/paths.ts";
 import type { RunResult } from "../../src/learn/core/proc.ts";
-import { cronLine, launchdPlist, parseInterval, schedule, systemdService, systemdTimer, unitPaths } from "../../src/learn/setup/schedule.ts";
+import {
+  cronLine,
+  launchdPlist,
+  parseInterval,
+  schedule,
+  systemdService,
+  systemdTimer,
+  unitPaths,
+} from "../../src/learn/setup/schedule.ts";
 import type { SetupDeps } from "../../src/learn/setup/wire.ts";
 import { scratch } from "./helpers.ts";
 
 /** A context whose environment is exactly `env`, so nothing from the developer's shell leaks into a golden. */
 function context(env: Record<string, string>, out: string[] = []): LearnContext {
-  return { cwd: "/", io: { out: (line) => out.push(line), err: (line) => out.push(line) }, config: loadConfig(env), judge: () => null, env };
+  return {
+    cwd: "/",
+    io: { out: (line) => out.push(line), err: (line) => out.push(line) },
+    config: loadConfig(env),
+    judge: () => null,
+    env,
+  };
 }
 
-function deps(options: { platform?: NodeJS.Platform; bins?: string[]; home?: string; code?: number } = {}): SetupDeps & { calls: string[][] } {
+function deps(
+  options: { platform?: NodeJS.Platform; bins?: string[]; home?: string; code?: number } = {},
+): SetupDeps & { calls: string[][] } {
   const bins = new Set(options.bins ?? []);
   const calls: string[][] = [];
   return {
@@ -101,13 +117,17 @@ StandardError=append:/cfg/agent-kit/learn/scheduler.log
   });
 
   test("cron line, minutes under an hour and hours above", () => {
-    const tail = "CLAUDE_CONFIG_DIR=/cfg PATH=/bin AK_LEARN_JUDGE='judge --json' /opt/bun /pkg/src/cli.ts learn memory tick >> /cfg/agent-kit/learn/scheduler.log 2>&1";
+    const tail =
+      "CLAUDE_CONFIG_DIR=/cfg PATH=/bin AK_LEARN_JUDGE='judge --json' /opt/bun /pkg/src/cli.ts learn memory tick >> /cfg/agent-kit/learn/scheduler.log 2>&1";
     expect(cronLine(context(ENV), deps(), 900)).toBe(`*/15 * * * * ${tail}`);
     expect(cronLine(context(ENV), deps(), 7200)).toBe(`0 */2 * * * ${tail}`);
   });
 
   test("systemd specifiers and variables are escaped so values arrive verbatim", () => {
-    const text = systemdService(context({ ...ENV, AK_LEARN_JUDGE: "judge --at 50% $HOME", AK_LEARN_TAG: "a%b" }), deps());
+    const text = systemdService(
+      context({ ...ENV, AK_LEARN_JUDGE: "judge --at 50% $HOME", AK_LEARN_TAG: "a%b" }),
+      deps(),
+    );
     expect(text).toContain('Environment="AK_LEARN_JUDGE=judge --at 50%% $$HOME"\n');
     expect(text).toContain('Environment="AK_LEARN_TAG=a%%b"\n');
   });
@@ -119,7 +139,9 @@ StandardError=append:/cfg/agent-kit/learn/scheduler.log
   });
 
   test("XML-special values are escaped in the plist", () => {
-    expect(launchdPlist(context({ ...ENV, AK_LEARN_JUDGE: "a<b & c" }), deps(), 900)).toContain("<string>a&lt;b &amp; c</string>");
+    expect(launchdPlist(context({ ...ENV, AK_LEARN_JUDGE: "a<b & c" }), deps(), 900)).toContain(
+      "<string>a&lt;b &amp; c</string>",
+    );
   });
 });
 
@@ -198,6 +220,9 @@ describe("setup schedule", () => {
     expect(existsSync(join(home, ".config"))).toBe(false);
     out.length = 0;
     expect(schedule(ctx, deps({ home }))).toBe(0);
-    expect(out).toEqual(["no supported scheduler (launchd, systemd, cron); run this from your own scheduler:", "  /opt/bun /pkg/src/cli.ts learn memory tick"]);
+    expect(out).toEqual([
+      "no supported scheduler (launchd, systemd, cron); run this from your own scheduler:",
+      "  /opt/bun /pkg/src/cli.ts learn memory tick",
+    ]);
   });
 });

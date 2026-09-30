@@ -30,7 +30,9 @@ export interface AuditArgs {
 export function auditRun(a: AuditArgs): string[] {
   const b = a.binding;
   if (b.evidence.store !== "mock") {
-    return [`refused: evidence store ${b.evidence.store} cannot be read: the knowledgebase fails closed (CONTRACT.md §1)`];
+    return [
+      `refused: evidence store ${b.evidence.store} cannot be read: the knowledgebase fails closed (CONTRACT.md §1)`,
+    ];
   }
   const refusals: string[] = [];
 
@@ -46,8 +48,10 @@ export function auditRun(a: AuditArgs): string[] {
   const sha = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   const at = realpathSync(a.bindingPath);
   if (ledger !== undefined) {
-    if (ledger.binding_path !== at) refusals.push(`refused: binding ${at} is not the ${ledger.binding_path} the ledger registered`);
-    if (ledger.binding_sha256 !== sha) refusals.push(`refused: binding hashes to ${sha}, not the ${ledger.binding_sha256} the ledger registered`);
+    if (ledger.binding_path !== at)
+      refusals.push(`refused: binding ${at} is not the ${ledger.binding_path} the ledger registered`);
+    if (ledger.binding_sha256 !== sha)
+      refusals.push(`refused: binding hashes to ${sha}, not the ${ledger.binding_sha256} the ledger registered`);
   }
 
   // Every required gate has a current record.
@@ -56,9 +60,12 @@ export function auditRun(a: AuditArgs): string[] {
   const project = a.project ?? b.project.path;
   let head: Snapshot | undefined;
   if (gates.includes("ship-preflight")) {
-    const ships = readRecords(dir, b.run_id, "ship-preflight").sort((x, y) => x.recorded_at.localeCompare(y.recorded_at));
+    const ships = readRecords(dir, b.run_id, "ship-preflight").sort((x, y) =>
+      x.recorded_at.localeCompare(y.recorded_at),
+    );
     head = ships[ships.length - 1]?.snapshot;
-    if (head === undefined) refusals.push(`refused: gate ship-preflight has no current evidence (no record for run ${b.run_id} in ${dir})`);
+    if (head === undefined)
+      refusals.push(`refused: gate ship-preflight has no current evidence (no record for run ${b.run_id} in ${dir})`);
   }
   if (head !== undefined || !gates.includes("ship-preflight")) {
     // Judged on phase records; a binding-declared evidence run needs `open` to accept the binding's run id.
@@ -81,9 +88,15 @@ export function auditRun(a: AuditArgs): string[] {
       continue;
     }
     const expected = ledger?.binding_sha256 ?? sha;
-    if (g.binding_sha256 !== expected) refusals.push(`refused: grant ${operation} names binding hash ${g.binding_sha256}, not the registered ${expected}`);
+    if (g.binding_sha256 !== expected)
+      refusals.push(
+        `refused: grant ${operation} names binding hash ${g.binding_sha256}, not the registered ${expected}`,
+      );
     const named = typeof g.binding === "string" && existsSync(g.binding) ? realpathSync(g.binding) : g.binding;
-    if (named !== (ledger?.binding_path ?? at)) refusals.push(`refused: grant ${operation} names binding ${g.binding}, not the registered ${ledger?.binding_path ?? at}`);
+    if (named !== (ledger?.binding_path ?? at))
+      refusals.push(
+        `refused: grant ${operation} names binding ${g.binding}, not the registered ${ledger?.binding_path ?? at}`,
+      );
     if (g.run_id !== b.run_id) refusals.push(`refused: grant ${operation} is for run ${g.run_id}, not ${b.run_id}`);
   }
   return refusals;

@@ -86,7 +86,8 @@ export function rollbackWiki(ledger: Ledger, to?: string): string {
   }
   const resolved = ledger.git(["rev-parse", "--verify", "--quiet", `${target}^{commit}`]).stdout.trim();
   if (resolved === "") return to === undefined ? "nothing to roll back" : `unknown revision ${to}`;
-  if (ledger.git(["merge-base", "--is-ancestor", resolved, "HEAD"]).code !== 0) return `${to ?? target} is not an ancestor of the ledger's HEAD`;
+  if (ledger.git(["merge-base", "--is-ancestor", resolved, "HEAD"]).code !== 0)
+    return `${to ?? target} is not an ancestor of the ledger's HEAD`;
   const dirty = ledger
     .git(["status", "--porcelain", "--", ...WIKI_PATHS])
     .stdout.split("\n")
@@ -217,7 +218,8 @@ export const memoryArea: LearnArea = {
       run: (args, ctx) => setMuted(args, ctx, false),
     },
     rollback: {
-      usage: "memory rollback [--to SHA] [--repo PATH]   restore memory.md and lessons to before the last change, or to SHA",
+      usage:
+        "memory rollback [--to SHA] [--repo PATH]   restore memory.md and lessons to before the last change, or to SHA",
       run: (args, ctx) => {
         const root = rootFor(args, ctx);
         if (root === null) return 1;
@@ -238,7 +240,9 @@ export const memoryArea: LearnArea = {
       run: (_args, ctx) => {
         const entries = Object.values(readRegistry(ctx.config)).sort((a, b) => b.last_seen - a.last_seen);
         for (const entry of entries)
-          ctx.io.out(`${new Date(entry.last_seen).toISOString().slice(0, 10)}  ${entry.mem_project.padEnd(24)} ${entry.root}`);
+          ctx.io.out(
+            `${new Date(entry.last_seen).toISOString().slice(0, 10)}  ${entry.mem_project.padEnd(24)} ${entry.root}`,
+          );
         if (entries.length === 0) ctx.io.out("(no registered projects)");
         return 0;
       },

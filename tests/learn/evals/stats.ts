@@ -95,18 +95,25 @@ const mean = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0) / xs.lengt
  * cases are resampled with replacement and each keeps all its runs in both arms, so runs of one
  * case are never treated as independent evidence.
  */
-export function pairedBootstrap(cases: readonly PairedCase[], options: { iterations?: number; seed?: number; level?: number } = {}): BootstrapResult {
+export function pairedBootstrap(
+  cases: readonly PairedCase[],
+  options: { iterations?: number; seed?: number; level?: number } = {},
+): BootstrapResult {
   const iterations = options.iterations ?? 10_000;
   const seed = options.seed ?? 1;
   const level = options.level ?? 0.95;
-  const diffs = cases.filter((c) => c.a.length > 0 && c.b.length > 0).map((c) => mean(c.a) - mean(c.b));
+  const diffs = cases
+    .values()
+    .filter((c) => c.a.length > 0 && c.b.length > 0)
+    .map((c) => mean(c.a) - mean(c.b))
+    .toArray();
   if (diffs.length === 0) return { estimate: 0, lo: 0, hi: 0, clusters: 0, iterations, seed };
   const next = rng(seed);
-  const stats: number[] = new Array(iterations);
+  const stats: number[] = [];
   for (let i = 0; i < iterations; i++) {
     let sum = 0;
     for (let j = 0; j < diffs.length; j++) sum += diffs[Math.floor(next() * diffs.length)]!;
-    stats[i] = sum / diffs.length;
+    stats.push(sum / diffs.length);
   }
   stats.sort((x, y) => x - y);
   const at = (q: number) => stats[Math.min(iterations - 1, Math.max(0, Math.floor(q * iterations)))]!;
@@ -153,8 +160,18 @@ export function kappaTable(ratings: Readonly<Record<string, Readonly<Record<stri
     for (let j = i + 1; j < raters.length; j++) {
       const ra = ratings[raters[i]!]!;
       const rb = ratings[raters[j]!]!;
-      const items = Object.keys(ra).filter((item) => item in rb).sort();
-      rows.push({ a: raters[i]!, b: raters[j]!, n: items.length, kappa: cohenKappa(items.map((x) => ra[x]!), items.map((x) => rb[x]!)) });
+      const items = Object.keys(ra)
+        .filter((item) => item in rb)
+        .sort();
+      rows.push({
+        a: raters[i]!,
+        b: raters[j]!,
+        n: items.length,
+        kappa: cohenKappa(
+          items.map((x) => ra[x]!),
+          items.map((x) => rb[x]!),
+        ),
+      });
     }
   }
   return rows;

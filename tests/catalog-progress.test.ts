@@ -23,8 +23,15 @@ const PROBE = join(ROOT, "research/probes/catalog-progress.sh");
 const EXPANSIONS = "research/probes/catalog-expansions.yaml";
 
 const BASELINE: Record<string, number> = {
-  skills: 33, packs: 8, protocols: 7, roles: 29, references: 4,
-  schemas: 14, policies: 5, profiles: 4, adapters: 4,
+  skills: 33,
+  packs: 8,
+  protocols: 7,
+  roles: 29,
+  references: 4,
+  schemas: 14,
+  policies: 5,
+  profiles: 4,
+  adapters: 4,
 };
 
 /** A catalog with the baseline count in every section, plus `extra` ids per section. */
@@ -61,7 +68,11 @@ function repo(extra: Record<string, string[]> = {}): Repo {
   return { root, baseline, added: git(root, "rev-parse", "HEAD") };
 }
 
-type Section = { baseline: number; catalog: number; expansions: { ids: string[]; reason: string; commits: string[] }[] };
+type Section = {
+  baseline: number;
+  catalog: number;
+  expansions: { ids: string[]; reason: string; commits: string[] }[];
+};
 
 function record(sections: Record<string, Section>): string {
   return stringify(sections);
@@ -83,7 +94,11 @@ function probe(cwd: string, baseline: string, expansions?: string): Run {
   }
   const run = Bun.spawnSync(["bash", PROBE], { cwd, env: { ...process.env, CATALOG_BASELINE: baseline } });
   const lines = (s: Uint8Array, tag: string) =>
-    new TextDecoder().decode(s).split("\n").filter((l) => l.startsWith(`  ${tag}  `)).map((l) => l.slice(tag.length + 4));
+    new TextDecoder()
+      .decode(s)
+      .split("\n")
+      .filter((l) => l.startsWith(`  ${tag}  `))
+      .map((l) => l.slice(tag.length + 4));
   return {
     code: run.exitCode ?? -1,
     expanded: lines(run.stdout, "EXPANDED").map((l) => l.split(/\s+/)[0] ?? ""),

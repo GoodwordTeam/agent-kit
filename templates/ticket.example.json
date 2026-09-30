@@ -31,10 +31,7 @@
     }
   },
   "goal": "The artifact loader reads every directory it is configured with, so a document outside the first one is validated rather than skipped.",
-  "non_goals": [
-    "Changing which directories are configured.",
-    "Changing any schema."
-  ],
+  "non_goals": ["Changing which directories are configured.", "Changing any schema."],
   "acceptance_criteria": [
     {
       "id": "AC-1",
@@ -53,26 +50,16 @@
     }
   ],
   "allowed_changes": {
-    "files": [
-      "src/loader/**"
-    ],
-    "symbols": [
-      "loadArtifacts"
-    ]
+    "files": ["src/loader/**"],
+    "symbols": ["loadArtifacts"]
   },
-  "read_dependencies": [
-    "src/config/**",
-    "tests/loader/**"
-  ],
+  "read_dependencies": ["src/config/**", "tests/loader/**"],
   "verification": [
     {
       "id": "loader-suite",
       "check": "Run the loader unit suite.",
       "kind": "command",
-      "supports": [
-        "AC-1",
-        "AC-2"
-      ]
+      "supports": ["AC-1", "AC-2"]
     }
   ],
   "stop_conditions": [
@@ -88,9 +75,7 @@
   ],
   "integration_owner": "implementer",
   "write_ownership": {
-    "paths": [
-      "src/loader/**"
-    ],
+    "paths": ["src/loader/**"],
     "generated_artifacts": [],
     "migration_sequence": null,
     "interfaces": [

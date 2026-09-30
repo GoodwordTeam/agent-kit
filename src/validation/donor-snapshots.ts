@@ -55,7 +55,13 @@ export function expectedSnapshots(root: string): ExpectedSnapshot[] {
     const parsed = parseDonorSource(row.source);
     if (parsed === null) continue;
     const file = snapshotFile(parsed.donor, parsed.commit, parsed.path);
-    byFile.set(file, { file, donor: parsed.donor, commit: parsed.commit, donorPath: parsed.path, clone: clones.get(parsed.donor) ?? null });
+    byFile.set(file, {
+      file,
+      donor: parsed.donor,
+      commit: parsed.commit,
+      donorPath: parsed.path,
+      clone: clones.get(parsed.donor) ?? null,
+    });
   }
   return [...byFile.values()].sort((a, b) => a.file.localeCompare(b.file));
 }

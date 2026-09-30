@@ -78,18 +78,23 @@ export const claude: SubjectAdapter = {
       if (line.type === "system" && line.subtype === "init") {
         if (typeof line.model === "string") model = line.model;
         // A typed `/ak:<id>` expands on the client with no stream line; this list is how the scorer sees it.
-        if (Array.isArray(line.slash_commands)) slashCommands = line.slash_commands.filter((c): c is string => typeof c === "string");
+        if (Array.isArray(line.slash_commands))
+          slashCommands = line.slash_commands.filter((c): c is string => typeof c === "string");
       } else if (line.type === "assistant" && Array.isArray(line.message?.content)) {
         for (const part of line.message.content) {
-          if (part.type === "text" && typeof part.text === "string" && part.text !== "") events.push({ kind: "message", text: part.text });
-          if (part.type === "tool_use" && typeof part.name === "string") events.push({ kind: "tool", name: part.name, raw: part.name, input: part.input ?? {} });
+          if (part.type === "text" && typeof part.text === "string" && part.text !== "")
+            events.push({ kind: "message", text: part.text });
+          if (part.type === "tool_use" && typeof part.name === "string")
+            events.push({ kind: "tool", name: part.name, raw: part.name, input: part.input ?? {} });
         }
       } else if (line.type === "user") {
         // A typed slash command's expansion arrives as a user line; tool results are not user text.
         const content = line.message?.content;
         if (typeof content === "string" && content !== "") events.push({ kind: "user", text: content });
         else if (Array.isArray(content)) {
-          for (const part of content) if (part.type === "text" && typeof part.text === "string" && part.text !== "") events.push({ kind: "user", text: part.text });
+          for (const part of content)
+            if (part.type === "text" && typeof part.text === "string" && part.text !== "")
+              events.push({ kind: "user", text: part.text });
         }
       } else if (line.type === "result") {
         reply = (line.result ?? "").trim();
@@ -97,7 +102,12 @@ export const claude: SubjectAdapter = {
         turns = line.num_turns;
       }
     }
-    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }), ...(model === undefined ? {} : { model }), ...(slashCommands === undefined ? {} : { slashCommands }) };
+    const parsed: ReturnType<SubjectAdapter["parse"]> = { events, reply };
+    if (costUsd !== undefined) parsed.costUsd = costUsd;
+    if (turns !== undefined) parsed.turns = turns;
+    if (model !== undefined) parsed.model = model;
+    if (slashCommands !== undefined) parsed.slashCommands = slashCommands;
+    return parsed;
   },
   isolate(): Isolation {
     return {

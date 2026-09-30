@@ -8,7 +8,10 @@
   "properties": {
     "last_obs_id_reflected": { "type": "integer", "minimum": 0 },
     "last_reflect": { "description": "Epoch milliseconds.", "type": "integer", "minimum": 0 },
-    "last_nightly": { "description": "Local calendar date of the last nightly run.", "$ref": "common.schema.json#/$defs/date" },
+    "last_nightly": {
+      "description": "Local calendar date of the last nightly run.",
+      "$ref": "common.schema.json#/$defs/date"
+    },
     "last_weekly": { "description": "Epoch milliseconds.", "type": "integer", "minimum": 0 },
     "muted": { "type": "boolean" }
   }

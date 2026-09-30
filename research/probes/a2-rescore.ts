@@ -14,7 +14,13 @@ for (const e of entries) {
   const line = existsSync(f) ? te.bodyFingerprint(readFileSync(f, "utf8")) : null;
   if (line !== null) fingerprints.set(e.id, line);
 }
-const scoring = { arm: "natural", userInvoked: new Set(entries.filter((e: any) => e.invocation === "U").map((e: any) => e.id)), known: new Set(entries.map((e: any) => e.id)), drafts: new Map(), fingerprints };
+const scoring = {
+  arm: "natural",
+  userInvoked: new Set(entries.filter((e: any) => e.invocation === "U").map((e: any) => e.id)),
+  known: new Set(entries.map((e: any) => e.id)),
+  drafts: new Map(),
+  fingerprints,
+};
 const claudeSlash = entries.map((e: any) => `ak:${e.id}`);
 const result: Record<string, any[]> = {};
 for (const rep of ["r1", "r2"]) {
@@ -23,8 +29,25 @@ for (const rep of ["r1", "r2"]) {
     const sub = receipt.subjects[0];
     const rows = sub.results.map((r: any) => {
       const dump = JSON.parse(readFileSync(join(dir, rep, "transcripts", sub.subject, `${r.id}.json`), "utf8"));
-      const s = te.scoreCase(dump.case, dump.events, dump.reply, scoring, sub.host === "claude" ? claudeSlash : undefined);
-      return { ...s, expects: s.expects, invalid: r.invalid ?? null, before: { outcome: r.outcome, pass: r.pass, hit: r.hit, false_fire: r.false_fire, unscored: r.unscored ?? false } };
+      const s = te.scoreCase(
+        dump.case,
+        dump.events,
+        dump.reply,
+        scoring,
+        sub.host === "claude" ? claudeSlash : undefined,
+      );
+      return {
+        ...s,
+        expects: s.expects,
+        invalid: r.invalid ?? null,
+        before: {
+          outcome: r.outcome,
+          pass: r.pass,
+          hit: r.hit,
+          false_fire: r.false_fire,
+          unscored: r.unscored ?? false,
+        },
+      };
     });
     result[`${sub.subject}/${rep}`] = rows;
   }

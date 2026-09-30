@@ -25,7 +25,15 @@ function bound(opts: { taskId?: string; out?: (home: string, worktree: string) =
   const ledger = makeDir();
   const bindingPath = opts.out?.(home, worktree) ?? join(home, "data", taskId, "binding.json");
   const r = bind(
-    { fmHome: home, taskId, project, mode: "agent-kit", bindingOut: bindingPath, host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+    {
+      fmHome: home,
+      taskId,
+      project,
+      mode: "agent-kit",
+      bindingOut: bindingPath,
+      host: "claude-code",
+      evidence: { store: "mock", location: makeDir() },
+    },
     { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: ledger, upstream, now: FIXED_NOW },
   );
   if (!r.ok) throw new Error(r.errors.join("\n"));
@@ -90,7 +98,9 @@ describe("ak firstmate grant", () => {
   });
 
   test("grants a binding bind wrote under a data-dir override, outside the home", () => {
-    const { worktree, ledger, bindingPath } = bound({ out: () => join(makeDir(), "override-data", "T-G", "agent-kit-binding.json") });
+    const { worktree, ledger, bindingPath } = bound({
+      out: () => join(makeDir(), "override-data", "T-G", "agent-kit-binding.json"),
+    });
     expect(grant(ledger, bindingPath, "ship.prepare", worktree).code).toBe(0);
   });
 
@@ -162,9 +172,24 @@ describe("ak firstmate grant", () => {
   test("bind refuses a '..'-prefixed binding path inside the project", () => {
     const { home, upstream } = makeHome({ patched: true });
     const project = makeProject();
-    const opts = { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: makeDir(), upstream, now: FIXED_NOW };
+    const opts = {
+      akRoot: REPO,
+      bundleDir: makeBundle(),
+      pinsDir: makeDir(),
+      ledgerDir: makeDir(),
+      upstream,
+      now: FIXED_NOW,
+    };
     const r = bind(
-      { fmHome: home, taskId: "T-D", project, mode: "agent-kit", bindingOut: join(project, "..b.json"), host: "claude-code", evidence: { store: "mock", location: makeDir() } },
+      {
+        fmHome: home,
+        taskId: "T-D",
+        project,
+        mode: "agent-kit",
+        bindingOut: join(project, "..b.json"),
+        host: "claude-code",
+        evidence: { store: "mock", location: makeDir() },
+      },
       opts,
     );
     expect(r.ok).toBe(false);
@@ -194,7 +219,10 @@ describe("ak firstmate grant", () => {
 
   test("refuses when the pinned bundle no longer matches its hash, or is gone", () => {
     const { worktree, ledger, bindingPath, binding } = bound();
-    writeFileSync(join(binding.skill_bundle.path, "skills/super-ship/SKILL.md"), "---\nname: super-ship\n---\nedited\n");
+    writeFileSync(
+      join(binding.skill_bundle.path, "skills/super-ship/SKILL.md"),
+      "---\nname: super-ship\n---\nedited\n",
+    );
     refused(grant(ledger, bindingPath, "ship.prepare", worktree), /pinned bundle/);
 
     const b = JSON.parse(readFileSync(bindingPath, "utf8"));

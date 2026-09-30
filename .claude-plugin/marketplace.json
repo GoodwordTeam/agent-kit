@@ -18,14 +18,7 @@
       },
       "homepage": "https://github.com/Pibomeister/agent-kit",
       "repository": "https://github.com/Pibomeister/agent-kit",
-      "keywords": [
-        "code-review",
-        "engineering-lifecycle",
-        "planning",
-        "tdd",
-        "verification",
-        "workflow-automation"
-      ]
+      "keywords": ["code-review", "engineering-lifecycle", "planning", "tdd", "verification", "workflow-automation"]
     }
   ]
 }

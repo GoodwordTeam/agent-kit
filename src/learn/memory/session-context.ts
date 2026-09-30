@@ -107,7 +107,9 @@ function hardCut(text: string, cap: number): string {
 export function lessonsBlock(ledger: Ledger): { text: string; confirmed: number; total: number } {
   const lessons = [...loadLessons(ledger).values()].map(({ meta }) => meta);
   const confirmed = lessons.filter((meta) => meta.status === "confirmed");
-  confirmed.sort((a, b) => Number(b.confidence ?? 0) - Number(a.confidence ?? 0) || str(b.last_seen).localeCompare(str(a.last_seen)));
+  confirmed.sort(
+    (a, b) => Number(b.confidence ?? 0) - Number(a.confidence ?? 0) || str(b.last_seen).localeCompare(str(a.last_seen)),
+  );
   if (confirmed.length === 0) return { text: "", confirmed: 0, total: lessons.length };
   const rows = confirmed.slice(0, MAX_LESSONS).map((meta) => `- ${str(meta.statement)} [${str(meta.id)}]`);
   return { text: `## Lessons\n${rows.join("\n")}\n`, confirmed: confirmed.length, total: lessons.length };
@@ -146,7 +148,8 @@ export function sessionStartBlock(ctx: LearnContext): string {
       const lessons = lessonsBlock(ledger);
       // The cap covers what the model reads: guardrails, the header and the memory itself.
       const remaining = Math.max(0, cap - (guardrails === "" ? 0 : tokens(guardrails) + 1) - tokens(MEMORY_HEADER) - 1);
-      const merged = memory !== "" || lessons.text !== "" ? trim(`${`${memory}\n\n${lessons.text}`.trim()}\n`, remaining) : "";
+      const merged =
+        memory !== "" || lessons.text !== "" ? trim(`${`${memory}\n\n${lessons.text}`.trim()}\n`, remaining) : "";
       if (merged.trim() !== "") {
         parts.push(`${MEMORY_HEADER}\n${merged.trimEnd()}`);
       }

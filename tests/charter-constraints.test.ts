@@ -95,7 +95,14 @@ const BASE = {
   default_grants: ["approve-ticket"],
   denied_actions: ["merge", "deploy", "force-push"],
   checkpoints: ["ticket-approval"],
-  limits: { fix_cycles: 2, ci_repair_attempts: 3, alignment_questions: 5, tickets: 10, elapsed_minutes: 120, review_rounds: 2 },
+  limits: {
+    fix_cycles: 2,
+    ci_repair_attempts: 3,
+    alignment_questions: 5,
+    tickets: 10,
+    elapsed_minutes: 120,
+    review_rounds: 2,
+  },
   budgets: { provided_by: "runner", enforces: ["fix-cycles", "elapsed-minutes"], on_exhaustion: "cap-reached" },
   approvals: [{ artifact_hash: `sha256:${"d".repeat(64)}`, by: "human", authority: "explicit", at: AT }],
   supervisors: {
@@ -134,7 +141,9 @@ describe("a charter's retirement is not a fact about the charter being retired",
   });
 
   test("the charter that retired it names it", () => {
-    expect(charterErrors({ id: "charter-2", supersedes: { id: "charter-1", schema: "charter", hash: HASH } })).toEqual([]);
+    expect(charterErrors({ id: "charter-2", supersedes: { id: "charter-1", schema: "charter", hash: HASH } })).toEqual(
+      [],
+    );
   });
 
   test("a reference that names nothing is still refused", () => {

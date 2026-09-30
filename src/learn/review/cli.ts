@@ -48,7 +48,8 @@ export function prNumbers(value: string | undefined): number[] {
   if (value === undefined) return [];
   return value.split(",").map((item) => {
     const n = Number.parseInt(item.trim(), 10);
-    if (!Number.isInteger(n) || n <= 0 || String(n) !== item.trim()) throw new Error(`--pr wants PR numbers, got ${item}`);
+    if (!Number.isInteger(n) || n <= 0 || String(n) !== item.trim())
+      throw new Error(`--pr wants PR numbers, got ${item}`);
     return n;
   });
 }
@@ -74,7 +75,9 @@ function doIngest(args: LearnArgs, ctx: LearnContext, ledger: Ledger, root: stri
   if (ctx.config.dryRun) {
     for (const event of result.events) {
       const where = `${event.path ?? ""}:${event.line ?? ""}`;
-      ctx.io.out(`${event.source.padEnd(14)} ${event.kind.padEnd(10)} pr=${event.pr} sev=${event.severity} by=${event.author} ${where}`);
+      ctx.io.out(
+        `${event.source.padEnd(14)} ${event.kind.padEnd(10)} pr=${event.pr} sev=${event.severity} by=${event.author} ${where}`,
+      );
       ctx.io.out(`    ${JSON.stringify(event.text.slice(0, 140))}`);
     }
     ctx.io.out(`${result.events.length} events (dry run; ledger ${ledger.dir})`);
@@ -87,7 +90,8 @@ export const reviewArea: LearnArea = {
   summary: "review findings -> pattern ledger -> guardrails, with the repeat rate per run",
   verbs: {
     run: {
-      usage: "review run [--pr N[,N]] [--repo PATH] [--cwd PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--source codex]   ingest, maintain, propose",
+      usage:
+        "review run [--pr N[,N]] [--repo PATH] [--cwd PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--source codex]   ingest, maintain, propose",
       run: (args, ctx) =>
         locked(args, ctx, (ledger, root) => {
           // Maintain runs even with nothing fresh: a batch the judge failed on earlier is still waiting.
@@ -98,7 +102,8 @@ export const reviewArea: LearnArea = {
         }),
     },
     ingest: {
-      usage: "review ingest [--pr N[,N]] [--repo PATH] [--cwd PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--no-github] [--no-mem]",
+      usage:
+        "review ingest [--pr N[,N]] [--repo PATH] [--cwd PATH] [--gh-repo owner/name] [--since YYYY-MM-DD] [--no-github] [--no-mem]",
       run: (args, ctx) =>
         locked(args, ctx, (ledger, root) => {
           doIngest(args, ctx, ledger, root);
@@ -158,7 +163,9 @@ export const reviewArea: LearnArea = {
       run: (args, ctx) =>
         locked(args, ctx, (ledger) => {
           if (ctx.config.dryRun) {
-            ctx.io.out(`dry run: would revert ${flag(args, "to") === undefined ? "HEAD" : `every commit after ${flag(args, "to")}`}`);
+            ctx.io.out(
+              `dry run: would revert ${flag(args, "to") === undefined ? "HEAD" : `every commit after ${flag(args, "to")}`}`,
+            );
             return 0;
           }
           const message = rollback(ledger, flag(args, "to"));

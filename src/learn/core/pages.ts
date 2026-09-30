@@ -50,7 +50,8 @@ function oneLine(value: string): string {
 export function renderPage(meta: PageMeta, body: string): string {
   const lines = Object.entries(meta).map(([key, value]) => {
     const name = oneLine(key).replace(/:/g, "");
-    if (Array.isArray(value)) return `${name}: [${value.map((item) => oneLine(item).replace(/[,[\]]/g, "")).join(", ")}]`;
+    if (Array.isArray(value))
+      return `${name}: [${value.map((item) => oneLine(item).replace(/[,[\]]/g, "")).join(", ")}]`;
     return `${name}: ${value === null ? "" : oneLine(String(value))}`;
   });
   return `---\n${lines.join("\n")}\n---\n${body}`;

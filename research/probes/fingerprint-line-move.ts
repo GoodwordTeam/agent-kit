@@ -60,8 +60,15 @@ const EXCERPT = "return cache.get(scopeKey) ?? loadScope(scopeKey);";
 function evidence(startLine: number) {
   return [
     {
-      location: { repo: "demo", revision: REV, path: "src/report.ts", symbol: "buildTenantSummary", line_range: { start: startLine, end: startLine } },
-      observation: "the scope key is read from a cache populated by the previous request, so a second tenant reads the first tenant's scope",
+      location: {
+        repo: "demo",
+        revision: REV,
+        path: "src/report.ts",
+        symbol: "buildTenantSummary",
+        line_range: { start: startLine, end: startLine },
+      },
+      observation:
+        "the scope key is read from a cache populated by the previous request, so a second tenant reads the first tenant's scope",
       excerpt: EXCERPT,
     },
   ];
@@ -99,7 +106,11 @@ function finding(id: string, reading: Reading, startLine: number, value: string)
     lane: "security",
     fingerprint: {
       value,
-      inputs: { rule: "tenant-isolation", symbol_or_path: "src/report.ts#buildTenantSummary", evidence_digest: digest(reading, ev) },
+      inputs: {
+        rule: "tenant-isolation",
+        symbol_or_path: "src/report.ts#buildTenantSummary",
+        evidence_digest: digest(reading, ev),
+      },
     },
     severity: "P1",
     confidence_anchor: 100,
@@ -126,7 +137,10 @@ ${readdirSync(SCHEMAS)
 `;
 
 /** Both findings in one tree, as a later closure pass would see them. */
-function issuesFor(reading: Reading, sameValue: boolean): { rules: string[]; messages: string[]; inputsMatch: boolean } {
+function issuesFor(
+  reading: Reading,
+  sameValue: boolean,
+): { rules: string[]; messages: string[]; inputsMatch: boolean } {
   const root = mkdtempSync(join(tmpdir(), "fp-"));
   mkdirSync(join(root, "schemas"), { recursive: true });
   mkdirSync(join(root, "templates"), { recursive: true });
@@ -136,7 +150,12 @@ function issuesFor(reading: Reading, sameValue: boolean): { rules: string[]; mes
   writeFileSync(join(root, "catalog.yaml"), CATALOG);
 
   const before = finding("finding-before", reading, 42, `sha256:${"1".repeat(64)}`);
-  const after = finding("finding-after", reading, 58, sameValue ? `sha256:${"1".repeat(64)}` : `sha256:${"2".repeat(64)}`);
+  const after = finding(
+    "finding-after",
+    reading,
+    58,
+    sameValue ? `sha256:${"1".repeat(64)}` : `sha256:${"2".repeat(64)}`,
+  );
   writeFileSync(join(root, "templates", "before.json"), JSON.stringify(before, null, 2));
   writeFileSync(join(root, "templates", "after.json"), JSON.stringify(after, null, 2));
 
@@ -148,8 +167,7 @@ function issuesFor(reading: Reading, sameValue: boolean): { rules: string[]; mes
     throw new Error(`fixture does not validate: ${schemaErrors.map((i) => i.message).join("; ")}`);
   }
   const issues = checkDocumentRules(ctx).filter((i) => i.rule === RULE);
-  const inputsMatch =
-    canonicalJson(before.fingerprint.inputs) === canonicalJson(after.fingerprint.inputs);
+  const inputsMatch = canonicalJson(before.fingerprint.inputs) === canonicalJson(after.fingerprint.inputs);
   rmSync(root, { recursive: true, force: true });
   return { rules: issues.map((i) => i.rule), messages: issues.map((i) => i.message ?? ""), inputsMatch };
 }
@@ -162,9 +180,13 @@ function main(): number {
     console.log(`--- evidence_digest taken ${reading} ---`);
     const kept = issuesFor(reading, true);
     console.log(`  identity inputs match across the move: ${kept.inputsMatch}`);
-    console.log(`  keeping the fingerprint  -> ${kept.rules.length === 0 ? "accepted" : "REPORTED: " + kept.messages[0]}`);
+    console.log(
+      `  keeping the fingerprint  -> ${kept.rules.length === 0 ? "accepted" : "REPORTED: " + kept.messages[0]}`,
+    );
     const changed = issuesFor(reading, false);
-    console.log(`  changing the fingerprint -> ${changed.rules.length === 0 ? "accepted" : "REPORTED: " + changed.messages[0]}`);
+    console.log(
+      `  changing the fingerprint -> ${changed.rules.length === 0 ? "accepted" : "REPORTED: " + changed.messages[0]}`,
+    );
 
     const keepsOk = kept.rules.length === 0;
     const changeOk = changed.rules.length === 0;
@@ -185,7 +207,8 @@ function main(): number {
   const wrong: string[] = [];
   if (!specified.inputsMatch) wrong.push("the specified domain does not survive the move");
   if (specified.rules.length > 0) wrong.push("keeping the fingerprint is refused under the specified domain");
-  if (other.rules.length === 0) wrong.push("the unspecified domain is no longer distinguishable, so this probe has stopped measuring");
+  if (other.rules.length === 0)
+    wrong.push("the unspecified domain is no longer distinguishable, so this probe has stopped measuring");
 
   if (wrong.length > 0) {
     console.error();

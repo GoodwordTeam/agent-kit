@@ -168,7 +168,12 @@ describe("the closure is exact in both directions", () => {
     // explains that model-invoked skills are absent by construction. Listing
     // one makes the count wrong and the reasoning unreadable.
     const issues = checkInvocationPartition(
-      ctxFor(policy({ closure: ["closed", "scout"], note: "3 user-invoked, of which these 2 expose no operation, plus 1 model-invoked." })),
+      ctxFor(
+        policy({
+          closure: ["closed", "scout"],
+          note: "3 user-invoked, of which these 2 expose no operation, plus 1 model-invoked.",
+        }),
+      ),
     );
     expect(issues.map((i) => i.rule)).toContain("partition.closure-names-model-invoked-skill");
     expect(issues.find((i) => i.rule === "partition.closure-names-model-invoked-skill")?.message).toContain("scout");
@@ -176,7 +181,12 @@ describe("the closure is exact in both directions", () => {
 
   test("a closure entry that is not a catalog skill is an error", () => {
     const issues = checkInvocationPartition(
-      ctxFor(policy({ closure: ["closed", "absent"], note: "3 user-invoked, of which these 2 expose no operation, plus 1 model-invoked." })),
+      ctxFor(
+        policy({
+          closure: ["closed", "absent"],
+          note: "3 user-invoked, of which these 2 expose no operation, plus 1 model-invoked.",
+        }),
+      ),
     );
     expect(issues.map((i) => i.rule)).toContain("partition.closure-names-unknown-skill");
     expect(issues.find((i) => i.rule === "partition.closure-names-unknown-skill")?.message).toContain("absent");
@@ -336,7 +346,10 @@ describe("through a full run", () => {
     // Whitespace-tolerant because the authored note is a folded scalar and the
     // phrase straddles a line break in the file; the fold makes it contiguous
     // only after parsing.
-    const perturbed = authored.replace(/(\d+)(\s+expose\s+no\s+operation)/, (_, n: string, tail: string) => `${Number(n) + 1}${tail}`);
+    const perturbed = authored.replace(
+      /(\d+)(\s+expose\s+no\s+operation)/,
+      (_, n: string, tail: string) => `${Number(n) + 1}${tail}`,
+    );
     // The phrase is in the authored note, not only in the fixtures above.
     expect(perturbed).not.toBe(authored);
 

@@ -121,7 +121,12 @@ function union(values: readonly string[], add: string): string[] {
 /** `- <ref> (<author> <severity> pr <n> <date>)`: the evidence line an event leaves on a page. */
 export function evidenceRef(event: ReviewEvent): string {
   const ref = event.url ?? (event.obs_id !== undefined ? `obs:${event.obs_id}` : event.hash);
-  const extra = [event.author, event.severity, event.pr ? `pr ${event.pr}` : null, (event.ts ?? "").slice(0, 10)].filter((part) => part);
+  const extra = [
+    event.author,
+    event.severity,
+    event.pr ? `pr ${event.pr}` : null,
+    (event.ts ?? "").slice(0, 10),
+  ].filter((part) => part);
   return `- ${ref} (${extra.join(" ")})`;
 }
 
@@ -130,7 +135,12 @@ export function evidenceRef(event: ReviewEvent): string {
  * A resolution is a reply saying a finding was handled, not a second sighting: it leaves its evidence
  * line and changes no count, source, PR, reviewer or status. A corroborating source adds no PR.
  */
-export function addEvidence(meta: PageMeta, body: string, event: ReviewEvent, activeAt: number): { meta: PageMeta; body: string } {
+export function addEvidence(
+  meta: PageMeta,
+  body: string,
+  event: ReviewEvent,
+  activeAt: number,
+): { meta: PageMeta; body: string } {
   const line = evidenceRef(event);
   const withLine = body.includes(line) ? body : patchBody(body, "append", "", line);
   if (event.kind === "resolution") return { meta: { ...meta }, body: withLine };
@@ -139,7 +149,8 @@ export function addEvidence(meta: PageMeta, body: string, event: ReviewEvent, ac
   next.last_seen = (event.ts ?? nowIso()).slice(0, 10);
   next.sources = union(list(meta, "sources"), event.source);
   // Only a witness adds a PR: a corroborating event's PR number is hearsay about a thread it did not read.
-  if (event.pr && sourceFamily(event.source) !== null) next.prs = union(list(meta, "prs").map(String), String(event.pr));
+  if (event.pr && sourceFamily(event.source) !== null)
+    next.prs = union(list(meta, "prs").map(String), String(event.pr));
   if (event.author) next.reviewers = union(list(meta, "reviewers"), event.author);
   next.status = statusFor(next, activeAt);
   return { meta: next, body: withLine };
@@ -214,5 +225,8 @@ export function logLine(ledger: Ledger, text: string): void {
 
 /** Append one row to `skill-impact.md`: the record of what each promotion or retirement did to the repeat rate. */
 export function impactRow(ledger: Ledger, action: string, patternId: string, note: string): void {
-  appendFileSync(ledger.path("skill-impact.md"), `| ${todayUtc()} | ${action} | ${patternId} | ${lastRate(ledger)} | ${note} |\n`);
+  appendFileSync(
+    ledger.path("skill-impact.md"),
+    `| ${todayUtc()} | ${action} | ${patternId} | ${lastRate(ledger)} | ${note} |\n`,
+  );
 }

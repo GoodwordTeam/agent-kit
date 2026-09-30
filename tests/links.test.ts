@@ -64,7 +64,9 @@ describe("relative link extraction", () => {
   });
 
   test("resolveFromFile normalizes against the referencing file's directory", () => {
-    expect(resolveFromFile("skills/alpha/SKILL.md", "../../protocols/tdd/PROTOCOL.md")).toBe("protocols/tdd/PROTOCOL.md");
+    expect(resolveFromFile("skills/alpha/SKILL.md", "../../protocols/tdd/PROTOCOL.md")).toBe(
+      "protocols/tdd/PROTOCOL.md",
+    );
     expect(resolveFromFile("skills/alpha/SKILL.md", "./references/d.md")).toBe("skills/alpha/references/d.md");
   });
 

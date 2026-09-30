@@ -1,7 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
 import { loadCatalog } from "../src/catalog/load.ts";
-import { DIRECTORY_SECTIONS, MANDATORY_BODY_SECTIONS, entryDir, preferredBodyFile, entryFilePath } from "../src/catalog/layout.ts";
+import {
+  DIRECTORY_SECTIONS,
+  MANDATORY_BODY_SECTIONS,
+  entryDir,
+  preferredBodyFile,
+  entryFilePath,
+} from "../src/catalog/layout.ts";
 import { makeTree } from "./helpers/tree.ts";
 
 const MINIMAL = `schema_version: 1
@@ -75,10 +81,10 @@ describe("catalog loading", () => {
     // Both reclassification directions the table actually uses are covered, so
     // dropping either `protocols` or `roles` from the rule fails here rather
     // than passing on the half that remains.
-    const both = MINIMAL.replace("protocols: []", "protocols:\n  - id: alpha\n    status: contract\n    summary: Also a protocol.").replace(
-      "roles: []",
-      "roles:\n  - id: beta\n    status: contract\n    summary: Also a role.",
-    );
+    const both = MINIMAL.replace(
+      "protocols: []",
+      "protocols:\n  - id: alpha\n    status: contract\n    summary: Also a protocol.",
+    ).replace("roles: []", "roles:\n  - id: beta\n    status: contract\n    summary: Also a role.");
     const { issues } = loadCatalog(makeTree({ "catalog.yaml": both }));
     const hits = issues.filter((i) => i.rule === "catalog.id-in-two-addressable-sections");
     expect(hits.length).toBe(2);
@@ -97,10 +103,10 @@ describe("catalog loading", () => {
     // is `schemas/review.schema.json` and `policies/review.yaml` -- different
     // kinds of artifact that no citation confuses. Only the three sections a
     // skill id can be reclassified between are addressable in this sense.
-    const shared = MINIMAL.replace("schemas: []", "schemas:\n  - id: review\n    status: contract\n    summary: A schema.").replace(
-      "policies: []",
-      "policies:\n  - id: review\n    status: contract\n    summary: A policy.",
-    );
+    const shared = MINIMAL.replace(
+      "schemas: []",
+      "schemas:\n  - id: review\n    status: contract\n    summary: A schema.",
+    ).replace("policies: []", "policies:\n  - id: review\n    status: contract\n    summary: A policy.");
     const { issues } = loadCatalog(makeTree({ "catalog.yaml": shared }));
     expect(issues.filter((i) => i.rule === "catalog.id-in-two-addressable-sections")).toEqual([]);
   });

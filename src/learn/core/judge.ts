@@ -26,20 +26,24 @@ export function extractJson(stdout: string): Record<string, unknown> | null {
   let content: unknown;
   try {
     const wrapper = JSON.parse(trimmed) as unknown;
-    content = wrapper !== null && typeof wrapper === "object" && !Array.isArray(wrapper) && "result" in wrapper
-      ? (wrapper as { result: unknown }).result
-      : wrapper;
+    content =
+      wrapper !== null && typeof wrapper === "object" && !Array.isArray(wrapper) && "result" in wrapper
+        ? wrapper.result
+        : wrapper;
   } catch {
     content = trimmed;
   }
-  if (content !== null && typeof content === "object" && !Array.isArray(content)) return content as Record<string, unknown>;
+  if (content !== null && typeof content === "object" && !Array.isArray(content))
+    return content as Record<string, unknown>;
   if (typeof content !== "string") return null;
   const fenced = /```(?:json)?\s*(\{[\s\S]*\})\s*```/.exec(content);
   const bare = fenced ?? /(\{[\s\S]*\})/.exec(content);
   if (bare === null) return null;
   try {
     const parsed = JSON.parse(bare[1]!) as unknown;
-    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }

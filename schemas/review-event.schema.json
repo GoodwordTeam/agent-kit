@@ -42,8 +42,17 @@
       "type": "string",
       "pattern": "^[0-9a-f]{16}$"
     },
-    "obs_id": { "description": "For an observation-source event: the observation id.", "type": "integer", "minimum": 1 },
+    "obs_id": {
+      "description": "For an observation-source event: the observation id.",
+      "type": "integer",
+      "minimum": 1
+    },
     "patterns": { "description": "For a correction: the detector's matched pattern names.", "type": "string" },
-    "confidence": { "description": "For a correction: the detector's confidence.", "type": "number", "minimum": 0, "maximum": 1 }
+    "confidence": {
+      "description": "For a correction: the detector's confidence.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
   }
 }

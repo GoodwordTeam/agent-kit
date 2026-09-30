@@ -102,7 +102,8 @@ export function globToRegExp(glob: string): RegExp {
 export function surfaceText(target: unknown, t: Transcript): string | null {
   if (target === undefined || target === "last_message") return t.lastMessage;
   if (target === "files") return t.filesCreated.join("\n");
-  if (target === "trace") return [...t.toolCalls.map((c) => JSON.stringify({ tool: c.name, input: c.input })), t.lastMessage].join("\n");
+  if (target === "trace")
+    return [...t.toolCalls.map((c) => JSON.stringify({ tool: c.name, input: c.input })), t.lastMessage].join("\n");
   return null;
 }
 

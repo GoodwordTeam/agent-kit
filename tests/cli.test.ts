@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
@@ -44,7 +44,11 @@ profiles:
     default: true
 `;
 
-const SKILL = wellFormedSkill("triage", "Sort incoming work into the smallest next action.", "Read the queue and pick one item.");
+const SKILL = wellFormedSkill(
+  "triage",
+  "Sort incoming work into the smallest next action.",
+  "Read the queue and pick one item.",
+);
 
 /**
  * The catalog and the files it declares must exist, which travel together.
@@ -121,7 +125,8 @@ const BUILDABLE = {
   // disagree is a tree `ak build` is right to refuse, and these fixtures exist
   // to exercise everything except that.
   "package.json": '{\n  "name": "ak",\n  "version": "0.1.0",\n  "description": "agent-kit",\n  "license": "MIT"\n}\n',
-  "evals/triage/does-not-start-unasked/case.yaml": 'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
+  "evals/triage/does-not-start-unasked/case.yaml":
+    'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
 };
 
 function cleanTree(): string {
@@ -370,7 +375,7 @@ describe("ak build", () => {
   test("--check fails once the source moves ahead of dist", () => {
     const root = cleanTree();
     runCli(["build"], { cwd: root, io: capture().io });
-    Bun.write(join(root, "skills/triage/SKILL.md"), `${SKILL}\nOne more line.\n`);
+    writeFileSync(join(root, "skills/triage/SKILL.md"), `${SKILL}\nOne more line.\n`);
     const io = capture();
     expect(runCli(["build", "--check"], { cwd: root, io: io.io })).not.toBe(0);
     expect(io.stdout()).toContain("packaging.dist-stale");
@@ -385,9 +390,9 @@ describe("ak build", () => {
     // adapter contract it declares still travels with it.
     const root = makeTree({ ...TREE, "catalog.yaml": catalog, "skills/triage/SKILL.md": SKILL, ...BUILDABLE });
     expect(runCli(["build", "--profile", "core"], { cwd: root, io: capture().io })).toBe(0);
-    const manifest = JSON.parse(
-      readFileSync(join(root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8"),
-    ) as { skills: string[] };
+    const manifest = JSON.parse(readFileSync(join(root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8")) as {
+      skills: string[];
+    };
     expect(manifest.skills).toEqual([]);
   });
 
@@ -405,7 +410,8 @@ describe("ak build", () => {
    * without any unit test noticing.
    */
   describe("--check gates the committed adaptations record", () => {
-    const LOCK = "donors:\n  - id: donorx\n    path: .donors/donorx\n    commit: 0123456789abcdef0123456789abcdef01234567\n";
+    const LOCK =
+      "donors:\n  - id: donorx\n    path: .donors/donorx\n    commit: 0123456789abcdef0123456789abcdef01234567\n";
     const SOURCE = "donorx@0123456789abcdef0123456789abcdef01234567:docs/guide.md";
     const FRAGMENT = `adaptations:\n  - path: skills/triage/SKILL.md\n    source: ${SOURCE}\n`;
 
@@ -429,7 +435,7 @@ describe("ak build", () => {
     test("a generated file edited away from its fragments fails", () => {
       const root = adaptedTree();
       runCli(["build"], { cwd: root, io: capture().io });
-      Bun.write(join(root, ADAPTATIONS_FILE), "adaptations: []\n");
+      writeFileSync(join(root, ADAPTATIONS_FILE), "adaptations: []\n");
       const io = capture();
       expect(runCli(["build", "--check"], { cwd: root, io: io.io })).not.toBe(0);
       expect(io.stdout()).toContain("provenance.adaptations-out-of-sync");
@@ -438,7 +444,7 @@ describe("ak build", () => {
     test("a fragment added after the last build fails, which is the batch case", () => {
       const root = adaptedTree();
       runCli(["build"], { cwd: root, io: capture().io });
-      Bun.write(
+      writeFileSync(
         join(root, `${ADAPTATIONS_FRAGMENT_DIR}/batch-2.yaml`),
         `adaptations:\n  - path: references/guide/REFERENCE.md\n    source: ${SOURCE}\n`,
       );
@@ -498,7 +504,12 @@ describe("the install configuration the summary names", () => {
 
   test("with an install file, the summary names it and what it attached", () => {
     const io = capture();
-    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, ...BUILDABLE, "ak.install.yaml": "attached: []\n" });
+    const root = makeTree({
+      ...TREE,
+      "skills/triage/SKILL.md": SKILL,
+      ...BUILDABLE,
+      "ak.install.yaml": "attached: []\n",
+    });
     runCli(["validate"], { cwd: root, io: io.io });
     expect(io.out.at(-1)).toEndWith("; install: ak.install.yaml: attached none");
   });
@@ -515,7 +526,12 @@ describe("the install configuration the summary names", () => {
 
   test("an unknown adapter id fails the run", () => {
     const io = capture();
-    const root = makeTree({ ...TREE, "skills/triage/SKILL.md": SKILL, ...BUILDABLE, "ak.install.yaml": "attached: [nope]\n" });
+    const root = makeTree({
+      ...TREE,
+      "skills/triage/SKILL.md": SKILL,
+      ...BUILDABLE,
+      "ak.install.yaml": "attached: [nope]\n",
+    });
     expect(runCli(["validate"], { cwd: root, io: io.io })).not.toBe(0);
     expect(io.stdout()).toContain("packaging.install-unknown-adapter");
     expect(io.stdout()).toContain("'nope'");
@@ -549,7 +565,9 @@ describe("the install configuration the summary names", () => {
   test("--json carries the install configuration beside ok", () => {
     const io = capture();
     runCli(["validate", "--json"], { cwd: cleanTree(), io: io.io });
-    const parsed = JSON.parse(io.stdout()) as { install: { file: string | null; attached: string[]; backends: Record<string, string> } };
+    const parsed = JSON.parse(io.stdout()) as {
+      install: { file: string | null; attached: string[]; backends: Record<string, string> };
+    };
     expect(parsed.install).toEqual({ file: null, attached: [], backends: {} });
   });
 });

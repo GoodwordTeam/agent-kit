@@ -47,13 +47,22 @@ function shared(a: string, b: string, n = 4): string[] {
 }
 
 function skillTexts(id: string): string[] {
-  const description = oneLine(frontmatter(readFileSync(join(REPO, "skills", id, "SKILL.md"), "utf8")).description ?? "");
+  const description = oneLine(
+    frontmatter(readFileSync(join(REPO, "skills", id, "SKILL.md"), "utf8")).description ?? "",
+  );
   const summary = entries.get(id)?.raw.summary;
   return [description, typeof summary === "string" ? oneLine(summary) : ""];
 }
 
 describe("trigger prompt sets", () => {
-  const skillsOf = (cls: "U" | "M") => [...new Set(all.filter((c) => c.invocation === cls).map((c) => c.skill))];
+  const skillsOf = (cls: "U" | "M") => [
+    ...new Set(
+      all
+        .values()
+        .filter((c) => c.invocation === cls)
+        .map((c) => c.skill),
+    ),
+  ];
   const tally = (cases: Case[], skill: string) => {
     const mine = cases.filter((c) => c.skill === skill);
     return {
@@ -133,7 +142,8 @@ describe("trigger prompt sets", () => {
 
   test("no negative and no model-invoked prompt names any catalog skill", () => {
     for (const c of all.filter((x) => x.polarity === "negative" || x.invocation === "M")) {
-      for (const id of entries.keys()) expect([c.id, id, new RegExp(`\\b${id}\\b`).test(c.prompt)]).toEqual([c.id, id, false]);
+      for (const id of entries.keys())
+        expect([c.id, id, new RegExp(`\\b${id}\\b`).test(c.prompt)]).toEqual([c.id, id, false]);
     }
   });
 
@@ -156,7 +166,12 @@ describe("trigger prompt sets", () => {
 
   test("the guard does not count the typed command, and still counts prose around it", () => {
     const [description] = skillTexts("diagnose");
-    expect(shared(withoutCommands("/ak:super-align /ak:super-bound /ak:super-ship /ak:super-review"), "super align super bound super ship")).toEqual([]);
+    expect(
+      shared(
+        withoutCommands("/ak:super-align /ak:super-bound /ak:super-ship /ak:super-review"),
+        "super align super bound super ship",
+      ),
+    ).toEqual([]);
     const lifted = `/ak:diagnose ${words(description!).slice(10, 16).join(" ")}`;
     expect(shared(withoutCommands(lifted), description!).length).toBeGreaterThan(0);
   });
@@ -170,6 +185,11 @@ describe("trigger prompt sets", () => {
   test("a legacy bare-array file still parses", () => {
     const legacy = parsePromptSet(JSON.stringify([{ arm: "catalog", prompt: "p", expected: ["diagnose"] }]), "old");
     expect(legacy.version).toBe(1);
-    expect(legacy.cases[0]).toMatchObject({ id: "old-1", skill: "diagnose", polarity: "positive", expected: ["diagnose"] });
+    expect(legacy.cases[0]).toMatchObject({
+      id: "old-1",
+      skill: "diagnose",
+      polarity: "positive",
+      expected: ["diagnose"],
+    });
   });
 });

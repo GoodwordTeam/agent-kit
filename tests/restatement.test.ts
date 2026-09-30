@@ -43,14 +43,38 @@ const SEAT = [
  * depends on one score being larger than another could be written at all.
  */
 const BALLAST: ReadonlyArray<readonly [string, string]> = [
-  ["closure-requires-independent-verification", "Only verification independent of the author closes a finding, and reviewer confidence is advisory rather than evidence."],
-  ["delta-scope-affected-behavior", "A delta review is bounded by affected behaviour rather than by changed lines, and a serious issue in an untouched caller stays reportable."],
-  ["two-fix-cycles-then-stop", "Two repair cycles then stop; whatever remains open is reported with its evidence attached rather than looped a third time."],
-  ["numeric-heuristics-are-guidance", "Numeric targets are configurable starting points, and an exception is recorded rather than forcing an artificial split."],
-  ["central-kb-owns-project-artifacts", "Project narrative belongs to the knowledgebase adapter, and no skill writes a document tree into the working repository."],
-  ["panel-composition-by-declared-risk", "Panel membership follows the declared risk of the change, not the preference of whoever assembled the panel."],
-  ["reviewer-continuity-not-amnesia", "A fresh reviewer means independent of the author, not forgetful between cycles; the prior packet travels with the seat."],
-  ["entrypoint-phase-operation-split", "A human starts an entrypoint and a delegated controller starts a phase operation, and neither borrows the other's authority."],
+  [
+    "closure-requires-independent-verification",
+    "Only verification independent of the author closes a finding, and reviewer confidence is advisory rather than evidence.",
+  ],
+  [
+    "delta-scope-affected-behavior",
+    "A delta review is bounded by affected behaviour rather than by changed lines, and a serious issue in an untouched caller stays reportable.",
+  ],
+  [
+    "two-fix-cycles-then-stop",
+    "Two repair cycles then stop; whatever remains open is reported with its evidence attached rather than looped a third time.",
+  ],
+  [
+    "numeric-heuristics-are-guidance",
+    "Numeric targets are configurable starting points, and an exception is recorded rather than forcing an artificial split.",
+  ],
+  [
+    "central-kb-owns-project-artifacts",
+    "Project narrative belongs to the knowledgebase adapter, and no skill writes a document tree into the working repository.",
+  ],
+  [
+    "panel-composition-by-declared-risk",
+    "Panel membership follows the declared risk of the change, not the preference of whoever assembled the panel.",
+  ],
+  [
+    "reviewer-continuity-not-amnesia",
+    "A fresh reviewer means independent of the author, not forgetful between cycles; the prior packet travels with the seat.",
+  ],
+  [
+    "entrypoint-phase-operation-split",
+    "A human starts an entrypoint and a delegated controller starts a phase operation, and neither borrows the other's authority.",
+  ],
 ];
 
 function policy(): string {
@@ -102,13 +126,19 @@ function filler(): Record<string, string> {
 }
 
 function ctxFor(files: Record<string, string>) {
-  const root = makeTree({ "catalog.yaml": CATALOG_HEAD, "policies/resolved-conflicts.yaml": policy(), ...filler(), ...files });
+  const root = makeTree({
+    "catalog.yaml": CATALOG_HEAD,
+    "policies/resolved-conflicts.yaml": policy(),
+    ...filler(),
+    ...files,
+  });
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
   return { root, catalog };
 }
 
-const hits = (issues: ReturnType<typeof checkRestatements>) => issues.filter((i) => i.rule === "rulings.uncited-restatement");
+const hits = (issues: ReturnType<typeof checkRestatements>) =>
+  issues.filter((i) => i.rule === "rulings.uncited-restatement");
 
 /** The leading candidate's cosine, as the report prints it. */
 const score = (message: string | undefined) => /\((\d\.\d+)\)/.exec(message ?? "")?.[1];

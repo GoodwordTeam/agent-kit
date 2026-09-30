@@ -2,7 +2,6 @@ import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { entryBodyPath } from "../catalog/layout.ts";
-import { generateHostFrontmatter } from "../packaging/frontmatter.ts";
 import { loadSkillManifest } from "../packaging/manifest.ts";
 import { readTextIfPresent } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
@@ -148,7 +147,11 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
     const body = readTextIfPresent(join(root, bodyPath));
     const manifest = loadSkillManifest(root, entry.id);
 
-    if (manifest.invocation !== undefined && entry.invocation !== undefined && manifest.invocation !== entry.invocation) {
+    if (
+      manifest.invocation !== undefined &&
+      entry.invocation !== undefined &&
+      manifest.invocation !== entry.invocation
+    ) {
       issues.push(
         error(
           "invocation.declaration-conflict",
@@ -174,13 +177,14 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
       ...manifest.modelOperations.map((call) => ({ call, model: true })),
     ];
     for (const { call, model } of edges) {
-      refs.push({
+      const ref: SkillNode["refs"][number] = {
         target: call,
         line: 0,
         kind: call.includes(".") ? "operation" : "skill",
         file: `skills/${entry.id}/skill.yaml`,
-        ...(model ? { model: true } : {}),
-      });
+      };
+      if (model) ref.model = true;
+      refs.push(ref);
     }
 
     nodes.push({ id: entry.id, invocation: entry.invocation ?? "M", refs });
@@ -248,7 +252,12 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
       const targetInvocation = invocationOf.get(ref.target);
       if (targetInvocation === undefined) {
         issues.push(
-          error("invocation.unknown-target", ref.file, `'${ref.target}' is not a skill declared in catalog.yaml.`, line),
+          error(
+            "invocation.unknown-target",
+            ref.file,
+            `'${ref.target}' is not a skill declared in catalog.yaml.`,
+            line,
+          ),
         );
         continue;
       }
@@ -278,4 +287,3 @@ export function checkInvocation(ctx: CheckContext): Issue[] {
 
   return issues;
 }
-

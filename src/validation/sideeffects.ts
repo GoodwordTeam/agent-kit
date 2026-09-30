@@ -53,7 +53,9 @@ const BACKTICKED = /`([a-z][a-z0-9-]*)`/g;
 const DENIAL = /\bno\s+`([a-z][a-z0-9-]*)`/gi;
 
 function obj(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function strings(value: unknown): string[] {
@@ -211,7 +213,7 @@ function checkProse(file: string, manifestFile: string, prose: Prose, declared: 
       error(
         "sideeffects.prose-no-list",
         file,
-        `## Side effects opens with prose rather than the list AUTHORING.md §3 requires. Read as the declaration: ${JSON.stringify(prose.opening)}. Name the values from common.schema.json#/$defs/side_effect, as a list, in the section's first sentence, or open with exactly \"None.\" when ${manifestFile} declares no side effects.`,
+        `## Side effects opens with prose rather than the list AUTHORING.md §3 requires. Read as the declaration: ${JSON.stringify(prose.opening)}. Name the values from common.schema.json#/$defs/side_effect, as a list, in the section's first sentence, or open with exactly "None." when ${manifestFile} declares no side effects.`,
         prose.line,
       ),
     ];
@@ -261,7 +263,11 @@ type Binding = { readonly entrypoint: string } | { readonly issue: Issue };
 
 function bindOperation(op: Operation, manifestFile: string, entrypoints: ReadonlyArray<Entrypoint>): Binding {
   const names = new Set(entrypoints.map((e) => e.name));
-  const claimants = entrypoints.filter((e) => e.operation === op.id).map((e) => e.name);
+  const claimants = entrypoints
+    .values()
+    .filter((e) => e.operation === op.id)
+    .map((e) => e.name)
+    .toArray();
 
   if (op.entrypoint !== null) {
     if (!names.has(op.entrypoint)) {

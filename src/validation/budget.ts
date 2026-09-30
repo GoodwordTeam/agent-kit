@@ -48,11 +48,19 @@ export function checkBudget(ctx: CheckContext): Issue[] {
       const lines = lineCount(text);
       if (lines > SKILL_LINE_FAIL) {
         issues.push(
-          error(cap, file, `${lines} lines exceeds the hard cap of ${SKILL_LINE_FAIL}. Move longer material behind references/.`),
+          error(
+            cap,
+            file,
+            `${lines} lines exceeds the hard cap of ${SKILL_LINE_FAIL}. Move longer material behind references/.`,
+          ),
         );
       } else if (lines > SKILL_LINE_WARN) {
         issues.push(
-          warning(over, file, `${lines} lines is over the ${SKILL_LINE_WARN}-line target (hard cap ${SKILL_LINE_FAIL}), which AUTHORING.md §12 applies to this body unchanged.`),
+          warning(
+            over,
+            file,
+            `${lines} lines is over the ${SKILL_LINE_WARN}-line target (hard cap ${SKILL_LINE_FAIL}), which AUTHORING.md §12 applies to this body unchanged.`,
+          ),
         );
       }
     }

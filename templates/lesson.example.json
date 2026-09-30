@@ -44,19 +44,10 @@
     }
   ],
   "applies_to": {
-    "domains": [
-      "artifact loading",
-      "code review"
-    ],
-    "paths": [
-      "src/loader/**"
-    ],
-    "packs": [
-      "pack-test"
-    ],
-    "skills": [
-      "super-review"
-    ]
+    "domains": ["artifact loading", "code review"],
+    "paths": ["src/loader/**"],
+    "packs": ["pack-test"],
+    "skills": ["super-review"]
   },
   "guidance": [
     "Where a function returns a collection built from a configured list, read the return position before reading the loop body.",

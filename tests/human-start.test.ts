@@ -31,7 +31,11 @@ interface Body {
 
 /** `wellFormedSkill` with the description or the first step swapped for the text under test. */
 function body(name: string, edit: Body = {}): string {
-  let text = wellFormedSkill(name, `Runs the ${name} workflow on a ticket that already exists.`, "Read the ticket first.");
+  let text = wellFormedSkill(
+    name,
+    `Runs the ${name} workflow on a ticket that already exists.`,
+    "Read the ticket first.",
+  );
   if (edit.description !== undefined) {
     text = text.replace(/^description: >-\n(?:  .*\n)+/m, `description: ${edit.description}\n`);
   }
@@ -95,7 +99,9 @@ describe("the description", () => {
         description: "Human-started command; on any other request tell the human to type the command.",
       }),
     };
-    expect(issues(files)).toEqual([{ rule: "invocation.description-omits-command", file: "skills/alpha/SKILL.md", line: 3 }]);
+    expect(issues(files)).toEqual([
+      { rule: "invocation.description-omits-command", file: "skills/alpha/SKILL.md", line: 3 },
+    ]);
   });
 
   test("must state the class", () => {
@@ -105,7 +111,9 @@ describe("the description", () => {
         description: "Runs the alpha workflow when a human types `/ak:alpha`.",
       }),
     };
-    expect(issues(files)).toEqual([{ rule: "invocation.description-omits-class", file: "skills/alpha/SKILL.md", line: 3 }]);
+    expect(issues(files)).toEqual([
+      { rule: "invocation.description-omits-class", file: "skills/alpha/SKILL.md", line: 3 },
+    ]);
   });
 
   test("a topic-only description raises both, on the description's line", () => {
@@ -113,10 +121,11 @@ describe("the description", () => {
       "catalog.yaml": ONE_U,
       "skills/alpha/SKILL.md": body("alpha", { description: "Runs the alpha workflow when a human asks for it." }),
     };
-    expect(issues(files).map((i) => i.rule).sort()).toEqual([
-      "invocation.description-omits-class",
-      "invocation.description-omits-command",
-    ]);
+    expect(
+      issues(files)
+        .map((i) => i.rule)
+        .sort(),
+    ).toEqual(["invocation.description-omits-class", "invocation.description-omits-command"]);
   });
 
   test("naming a longer command that starts with this one does not count", () => {
@@ -133,7 +142,9 @@ describe("the description", () => {
       }),
       "skills/compound-refresh/SKILL.md": body("compound-refresh"),
     };
-    expect(issues(files)).toEqual([{ rule: "invocation.description-omits-command", file: "skills/compound/SKILL.md", line: 3 }]);
+    expect(issues(files)).toEqual([
+      { rule: "invocation.description-omits-command", file: "skills/compound/SKILL.md", line: 3 },
+    ]);
   });
 
   test("the command is matched whole: a longer id that starts with it does not name it", () => {
@@ -149,14 +160,20 @@ describe("the first workflow step", () => {
     const skill = body("alpha", { firstStep: "1. Read the named ticket and record its id." });
     const files = { "catalog.yaml": ONE_U, "skills/alpha/SKILL.md": skill };
     expect(issues(files)).toEqual([
-      { rule: "invocation.first-step-not-stop", file: "skills/alpha/SKILL.md", line: lineOf(skill, "1. Read the named") },
+      {
+        rule: "invocation.first-step-not-stop",
+        file: "skills/alpha/SKILL.md",
+        line: lineOf(skill, "1. Read the named"),
+      },
     ]);
   });
 
   test("naming the command without stopping is not enough", () => {
     const files = {
       "catalog.yaml": ONE_U,
-      "skills/alpha/SKILL.md": body("alpha", { firstStep: "1. Note that a human types `/ak:alpha` to start this, then read the ticket." }),
+      "skills/alpha/SKILL.md": body("alpha", {
+        firstStep: "1. Note that a human types `/ak:alpha` to start this, then read the ticket.",
+      }),
     };
     const found = checkHumanStart(ctxFor(files));
     expect(found.map((i) => i.rule)).toEqual(["invocation.first-step-not-stop"]);
@@ -178,7 +195,8 @@ describe("the first workflow step", () => {
     const files = {
       "catalog.yaml": ONE_U,
       "skills/alpha/SKILL.md": body("alpha", {
-        firstStep: "1. Check how this run was started.\n   Without `/ak:alpha` at the head of the human's message, stop and name the command.",
+        firstStep:
+          "1. Check how this run was started.\n   Without `/ak:alpha` at the head of the human's message, stop and name the command.",
       }),
     };
     expect(issues(files)).toEqual([]);

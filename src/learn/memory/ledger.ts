@@ -34,9 +34,17 @@ export const SECTIONS = [
 ] as const;
 
 /** Observation types that count as a failure signal. */
-export const FAILURE_TYPES = new Set(["review-finding", "test-failure", "error", "security_alert", "critical-issue", "blocker"]);
+export const FAILURE_TYPES = new Set([
+  "review-finding",
+  "test-failure",
+  "error",
+  "security_alert",
+  "critical-issue",
+  "blocker",
+]);
 
-export const LESSONS_INDEX_HEAD = "# Lessons\n\n| id | status | scope | confidence | last seen | statement |\n|---|---|---|---|---|---|\n";
+export const LESSONS_INDEX_HEAD =
+  "# Lessons\n\n| id | status | scope | confidence | last seen | statement |\n|---|---|---|---|---|---|\n";
 
 const SEED: Readonly<Record<string, string>> = {
   "memory.md": "",
@@ -108,7 +116,10 @@ export function citedIds(text: string | null | undefined): Set<string> {
  * `candidates` is how many lines had to pass, the base for the "more than
  * half dropped" rejection.
  */
-export function provenanceGate(lines: readonly string[], valid: ReadonlySet<string>): { kept: string[]; dropped: number; candidates: number } {
+export function provenanceGate(
+  lines: readonly string[],
+  valid: ReadonlySet<string>,
+): { kept: string[]; dropped: number; candidates: number } {
   const kept: string[] = [];
   let dropped = 0;
   let candidates = 0;
@@ -181,7 +192,9 @@ const TAG = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 /** Judge-supplied tags: lowercase `[a-z0-9_-]`, at most 32 characters, at most 12 distinct. Anything else is dropped, not repaired. */
 export function cleanTags(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
-  const tags = value.filter((item): item is string => typeof item === "string").map((item) => item.trim().toLowerCase());
+  const tags = value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().toLowerCase());
   return [...new Set(tags.filter((tag) => TAG.test(tag)))].slice(0, 12);
 }
 
@@ -198,7 +211,9 @@ export function str(value: PageMeta[string] | undefined): string {
 }
 
 export function lessonsIndexText(ledger: Ledger): string {
-  const rows = [...loadLessons(ledger).values()].map(({ meta }) => `${str(meta.id)} [${str(meta.status)}] ${str(meta.statement)}`);
+  const rows = [...loadLessons(ledger).values()].map(
+    ({ meta }) => `${str(meta.id)} [${str(meta.status)}] ${str(meta.statement)}`,
+  );
   return rows.length > 0 ? rows.join("\n") : "(none)";
 }
 
@@ -239,7 +254,7 @@ export function proposeConfirmed(
       statement,
       trigger: options.trigger,
       occurrence: { id: evidence[0] ?? id, content: { statement, evidence } },
-      evidence: evidence.map((id) => ({ ref: `claude-mem:${id}`, kind: "transcript" as const })),
+      evidence: evidence.map((ref) => ({ ref: `claude-mem:${ref}`, kind: "transcript" as const })),
       domains,
       createdBy: options.createdBy,
     },

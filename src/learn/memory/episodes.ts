@@ -68,7 +68,11 @@ function isoToMs(ts: string | undefined): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
-export function rawEpisode(source: ClaudeMemSource, session: SessionRow, events: readonly EpisodeEvent[]): Omit<Episode, "priority"> | null {
+export function rawEpisode(
+  source: ClaudeMemSource,
+  session: SessionRow,
+  events: readonly EpisodeEvent[],
+): Omit<Episode, "priority"> | null {
   const sid = session.memory_session_id;
   const obs = source.sessionObservations(sid);
   if (obs.length === 0) return null;
@@ -113,7 +117,11 @@ function round4(value: number): number {
 }
 
 /** Fill `priority`. T is relative to the most tokens in the 30-day window; N is against earlier episodes' files. */
-export function score(fresh: ReadonlyArray<Omit<Episode, "priority">>, existing: readonly Episode[], now: number): Episode[] {
+export function score(
+  fresh: ReadonlyArray<Omit<Episode, "priority">>,
+  existing: readonly Episode[],
+  now: number,
+): Episode[] {
   const inWindow = [...existing.filter((episode) => now - episode.ended <= WINDOW_MS), ...fresh];
   const maxTokens = Math.max(...inWindow.map((episode) => episode.tokens), 0) || 1;
   const seen = new Set<string>();
@@ -153,10 +161,17 @@ export function undoneRuns(ledger: Ledger): Set<string> {
 export function consolidatedSids(ledger: Ledger): Set<string> {
   const undone = undoneRuns(ledger);
   const marks: ConsolidationMark[] = [
-    ...loadEpisodes(ledger).flatMap((row) => (row.consolidated_run ? [{ sid: row.sid, run: row.consolidated_run }] : [])),
+    ...loadEpisodes(ledger).flatMap((row) =>
+      row.consolidated_run ? [{ sid: row.sid, run: row.consolidated_run }] : [],
+    ),
     ...readJsonl<ConsolidationMark>(ledger.path(CONSOLIDATED_FILE)),
   ];
-  return new Set(marks.filter((mark) => !undone.has(mark.run)).map((mark) => mark.sid));
+  return new Set(
+    marks
+      .values()
+      .filter((mark) => !undone.has(mark.run))
+      .map((mark) => mark.sid),
+  );
 }
 
 /** Episodes no standing run has consolidated, in file order. */

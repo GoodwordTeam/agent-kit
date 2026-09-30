@@ -228,7 +228,13 @@ function loadDonors(root: string): { donors: Map<string, Donor>; issues: Issue[]
   const issues: Issue[] = [];
   const doc = readYaml(root, LOCK);
   if (doc === null) {
-    issues.push(note("provenance.lock-unavailable", LOCK, "No upstream lock; donor pins could not be resolved. Rows naming a donor it would have pinned are reported individually as provenance.unknown-donor, so an unverified row is an error here rather than a silence."));
+    issues.push(
+      note(
+        "provenance.lock-unavailable",
+        LOCK,
+        "No upstream lock; donor pins could not be resolved. Rows naming a donor it would have pinned are reported individually as provenance.unknown-donor, so an unverified row is an error here rather than a silence.",
+      ),
+    );
     return { donors, issues };
   }
   if ("error" in doc) return { donors, issues: [doc.error] };
@@ -272,7 +278,9 @@ export function loadAdaptationFragments(root: string): { rows: Adaptation[]; iss
   const rows: Adaptation[] = [];
   const issues: Issue[] = [];
 
-  const names = listFiles(join(root, ADAPTATIONS_FRAGMENT_DIR)).filter((n) => /\.ya?ml$/.test(n)).sort();
+  const names = listFiles(join(root, ADAPTATIONS_FRAGMENT_DIR))
+    .filter((n) => /\.ya?ml$/.test(n))
+    .sort();
   const present = isDir(join(root, ADAPTATIONS_FRAGMENT_DIR));
 
   /** path -> the one fragment that owns it, and the sources it has already recorded. */
@@ -430,13 +438,13 @@ function gitOut(root: string, donor: Donor, args: ReadonlyArray<string>): string
 function modeAtPin(root: string, donor: Donor, commit: string, path: string): string | null {
   const out = gitOut(root, donor, ["ls-tree", "--full-tree", "-z", commit, "--", path]);
   if (out === null) return null;
-  for (const record of out.split("\0")) {
-    if (record === "") continue;
-    const tab = record.indexOf("\t");
+  for (const entry of out.split("\0")) {
+    if (entry === "") continue;
+    const tab = entry.indexOf("\t");
     if (tab === -1) continue;
     // A pathspec can match more than the literal path; take the entry that is it.
-    if (record.slice(tab + 1) !== path) continue;
-    const mode = record.slice(0, tab).split(" ")[0] ?? "";
+    if (entry.slice(tab + 1) !== path) continue;
+    const mode = entry.slice(0, tab).split(" ")[0] ?? "";
     return mode === "" ? null : mode;
   }
   return null;
@@ -531,7 +539,8 @@ function checkPathAtPin(root: string, donor: Donor, parsed: DonorSource, row: Ad
       `'${path}' is a directory at ${at}. A row records the one file its text was adapted from, and a directory names a set without saying which member. The row for '${row.path}' needs the file.`,
     );
   }
-  const suggestion = repair === null ? "" : ` Cite '${repair}', which is the same file reached without crossing the link.`;
+  const suggestion =
+    repair === null ? "" : ` Cite '${repair}', which is the same file reached without crossing the link.`;
   return error(
     "provenance.source-not-at-pin",
     row.file,
@@ -725,6 +734,7 @@ function checkScenarioReferences(root: string, scenarios: Set<number> | null): I
 
   const known = [...scenarios].sort((a, b) => a - b);
   return cited
+    .values()
     .filter((c) => !scenarios.has(c.value))
     .map((c) =>
       error(
@@ -733,7 +743,8 @@ function checkScenarioReferences(root: string, scenarios: Set<number> | null): I
         `Release scenario ${c.value} is not one of the ${known.length} numbered in §10 of ${PLAN} (${known[0]}-${known[known.length - 1]}). A row naming a scenario that does not exist asserts coverage nothing can satisfy, and it counts as coverage in every tally taken from this file. Cite the scenario the capability actually tests, or drop the reference if it tests none.`,
         c.line,
       ),
-    );
+    )
+    .toArray();
 }
 
 /**
@@ -875,7 +886,7 @@ function checkAdaptationRationales(root: string, rows: ReadonlyArray<Adaptation>
 }
 
 export function checkProvenance(ctx: CheckContext): Issue[] {
-  const { root, catalog } = ctx;
+  const { root } = ctx;
   const issues: Issue[] = [];
 
   const { donors, issues: donorIssues } = loadDonors(root);
@@ -901,18 +912,34 @@ export function checkProvenance(ctx: CheckContext): Issue[] {
 
   for (const row of rows) {
     if (row.source === "") {
-      issues.push(error("provenance.malformed-source", row.file, `Row for '${row.path}' has no source. Expected donor@commit:path.`));
+      issues.push(
+        error(
+          "provenance.malformed-source",
+          row.file,
+          `Row for '${row.path}' has no source. Expected donor@commit:path.`,
+        ),
+      );
       continue;
     }
     const parsed = parseDonorSource(row.source);
     if (parsed === null) {
-      issues.push(error("provenance.malformed-source", row.file, `Source '${row.source}' for '${row.path}' is not of the form donor@commit:path.`));
+      issues.push(
+        error(
+          "provenance.malformed-source",
+          row.file,
+          `Source '${row.source}' for '${row.path}' is not of the form donor@commit:path.`,
+        ),
+      );
       continue;
     }
     const donor = donors.get(parsed.donor);
     if (donor === undefined) {
       issues.push(
-        error("provenance.unknown-donor", row.file, `Source for '${row.path}' names donor '${parsed.donor}', which ${LOCK} does not pin.`),
+        error(
+          "provenance.unknown-donor",
+          row.file,
+          `Source for '${row.path}' names donor '${parsed.donor}', which ${LOCK} does not pin.`,
+        ),
       );
       continue;
     }
@@ -960,7 +987,8 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
   const issues: Issue[] = [];
 
   const mapDoc = readYaml(root, CONVERSATION_MAP);
-  const mapRows = mapDoc !== null && !("error" in mapDoc) ? listOf(mapDoc.value, ["capabilities", "entries", "mechanisms"]) : [];
+  const mapRows =
+    mapDoc !== null && !("error" in mapDoc) ? listOf(mapDoc.value, ["capabilities", "entries", "mechanisms"]) : [];
   if (mapDoc !== null && "error" in mapDoc) issues.push(mapDoc.error);
   const mapAvailable = mapDoc !== null;
 
@@ -973,7 +1001,9 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
    * reader to stop reading the term.
    */
   const conversationEntries = DIRECTORY_SECTIONS.flatMap((section) =>
-    catalog.bySection(section).filter((entry) => entry.status === "authored" && entry.provenanceOrigin === "conversation"),
+    catalog
+      .bySection(section)
+      .filter((entry) => entry.status === "authored" && entry.provenanceOrigin === "conversation"),
   ).length;
   if (!mapAvailable) {
     const message = `No conversation map; conversation-origin entries could not be checked.`;
@@ -985,7 +1015,11 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
             "conversation origins",
             `${message} ${conversationEntries} authored entr${conversationEntries === 1 ? "y declares" : "ies declare"} provenance_origin: conversation and nothing confirmed the capability is recorded.`,
           )
-        : note("provenance.conversation-map-unavailable", CONVERSATION_MAP, `${message} No authored entry declares it, so nothing went unexamined.`),
+        : note(
+            "provenance.conversation-map-unavailable",
+            CONVERSATION_MAP,
+            `${message} No authored entry declares it, so nothing went unexamined.`,
+          ),
     );
   }
 
@@ -1000,7 +1034,11 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
             "G:L locator ranges",
             `${message} ${mapRows.length} capability row${mapRows.length === 1 ? "" : "s"} parsed; a range past the end of the transcript reads the same as one inside it.`,
           )
-        : note("provenance.transcript-unavailable", TRANSCRIPT, `${message} The map has no rows, so no range went unchecked.`),
+        : note(
+            "provenance.transcript-unavailable",
+            TRANSCRIPT,
+            `${message} The map has no rows, so no range went unchecked.`,
+          ),
     );
   }
 
@@ -1036,7 +1074,8 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
   for (const row of mapRows) {
     const id = typeof row["id"] === "string" && row["id"].length > 0 ? row["id"] : "(unnamed capability)";
     const disposition = typeof row["disposition"] === "string" ? row["disposition"] : "";
-    const destination = typeof row["destination"] === "string" && row["destination"].length > 0 ? row["destination"] : null;
+    const destination =
+      typeof row["destination"] === "string" && row["destination"].length > 0 ? row["destination"] : null;
 
     if (destination === null) {
       if (DISPOSITIONS_THAT_LAND.includes(disposition)) {
@@ -1074,12 +1113,16 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
       );
     }
 
-    if ((origin === "conversation" || origin === "amalgam") && typeof row["source"] === "string" && row["source"].length > 0) {
+    if (
+      (origin === "conversation" || origin === "amalgam") &&
+      typeof row["source"] === "string" &&
+      row["source"].length > 0
+    ) {
       issues.push(
         error(
           "provenance.fabricated-source",
           CONVERSATION_MAP,
-          `'${id}' has origin: ${String(origin)} but carries a donor source '${row["source"]}'. A capability absent upstream carries a locator, never a source path.`,
+          `'${id}' has origin: ${origin} but carries a donor source '${row["source"]}'. A capability absent upstream carries a locator, never a source path.`,
         ),
       );
     }
@@ -1125,7 +1168,9 @@ function checkEntryOrigins(ctx: CheckContext, rows: ReadonlyArray<Adaptation>): 
         // Named rather than assumed: with three origins in the map, "not conversation"
         // no longer implies "donor", and a message that guesses wrong sends the reader
         // to check something the row does not say.
-        const found = [...new Set(landed.map((r) => (typeof r["origin"] === "string" ? r["origin"] : "(absent)")))].sort();
+        const found = [
+          ...new Set(landed.map((r) => (typeof r["origin"] === "string" ? r["origin"] : "(absent)"))),
+        ].sort();
         issues.push(
           error(
             "provenance.missing-conversation-origin",
@@ -1223,7 +1268,13 @@ function checkLocatorField(
 ): Issue[] {
   const raw = row["locator"] ?? row["g_locator"] ?? row["gl"];
   if (typeof raw !== "string") {
-    return [error("provenance.g-locator-missing", CONVERSATION_MAP, `'${id}' carries no locator; every capability cites where it came from.`)];
+    return [
+      error(
+        "provenance.g-locator-missing",
+        CONVERSATION_MAP,
+        `'${id}' carries no locator; every capability cites where it came from.`,
+      ),
+    ];
   }
 
   const references = parseLocatorField(raw);

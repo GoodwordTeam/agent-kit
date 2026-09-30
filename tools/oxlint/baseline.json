@@ -1,0 +1,1120 @@
+{
+  "src/attach/index.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unknown-parameters)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 2
+  },
+  "src/attach/signals.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "src/catalog/layout.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1
+  },
+  "src/catalog/load.ts": {
+    "anti-slop(no-runtime-typeof)": 15,
+    "anti-slop(no-unknown-parameters)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 4,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-base-to-string)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/cli.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "src/denylist.ts": {
+    "anti-slop(no-shape-in-symbol-names)": 13
+  },
+  "src/firstmate/audit.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/firstmate/bind.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/firstmate/checks.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 3
+  },
+  "src/firstmate/cli.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 7,
+    "typescript(no-non-null-assertion)": 12,
+    "typescript(no-unsafe-type-assertion)": 5
+  },
+  "src/firstmate/grant.ts": {
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "typescript(no-unsafe-type-assertion)": 4
+  },
+  "src/firstmate/pin.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 2
+  },
+  "src/firstmate/proc.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/firstmate/schema.ts": {
+    "anti-slop(no-unknown-parameters)": 1
+  },
+  "src/learn/cli.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/learn/core/config.ts": {
+    "typescript(no-non-null-assertion)": 1
+  },
+  "src/learn/core/context.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/learn/core/judge.ts": {
+    "anti-slop(no-runtime-typeof)": 5,
+    "anti-slop(no-unsafe-dictionary-type)": 5,
+    "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/learn/core/ledger.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/learn/core/pages.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "src/learn/core/proc.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1
+  },
+  "src/learn/core/store.ts": {
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/learn/hooks.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/learn/kb.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/learn/memory/cli.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/memory/consolidate.ts": {
+    "anti-slop(no-known-value-widening)": 4,
+    "anti-slop(no-runtime-typeof)": 5,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 7
+  },
+  "src/learn/memory/deep.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 12,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 7
+  },
+  "src/learn/memory/episodes.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "typescript(no-non-null-assertion)": 1,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/learn/memory/ledger.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/memory/redact.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-shape-in-symbol-names)": 2,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 4
+  },
+  "src/learn/memory/reflect.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/learn/memory/registry.ts": {
+    "typescript(no-non-null-assertion)": 1
+  },
+  "src/learn/memory/session-context.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "src/learn/memory/tick.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "typescript(no-unsafe-type-assertion)": 5
+  },
+  "src/learn/review/cli.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/learn/review/guardrails.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/review/hooks.ts": {
+    "anti-slop(no-runtime-typeof)": 4
+  },
+  "src/learn/review/ingest.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-runtime-typeof)": 2,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "src/learn/review/ledger.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "src/learn/review/maintain.ts": {
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unknown-parameters)": 4,
+    "anti-slop(no-unsafe-dictionary-type)": 5,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/review/patterns.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-runtime-typeof)": 2,
+    "typescript(no-non-null-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/learn/review/propose.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/learn/setup/schedule.ts": {
+    "typescript(no-non-null-assertion)": 4,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/setup/uninstall.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "typescript(no-non-null-assertion)": 2
+  },
+  "src/learn/setup/verify.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1
+  },
+  "src/learn/setup/wire.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 4,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-base-to-string)": 1,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/skills/cli.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/skills/learn.ts": {
+    "anti-slop(no-runtime-typeof)": 13,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "typescript(no-unsafe-type-assertion)": 4,
+    "unicorn(no-array-sort)": 2
+  },
+  "src/learn/skills/roster.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 1,
+    "typescript(no-non-null-assertion)": 3,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/learn/sources/claude-mem.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/learn/sources/github.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unnecessary-type-parameters)": 1,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/lifecycle/gate.ts": {
+    "anti-slop(no-chained-type-assertions)": 2,
+    "anti-slop(no-conditional-empty-object-spread)": 1,
+    "anti-slop(no-known-value-widening)": 10,
+    "anti-slop(no-runtime-typeof)": 40,
+    "anti-slop(no-shape-in-symbol-names)": 6,
+    "anti-slop(no-unknown-parameters)": 6,
+    "anti-slop(no-unsafe-dictionary-type)": 16,
+    "anti-slop(require-safety-comment-for-type-assertion)": 24,
+    "typescript(no-non-null-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 20,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/packaging/build.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "src/packaging/capability-table.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1
+  },
+  "src/packaging/frontmatter.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 4,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/packaging/hosts.ts": {
+    "anti-slop(no-runtime-typeof)": 4,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/packaging/install.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 4,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "typescript(no-unsafe-type-assertion)": 4,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "src/packaging/manifest.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 5,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 4,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/packaging/plan.ts": {
+    "anti-slop(no-known-value-widening)": 5,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 7,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-base-to-string)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "typescript(restrict-template-expressions)": 1,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 2
+  },
+  "src/packaging/profiles.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/tracker/binding.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/util/frontmatter.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/util/fs.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/util/hash.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/artifacts.ts": {
+    "anti-slop(no-runtime-typeof)": 13,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-base-to-string)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/validation/bodies.ts": {
+    "anti-slop(no-known-value-widening)": 10,
+    "anti-slop(no-shape-in-symbol-names)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/validation/completeness.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "src/validation/configrules.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unknown-parameters)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/validation/content.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/docrules.ts": {
+    "anti-slop(no-known-value-widening)": 6,
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(no-unknown-parameters)": 10,
+    "anti-slop(no-unknown-returns)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 11,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-base-to-string)": 7,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "src/validation/documents.ts": {
+    "anti-slop(no-runtime-typeof)": 4,
+    "anti-slop(no-shape-in-symbol-names)": 12,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/validation/donor-snapshots.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/evals.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-runtime-typeof)": 9,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 7,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 6
+  },
+  "src/validation/frontmatter.ts": {
+    "anti-slop(no-runtime-typeof)": 1
+  },
+  "src/validation/grader-eval.ts": {
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/validation/graders.ts": {
+    "anti-slop(no-runtime-typeof)": 7,
+    "anti-slop(no-shape-in-symbol-names)": 2,
+    "anti-slop(no-unknown-parameters)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 8,
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 8,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/human-start.ts": {
+    "anti-slop(no-runtime-typeof)": 1
+  },
+  "src/validation/invocation.ts": {
+    "anti-slop(no-runtime-typeof)": 5,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "src/validation/links.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/partition.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 5,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/validation/policies.ts": {
+    "anti-slop(no-known-value-widening)": 4,
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(no-unknown-parameters)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "src/validation/provenance.ts": {
+    "anti-slop(no-known-value-widening)": 4,
+    "anti-slop(no-runtime-typeof)": 21,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 11,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-base-to-string)": 1,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 4
+  },
+  "src/validation/restatement.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "unicorn(no-array-sort)": 3
+  },
+  "src/validation/rulemap.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 2
+  },
+  "src/validation/rulings.ts": {
+    "anti-slop(no-known-value-widening)": 3,
+    "anti-slop(no-runtime-typeof)": 14,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 6
+  },
+  "src/validation/run.ts": {
+    "anti-slop(no-shape-in-symbol-names)": 3,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/schemas.ts": {
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-shape-in-symbol-names)": 6,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "src/validation/sideeffects.ts": {
+    "anti-slop(no-known-value-widening)": 3,
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unknown-parameters)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 3
+  },
+  "src/validation/skill-style.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "typescript(no-non-null-assertion)": 1
+  },
+  "src/validation/types.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/a1-fixtures.test.ts": {
+    "typescript(no-unsafe-assignment)": 2,
+    "typescript(no-unsafe-call)": 2,
+    "typescript(no-unsafe-member-access)": 6,
+    "typescript(no-unsafe-return)": 1
+  },
+  "tests/adaptations.test.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/artifacts.test.ts": {
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "typescript(no-unsafe-assignment)": 2,
+    "typescript(no-unsafe-member-access)": 5,
+    "unicorn(consistent-function-scoping)": 2
+  },
+  "tests/attach.test.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 5
+  },
+  "tests/bodies.test.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-shape-in-symbol-names)": 97,
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 8,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/capability-table.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/case-corpus-checks.test.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/catalog-progress.test.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "unicorn(consistent-function-scoping)": 3
+  },
+  "tests/catalog.test.ts": {
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/charter-constraints.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 1
+  },
+  "tests/checkpoint-fixture.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 6,
+    "anti-slop(require-safety-comment-for-type-assertion)": 10,
+    "typescript(no-non-null-assertion)": 10,
+    "typescript(no-unsafe-type-assertion)": 10,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/cli.test.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 8,
+    "unicorn(consistent-function-scoping)": 4
+  },
+  "tests/completeness.test.ts": {
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/configrules.test.ts": {
+    "unicorn(consistent-function-scoping)": 2
+  },
+  "tests/content.test.ts": {
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/defects.test.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/docrules.test.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 59,
+    "anti-slop(require-safety-comment-for-type-assertion)": 34,
+    "typescript(no-non-null-assertion)": 17,
+    "typescript(no-unsafe-assignment)": 4,
+    "typescript(no-unsafe-member-access)": 4,
+    "typescript(no-unsafe-type-assertion)": 34,
+    "unicorn(consistent-function-scoping)": 6
+  },
+  "tests/documents.test.ts": {
+    "anti-slop(no-shape-in-symbol-names)": 7
+  },
+  "tests/eval-local.test.ts": {
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unsafe-assignment)": 6,
+    "typescript(no-unsafe-call)": 3,
+    "typescript(no-unsafe-member-access)": 30,
+    "typescript(no-unsafe-return)": 2,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/evals.test.ts": {
+    "anti-slop(no-known-value-widening)": 9,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 9,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 6
+  },
+  "tests/finding-constraints.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 3
+  },
+  "tests/firstmate/child-guard.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 6,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/firstmate/firstmate.test.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 5,
+    "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-assignment)": 3,
+    "typescript(no-unsafe-call)": 1,
+    "typescript(no-unsafe-member-access)": 11,
+    "typescript(no-unsafe-return)": 1,
+    "typescript(no-unsafe-type-assertion)": 6,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/firstmate/fixture-demo.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 4,
+    "typescript(no-unsafe-member-access)": 7,
+    "typescript(no-unsafe-return)": 1,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "tests/firstmate/fixture.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/firstmate/grant.test.ts": {
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 9,
+    "typescript(no-unsafe-call)": 2,
+    "typescript(no-unsafe-member-access)": 11
+  },
+  "tests/firstmate/status.test.ts": {
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 1
+  },
+  "tests/frontmatter.test.ts": {
+    "unicorn(consistent-function-scoping)": 3,
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/grader-lint.test.ts": {
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/human-start.test.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/integration.live.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/invalid-fixtures.test.ts": {
+    "typescript(no-unsafe-member-access)": 1,
+    "typescript(no-unsafe-return)": 1,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 4
+  },
+  "tests/kb-kind.test.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 1,
+    "typescript(no-unsafe-member-access)": 1,
+    "typescript(no-unsafe-return)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/learn/core.test.ts": {
+    "typescript(no-non-null-assertion)": 10,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/evals-calibrate.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 4,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "eslint(no-unused-vars)": 3,
+    "typescript(no-non-null-assertion)": 29,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 4,
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/learn/evals-panel.test.ts": {
+    "typescript(no-non-null-assertion)": 5,
+    "unicorn(consistent-function-scoping)": 3
+  },
+  "tests/learn/evals-stats.test.ts": {
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-assignment)": 8
+  },
+  "tests/learn/evals-subjects.test.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "typescript(no-non-null-assertion)": 8,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/evals/calibrate.ts": {
+    "anti-slop(no-conditional-empty-object-spread)": 1,
+    "anti-slop(no-known-value-widening)": 6,
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "typescript(no-non-null-assertion)": 21,
+    "typescript(no-unsafe-type-assertion)": 4,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 5
+  },
+  "tests/learn/evals/influence-eval.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-non-null-assertion)": 6,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(no-array-sort)": 6
+  },
+  "tests/learn/evals/influence/graders.ts": {
+    "anti-slop(no-known-value-widening)": 3,
+    "anti-slop(no-runtime-typeof)": 2,
+    "typescript(no-non-null-assertion)": 10,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/evals/influence/preregistered.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/learn/evals/matrix.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 3
+  },
+  "tests/learn/evals/panel.ts": {
+    "anti-slop(no-known-value-widening)": 4,
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 2
+  },
+  "tests/learn/evals/reflect-eval.ts": {
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-non-null-assertion)": 4,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/evals/reflect/fixtures.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unsafe-type-assertion)": 3
+  },
+  "tests/learn/evals/review-maintainer-eval.ts": {
+    "typescript(no-non-null-assertion)": 6,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/evals/session.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/learn/evals/skill-learn-eval.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/learn/evals/stats.ts": {
+    "typescript(no-non-null-assertion)": 14,
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/learn/evals/subjects/claude.ts": {
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/learn/evals/subjects/codex.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/learn/evals/subjects/grok.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-runtime-typeof)": 4,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/evals/subjects/shell.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "typescript(no-non-null-assertion)": 7
+  },
+  "tests/learn/evals/subjects/types.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1
+  },
+  "tests/learn/evals/trigger-eval.ts": {
+    "anti-slop(no-array-filter-map)": 1,
+    "anti-slop(no-known-value-widening)": 9,
+    "anti-slop(no-runtime-typeof)": 5,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "eslint(no-shadow)": 1,
+    "typescript(no-non-null-assertion)": 36,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 3,
+    "unicorn(no-array-sort)": 4
+  },
+  "tests/learn/helpers.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 3
+  },
+  "tests/learn/hook-e2e.test.ts": {
+    "anti-slop(no-known-value-widening)": 2
+  },
+  "tests/learn/kb.test.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 2,
+    "typescript(no-unsafe-member-access)": 3,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/learn/memory-cli.test.ts": {
+    "typescript(no-non-null-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/memory-consolidate.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 23,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/memory-deep.test.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 10,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/learn/memory-episodes.test.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/memory-evals-influence.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 80,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 5
+  },
+  "tests/learn/memory-evals-reflect.test.ts": {
+    "anti-slop(no-shape-in-symbol-names)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "typescript(no-non-null-assertion)": 42,
+    "typescript(no-unsafe-type-assertion)": 2,
+    "unicorn(consistent-function-scoping)": 6,
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/learn/memory-golden.test.ts": {
+    "anti-slop(no-known-value-widening)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 12,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/memory-redact.test.ts": {
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 7,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/learn/memory-reflect.test.ts": {
+    "typescript(no-non-null-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/memory-registry.test.ts": {
+    "typescript(no-non-null-assertion)": 4
+  },
+  "tests/learn/memory-session.test.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/learn/memory-tick.test.ts": {
+    "typescript(no-non-null-assertion)": 1
+  },
+  "tests/learn/review-guardrails.test.ts": {
+    "typescript(no-non-null-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/review-hooks.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 10,
+    "typescript(no-unsafe-type-assertion)": 1
+  },
+  "tests/learn/review-ingest.test.ts": {
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unsafe-member-access)": 1,
+    "unicorn(consistent-function-scoping)": 3
+  },
+  "tests/learn/review-maintain.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "typescript(no-non-null-assertion)": 10,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/review-propose.test.ts": {
+    "typescript(no-non-null-assertion)": 13,
+    "typescript(no-unsafe-assignment)": 2,
+    "typescript(no-unsafe-member-access)": 8,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/setup-verify.test.ts": {
+    "typescript(no-non-null-assertion)": 2
+  },
+  "tests/learn/setup-wire.test.ts": {
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-non-null-assertion)": 11,
+    "typescript(no-unsafe-member-access)": 4,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/learn/skills-learn.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-unknown-parameters)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "typescript(no-non-null-assertion)": 9,
+    "unicorn(consistent-function-scoping)": 1,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/skills-roster.test.ts": {
+    "typescript(no-non-null-assertion)": 3
+  },
+  "tests/learn/trigger-prompts.test.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "typescript(no-non-null-assertion)": 8,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/learn/trigger-score.test.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-non-null-assertion)": 4,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 9
+  },
+  "tests/lifecycle/check.test.ts": {
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-shape-in-symbol-names)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "typescript(no-non-null-assertion)": 28,
+    "typescript(no-unnecessary-type-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 18,
+    "typescript(no-unsafe-call)": 3,
+    "typescript(no-unsafe-member-access)": 19,
+    "typescript(no-unsafe-type-assertion)": 5,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/lifecycle/verification-predicate.test.ts": {
+    "anti-slop(no-shape-in-symbol-names)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-dynamic-delete)": 1,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unnecessary-type-assertion)": 1,
+    "typescript(no-unsafe-return)": 1
+  },
+  "tests/links.test.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/packaging.test.ts": {
+    "anti-slop(no-known-value-widening)": 4,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 6,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "typescript(no-non-null-assertion)": 1,
+    "typescript(no-unsafe-assignment)": 27,
+    "typescript(no-unsafe-member-access)": 55,
+    "typescript(no-unsafe-return)": 5,
+    "typescript(no-unsafe-type-assertion)": 3,
+    "unicorn(consistent-function-scoping)": 25,
+    "unicorn(no-array-sort)": 5
+  },
+  "tests/policies.test.ts": {
+    "typescript(no-non-null-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/provenance.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "typescript(no-non-null-assertion)": 5,
+    "unicorn(consistent-function-scoping)": 5,
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/restatement-cases.test.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/restatement.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/rulemap.test.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/rulings.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1,
+    "unicorn(consistent-function-scoping)": 3,
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/run-records.test.ts": {
+    "anti-slop(no-unsafe-dictionary-type)": 7,
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unsafe-assignment)": 4,
+    "typescript(no-unsafe-member-access)": 4,
+    "typescript(no-unsafe-return)": 1,
+    "typescript(no-unsafe-type-assertion)": 8,
+    "unicorn(consistent-function-scoping)": 1
+  },
+  "tests/run.test.ts": {
+    "unicorn(no-array-sort)": 1
+  },
+  "tests/schemas.test.ts": {
+    "typescript(no-non-null-assertion)": 2
+  },
+  "tests/sideeffects.test.ts": {
+    "anti-slop(no-known-value-widening)": 1
+  },
+  "tests/skill-style.test.ts": {
+    "unicorn(no-array-sort)": 2
+  },
+  "tests/tracker-binding.test.ts": {
+    "typescript(no-non-null-assertion)": 6,
+    "unicorn(consistent-function-scoping)": 2
+  },
+  "tests/unavailable.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "unicorn(consistent-function-scoping)": 2,
+    "unicorn(no-array-sort)": 3
+  },
+  "tests/util.test.ts": {
+    "typescript(no-non-null-assertion)": 1
+  },
+  "tests/verification-exit-disagreement.test.ts": {
+    "anti-slop(no-known-value-widening)": 1,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-unsafe-type-assertion)": 1
+  }
+}

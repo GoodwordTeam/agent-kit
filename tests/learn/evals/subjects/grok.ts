@@ -120,9 +120,15 @@ export const grok: SubjectAdapter = {
         const rawInput = line.rawInput ?? {};
         const name = TOOLS[line.toolName] ?? line.toolName;
         const file = rawInput.target_file ?? rawInput.file_path ?? rawInput.path;
-        events.push({ kind: "tool", name, raw: line.toolName, input: typeof file === "string" ? { ...rawInput, file_path: file } : rawInput });
+        events.push({
+          kind: "tool",
+          name,
+          raw: line.toolName,
+          input: typeof file === "string" ? { ...rawInput, file_path: file } : rawInput,
+        });
         if (name === "Bash" && typeof rawInput.command === "string") {
-          for (const file_path of readsOf(rawInput.command)) events.push({ kind: "tool", name: "Read", raw: line.toolName, input: { file_path, via: "shell" } });
+          for (const file_path of readsOf(rawInput.command))
+            events.push({ kind: "tool", name: "Read", raw: line.toolName, input: { file_path, via: "shell" } });
         }
       } else if (line.type === "end") {
         costUsd = line.total_cost_usd;
@@ -136,16 +142,34 @@ export const grok: SubjectAdapter = {
     flush();
     const last = events.at(-1);
     const reply = last?.kind === "message" ? last.text.trim() : "";
-    return { events, reply, ...(costUsd === undefined ? {} : { costUsd }), ...(turns === undefined ? {} : { turns }), ...(model === undefined ? {} : { model }), ...(stopReason === undefined ? {} : { stopReason }) };
+    const parsed: ReturnType<SubjectAdapter["parse"]> = { events, reply };
+    if (costUsd !== undefined) parsed.costUsd = costUsd;
+    if (turns !== undefined) parsed.turns = turns;
+    if (model !== undefined) parsed.model = model;
+    if (stopReason !== undefined) parsed.stopReason = stopReason;
+    return parsed;
   },
   isolate(scratch: string, req: SessionRequest): Isolation {
     const callerHome = req.env.GROK_HOME ?? join(req.env.HOME ?? homedir(), ".grok");
-    const home = privateHome(join(scratch, "grok-home"), join(callerHome, "auth.json"), req.bundleDir === undefined ? undefined : join(req.bundleDir, "skills"), "skills");
+    const home = privateHome(
+      join(scratch, "grok-home"),
+      join(callerHome, "auth.json"),
+      req.bundleDir === undefined ? undefined : join(req.bundleDir, "skills"),
+      "skills",
+    );
     mkdirSync(join(scratch, "home"), { recursive: true });
     return {
-      env: { GROK_HOME: home.dir, HOME: join(scratch, "home"), GROK_DISABLE_AUTOUPDATER: "1", GROK_MEMORY: "0", ...Object.fromEntries(COMPAT_OFF) },
-      leaks: ["the host's bundled platform skills, fetched into the private home at start and advertised beside the bundle's"],
-      release: home.release,
+      env: {
+        GROK_HOME: home.dir,
+        HOME: join(scratch, "home"),
+        GROK_DISABLE_AUTOUPDATER: "1",
+        GROK_MEMORY: "0",
+        ...Object.fromEntries(COMPAT_OFF),
+      },
+      leaks: [
+        "the host's bundled platform skills, fetched into the private home at start and advertised beside the bundle's",
+      ],
+      release: () => home.release(),
     };
   },
 };

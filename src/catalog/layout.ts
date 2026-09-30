@@ -53,7 +53,13 @@ const PREFERRED_BODY: Record<DirectorySection, string> = {
  * eight entries were still `status: contract`, so no authored pack was
  * grandfathered.
  */
-export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = ["skills", "packs", "protocols", "roles", "references"];
+export const MANDATORY_BODY_SECTIONS: ReadonlyArray<DirectorySection> = [
+  "skills",
+  "packs",
+  "protocols",
+  "roles",
+  "references",
+];
 
 export function entryDir(section: DirectorySection, id: string): string {
   return `${section}/${id}`;
@@ -77,6 +83,10 @@ export function entryFilePath(section: FileSection, id: string): string {
       return `profiles/${id}.yaml`;
     case "adapters":
       return `adapters/${id}/CONTRACT.md`;
+    default: {
+      const unhandled: never = section;
+      throw new Error(`entryFilePath: unknown file section ${JSON.stringify(unhandled)}`);
+    }
   }
 }
 

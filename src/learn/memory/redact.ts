@@ -43,7 +43,14 @@
 import type { ObservationRow, SummaryRow } from "../sources/claude-mem.ts";
 import { citedIds, SECTIONS } from "./ledger.ts";
 
-export const SECURITY_KINDS = ["instruction-in-data", "credential-exfil", "destructive-command", "remote-code", "policy-rewrite", "other"] as const;
+export const SECURITY_KINDS = [
+  "instruction-in-data",
+  "credential-exfil",
+  "destructive-command",
+  "remote-code",
+  "policy-rewrite",
+  "other",
+] as const;
 export type SecurityKind = (typeof SECURITY_KINDS)[number];
 
 export interface SecurityNote {
@@ -61,7 +68,10 @@ const OBS_ID = /^obs:\d+$/;
  * no notes, so an older reply parses. One entry per observation: repeated
  * notes merge their kinds.
  */
-export function parseSecurityNotes(value: unknown, valid: ReadonlySet<string>): { notes: SecurityNote[]; rejected: number } {
+export function parseSecurityNotes(
+  value: unknown,
+  valid: ReadonlySet<string>,
+): { notes: SecurityNote[]; rejected: number } {
   if (!Array.isArray(value)) return { notes: [], rejected: 0 };
   const byObs = new Map<string, Set<SecurityKind>>();
   let rejected = 0;
@@ -83,7 +93,10 @@ export function parseSecurityNotes(value: unknown, valid: ReadonlySet<string>): 
  * The one runtime-authored bullet for every quarantined observation. Built only
  * from the ids, their sessions and the kinds; null when nothing is quarantined.
  */
-export function securityRecord(notes: readonly SecurityNote[], sessionOf: (obs: string) => string | null): string | null {
+export function securityRecord(
+  notes: readonly SecurityNote[],
+  sessionOf: (obs: string) => string | null,
+): string | null {
   const kinds = new Map<string, Set<SecurityKind>>();
   for (const n of notes) kinds.set(n.obs, (kinds.get(n.obs) ?? new Set()).add(n.kind));
   if (kinds.size === 0) return null;
@@ -159,7 +172,9 @@ export function normalWords(text: string): string[] {
 }
 
 function observationText(row: ObservationRow): string {
-  return [row.title, row.subtitle, row.narrative, row.facts, row.concepts, row.files_read, row.files_modified].filter((v) => v).join("\n");
+  return [row.title, row.subtitle, row.narrative, row.facts, row.concepts, row.files_read, row.files_modified]
+    .filter((v) => v)
+    .join("\n");
 }
 
 function summaryText(s: SummaryRow): string {
@@ -241,13 +256,15 @@ export function carriers(claims: readonly string[], f: Fragments): Set<number> {
   for (const seq of f.marked) {
     for (const i of occurrences(words, seq)) mark(i, i + seq.length, owner);
     const flat = seq.join("");
-    if (flat.length >= 8) for (let at = run.indexOf(flat); at !== -1; at = run.indexOf(flat, at + 1)) mark(at, at + flat.length, runOwner);
+    if (flat.length >= 8)
+      for (let at = run.indexOf(flat); at !== -1; at = run.indexOf(flat, at + 1)) mark(at, at + flat.length, runOwner);
   }
   const contentOwner = content.map((i) => owner[i]!);
   for (const seq of f.phrases) for (const i of occurrences(contentWords, seq)) mark(i, i + seq.length, contentOwner);
   const found = f.long.filter((w) => run.includes(w));
   if (found.length >= 2) {
-    for (const w of found) for (let at = run.indexOf(w); at !== -1; at = run.indexOf(w, at + 1)) mark(at, at + w.length, runOwner);
+    for (const w of found)
+      for (let at = run.indexOf(w); at !== -1; at = run.indexOf(w, at + 1)) mark(at, at + w.length, runOwner);
   }
   return hit;
 }
@@ -296,7 +313,10 @@ export function redact(lines: readonly string[], inputs: RedactInputs): RedactRe
     inputs.previous,
     ...SECTIONS,
   ].join("\n");
-  const tainted = [...inputs.observations.filter(isQuarantined).map(observationText), ...inputs.summaries.filter(isTainted).map(summaryText)].join("\n");
+  const tainted = [
+    ...inputs.observations.filter(isQuarantined).map(observationText),
+    ...inputs.summaries.filter(isTainted).map(summaryText),
+  ].join("\n");
   const survivors: number[] = [];
   let flagged = 0;
   lines.forEach((line, i) => {
@@ -304,7 +324,13 @@ export function redact(lines: readonly string[], inputs: RedactInputs): RedactRe
     if ([...citedIds(line)].some((id) => quarantined.has(id))) flagged += 1;
     else survivors.push(i);
   });
-  const hit = tainted === "" ? new Set<number>() : carriers(survivors.map((i) => claim(lines[i]!)), distinctiveFragments(tainted, clean));
+  const hit =
+    tainted === ""
+      ? new Set<number>()
+      : carriers(
+          survivors.map((i) => claim(lines[i]!)),
+          distinctiveFragments(tainted, clean),
+        );
   const drop = new Set([...hit].map((k) => survivors[k]!));
   const kept = lines.filter((line, i) => !isBullet(line) || (survivors.includes(i) && !drop.has(i)));
   const quarantine = [...inputs.notes, ...[...inferred].map((obs) => ({ obs, kind: "other" as const }))];

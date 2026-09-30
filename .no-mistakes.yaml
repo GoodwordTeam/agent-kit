@@ -1,20 +1,22 @@
 # no-mistakes gate configuration for agent-kit.
 #
 # Bun project (bun.lock). `bun test` runs the full suite AND typechecks the
-# tree (tests/typecheck.test.ts shells out to node_modules/.bin/tsc over all
-# of src/ and tests/ — see that file's header) whenever the whole suite runs,
-# so no separate typecheck command is needed. There is no lint/format script;
-# the lint role runs the two gates AGENTS.md lists under "Before you commit":
-# `bun run validate` (`ak validate`, the consistency/denylist gate) followed
-# by `bun run build` (`ak build`, which re-resolves references after the
-# packager copies transitive dependencies and writes only the gitignored
-# dist/). The pre-push hook's build gate fires only for pushes to main, so
-# feature-branch pushes rely on this command for it.
+# tree (tests/typecheck.test.ts shells out to node_modules/.bin/tsc over what
+# tsconfig.json includes — see that file's header) whenever the whole suite runs,
+# so no separate typecheck command is needed. The lint role runs the other
+# gates AGENTS.md lists under "Before you commit": `bun run lint` (oxlint
+# through tools/oxlint/ratchet.ts, failing on any violation beyond
+# tools/oxlint/baseline.json), `bun run fmt:check` (oxfmt), `bun run
+# validate` (`ak validate`, the consistency/denylist gate) and `bun run build`
+# (`ak build`, which re-resolves references after the packager copies
+# transitive dependencies and writes only the gitignored dist/). The
+# pre-push hook's build gate fires only for pushes to main, so feature-branch
+# pushes rely on this command for it.
 
 commands:
   prepare: "bun install --frozen-lockfile"
   test: "bun test"
-  lint: "bun run validate && bun run build"
+  lint: "bun run lint && bun run fmt:check && bun run validate && bun run build"
 
 # Review findings the reviewer marks `auto-fix` (mechanical, low risk) are
 # fixed and re-reviewed without parking for approval, up to three rounds, the

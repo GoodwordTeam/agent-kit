@@ -103,9 +103,7 @@ for (let i = 0; i < MAX_ITERATIONS; i += 1) {
     break;
   }
   seen.push(current);
-  console.log(
-    `Iteration ${i + 1}: recomputed ${current.slice(0, 19)}...; writing it into the grant's approval.`,
-  );
+  console.log(`Iteration ${i + 1}: recomputed ${current.slice(0, 19)}...; writing it into the grant's approval.`);
   approval["artifact_hash"] = current;
 }
 
@@ -123,7 +121,9 @@ if (settled && bound === finalHash) {
 console.log("UNSATISFIABLE. The rule cannot be met by an honestly authored charter.");
 console.log(`  approval.artifact_hash holds ${bound.slice(0, 19)}...`);
 console.log(`  the charter now hashes to  ${finalHash.slice(0, 19)}...`);
-console.log(`  ${seen.length} distinct hashes in ${MAX_ITERATIONS} iterations; the value moves each time it is written.`);
+console.log(
+  `  ${seen.length} distinct hashes in ${MAX_ITERATIONS} iterations; the value moves each time it is written.`,
+);
 console.log("");
 console.log("This is a preimage problem, not an authoring difficulty. The approval hash is nested");
 console.log("inside the content it is a digest of, so writing it changes what it must equal.");

@@ -39,9 +39,14 @@ afterAll(removeProjectScratch);
 describe("registry", () => {
   test("a subdirectory resolves to its root and a worktree suffix is stripped", () => {
     const { dir, repo, config } = setup();
-    const registry = discoverProjects(config, rows(dir, [{ project: "myrepo/some-branch", cwd: join(repo, "packages", "api"), at: Date.now() }]));
+    const registry = discoverProjects(
+      config,
+      rows(dir, [{ project: "myrepo/some-branch", cwd: join(repo, "packages", "api"), at: Date.now() }]),
+    );
     const folder = projectFolderName(repo);
-    expect(registry).toEqual({ [folder]: { root: repo, mem_project: "myrepo", last_seen: registry[folder]!.last_seen } });
+    expect(registry).toEqual({
+      [folder]: { root: repo, mem_project: "myrepo", last_seen: registry[folder]!.last_seen },
+    });
     expect(readRegistry(config)).toEqual(registry);
   });
 
@@ -59,7 +64,9 @@ describe("registry", () => {
 
   test("rows outside the window are ignored", () => {
     const { dir, repo, config } = setup();
-    expect(discoverProjects(config, rows(dir, [{ project: "myrepo", cwd: repo, at: Date.now() - 20 * 86_400_000 }], 14))).toEqual({});
+    expect(
+      discoverProjects(config, rows(dir, [{ project: "myrepo", cwd: repo, at: Date.now() - 20 * 86_400_000 }], 14)),
+    ).toEqual({});
   });
 
   test("the newest sighting wins over an older registry entry", () => {
@@ -67,7 +74,9 @@ describe("registry", () => {
     registerRoot(config, repo, 5);
     const registry = discoverProjects(config, [{ project: "myrepo", cwd: repo, last_seen: 10 }]);
     expect(registry[projectFolderName(repo)]!.last_seen).toBe(10);
-    expect(discoverProjects(config, [{ project: "myrepo", cwd: repo, last_seen: 7 }])[projectFolderName(repo)]!.last_seen).toBe(10);
+    expect(
+      discoverProjects(config, [{ project: "myrepo", cwd: repo, last_seen: 7 }])[projectFolderName(repo)]!.last_seen,
+    ).toBe(10);
   });
 
   test("root resolution only stats", () => {

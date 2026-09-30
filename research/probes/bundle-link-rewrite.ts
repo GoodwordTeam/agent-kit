@@ -117,7 +117,11 @@ const TARGET = "../../references/probe-pack/REFERENCE.md";
 const CASES: ReadonlyArray<{ role: "control" | "subject"; name: string; line: string }> = [
   { role: "control", name: "code span only", line: `Load \`${TARGET}\` before naming any term.` },
   { role: "control", name: "markdown link only", line: `Load [the pack](${TARGET}) before naming any term.` },
-  { role: "subject", name: "both spellings, one line", line: `Load [\`${TARGET}\`](${TARGET}) before naming any term.` },
+  {
+    role: "subject",
+    name: "both spellings, one line",
+    line: `Load [\`${TARGET}\`](${TARGET}) before naming any term.`,
+  },
 ];
 
 let controlsHeld = true;

@@ -76,17 +76,13 @@
   ],
   "suggested_fix": {
     "summary": "Accumulate across the configured directories instead of returning inside the loop.",
-    "affected": [
-      "src/loader/artifacts.ts"
-    ]
+    "affected": ["src/loader/artifacts.ts"]
   },
   "verification": [
     {
       "check": "A document in a non-first configured directory is returned by the loader.",
       "kind": "command",
-      "supports": [
-        "AC-1"
-      ]
+      "supports": ["AC-1"]
     }
   ],
   "authorization_ref": {

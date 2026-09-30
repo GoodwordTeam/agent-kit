@@ -57,7 +57,12 @@ describe("the two kinds of skip are distinguishable, because only one of them bl
   });
 
   test("an authority-absent skip names the same check and does block", () => {
-    const issue = unavailable("x.authority-gone", "AUTHORING.md", "mandated role rows", "subject present, contract not");
+    const issue = unavailable(
+      "x.authority-gone",
+      "AUTHORING.md",
+      "mandated role rows",
+      "subject present, contract not",
+    );
     expect(issue.skipped).toBe("mandated role rows");
     expect(issue.blocking).toBe(true);
     expect(hasBlockingSkips([issue])).toBe(true);
@@ -129,7 +134,9 @@ describe("the summary line says which kind, at zero as well as above it", () => 
     // The end-to-end shape of the bug: subject present, authority absent. An
     // open entry is in the tree and there is no AUTHORING.md to resolve it
     // against, so the check cannot run and the run does not pass.
-    const open = ["# Contract defects", "", "## Open", "", "### one", "", "§5 requires:", "", "> something", ""].join("\n");
+    const open = ["# Contract defects", "", "## Open", "", "### one", "", "§5 requires:", "", "> something", ""].join(
+      "\n",
+    );
     const { text, code } = validateWith({ "CONTRACT-DEFECTS.md": open });
     expect(text).toContain("1 check unavailable: defect entry quotations");
     expect(code).toBe(1);
@@ -168,7 +175,12 @@ describe("the summary line says which kind, at zero as well as above it", () => 
       const repo = join(import.meta.dir, "..");
       const io = capture();
       runCli(["validate"], { cwd: repo, io: io.io });
-      const summary = io.text().split("\n").filter((l) => l.startsWith("ak validate:")).at(-1) ?? "";
+      const summary =
+        io
+          .text()
+          .split("\n")
+          .filter((l) => l.startsWith("ak validate:"))
+          .at(-1) ?? "";
       expect(summary).toMatch(/\d+ checks? skipped/);
       expect(summary).toMatch(/\d+ checks? unavailable/);
     },
@@ -283,9 +295,11 @@ describe("every skip in the validator is classified, so a new one cannot default
 
     // Compared as sets, so a rule that gains a second kind fails here rather
     // than passing on the strength of the kind it already had.
-    const miscategorised = [...found]
+    const miscategorised = found
+      .entries()
       .filter(([rule, kinds]) => JSON.stringify(CLASSIFIED[rule]?.slice().sort()) !== JSON.stringify(kinds))
-      .map(([rule, kinds]) => `${rule}: ${kinds.join("+")}`);
+      .map(([rule, kinds]) => `${rule}: ${kinds.join("+")}`)
+      .toArray();
     expect(miscategorised).toEqual([]);
   });
 

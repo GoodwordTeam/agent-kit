@@ -59,11 +59,14 @@ export function turnCapReceipt(subject: Subject, evaluatorDefault: number): { ma
 
 /** Parse and validate matrix YAML. Throws with every problem found, never a partial matrix. */
 export function parseMatrix(text: string, source = "eval matrix"): Matrix {
-  validator ??= new Ajv2020({ allErrors: true, strict: false }).compile(JSON.parse(readFileSync(MATRIX_SCHEMA, "utf8")) as object);
+  validator ??= new Ajv2020({ allErrors: true, strict: false }).compile(
+    JSON.parse(readFileSync(MATRIX_SCHEMA, "utf8")) as object,
+  );
   const value: unknown = parseYaml(text, { uniqueKeys: true });
   const problems: string[] = [];
   if (!validator(value)) {
-    for (const e of validator.errors ?? []) problems.push(`${e.instancePath === "" ? "(root)" : e.instancePath} ${e.message ?? "is invalid"}`);
+    for (const e of validator.errors ?? [])
+      problems.push(`${e.instancePath === "" ? "(root)" : e.instancePath} ${e.message ?? "is invalid"}`);
   } else {
     const seen = new Set<string>();
     const matrix = value as MatrixFile;
@@ -81,7 +84,11 @@ export function parseMatrix(text: string, source = "eval matrix"): Matrix {
   const matrix = value as MatrixFile;
   return {
     ...matrix,
-    subjects: matrix.subjects.map(({ "max-turns": maxTurns, ...subject }) => ({ ...subject, model: subject.model, maxTurns })),
+    subjects: matrix.subjects.map(({ "max-turns": maxTurns, ...subject }) => ({
+      ...subject,
+      model: subject.model,
+      maxTurns,
+    })),
   };
 }
 

@@ -30,7 +30,15 @@ function bound() {
   const store = makeDir();
   const bindingPath = join(home, "data", "T-S", "binding.json");
   const r = bind(
-    { fmHome: home, taskId: "T-S", project, mode: "agent-kit", bindingOut: bindingPath, host: "claude-code", evidence: { store: "mock", location: store } },
+    {
+      fmHome: home,
+      taskId: "T-S",
+      project,
+      mode: "agent-kit",
+      bindingOut: bindingPath,
+      host: "claude-code",
+      evidence: { store: "mock", location: store },
+    },
     { akRoot: REPO, bundleDir: makeBundle(), pinsDir: makeDir(), ledgerDir: ledger, upstream, now: FIXED_NOW },
   );
   if (!r.ok) throw new Error(r.errors.join("\n"));
@@ -42,7 +50,8 @@ function bound() {
     return { code, out, err: err.join("\n") };
   };
   const grants = (...ops: string[]) => {
-    for (const op of ops) expect(fm("grant", "--binding", bindingPath, "--operation", op, "--cwd", project).code).toBe(0);
+    for (const op of ops)
+      expect(fm("grant", "--binding", bindingPath, "--operation", op, "--cwd", project).code).toBe(0);
   };
   const record = (...gates: string[]) => {
     for (const gate of gates) {
@@ -89,7 +98,15 @@ describe("ak firstmate status complete is audited", () => {
     const { bindingPath, fm, grants, record } = bound();
     grants(...OPERATIONS);
     record("build-checks", "verify", "review-full", "review-readiness", "ship-preflight");
-    expect(fm("status", bindingPath, "complete", "--evidence", "build-check,verify-receipt,review-full,review-readiness,ship-dry-run").code).toBe(0);
+    expect(
+      fm(
+        "status",
+        bindingPath,
+        "complete",
+        "--evidence",
+        "build-check,verify-receipt,review-full,review-readiness,ship-dry-run",
+      ).code,
+    ).toBe(0);
   });
 
   test("the head is the one ship-preflight names: an edit after ship does not undo done, an edit before it does", () => {
@@ -149,7 +166,10 @@ describe("ak firstmate status complete is audited", () => {
     const { bindingPath, binding, fm, grants, record } = bound();
     grants(...OPERATIONS);
     record(...binding.required_gates);
-    writeFileSync(bindingPath, `${JSON.stringify({ ...binding, required_gates: ["verify", "ship-preflight"] }, null, 2)}\n`);
+    writeFileSync(
+      bindingPath,
+      `${JSON.stringify({ ...binding, required_gates: ["verify", "ship-preflight"] }, null, 2)}\n`,
+    );
     const r = fm("status", bindingPath, "--verify");
     expect(r.code).toBe(1);
     expect(r.err).toContain("not the sha256:");

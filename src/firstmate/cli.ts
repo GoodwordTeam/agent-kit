@@ -132,7 +132,9 @@ function options(a: Args, host: Host, ledgerDir: string): FirstmateOptions {
 
 function hostOf(a: Args): { host: Host } | { error: string } {
   const h = str(a, "host") ?? "claude-code";
-  return (HOSTS as readonly string[]).includes(h) ? { host: h as Host } : { error: `--host must be one of ${HOSTS.join(", ")}` };
+  return (HOSTS as readonly string[]).includes(h)
+    ? { host: h as Host }
+    : { error: `--host must be one of ${HOSTS.join(", ")}` };
 }
 
 function evidenceOf(a: Args): { evidence: Evidence | undefined } | { error: string } {
@@ -182,7 +184,12 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
       if (!need(a, ["fm-home", "project"], io, sub)) return 2;
       const fmHome = resolve(str(a, "fm-home")!);
       const result = preflight(
-        { fmHome, project: resolve(str(a, "project")!), host, evidence: evidence ?? evidenceFromEnv(readHomeEnv(fmHome)) },
+        {
+          fmHome,
+          project: resolve(str(a, "project")!),
+          host,
+          evidence: evidence ?? evidenceFromEnv(readHomeEnv(fmHome)),
+        },
         opts,
       );
       if (a.flags.get("json") === true) io.out(JSON.stringify(result, null, 2));
@@ -217,7 +224,9 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
     case "remove": {
       if (!need(a, ["fm-home"], io, sub)) return 2;
       const result =
-        sub === "install" ? install({ fmHome: str(a, "fm-home")!, evidence }, opts) : remove({ fmHome: str(a, "fm-home")! }, opts);
+        sub === "install"
+          ? install({ fmHome: str(a, "fm-home")!, evidence }, opts)
+          : remove({ fmHome: str(a, "fm-home")! }, opts);
       for (const e of result.errors) io.err(`ak firstmate ${sub}: ${e}`);
       for (const w of result.written) io.out(`wrote ${w}`);
       if (result.ok && sub === "remove") io.out("removed agent-kit configuration");
@@ -226,8 +235,15 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
     case "status": {
       const [file, outcome] = a.positional;
       const verifyOnly = a.flags.get("verify") === true;
-      if (file === undefined || (verifyOnly ? outcome !== undefined : outcome === undefined || !(OUTCOMES as readonly string[]).includes(outcome))) {
-        io.err(`ak firstmate status: needs <binding.json> and one of ${OUTCOMES.join(", ")}, or <binding.json> --verify`);
+      if (
+        file === undefined ||
+        (verifyOnly
+          ? outcome !== undefined
+          : outcome === undefined || !(OUTCOMES as readonly string[]).includes(outcome))
+      ) {
+        io.err(
+          `ak firstmate status: needs <binding.json> and one of ${OUTCOMES.join(", ")}, or <binding.json> --verify`,
+        );
         return 2;
       }
       if (!existsSync(file)) {
@@ -250,7 +266,12 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
       // Done is checked, not taken on the worker's word: the same audit Firstmate runs with --verify.
       if (verifyOnly || outcome === "complete") {
         const project = str(a, "project");
-        const refusals = auditRun({ binding: b, bindingPath: file, ledgerDir: opts.ledgerDir, project: project === undefined ? undefined : resolve(project) });
+        const refusals = auditRun({
+          binding: b,
+          bindingPath: file,
+          ledgerDir: opts.ledgerDir,
+          project: project === undefined ? undefined : resolve(project),
+        });
         for (const r of refusals) io.err(`ak firstmate status: ${r}`);
         if (refusals.length > 0) {
           io.err(
@@ -259,11 +280,16 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
           return 1;
         }
         if (verifyOnly) {
-          io.out(`verified: run ${b.run_id} has a current record for ${b.required_gates.join(", ")} and every grant matches the ledger`);
+          io.out(
+            `verified: run ${b.run_id} has a current record for ${b.required_gates.join(", ")} and every grant matches the ledger`,
+          );
           return 0;
         }
       }
-      const list = (name: string) => str(a, name)?.split(",").filter((s) => s !== "");
+      const list = (name: string) =>
+        str(a, name)
+          ?.split(",")
+          .filter((s) => s !== "");
       const at = str(a, "at");
       if (at !== undefined && !/^\d+$/.test(at)) {
         io.err("ak firstmate status: --at must be an epoch in seconds");
@@ -291,7 +317,11 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
       if (!need(a, ["binding", "operation"], io, sub)) return 2;
       const binding = resolve(str(a, "binding")!);
       const operation = str(a, "operation")!;
-      const result = grant({ binding, operation, cwd: resolve(str(a, "cwd") ?? process.cwd()) }, opts.akRoot, opts.ledgerDir);
+      const result = grant(
+        { binding, operation, cwd: resolve(str(a, "cwd") ?? process.cwd()) },
+        opts.akRoot,
+        opts.ledgerDir,
+      );
       if (!result.ok) {
         io.err(`ak firstmate grant: refused: ${result.reason}`);
         io.err(

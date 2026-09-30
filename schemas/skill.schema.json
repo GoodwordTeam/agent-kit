@@ -103,11 +103,20 @@
             "description": "A user-startable entrypoint cannot run on a grant alone; a grant-only entrypoint cannot be offered as a slash command.",
             "if": { "properties": { "invocation": { "const": "U" } }, "required": ["invocation"] },
             "then": { "properties": { "authority": { "enum": ["explicit", "explicit-or-delegated"] } } },
-            "else": { "properties": { "authority": { "enum": ["explicit-or-delegated", "delegated-grant", "active-review-run", "model"] } } }
+            "else": {
+              "properties": {
+                "authority": { "enum": ["explicit-or-delegated", "delegated-grant", "active-review-run", "model"] }
+              }
+            }
           },
           {
             "description": "An entrypoint that may run under delegation names the shared phase operation it runs, so the public wrapper and the controller use one protocol rather than two pipelines (plan 7.1).",
-            "if": { "properties": { "authority": { "enum": ["explicit-or-delegated", "delegated-grant", "active-review-run"] } }, "required": ["authority"] },
+            "if": {
+              "properties": {
+                "authority": { "enum": ["explicit-or-delegated", "delegated-grant", "active-review-run"] }
+              },
+              "required": ["authority"]
+            },
             "then": { "required": ["operation"] }
           }
         ]

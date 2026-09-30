@@ -31,9 +31,7 @@
       "id": "loader-callers",
       "tool": "lexical",
       "query": "loadArtifacts",
-      "scope": [
-        "src/**"
-      ],
+      "scope": ["src/**"],
       "result_count": 4,
       "turn": 1
     },
@@ -56,9 +54,7 @@
       "id": "loader-generated",
       "tool": "lexical",
       "query": "loadArtifacts",
-      "scope": [
-        "generated/**"
-      ],
+      "scope": ["generated/**"],
       "result_count": 0,
       "turn": 3
     }
@@ -129,9 +125,7 @@
       "provider": "example-call-graph"
     }
   ],
-  "unknowns": [
-    "Does any caller outside this repository depend on the single-directory behaviour?"
-  ],
+  "unknowns": ["Does any caller outside this repository depend on the single-directory behaviour?"],
   "do_not_touch": [
     {
       "path": "generated/**",
@@ -146,8 +140,6 @@
         "suggested_tool": "manual-read"
       }
     ],
-    "priority_order": [
-      "The dispatch table in src/report/registry.ts"
-    ]
+    "priority_order": ["The dispatch table in src/report/registry.ts"]
   }
 }

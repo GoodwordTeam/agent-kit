@@ -36,7 +36,17 @@
         "includes": {
           "description": "What was packaged with the snapshot for the seats.",
           "type": "array",
-          "items": { "enum": ["diff", "requirements", "standards", "tests", "dependency-context", "prior-findings", "verification-receipts"] }
+          "items": {
+            "enum": [
+              "diff",
+              "requirements",
+              "standards",
+              "tests",
+              "dependency-context",
+              "prior-findings",
+              "verification-receipts"
+            ]
+          }
         },
         "excludes": {
           "description": "What is deliberately withheld from every seat.",
@@ -209,7 +219,14 @@
       "additionalProperties": false,
       "required": ["reason", "invalidated_approvals", "new_scope"],
       "properties": {
-        "reason": { "enum": ["architecture-changed", "requirements-changed", "comparison-base-changed", "affected-surface-changed"] },
+        "reason": {
+          "enum": [
+            "architecture-changed",
+            "requirements-changed",
+            "comparison-base-changed",
+            "affected-surface-changed"
+          ]
+        },
         "invalidated_approvals": {
           "type": "array",
           "items": { "$ref": "common.schema.json#/$defs/artifact_ref" }

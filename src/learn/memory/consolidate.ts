@@ -46,10 +46,16 @@ export const INPUT_CHARS = 80_000;
 export const OBS_PER_EPISODE = 15;
 const SCOPES = new Set(["repo", "subtree", "technology", "global"]);
 
-type Stratifiable = Pick<Episode, "sid" | "started" | "completed" | "files_modified" | "failure_signals" | "corrections" | "priority">;
+type Stratifiable = Pick<
+  Episode,
+  "sid" | "started" | "completed" | "files_modified" | "failure_signals" | "corrections" | "priority"
+>;
 
 /** Up to `batch` episodes: 40% failures/corrections, 40% successful repeats, 20% novelty; priority descending within each. */
-export function stratify<T extends Stratifiable>(episodes: readonly T[], batch: number): { chosen: T[]; failures: T[] } {
+export function stratify<T extends Stratifiable>(
+  episodes: readonly T[],
+  batch: number,
+): { chosen: T[]; failures: T[] } {
   const seen = new Set<string>();
   const repeats = new Set<string>();
   for (const episode of [...episodes].sort((a, b) => a.started - b.started)) {
@@ -76,7 +82,9 @@ export function pairFailures<T extends Stratifiable>(failures: readonly T[], all
   for (const failure of failures) {
     const later = all.filter(
       (episode) =>
-        episode.started > failure.started && episode.completed && episode.files_modified.some((path) => failure.files_modified.includes(path)),
+        episode.started > failure.started &&
+        episode.completed &&
+        episode.files_modified.some((path) => failure.files_modified.includes(path)),
     );
     if (later.length > 0) pairs.push([failure, later.reduce((a, b) => (b.started < a.started ? b : a))]);
   }
@@ -151,7 +159,10 @@ export function consolidatePrompt(
     OUTPUT_CONTRACT,
     [
       { title: "Existing lessons", body: lessonsIndexText(ledger) },
-      { title: "Failure pairs (failed or corrected episode -> later completed episode on the same files)", body: pairText },
+      {
+        title: "Failure pairs (failed or corrected episode -> later completed episode on the same files)",
+        body: pairText,
+      },
       { title: "Episodes", body: texts.join("\n") || "(none)" },
     ],
     ctx.env,
@@ -170,15 +181,20 @@ export function sessionsOf(evidence: readonly string[], obsSession: ReadonlyMap<
 }
 
 export function nextLessonId(ledger: Ledger): string {
-  const numbers = [...loadLessons(ledger).values()]
+  const numbers = loadLessons(ledger)
+    .values()
     .map(({ path }) => basename(path, ".md").slice(3))
     .filter((digits) => /^\d+$/.test(digits))
-    .map(Number);
+    .map(Number)
+    .toArray();
   return `ls-${String(numbers.length > 0 ? Math.max(...numbers) + 1 : 1).padStart(3, "0")}`;
 }
 
 export function renderLesson(meta: PageMeta, evidence: readonly string[]): string {
-  return renderPage(meta, `\n## Statement\n${str(meta.statement)}\n\n## Evidence\n${evidence.map((id) => `- ${id}\n`).join("")}`);
+  return renderPage(
+    meta,
+    `\n## Statement\n${str(meta.statement)}\n\n## Evidence\n${evidence.map((id) => `- ${id}\n`).join("")}`,
+  );
 }
 
 interface JudgedLesson {
@@ -225,7 +241,14 @@ export function applyConsolidation(
 ): ConsolidateSummary {
   const today = options.today ?? todayLocal();
   const existing = loadLessons(ledger);
-  const summary: ConsolidateSummary = { created: [], dropped: 0, superseded: [], confirmed: [], review_events: 0, review_events_parked: 0 };
+  const summary: ConsolidateSummary = {
+    created: [],
+    dropped: 0,
+    superseded: [],
+    confirmed: [],
+    review_events: 0,
+    review_events_parked: 0,
+  };
   const lessons = Array.isArray(reply.lessons) ? (reply.lessons as JudgedLesson[]) : [];
   for (const lesson of lessons) {
     if (lesson === null || typeof lesson !== "object") continue;
@@ -243,7 +266,9 @@ export function applyConsolidation(
       statement,
       scope: typeof lesson.scope === "string" && SCOPES.has(lesson.scope) ? lesson.scope : "repo",
       status: sessions >= 2 ? "confirmed" : "hypothesis",
-      confidence: Math.min(1, Math.max(0, Number.isFinite(confidence) && confidence !== 0 ? confidence : 0.5)).toFixed(2),
+      confidence: Math.min(1, Math.max(0, Number.isFinite(confidence) && confidence !== 0 ? confidence : 0.5)).toFixed(
+        2,
+      ),
       sessions,
       tags: cleanTags(lesson.tags),
       evidence,
@@ -269,7 +294,14 @@ export function applyConsolidation(
   }
   if (options.review !== undefined) {
     const events = Array.isArray(reply.review_events) ? (reply.review_events as JudgedEvent[]) : [];
-    const delivered = forwardReviewEvents(options.review.ledger, ledger, options.review.project, events, valid, options.runId ?? null);
+    const delivered = forwardReviewEvents(
+      options.review.ledger,
+      ledger,
+      options.review.project,
+      events,
+      valid,
+      options.runId ?? null,
+    );
     summary.review_events = delivered.forwarded;
     summary.review_events_parked = delivered.parked;
   }
@@ -281,7 +313,12 @@ export function applyConsolidation(
 export const PENDING_REVIEW_FILE = "raw/pending-review-events.jsonl";
 
 /** Evidence-backed findings and corrections from a judge reply, as review events. Deduplicated later by the hash of the text. */
-export function buildReviewEvents(project: string, events: readonly JudgedEvent[], valid: ReadonlySet<string>, runId: string | null): ReviewEvent[] {
+export function buildReviewEvents(
+  project: string,
+  events: readonly JudgedEvent[],
+  valid: ReadonlySet<string>,
+  runId: string | null,
+): ReviewEvent[] {
   const out: ReviewEvent[] = [];
   for (const event of events) {
     if (event === null || typeof event !== "object") continue;
@@ -325,7 +362,11 @@ export function buildReviewEvents(project: string, events: readonly JudgedEvent[
  * `appendEvents` deduplicates by hash, so a crash between the two resends
  * nothing twice.
  */
-export function deliverReviewEvents(review: Ledger, memory: Ledger, events: readonly ReviewEvent[]): { forwarded: number; parked: number } {
+export function deliverReviewEvents(
+  review: Ledger,
+  memory: Ledger,
+  events: readonly ReviewEvent[],
+): { forwarded: number; parked: number } {
   const release = review.tryLock();
   if (release === null) {
     appendJsonl(memory.path(PENDING_REVIEW_FILE), events);
@@ -356,7 +397,11 @@ export function forwardReviewEvents(
 }
 
 /** The lesson's origin as a knowledgebase trigger: a stated preference or a corrected session is a correction. */
-function triggerOf(meta: PageMeta, obsSession: ReadonlyMap<string, string>, corrected: ReadonlySet<string>): "correction" | "failure" {
+function triggerOf(
+  meta: PageMeta,
+  obsSession: ReadonlyMap<string, string>,
+  corrected: ReadonlySet<string>,
+): "correction" | "failure" {
   if (list(meta.tags).includes("preference")) return "correction";
   const sessions = sessionsOf(list(meta.evidence), obsSession);
   return [...sessions].some((sid) => corrected.has(sid)) ? "correction" : "failure";
@@ -371,7 +416,8 @@ export function consolidate(
   trigger = "tick",
 ): string {
   // Events parked by an earlier run go out as soon as the review ledger is free, even on a night with nothing to consolidate.
-  if (review !== null && !ctx.config.dryRun && existsSync(ledger.path(PENDING_REVIEW_FILE))) deliverReviewEvents(review, ledger, []);
+  if (review !== null && !ctx.config.dryRun && existsSync(ledger.path(PENDING_REVIEW_FILE)))
+    deliverReviewEvents(review, ledger, []);
   const all = loadEpisodes(ledger);
   const pending = unconsolidatedEpisodes(ledger);
   if (pending.length === 0) return "nightly: no unconsolidated episodes";
@@ -406,7 +452,9 @@ export function consolidate(
     runId,
   });
   markConsolidated(ledger, includedSids, runId);
-  const corrected = new Set(included.filter((episode) => episode.corrections > 0).map((episode) => sid8(episode.sid).slice(1)));
+  const corrected = new Set(
+    included.filter((episode) => episode.corrections > 0).map((episode) => sid8(episode.sid).slice(1)),
+  );
   const lessons = loadLessons(ledger);
   const proposals: string[] = [];
   const skippedProposals: string[] = [];
@@ -420,7 +468,7 @@ export function consolidate(
   }
   saveState(ledger, { ...readState(ledger), last_nightly: todayLocal() });
   const log = typeof reply.log === "string" ? reply.log : "";
-  appendRun(ledger, {
+  const run = {
     job: "nightly",
     id: runId,
     status: "ok",
@@ -431,9 +479,9 @@ export function consolidate(
     tokens_in: tokens(prompt),
     ...summary,
     proposals,
-    ...(skippedProposals.length > 0 ? { proposals_skipped: skippedProposals } : {}),
-    log: log.slice(0, 200),
-  });
+  };
+  const recorded = skippedProposals.length > 0 ? { ...run, proposals_skipped: skippedProposals } : run;
+  appendRun(ledger, { ...recorded, log: log.slice(0, 200) });
   logLine(
     ledger,
     `nightly ${runId}: ${included.length}/${chosen.length} episodes, +${summary.created.length} lessons, ${summary.dropped} dropped, ` +

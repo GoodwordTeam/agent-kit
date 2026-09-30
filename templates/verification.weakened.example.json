@@ -22,11 +22,7 @@
   "kind": "command",
   "check": "loader-suite",
   "command": {
-    "argv": [
-      "bun",
-      "test",
-      "tests/loader"
-    ],
+    "argv": ["bun", "test", "tests/loader"],
     "cwd": "src/loader",
     "started_at": "2026-09-19T09:00:00Z",
     "duration_ms": 3980
@@ -54,9 +50,7 @@
     ],
     "config_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
   },
-  "supports": [
-    "AC-2"
-  ],
+  "supports": ["AC-2"],
   "ticket": {
     "id": "example-ticket-1",
     "schema": "ticket",

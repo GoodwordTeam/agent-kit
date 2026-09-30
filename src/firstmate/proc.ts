@@ -23,7 +23,12 @@ export function run(cmd: readonly string[], cwd: string, env?: Record<string, st
       stderr: proc.stderr.toString().trim(),
     };
   } catch (e) {
-    return { code: -1, stdout: new Uint8Array(), text: "", stderr: `cannot run ${cmd[0]} in ${cwd}: ${(e as Error).message}` };
+    return {
+      code: -1,
+      stdout: new Uint8Array(),
+      text: "",
+      stderr: `cannot run ${cmd[0]} in ${cwd}: ${(e as Error).message}`,
+    };
   }
 }
 

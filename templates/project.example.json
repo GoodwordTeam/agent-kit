@@ -45,22 +45,13 @@
       "coordinator": "kb-merge-coordinator",
       "atomic": false
     },
-    "adapter_operations": [
-      "readContext",
-      "recordDecision",
-      "publishArtifact",
-      "linkPullRequests",
-      "proposeLesson"
-    ]
+    "adapter_operations": ["readContext", "recordDecision", "publishArtifact", "linkPullRequests", "proposeLesson"]
   },
   "standards": [
     {
       "id": "authoring-contract",
       "path": "AUTHORING.md",
-      "applies_to": [
-        "skills/**",
-        "templates/**"
-      ],
+      "applies_to": ["skills/**", "templates/**"],
       "lane": "code-review/project-standards"
     }
   ],
@@ -97,9 +88,7 @@
     {
       "id": "closure-needs-a-receipt",
       "requirement": "A finding reaches resolved only with a verification receipt written by someone other than its author.",
-      "evidence_required": [
-        "a verification artifact bound to the reviewed revision"
-      ],
+      "evidence_required": ["a verification artifact bound to the reviewed revision"],
       "blocks": "ship"
     }
   ],
@@ -118,14 +107,8 @@
     ],
     "policy": "Every state change is written to the tracker first; the forge issue is refreshed from it and is never edited directly."
   },
-  "profiles": [
-    "core",
-    "autonomy"
-  ],
-  "packs": [
-    "pack-test",
-    "pack-secure"
-  ],
+  "profiles": ["core", "autonomy"],
+  "packs": ["pack-test", "pack-secure"],
   "environments": [
     {
       "id": "example-ci",

@@ -109,10 +109,6 @@
       "why": "Callers index the result, so a generator broke them."
     }
   ],
-  "next_steps": [
-    "Finish the three-source test, then re-run both suites at the anchor."
-  ],
-  "skills": [
-    "super-verify"
-  ]
+  "next_steps": ["Finish the three-source test, then re-run both suites at the anchor."],
+  "skills": ["super-verify"]
 }

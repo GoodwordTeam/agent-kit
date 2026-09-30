@@ -47,7 +47,13 @@ export function loadTrackerBinding(projectRoot: string, schemaRoot: string): Bin
   if (text === null) {
     return {
       binding: null,
-      issues: [note("tracker.unbound", BINDING_FILE, "No binding: this folder reaches no backend, so the knowledgebase's ticket records are the system of record when the project record agrees, and every ticket operation refuses otherwise (adapters/tracker/CONTRACT.md §2).")],
+      issues: [
+        note(
+          "tracker.unbound",
+          BINDING_FILE,
+          "No binding: this folder reaches no backend, so the knowledgebase's ticket records are the system of record when the project record agrees, and every ticket operation refuses otherwise (adapters/tracker/CONTRACT.md §2).",
+        ),
+      ],
     };
   }
   let value: unknown;
@@ -60,7 +66,16 @@ export function loadTrackerBinding(projectRoot: string, schemaRoot: string): Bin
   const set = compileSchemas(schemaRoot);
   const validate = set.validatorFor("tracker-binding");
   if (validate === undefined) {
-    return { binding: null, issues: [error("tracker.binding-schema-missing", BINDING_FILE, "schemas/tracker-binding.schema.json did not compile, so the binding cannot be checked and is not trusted.")] };
+    return {
+      binding: null,
+      issues: [
+        error(
+          "tracker.binding-schema-missing",
+          BINDING_FILE,
+          "schemas/tracker-binding.schema.json did not compile, so the binding cannot be checked and is not trusted.",
+        ),
+      ],
+    };
   }
   if (!validate(value)) {
     // Messages name the path and the constraint, never the value: a token
@@ -68,9 +83,17 @@ export function loadTrackerBinding(projectRoot: string, schemaRoot: string): Bin
     // offending value would print it.
     const detail = (validate.errors ?? [])
       .slice(0, 6)
-      .map((e) => `${e.instancePath === "" ? "(root)" : e.instancePath} ${e.message ?? "is invalid"}${e.keyword === "additionalProperties" ? ` (${String((e.params as { additionalProperty?: string }).additionalProperty)})` : ""}`)
+      .map(
+        (e) =>
+          `${e.instancePath === "" ? "(root)" : e.instancePath} ${e.message ?? "is invalid"}${e.keyword === "additionalProperties" ? ` (${String((e.params as { additionalProperty?: string }).additionalProperty)})` : ""}`,
+      )
       .join("; ");
-    return { binding: null, issues: [error("tracker.binding-invalid", BINDING_FILE, `Does not match schemas/tracker-binding.schema.json: ${detail}`)] };
+    return {
+      binding: null,
+      issues: [
+        error("tracker.binding-invalid", BINDING_FILE, `Does not match schemas/tracker-binding.schema.json: ${detail}`),
+      ],
+    };
   }
   const binding = value as TrackerBinding;
   const backendIssues = checkBackend(binding, schemaRoot);
@@ -90,7 +113,13 @@ export const BACKEND_SCHEMAS_DIR = "schemas/tracker-backends";
 function checkBackend(binding: TrackerBinding, schemaRoot: string): Issue[] {
   const id = binding.backend;
   if (!existsSync(join(schemaRoot, BACKENDS_DIR, `${id}.md`))) {
-    return [error("tracker.backend-unknown", BINDING_FILE, `backend '${id}' has no document at ${BACKENDS_DIR}/${id}.md, so no operation knows how to reach it. A binding is added by writing that document (adapters/tracker/CONTRACT.md §5).`)];
+    return [
+      error(
+        "tracker.backend-unknown",
+        BINDING_FILE,
+        `backend '${id}' has no document at ${BACKENDS_DIR}/${id}.md, so no operation knows how to reach it. A binding is added by writing that document (adapters/tracker/CONTRACT.md §5).`,
+      ),
+    ];
   }
   const file = `${BACKEND_SCHEMAS_DIR}/${id}.schema.json`;
   const text = readTextIfPresent(join(schemaRoot, file));
@@ -100,7 +129,13 @@ function checkBackend(binding: TrackerBinding, schemaRoot: string): Issue[] {
     const ajv = new Ajv2020({ strict: false, allErrors: true });
     validate = ajv.compile(JSON.parse(text) as object);
   } catch (cause) {
-    return [error("tracker.binding-schema-missing", BINDING_FILE, `${file} did not compile, so the binding cannot be checked and is not trusted: ${cause instanceof Error ? cause.message : String(cause)}`)];
+    return [
+      error(
+        "tracker.binding-schema-missing",
+        BINDING_FILE,
+        `${file} did not compile, so the binding cannot be checked and is not trusted: ${cause instanceof Error ? cause.message : String(cause)}`,
+      ),
+    ];
   }
   if (validate(binding)) return [];
   const detail = (validate.errors ?? [])
@@ -139,7 +174,12 @@ export function findProjectRoot(start: string): string {
 function git(root: string, args: string[], options: { input?: string; timeout?: number; literal?: boolean } = {}) {
   const { literal = true, ...spawn } = options;
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
-  return spawnSync("git", [...(literal ? ["--literal-pathspecs"] : []), "-C", root, ...args], { encoding: "utf8", env, maxBuffer: 64 * 1024 * 1024, ...spawn });
+  return spawnSync("git", [...(literal ? ["--literal-pathspecs"] : []), "-C", root, ...args], {
+    encoding: "utf8",
+    env,
+    maxBuffer: 64 * 1024 * 1024,
+    ...spawn,
+  });
 }
 
 /** How long the history scan may run before it is reported as not run. */
@@ -154,7 +194,8 @@ export const HISTORY_TIMEOUT_MS = 30_000;
  */
 function ignoringRule(root: string, file: string): { source: string; pattern: string } | null {
   const input = `./${file}\0`;
-  if (git(root, ["check-ignore", "-q", "-z", "--stdin", "--no-index"], { input, literal: false }).status !== 0) return null;
+  if (git(root, ["check-ignore", "-q", "-z", "--stdin", "--no-index"], { input, literal: false }).status !== 0)
+    return null;
   const verbose = git(root, ["check-ignore", "-v", "-z", "--stdin", "--no-index"], { input, literal: false });
   if (verbose.status !== 0) return null;
   const [source = "", , pattern = ""] = verbose.stdout.split("\0");
@@ -192,7 +233,12 @@ function ignoredAtHead(root: string, file: string): boolean {
       writeFileSync(join(scratch, rules), blob.stdout);
     }
     const excludes = `core.excludesFile=${join(scratch, ".git", "no-excludes")}`;
-    return git(scratch, ["-c", excludes, "check-ignore", "-q", "-z", "--stdin", "--no-index"], { input: `./${path}\0`, literal: false }).status === 0;
+    return (
+      git(scratch, ["-c", excludes, "check-ignore", "-q", "-z", "--stdin", "--no-index"], {
+        input: `./${path}\0`,
+        literal: false,
+      }).status === 0
+    );
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
@@ -207,7 +253,11 @@ function ignoredAtHead(root: string, file: string): boolean {
  * token, which is the cross-project write the binding exists to prevent
  * (adapters/tracker/backends/linear-linearis.md §3).
  */
-export function checkTrackerSecret(projectRoot: string, binding: TrackerBinding, historyTimeoutMs = HISTORY_TIMEOUT_MS): Issue[] {
+export function checkTrackerSecret(
+  projectRoot: string,
+  binding: TrackerBinding,
+  historyTimeoutMs = HISTORY_TIMEOUT_MS,
+): Issue[] {
   const issues: Issue[] = [];
   const file = binding.token_file;
   const path = join(projectRoot, file);
@@ -218,26 +268,62 @@ export function checkTrackerSecret(projectRoot: string, binding: TrackerBinding,
   if (text !== null) {
     const inside = relative(realpathSync(projectRoot), realpathSync(path));
     if (inside.startsWith("..") || isAbsolute(inside)) {
-      issues.push(error("tracker.secret-outside-project", file, "token_file resolves outside the project folder. The secret is project-local (CONTRACT.md §5), so a link to a shared or global token is refused."));
+      issues.push(
+        error(
+          "tracker.secret-outside-project",
+          file,
+          "token_file resolves outside the project folder. The secret is project-local (CONTRACT.md §5), so a link to a shared or global token is refused.",
+        ),
+      );
     }
   }
   if (text === null) {
-    issues.push(error("tracker.secret-absent", file, "token_file does not exist. Every ticket operation refuses before invoking the backend until the operator creates it (CONTRACT.md §5)."));
+    issues.push(
+      error(
+        "tracker.secret-absent",
+        file,
+        "token_file does not exist. Every ticket operation refuses before invoking the backend until the operator creates it (CONTRACT.md §5).",
+      ),
+    );
   } else if (text.trim() === "") {
-    issues.push(error("tracker.secret-empty", file, `token_file is blank (${statSync(path).size} bytes). A blank token is refused rather than passed, because the backend would treat it as absent and reach for an operator-global credential.`));
+    issues.push(
+      error(
+        "tracker.secret-empty",
+        file,
+        `token_file is blank (${statSync(path).size} bytes). A blank token is refused rather than passed, because the backend would treat it as absent and reach for an operator-global credential.`,
+      ),
+    );
   }
   if (text !== null && (statSync(path).mode & 0o044) !== 0) {
-    issues.push(warning("tracker.secret-readable-by-others", file, "token_file is readable by its group or by other users of this machine. Restrict it to its owner: chmod 600."));
+    issues.push(
+      warning(
+        "tracker.secret-readable-by-others",
+        file,
+        "token_file is readable by its group or by other users of this machine. Restrict it to its owner: chmod 600.",
+      ),
+    );
   }
 
   const top = git(projectRoot, ["rev-parse", "--show-toplevel"]);
   if (top.status !== 0) {
-    issues.push(warning("tracker.not-a-git-repository", file, "Not inside a git repository, so whether the secret is ignored, tracked or in history was not checked."));
+    issues.push(
+      warning(
+        "tracker.not-a-git-repository",
+        file,
+        "Not inside a git repository, so whether the secret is ignored, tracked or in history was not checked.",
+      ),
+    );
     return issues;
   }
 
   if (git(projectRoot, ["ls-files", "--error-unmatch", "--", file]).status === 0) {
-    issues.push(error("tracker.secret-tracked", file, "token_file is tracked by git. Remove it from the index and rotate the token: nothing token-bearing is committed (CONTRACT.md §5)."));
+    issues.push(
+      error(
+        "tracker.secret-tracked",
+        file,
+        "token_file is tracked by git. Remove it from the index and rotate the token: nothing token-bearing is committed (CONTRACT.md §5).",
+      ),
+    );
   }
 
   // A project .gitignore, specifically: it protects every operator who follows
@@ -245,19 +331,48 @@ export function checkTrackerSecret(projectRoot: string, binding: TrackerBinding,
   // machine that has it.
   const source = ignoringRule(projectRoot, file)?.source ?? "";
   if (source === "" || isAbsolute(source) || basename(source) !== ".gitignore") {
-    issues.push(error("tracker.secret-not-ignored", file, "token_file is not ignored by a .gitignore in this repository. Add it to the project's .gitignore, so no operator following this binding can stage it."));
+    issues.push(
+      error(
+        "tracker.secret-not-ignored",
+        file,
+        "token_file is not ignored by a .gitignore in this repository. Add it to the project's .gitignore, so no operator following this binding can stage it.",
+      ),
+    );
   } else if (!ignoredAtHead(projectRoot, file)) {
     // An untracked .gitignore, or a rule not yet committed to a tracked one, is
     // machine-local in the same way: the next clone has no rule.
-    issues.push(error("tracker.secret-not-ignored", file, `token_file is ignored only by an uncommitted rule in ${source}. Commit that .gitignore rule, so every clone of the project ignores it.`));
+    issues.push(
+      error(
+        "tracker.secret-not-ignored",
+        file,
+        `token_file is ignored only by an uncommitted rule in ${source}. Commit that .gitignore rule, so every clone of the project ignores it.`,
+      ),
+    );
   }
 
-  const history = git(projectRoot, ["log", "--all", "--full-history", "--format=%h", "-1", "--", file], { timeout: historyTimeoutMs });
+  const history = git(projectRoot, ["log", "--all", "--full-history", "--format=%h", "-1", "--", file], {
+    timeout: historyTimeoutMs,
+  });
   if (history.status !== 0) {
-    const why = history.error !== undefined || history.signal !== null ? `did not finish within ${historyTimeoutMs} ms` : "failed";
-    issues.push(warning("tracker.history-unreadable", file, `git log ${why}, so whether token_file was ever committed was not checked.`));
+    const why =
+      history.error !== undefined || history.signal !== null
+        ? `did not finish within ${historyTimeoutMs} ms`
+        : "failed";
+    issues.push(
+      warning(
+        "tracker.history-unreadable",
+        file,
+        `git log ${why}, so whether token_file was ever committed was not checked.`,
+      ),
+    );
   } else if (history.stdout.trim() !== "") {
-    issues.push(error("tracker.secret-in-history", file, `token_file appears in commit ${history.stdout.trim()}. Untracking it now does not remove it from history: rotate the token.`));
+    issues.push(
+      error(
+        "tracker.secret-in-history",
+        file,
+        `token_file appears in commit ${history.stdout.trim()}. Untracking it now does not remove it from history: rotate the token.`,
+      ),
+    );
   }
   return issues;
 }

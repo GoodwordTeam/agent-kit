@@ -3,7 +3,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 const [a, b, dir] = process.argv.slice(2) as [string, string, string];
-const load = async (tree: string) => (await import(join(tree, "tests/learn/evals/trigger-eval.ts"))).readOnlyShell as (c: string) => boolean;
+const load = async (tree: string) =>
+  (await import(join(tree, "tests/learn/evals/trigger-eval.ts"))).readOnlyShell as (c: string) => boolean;
 const [readOnlyA, readOnlyB] = [await load(a), await load(b)];
 const { unwrap } = await import(join(b, "tests/learn/evals/subjects/shell.ts"));
 const commands = new Set<string>();

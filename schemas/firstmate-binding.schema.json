@@ -104,7 +104,9 @@
       "type": "array",
       "minItems": 1,
       "uniqueItems": true,
-      "items": { "enum": ["build-checks", "verify", "review-full", "review-delta", "review-readiness", "ship-preflight"] }
+      "items": {
+        "enum": ["build-checks", "verify", "review-full", "review-delta", "review-readiness", "ship-preflight"]
+      }
     },
     "packs": {
       "type": "array",

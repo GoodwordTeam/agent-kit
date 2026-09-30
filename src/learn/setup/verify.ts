@@ -10,7 +10,16 @@ import { readJson } from "../core/store.ts";
 import { readRegistry } from "../memory/registry.ts";
 import { judgeBinary } from "./doctor.ts";
 import { LABEL, schedulerKind, unitPaths } from "./schedule.ts";
-import { CONTEXT_OBSERVATIONS, claudeSettingsPath, codexHome, countHook, type HookDoc, MEM_MODE, memDir, type SetupDeps } from "./wire.ts";
+import {
+  CONTEXT_OBSERVATIONS,
+  claudeSettingsPath,
+  codexHome,
+  countHook,
+  type HookDoc,
+  MEM_MODE,
+  memDir,
+  type SetupDeps,
+} from "./wire.ts";
 
 export interface VerifyResult {
   label: string;
@@ -25,14 +34,21 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
   const check = (label: string, ok: boolean, detail = "") => out.push({ label, ok, detail });
 
   const claude = readJson<HookDoc>(claudeSettingsPath(ctx), {});
-  for (const [event, verb] of [["SessionStart", "session-start"], ["Stop", "stop"]] as const) {
+  for (const [event, verb] of [
+    ["SessionStart", "session-start"],
+    ["Stop", "stop"],
+  ] as const) {
     const n = countHook(claude, event, verb);
     check(`claude ${event} hook`, n === 1, `${n} entries`);
   }
   const codexHooks = join(codexHome(ctx, deps), "hooks.json");
   if (existsSync(codexHooks)) {
     const codex = readJson<HookDoc>(codexHooks, {});
-    for (const [event, verb] of [["SessionStart", "session-start"], ["UserPromptSubmit", "prompt"], ["Stop", "stop --source codex"]] as const) {
+    for (const [event, verb] of [
+      ["SessionStart", "session-start"],
+      ["UserPromptSubmit", "prompt"],
+      ["Stop", "stop --source codex"],
+    ] as const) {
       const n = countHook(codex, event, verb);
       check(`codex ${event} hook`, n === 1, `${n} entries`);
     }
@@ -41,7 +57,11 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
   if (existsSync(ctx.config.memDb)) {
     const dir = memDir(ctx, deps);
     const settings = readJson<Record<string, unknown>>(join(dir, "settings.json"), {});
-    check("claude-mem observation budget", settings.CLAUDE_MEM_CONTEXT_OBSERVATIONS === CONTEXT_OBSERVATIONS, String(settings.CLAUDE_MEM_CONTEXT_OBSERVATIONS));
+    check(
+      "claude-mem observation budget",
+      settings.CLAUDE_MEM_CONTEXT_OBSERVATIONS === CONTEXT_OBSERVATIONS,
+      String(settings.CLAUDE_MEM_CONTEXT_OBSERVATIONS),
+    );
     check("claude-mem mode file", existsSync(join(dir, "modes", `${MEM_MODE}.json`)));
   }
 
@@ -79,7 +99,8 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
 
 export function verify(ctx: LearnContext, deps: SetupDeps, repo?: string): number {
   const results = verifyChecks(ctx, deps, repo);
-  for (const result of results) ctx.io.out(`  ${result.ok ? "PASS" : "FAIL"}  ${result.label}${result.detail === "" ? "" : `  ${result.detail}`}`);
+  for (const result of results)
+    ctx.io.out(`  ${result.ok ? "PASS" : "FAIL"}  ${result.label}${result.detail === "" ? "" : `  ${result.detail}`}`);
   const failed = results.filter((result) => !result.ok).length;
   ctx.io.out(failed === 0 ? "\nall checks passed" : `\n${failed} checks failed`);
   return failed === 0 ? 0 : 1;

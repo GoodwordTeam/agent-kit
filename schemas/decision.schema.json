@@ -110,7 +110,14 @@
       "description": "The deterministic policy check (plan 7.3). It is performed by policy against artifact evidence, not by a judgment, and every component is recorded so a failure names itself. Confidence alone cannot grant authority; absent required evidence fails closed. 'charter_permits' and 'checkpoint_in_charter' are what make a sensitive action decidable at all: the charter entry a human approved up front, naming the action and its scope, is the permission, and the pair may never enlarge its own authority mid-run (ruling `sensitive-actions-need-approved-charter-entry`, release scenario 5).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["deterministic", "charter_permits", "required_evidence_present", "seats_independent", "checkpoint_in_charter", "result"],
+      "required": [
+        "deterministic",
+        "charter_permits",
+        "required_evidence_present",
+        "seats_independent",
+        "checkpoint_in_charter",
+        "result"
+      ],
       "properties": {
         "deterministic": { "const": true },
         "charter_permits": { "type": "boolean" },
@@ -195,7 +202,10 @@
           },
           "judgments": { "minItems": 2 },
           "agreement": { "const": true },
-          "ruling": { "properties": { "chosen_option": { "$ref": "common.schema.json#/$defs/kebab_id" } }, "required": ["chosen_option"] }
+          "ruling": {
+            "properties": { "chosen_option": { "$ref": "common.schema.json#/$defs/kebab_id" } },
+            "required": ["chosen_option"]
+          }
         }
       },
       "x-validator-rule": "decision.ruling-requires-a-passed-authority-check-not-mere-agreement"
@@ -233,7 +243,9 @@
       "description": "A judgment raising the escalation flag stops the checkpoint rather than being outvoted (plan 7.3).",
       "if": {
         "required": ["judgments"],
-        "properties": { "judgments": { "contains": { "properties": { "escalate": { "const": true } }, "required": ["escalate"] } } }
+        "properties": {
+          "judgments": { "contains": { "properties": { "escalate": { "const": true } }, "required": ["escalate"] } }
+        }
       },
       "then": {
         "properties": { "ruling": { "properties": { "outcome": { "const": "blocked" } } } }

@@ -5,12 +5,12 @@ import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
 
 import { INSTALL_FILE } from "../packaging/install.ts";
-import { listDirs, listFiles, readTextIfPresent, walkFiles } from "../util/fs.ts";
+import { listDirs, listFiles, readTextIfPresent } from "../util/fs.ts";
 import type { CheckContext } from "./context.ts";
 import { documentFiles, documentShape } from "./documents.ts";
 import { CASE_FILE, EVALS_DIR } from "./evals.ts";
 import { RULINGS_FILE } from "./rulings.ts";
-import { error, note, skipped, type Issue } from "./types.ts";
+import { error, skipped, type Issue } from "./types.ts";
 
 type AjvInstance = InstanceType<typeof Ajv2020>;
 
@@ -66,7 +66,9 @@ export function compileSchemas(root: string): SchemaSet {
     try {
       schema = JSON.parse(text);
     } catch (cause) {
-      issues.push(error("schemas.unparseable", file, `Not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`));
+      issues.push(
+        error("schemas.unparseable", file, `Not valid JSON: ${cause instanceof Error ? cause.message : String(cause)}`),
+      );
       continue;
     }
     if (schema === null || typeof schema !== "object") {
@@ -80,7 +82,13 @@ export function compileSchemas(root: string): SchemaSet {
     try {
       ajv.addSchema(schema);
     } catch (cause) {
-      issues.push(error("schemas.uncompilable", file, `ajv rejected the schema: ${cause instanceof Error ? cause.message : String(cause)}`));
+      issues.push(
+        error(
+          "schemas.uncompilable",
+          file,
+          `ajv rejected the schema: ${cause instanceof Error ? cause.message : String(cause)}`,
+        ),
+      );
     }
   }
 
@@ -89,10 +97,16 @@ export function compileSchemas(root: string): SchemaSet {
     const $id = typeof schema["$id"] === "string" ? schema["$id"] : undefined;
     try {
       const validate = $id === undefined ? ajv.compile(schema) : ajv.getSchema($id);
-      if (validate !== undefined) validators.set(id, validate as ValidateFunction);
+      if (validate !== undefined) validators.set(id, validate);
       else issues.push(error("schemas.uncompilable", file, `No compiled validator for $id ${$id}.`));
     } catch (cause) {
-      issues.push(error("schemas.uncompilable", file, `ajv could not compile it: ${cause instanceof Error ? cause.message : String(cause)}`));
+      issues.push(
+        error(
+          "schemas.uncompilable",
+          file,
+          `ajv could not compile it: ${cause instanceof Error ? cause.message : String(cause)}`,
+        ),
+      );
     }
   }
 
@@ -123,7 +137,9 @@ function loadDocument(root: string, file: string): { value: unknown } | { failur
     const value = file.endsWith(".json") ? JSON.parse(text) : parseYaml(text);
     return { value };
   } catch (cause) {
-    return { failure: error("schemas.document-unparseable", file, cause instanceof Error ? cause.message : String(cause)) };
+    return {
+      failure: error("schemas.document-unparseable", file, cause instanceof Error ? cause.message : String(cause)),
+    };
   }
 }
 

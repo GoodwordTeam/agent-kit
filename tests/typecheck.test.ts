@@ -118,10 +118,13 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     expect(owned.filter((file) => !checked.has(file))).toEqual([]);
 
     // And the exclusion is the one documented in `tsconfig.json`, not a wider
-    // one that happens to still satisfy the line above. Every checked file that
-    // this repository owns must be under `src/` or `tests/`; anything the
-    // config started excluding beyond fixtures would drop out of `owned` and
-    // pass silently without this.
+    // one that happens to still satisfy the line above; anything the config
+    // started excluding beyond fixtures would drop out of `owned` and pass
+    // silently without this. The population here is `src/` and `tests/` only.
+    // `tools/oxlint/ratchet.ts` is typechecked too, through the config's
+    // `include` and through its import from `tests/lint-tooling.test.ts`, but
+    // that import keeps it in `tsc`'s program whether or not `include` names
+    // it, so no assertion here could fail on an `include` regression for it.
     expect(owned.filter((file) => file.startsWith("tests/fixtures"))).toEqual([]);
     expect(owned.some((file) => file.startsWith("src/"))).toBe(true);
     expect(owned.some((file) => file.startsWith("tests/"))).toBe(true);
@@ -151,7 +154,7 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     // it would race them.
     const dir = mkdtempSync(join(tmpdir(), "ak-tsc-"));
     const file = join(dir, "planted.ts");
-    writeFileSync(file, "export const x: number = \"not a number\";\n");
+    writeFileSync(file, 'export const x: number = "not a number";\n');
     const run = tsc(["--noEmit", "--strict", "--types", "", file], dir);
     expect(run.status).not.toBe(0);
     expect(`${run.stdout}${run.stderr}`).toContain("TS2322");

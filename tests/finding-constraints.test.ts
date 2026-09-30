@@ -191,9 +191,9 @@ describe("a smell has an open solution space", () => {
     // Jointly held with the fixer-dispatch branch, which excludes exactly the
     // `smell` spec quality this branch fires on. Deleting either clause leaves
     // the document rejected, so this pins the ruling and not the clause.
-    expect(reason({ spec_quality: "smell", difficulty: null, dispatch: { kind: "fixer" }, authorization_ref: AUTHORIZED })).toMatch(
-      /dispatch|spec_quality/,
-    );
+    expect(
+      reason({ spec_quality: "smell", difficulty: null, dispatch: { kind: "fixer" }, authorization_ref: AUTHORIZED }),
+    ).toMatch(/dispatch|spec_quality/);
   });
 
   test("a smell may be sharpened, diagnosed or escalated", () => {
@@ -207,14 +207,19 @@ describe("an automatically appliable finding is a fully specified one", () => {
   // Plan 5.5 and plan 2.5 apply-findings: this is the structural floor under
   // `safe_auto`. The per-seat restriction (ruling `safe-auto-restricted-per-seat`)
   // sits on top of it and is a review-policy property, not a shape.
-  const SAFE = { autofix_class: "safe_auto", spec_quality: "patch", difficulty: "mechanical", suggested_fix: SUGGESTED_FIX };
+  const SAFE = {
+    autofix_class: "safe_auto",
+    spec_quality: "patch",
+    difficulty: "mechanical",
+    suggested_fix: SUGGESTED_FIX,
+  };
 
   test("safe_auto with a patch, a mechanical difficulty and a suggested fix is valid", () => {
     expect(findingErrors(SAFE)).toEqual([]);
   });
 
   test("safe_auto needs a suggested fix to apply", () => {
-    const { suggested_fix, ...withoutFix } = SAFE;
+    const { suggested_fix: _suggestedFix, ...withoutFix } = SAFE;
     expect(reason(withoutFix)).toMatch(/suggested_fix/);
   });
 
@@ -299,13 +304,13 @@ describe("only independent verification evidence closes a finding", () => {
     // only place both identities exist. This case is the structural half and
     // is not evidence about either.
     expect(reason({ ...RESOLVED, closure_receipt: { ...RECEIPT, independent: false } })).toMatch(/independent/);
-    const { independent, ...withoutClaim } = RECEIPT;
+    const { independent: _independent, ...withoutClaim } = RECEIPT;
     expect(reason({ ...RESOLVED, closure_receipt: withoutClaim })).toMatch(/independent/);
   });
 
   test("a receipt points at a verification artifact, because a description of green tests is not one", () => {
     // Plan 5.6, release scenario 10.
-    const { verification, ...withoutArtifact } = RECEIPT;
+    const { verification: _verification, ...withoutArtifact } = RECEIPT;
     expect(reason({ ...RESOLVED, closure_receipt: withoutArtifact })).toMatch(/verification/);
   });
 
@@ -375,7 +380,9 @@ describe("a low-confidence security finding stays visible and is adjudicated", (
   test("an adjudicated security finding may not still be sitting open", () => {
     // Isolates the second half of the branch: the ruling is recorded and the
     // finding has moved, not recorded and then left where it was.
-    expect(reason({ ...SECURITY, confidence_anchor: 25, adjudication: ADJUDICATION, status: "open" })).toMatch(/status/);
+    expect(reason({ ...SECURITY, confidence_anchor: 25, adjudication: ADJUDICATION, status: "open" })).toMatch(
+      /status/,
+    );
   });
 
   test("a well-evidenced security finding is not forced through adjudication", () => {
@@ -403,7 +410,9 @@ describe("a fixer dispatch needs a specified finding and a recorded authorizatio
 
   test("a fixer dispatch with an authorization is valid", () => {
     expect(findingErrors({ dispatch: { kind: "fixer" }, authorization_ref: AUTHORIZED })).toEqual([]);
-    expect(findingErrors({ dispatch: { kind: "fixer" }, spec_quality: "sketch", authorization_ref: AUTHORIZED })).toEqual([]);
+    expect(
+      findingErrors({ dispatch: { kind: "fixer" }, spec_quality: "sketch", authorization_ref: AUTHORIZED }),
+    ).toEqual([]);
   });
 
   test("a dispatch that is not a hand-off carries no authorization requirement", () => {
@@ -418,9 +427,9 @@ describe("a fixer dispatch needs a specified finding and a recorded authorizatio
     // Jointly held with the smell branch above; see the note there. `smell` is
     // the only spec quality this clause excludes, and it is the value that
     // branch fires on.
-    expect(reason({ spec_quality: "smell", difficulty: null, dispatch: { kind: "fixer" }, authorization_ref: AUTHORIZED })).toMatch(
-      /dispatch|spec_quality/,
-    );
+    expect(
+      reason({ spec_quality: "smell", difficulty: null, dispatch: { kind: "fixer" }, authorization_ref: AUTHORIZED }),
+    ).toMatch(/dispatch|spec_quality/);
   });
 });
 
@@ -438,7 +447,9 @@ describe("the quote-the-line gate on high confidence anchors", () => {
   });
 
   test("an empty excerpt string does not satisfy the gate", () => {
-    expect(findingErrors({ confidence_anchor: 75, evidence: [{ ...UNQUOTED, excerpt: "" }] }).join(" ")).toMatch(/evidence/);
+    expect(findingErrors({ confidence_anchor: 75, evidence: [{ ...UNQUOTED, excerpt: "" }] }).join(" ")).toMatch(
+      /evidence/,
+    );
   });
 
   test("a quote that argues against the finding does not ground it", () => {
@@ -451,7 +462,8 @@ describe("the quote-the-line gate on high confidence anchors", () => {
   });
 
   test("the gate does not reach anchors below 75, which is where an unquotable finding belongs", () => {
-    for (const anchor of [0, 25, 50]) expect(findingErrors({ confidence_anchor: anchor, evidence: [UNQUOTED] })).toEqual([]);
+    for (const anchor of [0, 25, 50])
+      expect(findingErrors({ confidence_anchor: anchor, evidence: [UNQUOTED] })).toEqual([]);
   });
 
   test("a seat that cannot quote has a passing option, so the gate never forces a fabricated excerpt", () => {
@@ -470,7 +482,9 @@ describe("an authorization names the authority it rests on", () => {
   // A finding does not carry its own authority (plan 5.5).
   test("a delegated grant names the grant", () => {
     expect(reason({ status: "accepted", authorization_ref: { kind: "delegated-grant" } })).toMatch(/grant/);
-    expect(findingErrors({ status: "accepted", authorization_ref: { kind: "delegated-grant", grant: GRANT } })).toEqual([]);
+    expect(findingErrors({ status: "accepted", authorization_ref: { kind: "delegated-grant", grant: GRANT } })).toEqual(
+      [],
+    );
   });
 
   test("a decision authorization names the decision", () => {

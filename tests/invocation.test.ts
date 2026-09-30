@@ -210,7 +210,9 @@ describe("model_operations", () => {
   test("an operation whose callable_by excludes the skill fails", () => {
     const ctx = ctxFor({ ...bodies, "skills/scout/skill.yaml": "id: scout\nmodel_operations: [compound.draft]\n" });
     const issues = checkInvocation(ctx).filter((i) => i.severity === "error");
-    expect(issues.map((i) => [i.rule, i.file])).toEqual([["invocation.model-operation-not-callable", "skills/scout/skill.yaml"]]);
+    expect(issues.map((i) => [i.rule, i.file])).toEqual([
+      ["invocation.model-operation-not-callable", "skills/scout/skill.yaml"],
+    ]);
   });
 
   test("an operation that is not model-authority fails under model_operations", () => {
@@ -228,7 +230,9 @@ describe("model_operations", () => {
       "skills/ship/skill.yaml": "id: ship\nchild_operations: [compound.draft]\nmodel_operations: [compound.draft]\n",
     });
     const issues = checkInvocation(ctx).filter((i) => i.severity === "error");
-    expect(issues.map((i) => [i.rule, i.file])).toEqual([["invocation.operation-not-delegated", "skills/ship/skill.yaml"]]);
+    expect(issues.map((i) => [i.rule, i.file])).toEqual([
+      ["invocation.operation-not-delegated", "skills/ship/skill.yaml"],
+    ]);
   });
 
   test("an undeclared operation fails under model_operations too", () => {

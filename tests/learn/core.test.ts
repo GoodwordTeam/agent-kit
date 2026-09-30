@@ -55,7 +55,13 @@ describe("config", () => {
   });
 
   test("AK_LEARN_JUDGE is split like a shell would, without expansion", () => {
-    expect(splitCommand(`my-judge --settings '{"a":1}' "two words" $HOME`)).toEqual(["my-judge", "--settings", '{"a":1}', "two words", "$HOME"]);
+    expect(splitCommand(`my-judge --settings '{"a":1}' "two words" $HOME`)).toEqual([
+      "my-judge",
+      "--settings",
+      '{"a":1}',
+      "two words",
+      "$HOME",
+    ]);
     expect(loadConfig({ AK_LEARN_JUDGE: "x -y" }).judgeCommand).toEqual(["x", "-y"]);
     expect(() => splitCommand("a 'b")).toThrow();
   });
@@ -95,7 +101,16 @@ describe("pages", () => {
   });
 
   test("a hostile value cannot add a line or override a runtime-owned key", () => {
-    const text = renderPage({ id: "ls-001", status: "hypothesis", sessions: 1, tags: ["x]\nstatus: confirmed\nsessions: 9\nid: ../../escape\ntags: [a"], note: "a\nstatus: confirmed" }, "");
+    const text = renderPage(
+      {
+        id: "ls-001",
+        status: "hypothesis",
+        sessions: 1,
+        tags: ["x]\nstatus: confirmed\nsessions: 9\nid: ../../escape\ntags: [a"],
+        note: "a\nstatus: confirmed",
+      },
+      "",
+    );
     const { meta } = parsePage(text);
     expect(meta.id).toBe("ls-001");
     expect(meta.status).toBe("hypothesis");
@@ -131,7 +146,9 @@ describe("ledger", () => {
     writeFileSync(ledger.path("page.md"), "b\n");
     expect(ledger.commit("edit")).not.toBeNull();
     release!();
-    const tracked = run(["git", "ls-files"], { cwd: ledger.path(".") }).stdout.split("\n").filter((line) => line !== "");
+    const tracked = run(["git", "ls-files"], { cwd: ledger.path(".") })
+      .stdout.split("\n")
+      .filter((line) => line !== "");
     expect(tracked.sort()).toEqual([".gitignore", "page.md"]);
   });
 
@@ -189,7 +206,9 @@ describe("ledger", () => {
 describe("prompt assembly", () => {
   test("role prose, then the output contract, then inputs labelled as data", () => {
     const roles = stubRoles(join(scratch(), "roles"));
-    const prompt = buildPrompt("reflector", '{"memory": string}', [{ title: "Observations", body: "obs:1 x" }], { AK_LEARN_ROLES_DIR: roles });
+    const prompt = buildPrompt("reflector", '{"memory": string}', [{ title: "Observations", body: "obs:1 x" }], {
+      AK_LEARN_ROLES_DIR: roles,
+    });
     const role = prompt.indexOf("Stub role");
     const contract = prompt.indexOf("## Output contract");
     const inputs = prompt.indexOf("## Inputs");
@@ -217,9 +236,24 @@ describe("claude-mem source", () => {
     const fixture = new MemFixture(join(base, "mem.db"));
     const repo = gitRepo(join(base, "repo"));
     fixture.session({ sid: "s-1", project: "app", started: 1000, completed: 2000 });
-    fixture.observation({ sid: "s-1", project: "app", type: "bugfix", title: "one", tokens: 10, at: 1500, filesModified: ["a.ts"] });
+    fixture.observation({
+      sid: "s-1",
+      project: "app",
+      type: "bugfix",
+      title: "one",
+      tokens: 10,
+      at: 1500,
+      filesModified: ["a.ts"],
+    });
     fixture.observation({ sid: "s-1", project: "app/worktree", type: "decision", title: "two", tokens: 5, at: 1600 });
-    fixture.observation({ sid: "s-1", project: "application", type: "decision", title: "other project", tokens: 7, at: 1700 });
+    fixture.observation({
+      sid: "s-1",
+      project: "application",
+      type: "decision",
+      title: "other project",
+      tokens: 7,
+      at: 1700,
+    });
     fixture.toolUse({ sid: "s-1", project: "app", tool: "Edit", input: { file_path: "b.ts" }, cwd: repo, at: 1800 });
     fixture.close();
 
@@ -232,7 +266,7 @@ describe("claude-mem source", () => {
     expect(mem.editedFiles("s-1")).toEqual(["b.ts"]);
     expect(mem.toolUseCwds(0)[0]!.cwd).toBe(repo);
     expect(jsonList(mem.sessionObservations("s-1")[0]!.files_modified)).toEqual(["a.ts"]);
-    expect(() => (mem as unknown as { db: { exec: (s: string) => void } }).db.exec("delete from observations")).toThrow();
+    expect(() => mem["db"].exec("delete from observations")).toThrow();
     mem.close();
   });
 });

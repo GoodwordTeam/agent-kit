@@ -25,9 +25,28 @@ import { discover, loadRegistry, skillsLedger } from "../../../src/learn/skills/
 import { scratchRepo } from "./session.ts";
 
 const WORKFLOW: Array<[string, string[]]> = [
-  ["s1000001", ["ask the review bot to re-review PR 1873, its review is stale on an old commit", "poll gh pr checks until the new bot score lands", "ok it is 5/5 now, mark it ready"]],
-  ["s2000002", ["the bot review on #1882 is pinned to the previous sha, retrigger it and wait for 5/5", "good, now flip the PR out of draft"]],
-  ["s3000003", ["re-request the bot review on 1874 at the current head and tell me when its confidence is back to 5", "then run gh pr ready"]],
+  [
+    "s1000001",
+    [
+      "ask the review bot to re-review PR 1873, its review is stale on an old commit",
+      "poll gh pr checks until the new bot score lands",
+      "ok it is 5/5 now, mark it ready",
+    ],
+  ],
+  [
+    "s2000002",
+    [
+      "the bot review on #1882 is pinned to the previous sha, retrigger it and wait for 5/5",
+      "good, now flip the PR out of draft",
+    ],
+  ],
+  [
+    "s3000003",
+    [
+      "re-request the bot review on 1874 at the current head and tell me when its confidence is back to 5",
+      "then run gh pr ready",
+    ],
+  ],
 ];
 const NOISE: Array<[string, string[]]> = [
   ["s4000004", ["why does the settings page 404 in the worktree?", "check the org id column for the bypass org"]],
@@ -57,7 +76,10 @@ function runCase(installed: string | null): { summary: string; ctx: LearnContext
   }
   if (installed !== null) {
     mkdirSync(join(config, "skills", "bot-rereview-and-ready"), { recursive: true });
-    writeFileSync(join(config, "skills", "bot-rereview-and-ready", "SKILL.md"), `---\nname: bot-rereview-and-ready\ndescription: ${installed}\n---\n`);
+    writeFileSync(
+      join(config, "skills", "bot-rereview-and-ready", "SKILL.md"),
+      `---\nname: bot-rereview-and-ready\ndescription: ${installed}\n---\n`,
+    );
   }
   const catalog = join(repo, "..", "catalog");
   mkdirSync(catalog);
@@ -78,7 +100,9 @@ function main(): number {
     console.log(`   ${id} ${info.name} scope=${info.scope} evidence=${info.evidence} confidence=${info.confidence}`);
     console.log(readFileSync(ledgerA.path("candidates", `${id}.md`), "utf8").slice(0, 500));
   }
-  console.log(`A ${aOk ? "PASS" : "FAIL"} (expect exactly one review-bot candidate with evidence from >=3 sessions; scope may be project or global)`);
+  console.log(
+    `A ${aOk ? "PASS" : "FAIL"} (expect exactly one review-bot candidate with evidence from >=3 sessions; scope may be project or global)`,
+  );
   ok &&= aOk;
 
   const b = runCase(INSTALLED_WORKFLOW);

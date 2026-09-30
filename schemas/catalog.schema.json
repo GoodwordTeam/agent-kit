@@ -5,7 +5,19 @@
   "description": "The shape of catalog.yaml, the single source of truth. Nothing is installable, packageable or referenceable unless it is declared here, and `ak validate` fails on an entry with no directory and on a directory with no entry. Every entry carries a batch and a status; skills, packs, protocols, roles and references additionally carry a provenance origin, because the question 'is there a donor file behind it' has an answer for authored content and not for a schema or a profile. 'invocation' is U or M and nothing else (AGENTS.md, 'The invocation law'); 'status' moves contract -> authored; 'provenance_origin' is donor or conversation, where conversation means a G:L locator rather than a fabricated source path (plan 1.4). Profiles are install sets and adapters are host contracts: neither may name anything about which agent fills a seat.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "package", "skills", "packs", "protocols", "roles", "references", "schemas", "policies", "profiles", "adapters"],
+  "required": [
+    "schema_version",
+    "package",
+    "skills",
+    "packs",
+    "protocols",
+    "roles",
+    "references",
+    "schemas",
+    "policies",
+    "profiles",
+    "adapters"
+  ],
   "properties": {
     "schema_version": { "const": 1 },
     "package": {
@@ -121,7 +133,9 @@
           "batch": { "$ref": "#/$defs/batch" },
           "provenance_origin": { "$ref": "#/$defs/provenance_origin" },
           "status": { "$ref": "#/$defs/status" },
-          "tier": { "enum": ["always-on", "standards-gate", "generic-conditional", "conditional", "stack-conditional"] },
+          "tier": {
+            "enum": ["always-on", "standards-gate", "generic-conditional", "conditional", "stack-conditional"]
+          },
           "summary": { "$ref": "common.schema.json#/$defs/nonempty_string" }
         }
       }

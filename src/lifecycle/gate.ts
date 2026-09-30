@@ -119,7 +119,11 @@ export function takeSnapshot(project: string): Snapshot | string {
     const digest = createHash("sha256").update(diff.stdout).digest("hex");
 
     const remote = git(project, ["config", "--get", "remote.origin.url"]);
-    return { repo: remote.code === 0 && remote.text !== "" ? remote.text : project, revision: head.text, diff_hash: `sha256:${digest}` };
+    return {
+      repo: remote.code === 0 && remote.text !== "" ? remote.text : project,
+      revision: head.text,
+      diff_hash: `sha256:${digest}`,
+    };
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
@@ -128,7 +132,14 @@ export function takeSnapshot(project: string): Snapshot | string {
 // ── gates and records ────────────────────────────────────────────────────────
 
 /** The gates a phase records, in lifecycle order. */
-export const GATES = ["build-checks", "verify", "review-full", "review-delta", "review-readiness", "ship-preflight"] as const;
+export const GATES = [
+  "build-checks",
+  "verify",
+  "review-full",
+  "review-delta",
+  "review-readiness",
+  "ship-preflight",
+] as const;
 export type Gate = (typeof GATES)[number];
 
 /** What super-ship checks before it starts: every phase before it. */
@@ -243,7 +254,12 @@ const boundTo = (receipt: Record<string, unknown>, snapshot: Snapshot): boolean 
 /** Whether the store still holds this reference as a well-formed failed receipt at this snapshot, which no re-record replaces. */
 function storedFailure(dir: string, run: string, ref: ArtifactRef, snapshot: Snapshot): boolean {
   const receipt = storedReceipt(dir, run, ref);
-  return receipt !== undefined && receipt.status === "failed" && boundTo(receipt, snapshot) && verificationShapeReasons(receipt).length === 0;
+  return (
+    receipt !== undefined &&
+    receipt.status === "failed" &&
+    boundTo(receipt, snapshot) &&
+    verificationShapeReasons(receipt).length === 0
+  );
 }
 
 const runRecordPath = (dir: string, run: string): string => join(dir, "runs", safeRunId(run), "run.json");
@@ -254,7 +270,9 @@ function readObject(path: string): Record<string, unknown> | undefined {
   if (!existsSync(path)) return undefined;
   try {
     const value: unknown = JSON.parse(readFileSync(path, "utf8"));
-    return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -302,12 +320,19 @@ export function openRun(a: OpenArgs): { ok: true; run: RunRecord } | { ok: false
 
   const openedAt = new Date().toISOString();
   const canonical = new TextEncoder().encode(
-    canonicalJson(Object.fromEntries(Object.entries(ticket as Record<string, unknown>).filter(([key]) => key !== "approvals"))),
+    canonicalJson(
+      Object.fromEntries(Object.entries(ticket as Record<string, unknown>).filter(([key]) => key !== "approvals")),
+    ),
   );
   const ticketHash = sha256(canonical);
   const nonce = randomBytes(16).toString("hex");
-  const suffix = createHash("sha256").update(JSON.stringify([id, ticketHash, head.text, openedAt, nonce])).digest("hex").slice(0, 12);
-  const branchId = safeRunId(branch.text).replace(/^[^A-Za-z0-9]+/, "").slice(0, 128 - suffix.length - 1);
+  const suffix = createHash("sha256")
+    .update(JSON.stringify([id, ticketHash, head.text, openedAt, nonce]))
+    .digest("hex")
+    .slice(0, 12);
+  const branchId = safeRunId(branch.text)
+    .replace(/^[^A-Za-z0-9]+/, "")
+    .slice(0, 128 - suffix.length - 1);
   const runId = branchId === "" ? suffix : `${branchId}-${suffix}`;
   const run: RunRecord = {
     run_id: runId,
@@ -349,11 +374,16 @@ export interface RecordArgs {
   now?: () => Date;
 }
 
-export function recordGate(a: RecordArgs): { ok: true; path: string; record: GateRecord; skipped: string[] } | { ok: false; reason: string } {
+export function recordGate(
+  a: RecordArgs,
+): { ok: true; path: string; record: GateRecord; skipped: string[] } | { ok: false; reason: string } {
   const snapshot = takeSnapshot(a.project);
   if (typeof snapshot === "string") return { ok: false, reason: snapshot };
   if ((a.receipts?.length ?? 0) > 0 && readRunRecord(a.dir, a.run) === undefined) {
-    return { ok: false, reason: `run ${a.run} has no task-bound run record; open it with --ticket before recording receipts` };
+    return {
+      ok: false,
+      reason: `run ${a.run} has no task-bound run record; open it with --ticket before recording receipts`,
+    };
   }
   const refs: ArtifactRef[] = [];
   const skipped: string[] = [];
@@ -363,7 +393,8 @@ export function recordGate(a: RecordArgs): { ok: true; path: string; record: Gat
     try {
       bytes = readFileSync(receiptPath);
       const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
-      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("receipt is not an object");
+      if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed))
+        throw new Error("receipt is not an object");
       receipt = parsed as Record<string, unknown>;
     } catch (e) {
       return { ok: false, reason: `cannot read receipt ${receiptPath}: ${(e as Error).message}` };
@@ -372,7 +403,9 @@ export function recordGate(a: RecordArgs): { ok: true; path: string; record: Gat
       return { ok: false, reason: `receipt ${receiptPath} must name schema verification and a non-empty id` };
     }
     if (!boundTo(receipt, snapshot)) {
-      skipped.push(`receipt ${receiptPath} is bound to revision ${String(object(receipt.source_revision)?.revision)}, not ${short(snapshot)}; not recorded`);
+      skipped.push(
+        `receipt ${receiptPath} is bound to revision ${String(object(receipt.source_revision)?.revision)}, not ${short(snapshot)}; not recorded`,
+      );
       continue;
     }
     const output = receipt.output_digest;
@@ -388,7 +421,10 @@ export function recordGate(a: RecordArgs): { ok: true; path: string; record: Gat
         .map((candidate) => readFileSync(candidate))
         .find((candidate) => sha256(candidate) === output);
       if (log === undefined) {
-        return { ok: false, reason: `receipt ${receiptPath} names output ${output}, but none of its artifacts entries resolves to a log with that digest` };
+        return {
+          ok: false,
+          reason: `receipt ${receiptPath} names output ${output}, but none of its artifacts entries resolves to a log with that digest`,
+        };
       }
       storeArtifact(a.dir, a.run, log);
     }
@@ -418,7 +454,8 @@ export function recordGate(a: RecordArgs): { ok: true; path: string; record: Gat
       return !recorded.has(ref.id) || storedFailure(a.dir, a.run, ref, snapshot);
     });
     record.evidence = [...earlier, ...refs].filter(
-      (ref, index, all) => all.findIndex((candidate) => candidate.hash === ref.hash && candidate.id === ref.id) === index,
+      (ref, index, all) =>
+        all.findIndex((candidate) => candidate.hash === ref.hash && candidate.id === ref.id) === index,
     );
   }
   atomicJson(path, record);
@@ -533,7 +570,10 @@ function forkPoint(project: string, head: string): { branch: string; base: strin
   for (const key of ["refs/remotes/origin/HEAD", "main", "master"]) {
     const ref = git(project, ["rev-parse", "--verify", "--quiet", `${key}^{commit}`]);
     if (ref.code !== 0) continue;
-    const name = key === "main" || key === "master" ? key : git(project, ["symbolic-ref", "--quiet", "--short", key]).text.replace(/^origin\//, "");
+    const name =
+      key === "main" || key === "master"
+        ? key
+        : git(project, ["symbolic-ref", "--quiet", "--short", key]).text.replace(/^origin\//, "");
     if (current !== "" && current === name) return undefined;
     const base = git(project, ["merge-base", head, ref.text]);
     return base.code === 0 ? { branch: name === "" ? "origin/HEAD" : name, base: base.text } : undefined;
@@ -571,40 +611,104 @@ export function verificationShapeReasons(value: unknown): string[] {
   if (receipt === undefined) return ["receipt is not an object"];
   const reasons: string[] = [];
   const allowed = new Set([
-    "schema", "schema_version", "id", "project", "run_id", "created_by", "inputs", "source_revision", "created_at", "updated_at", "status",
-    "supersedes", "approvals", "tracker", "kind", "check", "command", "probe", "manual", "exit_status", "exit_disagreement", "output_digest",
-    "output_excerpt", "artifacts", "environment", "supports", "ticket", "finding", "reason", "invalidation", "notes", "weakened_checks",
+    "schema",
+    "schema_version",
+    "id",
+    "project",
+    "run_id",
+    "created_by",
+    "inputs",
+    "source_revision",
+    "created_at",
+    "updated_at",
+    "status",
+    "supersedes",
+    "approvals",
+    "tracker",
+    "kind",
+    "check",
+    "command",
+    "probe",
+    "manual",
+    "exit_status",
+    "exit_disagreement",
+    "output_digest",
+    "output_excerpt",
+    "artifacts",
+    "environment",
+    "supports",
+    "ticket",
+    "finding",
+    "reason",
+    "invalidation",
+    "notes",
+    "weakened_checks",
   ]);
   for (const key of Object.keys(receipt)) if (!allowed.has(key)) reasons.push(`unknown member ${key}`);
-  const required = ["schema", "schema_version", "id", "project", "run_id", "created_by", "inputs", "source_revision", "created_at", "status", "kind", "environment", "supports"];
+  const required = [
+    "schema",
+    "schema_version",
+    "id",
+    "project",
+    "run_id",
+    "created_by",
+    "inputs",
+    "source_revision",
+    "created_at",
+    "status",
+    "kind",
+    "environment",
+    "supports",
+  ];
   for (const key of required) if (!(key in receipt)) reasons.push(`missing ${key}`);
   if (receipt.schema !== "verification") reasons.push("schema is not verification");
   if (receipt.schema_version !== 1) reasons.push("schema_version is not 1");
   if (!nonempty(receipt.id) || !ARTIFACT_ID.test(receipt.id)) reasons.push("id is invalid");
   const project = object(receipt.project);
   if (project === undefined || !nonempty(project.id) || !KEBAB.test(project.id)) reasons.push("project is invalid");
-  if (receipt.run_id !== null && (!nonempty(receipt.run_id) || !ARTIFACT_ID.test(receipt.run_id))) reasons.push("run_id is invalid");
+  if (receipt.run_id !== null && (!nonempty(receipt.run_id) || !ARTIFACT_ID.test(receipt.run_id)))
+    reasons.push("run_id is invalid");
   const creator = object(receipt.created_by);
   if (creator === undefined || !nonempty(creator.role)) reasons.push("created_by is invalid");
   const artifactRefValid = (candidate: unknown): boolean => {
     const ref = object(candidate);
-    return ref !== undefined && nonempty(ref.id) && ARTIFACT_ID.test(ref.id) && typeof ref.hash === "string" && HASH.test(ref.hash);
+    return (
+      ref !== undefined &&
+      nonempty(ref.id) &&
+      ARTIFACT_ID.test(ref.id) &&
+      typeof ref.hash === "string" &&
+      HASH.test(ref.hash)
+    );
   };
   if (!Array.isArray(receipt.inputs) || !receipt.inputs.every(artifactRefValid)) reasons.push("inputs is invalid");
   const revision = object(receipt.source_revision);
-  if (revision === undefined || !nonempty(revision.repo) || typeof revision.revision !== "string" || !REVISION.test(revision.revision)) {
+  if (
+    revision === undefined ||
+    !nonempty(revision.repo) ||
+    typeof revision.revision !== "string" ||
+    !REVISION.test(revision.revision)
+  ) {
     reasons.push("source_revision is invalid");
-  } else if (revision.diff_hash !== undefined && (typeof revision.diff_hash !== "string" || !HASH.test(revision.diff_hash))) {
+  } else if (
+    revision.diff_hash !== undefined &&
+    (typeof revision.diff_hash !== "string" || !HASH.test(revision.diff_hash))
+  ) {
     reasons.push("source_revision.diff_hash is invalid");
   }
-  if (typeof receipt.created_at !== "string" || !Number.isFinite(Date.parse(receipt.created_at))) reasons.push("created_at is invalid");
+  if (typeof receipt.created_at !== "string" || !Number.isFinite(Date.parse(receipt.created_at)))
+    reasons.push("created_at is invalid");
   const statuses = ["passed", "failed", "not-run", "not-applicable", "inconclusive"];
   const kinds = ["command", "probe", "manual"];
   if (!statuses.includes(String(receipt.status))) reasons.push("status is invalid");
   if (!kinds.includes(String(receipt.kind))) reasons.push("kind is invalid");
   const supports = strings(receipt.supports);
-  if (supports === undefined || supports.length === 0 || supports.some((id) => !AC.test(id))) reasons.push("supports is invalid");
-  if (receipt.check !== undefined && (typeof receipt.check !== "string" || receipt.check.length > 64 || !KEBAB.test(receipt.check))) reasons.push("check is invalid");
+  if (supports === undefined || supports.length === 0 || supports.some((id) => !AC.test(id)))
+    reasons.push("supports is invalid");
+  if (
+    receipt.check !== undefined &&
+    (typeof receipt.check !== "string" || receipt.check.length > 64 || !KEBAB.test(receipt.check))
+  )
+    reasons.push("check is invalid");
   if (receipt.ticket !== undefined && !artifactRefValid(receipt.ticket)) reasons.push("ticket is invalid");
   if (receipt.finding !== undefined && !artifactRefValid(receipt.finding)) reasons.push("finding is invalid");
   const environment = object(receipt.environment);
@@ -618,12 +722,21 @@ export function verificationShapeReasons(value: unknown): string[] {
     reasons.push("environment is invalid");
   }
   const output = receipt.output_digest;
-  if (["passed", "failed", "inconclusive"].includes(String(receipt.status)) && (typeof output !== "string" || !HASH.test(output))) {
+  if (
+    ["passed", "failed", "inconclusive"].includes(String(receipt.status)) &&
+    (typeof output !== "string" || !HASH.test(output))
+  ) {
     reasons.push("output_digest is required for a check that ran");
   }
   if (receipt.kind === "command") {
     const command = object(receipt.command);
-    if (command === undefined || !Array.isArray(command.argv) || command.argv.length === 0 || !command.argv.every(nonempty)) reasons.push("command is invalid");
+    if (
+      command === undefined ||
+      !Array.isArray(command.argv) ||
+      command.argv.length === 0 ||
+      !command.argv.every(nonempty)
+    )
+      reasons.push("command is invalid");
   }
   if (receipt.kind === "probe") {
     const probe = object(receipt.probe);
@@ -631,22 +744,33 @@ export function verificationShapeReasons(value: unknown): string[] {
   }
   if (receipt.kind === "manual") {
     const manual = object(receipt.manual);
-    if (manual === undefined || manual.performed_by !== "human" || !nonempty(manual.procedure)) reasons.push("manual is invalid");
+    if (manual === undefined || manual.performed_by !== "human" || !nonempty(manual.procedure))
+      reasons.push("manual is invalid");
   }
-  if (receipt.kind === "command" && receipt.status === "passed" && receipt.exit_status !== 0) reasons.push("passing command exit_status is not 0");
+  if (receipt.kind === "command" && receipt.status === "passed" && receipt.exit_status !== 0)
+    reasons.push("passing command exit_status is not 0");
   if (receipt.kind === "command" && receipt.status === "failed") {
     if (!Number.isInteger(receipt.exit_status)) reasons.push("failed command has no integer exit_status");
     if (receipt.exit_status === 0) {
       const disagreement = object(receipt.exit_disagreement);
-      if (disagreement === undefined || disagreement.verdict_from !== "output" || !nonempty(disagreement.output_reports)) reasons.push("zero-exit failure has no output disagreement");
+      if (
+        disagreement === undefined ||
+        disagreement.verdict_from !== "output" ||
+        !nonempty(disagreement.output_reports)
+      )
+        reasons.push("zero-exit failure has no output disagreement");
     }
   }
-  if (receipt.exit_disagreement !== undefined && !(receipt.kind === "command" && receipt.status === "failed" && receipt.exit_status === 0)) {
+  if (
+    receipt.exit_disagreement !== undefined &&
+    !(receipt.kind === "command" && receipt.status === "failed" && receipt.exit_status === 0)
+  ) {
     reasons.push("exit_disagreement is inconsistent");
   }
   if (["not-run", "not-applicable"].includes(String(receipt.status))) {
     if (!nonempty(receipt.reason)) reasons.push("reason is required when nothing ran");
-    if (receipt.exit_status !== undefined || receipt.output_digest !== undefined) reasons.push("unrun check carries execution evidence");
+    if (receipt.exit_status !== undefined || receipt.output_digest !== undefined)
+      reasons.push("unrun check carries execution evidence");
   }
   if (receipt.status === "inconclusive" && !nonempty(receipt.reason)) reasons.push("inconclusive check has no reason");
   return reasons;
@@ -657,22 +781,42 @@ function recordPath(dir: string, run: string, record: GateRecord): string {
   return join(dir, safeRunId(run), record.gate, name);
 }
 
-function evaluateEvidence(a: CheckArgs, head: Snapshot): { outcome: DecisionRecord["outcome"]; reasons: DecisionReason[]; refs: ArtifactRef[] } {
+function evaluateEvidence(
+  a: CheckArgs,
+  head: Snapshot,
+): { outcome: DecisionRecord["outcome"]; reasons: DecisionReason[]; refs: ArtifactRef[] } {
   const run = readRunRecord(a.dir, a.run);
-  if (run === undefined) return { outcome: "unavailable", reasons: [{ code: "unavailable", detail: `run ${a.run} has no task-bound run record` }], refs: [] };
+  if (run === undefined)
+    return {
+      outcome: "unavailable",
+      reasons: [{ code: "unavailable", detail: `run ${a.run} has no task-bound run record` }],
+      refs: [],
+    };
   const ticketPath = artifactPath(a.dir, a.run, run.ticket.hash);
   if (ticketPath === undefined || !existsSync(ticketPath)) {
-    return { outcome: "unavailable", reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} is absent from the run store` }], refs: [] };
+    return {
+      outcome: "unavailable",
+      reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} is absent from the run store` }],
+      refs: [],
+    };
   }
   const ticketBytes = readFileSync(ticketPath);
   if (sha256(ticketBytes) !== run.ticket.hash) {
-    return { outcome: "unavailable", reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} does not match ${run.ticket.hash}` }], refs: [] };
+    return {
+      outcome: "unavailable",
+      reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} does not match ${run.ticket.hash}` }],
+      refs: [],
+    };
   }
   let ticket: Record<string, unknown>;
   try {
     ticket = JSON.parse(new TextDecoder().decode(ticketBytes)) as Record<string, unknown>;
   } catch {
-    return { outcome: "unavailable", reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} is malformed` }], refs: [] };
+    return {
+      outcome: "unavailable",
+      reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} is malformed` }],
+      refs: [],
+    };
   }
   const criteria = (Array.isArray(ticket.acceptance_criteria) ? ticket.acceptance_criteria : [])
     .map(object)
@@ -685,17 +829,29 @@ function evaluateEvidence(a: CheckArgs, head: Snapshot): { outcome: DecisionReco
       .filter((id): id is string => typeof id === "string" && KEBAB.test(id)),
   );
   if (criteria.length === 0 || checks.size === 0) {
-    return { outcome: "unavailable", reasons: [{ code: "unavailable", detail: `ticket ${run.ticket.id} has no acceptance criteria or named verification` }], refs: [] };
+    return {
+      outcome: "unavailable",
+      reasons: [
+        { code: "unavailable", detail: `ticket ${run.ticket.id} has no acceptance criteria or named verification` },
+      ],
+      refs: [],
+    };
   }
 
-  const current = readRecords(a.dir, a.run, "verify").filter((record) => record.schema_version === 2 && same(record.snapshot, head));
-  const refs = current.flatMap((record) => record.evidence ?? []).filter(
-    (ref, index, all) => all.findIndex((candidate) => candidate.id === ref.id && candidate.hash === ref.hash) === index,
+  const current = readRecords(a.dir, a.run, "verify").filter(
+    (record) => record.schema_version === 2 && same(record.snapshot, head),
   );
+  const refs = current
+    .flatMap((record) => record.evidence ?? [])
+    .filter(
+      (ref, index, all) =>
+        all.findIndex((candidate) => candidate.id === ref.id && candidate.hash === ref.hash) === index,
+    );
   const reasons: DecisionReason[] = [];
   const passed = new Set<string>();
   const failed = new Set<string>();
-  if (refs.length === 0) reasons.push({ code: "missing", detail: "the current verify marker has no verification evidence references" });
+  if (refs.length === 0)
+    reasons.push({ code: "missing", detail: "the current verify marker has no verification evidence references" });
 
   for (const ref of refs) {
     const path = artifactPath(a.dir, a.run, ref.hash);
@@ -705,7 +861,11 @@ function evaluateEvidence(a: CheckArgs, head: Snapshot): { outcome: DecisionReco
     }
     const bytes = readFileSync(path);
     if (sha256(bytes) !== ref.hash) {
-      reasons.push({ code: "digest-mismatch", detail: `receipt ${ref.id} does not hash to ${ref.hash}`, evidence: ref.id });
+      reasons.push({
+        code: "digest-mismatch",
+        detail: `receipt ${ref.id} does not hash to ${ref.hash}`,
+        evidence: ref.id,
+      });
       continue;
     }
     let receipt: Record<string, unknown>;
@@ -716,7 +876,11 @@ function evaluateEvidence(a: CheckArgs, head: Snapshot): { outcome: DecisionReco
       continue;
     }
     if (receipt.schema_version !== 1) {
-      reasons.push({ code: "unsupported-version", detail: `receipt ${ref.id} has schema version ${String(receipt.schema_version)}`, evidence: ref.id });
+      reasons.push({
+        code: "unsupported-version",
+        detail: `receipt ${ref.id} has schema version ${String(receipt.schema_version)}`,
+        evidence: ref.id,
+      });
       continue;
     }
     const shape = verificationShapeReasons(receipt);
@@ -724,32 +888,67 @@ function evaluateEvidence(a: CheckArgs, head: Snapshot): { outcome: DecisionReco
       reasons.push({ code: "malformed", detail: `receipt ${ref.id}: ${shape.join("; ")}`, evidence: ref.id });
       continue;
     }
-    if (receipt.id !== ref.id) reasons.push({ code: "malformed", detail: `receipt ${ref.id} contains id ${String(receipt.id)}`, evidence: ref.id });
+    if (receipt.id !== ref.id)
+      reasons.push({
+        code: "malformed",
+        detail: `receipt ${ref.id} contains id ${String(receipt.id)}`,
+        evidence: ref.id,
+      });
     const before = reasons.length;
-    if (receipt.run_id !== a.run) reasons.push({ code: "wrong-run", detail: `receipt ${ref.id} is for run ${String(receipt.run_id)}, not ${a.run}`, evidence: ref.id });
+    if (receipt.run_id !== a.run)
+      reasons.push({
+        code: "wrong-run",
+        detail: `receipt ${ref.id} is for run ${String(receipt.run_id)}, not ${a.run}`,
+        evidence: ref.id,
+      });
     if (!boundTo(receipt, head)) {
-      reasons.push({ code: "wrong-revision", detail: `receipt ${ref.id} does not name ${short(head)}`, evidence: ref.id });
+      reasons.push({
+        code: "wrong-revision",
+        detail: `receipt ${ref.id} does not name ${short(head)}`,
+        evidence: ref.id,
+      });
     }
     const task = object(receipt.ticket);
-    if (task?.id !== run.ticket.id || task?.hash !== run.ticket.hash || (task?.schema !== undefined && task.schema !== "ticket")) {
-      reasons.push({ code: "wrong-task", detail: `receipt ${ref.id} does not name ticket ${run.ticket.id} at ${run.ticket.hash}`, evidence: ref.id });
+    if (
+      task?.id !== run.ticket.id ||
+      task?.hash !== run.ticket.hash ||
+      (task?.schema !== undefined && task.schema !== "ticket")
+    ) {
+      reasons.push({
+        code: "wrong-task",
+        detail: `receipt ${ref.id} does not name ticket ${run.ticket.id} at ${run.ticket.hash}`,
+        evidence: ref.id,
+      });
     }
     const bound = reasons.length === before;
-    if (receipt.invalidation !== undefined) reasons.push({ code: "invalidated", detail: `receipt ${ref.id} has been invalidated`, evidence: ref.id });
+    if (receipt.invalidation !== undefined)
+      reasons.push({ code: "invalidated", detail: `receipt ${ref.id} has been invalidated`, evidence: ref.id });
     const output = receipt.output_digest as string | undefined;
     if (output !== undefined) {
       const outputPath = artifactPath(a.dir, a.run, output);
       if (outputPath === undefined || !existsSync(outputPath) || sha256(readFileSync(outputPath)) !== output) {
-        reasons.push({ code: "output-missing", detail: `receipt ${ref.id} output ${output} is absent or changed`, evidence: ref.id });
+        reasons.push({
+          code: "output-missing",
+          detail: `receipt ${ref.id} output ${output} is absent or changed`,
+          evidence: ref.id,
+        });
       }
     }
     if (typeof receipt.check !== "string" || !checks.has(receipt.check)) {
-      reasons.push({ code: "unknown-check", detail: `receipt ${ref.id} names unknown check ${String(receipt.check)}`, evidence: ref.id });
+      reasons.push({
+        code: "unknown-check",
+        detail: `receipt ${ref.id} names unknown check ${String(receipt.check)}`,
+        evidence: ref.id,
+      });
     }
     const environment = object(receipt.environment)!;
     const expectedEnvironment = object((run as unknown as Record<string, unknown>).environment);
     if (!nonempty(environment.id) || (expectedEnvironment !== undefined && environment.id !== expectedEnvironment.id)) {
-      reasons.push({ code: "environment-mismatch", detail: `receipt ${ref.id} environment does not match the run`, evidence: ref.id });
+      reasons.push({
+        code: "environment-mismatch",
+        detail: `receipt ${ref.id} environment does not match the run`,
+        evidence: ref.id,
+      });
     }
     for (const criterion of bound ? (receipt.supports as string[]) : []) {
       if (receipt.status === "passed") passed.add(criterion);
@@ -757,9 +956,16 @@ function evaluateEvidence(a: CheckArgs, head: Snapshot): { outcome: DecisionReco
     }
   }
   for (const criterion of criteria) {
-    if (failed.has(criterion) && passed.has(criterion)) reasons.push({ code: "unstable", detail: `${criterion} has both failed and passed evidence at this head`, criterion });
-    else if (failed.has(criterion)) reasons.push({ code: "failed", detail: `${criterion} has failed evidence at this head`, criterion });
-    else if (!passed.has(criterion)) reasons.push({ code: "uncovered", detail: `${criterion} has no passed evidence at this head`, criterion });
+    if (failed.has(criterion) && passed.has(criterion))
+      reasons.push({
+        code: "unstable",
+        detail: `${criterion} has both failed and passed evidence at this head`,
+        criterion,
+      });
+    else if (failed.has(criterion))
+      reasons.push({ code: "failed", detail: `${criterion} has failed evidence at this head`, criterion });
+    else if (!passed.has(criterion))
+      reasons.push({ code: "uncovered", detail: `${criterion} has no passed evidence at this head`, criterion });
   }
   return { outcome: reasons.length === 0 ? "allowed" : "refused", reasons, refs };
 }
@@ -782,7 +988,8 @@ export function checkGates(a: CheckArgs): CheckResult {
   const refusals: string[] = [];
   const notes: string[] = [];
   const stale = (g: Gate, why: string) => refusals.push(`refused: gate ${g} has no current evidence (${why})`);
-  const fork = a.forkBound === true && a.gates.some((g) => EARLIER.has(g)) ? forkPoint(a.project, head.revision) : undefined;
+  const fork =
+    a.forkBound === true && a.gates.some((g) => EARLIER.has(g)) ? forkPoint(a.project, head.revision) : undefined;
 
   for (const gate of a.gates) {
     const records = readRecords(a.dir, a.run, gate).sort((x, y) => x.recorded_at.localeCompare(y.recorded_at));
@@ -812,14 +1019,20 @@ export function checkGates(a: CheckArgs): CheckResult {
       if (gate === "build-checks") continue;
       // review-full on an earlier head stands once a delta review covers the fix on this one.
       if (readRecords(a.dir, a.run, "review-delta").some((r) => same(r.snapshot, head))) continue;
-      stale(gate, `the full review is for ${short(onLine[onLine.length - 1]!.snapshot)} and no review-delta covers ${short(head)}`);
+      stale(
+        gate,
+        `the full review is for ${short(onLine[onLine.length - 1]!.snapshot)} and no review-delta covers ${short(head)}`,
+      );
       continue;
     }
     const latest = records[records.length - 1]!;
     stale(gate, `the latest record is for ${short(latest.snapshot)}, the head is ${short(head)}`);
   }
   const currentVerify = readRecords(a.dir, a.run, "verify").filter((record) => same(record.snapshot, head));
-  if (currentVerify.some((record) => record.schema_version === 1) && !currentVerify.some((record) => record.schema_version === 2)) {
+  if (
+    currentVerify.some((record) => record.schema_version === 1) &&
+    !currentVerify.some((record) => record.schema_version === 2)
+  ) {
     notes.push("note: v1 marker, no evidence references: history, not proof");
   }
 
@@ -837,7 +1050,9 @@ export function checkGates(a: CheckArgs): CheckResult {
   }
   const outcome = phaseReasons.length > 0 ? "refused" : judged.outcome;
   const reasons = [...phaseReasons, ...judged.reasons];
-  const phase = a.gates.flatMap((gate) => readRecords(a.dir, a.run, gate).map((record) => recordPath(a.dir, a.run, record)));
+  const phase = a.gates.flatMap((gate) =>
+    readRecords(a.dir, a.run, gate).map((record) => recordPath(a.dir, a.run, record)),
+  );
   const decision: DecisionRecord = {
     run_id: a.run,
     transition: "ship",
@@ -850,7 +1065,14 @@ export function checkGates(a: CheckArgs): CheckResult {
   };
   const decisionPath = writeDecision(a, decision);
   for (const reason of judged.reasons) refusals.push(`refused: evidence ${reason.code}: ${reason.detail}`);
-  return { ok: outcome === "allowed", head, refusals, notes: outcome === "allowed" ? notes : [], decision, decisionPath };
+  return {
+    ok: outcome === "allowed",
+    head,
+    refusals,
+    notes: outcome === "allowed" ? notes : [],
+    decision,
+    decisionPath,
+  };
 }
 
 // ── the command ──────────────────────────────────────────────────────────────
@@ -894,7 +1116,9 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
   const receipts: string[] = [];
   for (let i = 1; i < argv.length; i += 1) {
     const token = argv[i]!;
-    const [name, inline] = token.startsWith("--") ? (token.slice(2).split("=", 2) as [string, string | undefined]) : ["", undefined];
+    const [name, inline] = token.startsWith("--")
+      ? (token.slice(2).split("=", 2) as [string, string | undefined])
+      : ["", undefined];
     if (!allowed.has(name)) {
       io.err(`ak lifecycle ${sub}: unexpected ${token}`);
       return 2;
@@ -947,7 +1171,9 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
   if (run === undefined) {
     const branch = git(project, ["symbolic-ref", "--quiet", "--short", "HEAD"]);
     if (branch.code !== 0 || branch.text === "") {
-      io.err(`ak lifecycle ${sub}: ${project} is on a detached head, so there is no branch to name the run; pass --run <id>`);
+      io.err(
+        `ak lifecycle ${sub}: ${project} is on a detached head, so there is no branch to name the run; pass --run <id>`,
+      );
       return 2;
     }
     const pointer = pointerRun(dir, branch.text);
@@ -977,7 +1203,9 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
     if (opened?.closed_at !== undefined) {
       const live = gate === "ship-preflight" ? takeSnapshot(project) : undefined;
       const closedHere =
-        live !== undefined && typeof live !== "string" && readRecords(dir, run, "ship-preflight").some((r) => same(r.snapshot, live));
+        live !== undefined &&
+        typeof live !== "string" &&
+        readRecords(dir, run, "ship-preflight").some((r) => same(r.snapshot, live));
       if (!closedHere) {
         io.err("ak lifecycle record: run closed; open a new run");
         return 1;
@@ -997,12 +1225,22 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
   const names = (str("gates") ?? PRE_SHIP_GATES.join(",")).split(",").filter((g) => g !== "");
   const unknown = names.filter((g) => !isGate(g));
   if (names.length === 0 || unknown.length > 0) {
-    io.err(`ak lifecycle check: --gates takes ${GATES.join(", ")}${unknown.length > 0 ? `, not ${unknown.join(", ")}` : ""}`);
+    io.err(
+      `ak lifecycle check: --gates takes ${GATES.join(", ")}${unknown.length > 0 ? `, not ${unknown.join(", ")}` : ""}`,
+    );
     return 2;
   }
-  const result = checkGates({ dir, run, gates: names as Gate[], project, forkBound, evidence: flags.get("evidence") === true });
+  const result = checkGates({
+    dir,
+    run,
+    gates: names as Gate[],
+    project,
+    forkBound,
+    evidence: flags.get("evidence") === true,
+  });
   if (result.ok) for (const note of result.notes) io.err(note);
-  if (flags.get("json") === true) io.out(JSON.stringify(result.decision ?? { run, dir, gates: names, ...result }, null, 2));
+  if (flags.get("json") === true)
+    io.out(JSON.stringify(result.decision ?? { run, dir, gates: names, ...result }, null, 2));
   else if (result.ok) io.out(`ok: run ${run} has current evidence for ${names.join(", ")} at ${short(result.head!)}`);
   else for (const r of result.refusals) io.err(r);
   return result.ok ? 0 : 1;

@@ -5,7 +5,15 @@ import { parseLearnArgs } from "../../src/learn/core/context.ts";
 import { run } from "../../src/learn/core/proc.ts";
 import { PACKAGE_ROOT } from "../../src/learn/core/roles.ts";
 import { loadEvents } from "../../src/learn/review/events.ts";
-import { detectPatterns, LAST_RUN_FILE, PIPELINE_LOG, pipelineCommand, promptHook, type Spawner, stopHook } from "../../src/learn/review/hooks.ts";
+import {
+  detectPatterns,
+  LAST_RUN_FILE,
+  PIPELINE_LOG,
+  pipelineCommand,
+  promptHook,
+  type Spawner,
+  stopHook,
+} from "../../src/learn/review/hooks.ts";
 import { reviewLedger, reviewLedgerDir } from "../../src/learn/review/ledger.ts";
 import { reviewArea } from "../../src/learn/review/cli.ts";
 import { gitRepo, scratch, testContext } from "./helpers.ts";
@@ -69,7 +77,9 @@ describe("stop hook", () => {
     const lines = readFileSync(log, "utf8").split("\n");
     expect(lines[0]).toMatch(/^== \d{4}-\d{2}-\d{2}T\S+Z claude /);
     expect(lines[0]!.endsWith(` ${root}`)).toBe(true);
-    expect(lines[1]).toBe(`[learn][review][run][--repo][${root}][--cwd][${root}/wt][--source][claude][learn][skills][run][--repo][${root}]`);
+    expect(lines[1]).toBe(
+      `[learn][review][run][--repo][${root}][--cwd][${root}/wt][--source][claude][learn][skills][run][--repo][${root}]`,
+    );
   });
 
   test("a session in a linked worktree hands the pipeline its worktree, and the PR is looked up there", () => {
@@ -211,7 +221,10 @@ describe("correction detection (ported from claude-reflect)", () => {
   });
 
   test("praise that names its referent is positive, not a correction; a forward pivot drops it", () => {
-    expect(detectPatterns("love it, keep the tables compact like that in future reports")).toMatchObject({ type: "positive", sentiment: "positive" });
+    expect(detectPatterns("love it, keep the tables compact like that in future reports")).toMatchObject({
+      type: "positive",
+      sentiment: "positive",
+    });
     expect(detectPatterns("perfect, that works well. now let's add the export step").type).toBeNull();
   });
 });
@@ -255,14 +268,22 @@ describe("prompt hook", () => {
       { cwd: repo },
     ];
     for (const payload of skipped) promptHook(ctx, payload, parseLearnArgs([]));
-    promptHook(testContext({ env: { AK_LEARN_DRY_RUN: "1" } }), { cwd: repo, prompt: "no, use the other one" }, parseLearnArgs([]));
+    promptHook(
+      testContext({ env: { AK_LEARN_DRY_RUN: "1" } }),
+      { cwd: repo, prompt: "no, use the other one" },
+      parseLearnArgs([]),
+    );
     expect(existsSync(reviewLedgerDir(ctx.config, repo))).toBe(false);
   });
 
   test("a long `remember:` prompt is still captured", () => {
     const repo = gitRepo(join(scratch(), "app"));
     const ctx = testContext();
-    promptHook(ctx, { cwd: repo, prompt: `remember: ${"keep the fixture clock pinned ".repeat(30)}` }, parseLearnArgs([]));
+    promptHook(
+      ctx,
+      { cwd: repo, prompt: `remember: ${"keep the fixture clock pinned ".repeat(30)}` },
+      parseLearnArgs([]),
+    );
     expect(loadEvents(reviewLedger(ctx.config, repo))).toHaveLength(1);
   });
 });

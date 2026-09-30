@@ -6,7 +6,15 @@ import { appendEvents, loadEvents, makeEvent } from "../../src/learn/review/even
 import { EVENTS_FILE, reviewLedger } from "../../src/learn/review/ledger.ts";
 import { PROCESSED_FILE } from "../../src/learn/review/maintain.ts";
 import { loadPatterns } from "../../src/learn/review/patterns.ts";
-import { guardrailDraft, pendingPromotions, promoteById, propose, retire, rollback, skillCandidates } from "../../src/learn/review/propose.ts";
+import {
+  guardrailDraft,
+  pendingPromotions,
+  promoteById,
+  propose,
+  retire,
+  rollback,
+  skillCandidates,
+} from "../../src/learn/review/propose.ts";
 import { compileSchemas } from "../../src/validation/schemas.ts";
 import { gitRepo, scratch, testContext } from "./helpers.ts";
 
@@ -45,7 +53,8 @@ function setup(root = scratch()) {
   const ctx = testContext();
   const ledger = reviewLedger(ctx.config, root);
   mkdirSync(ledger.path("patterns"), { recursive: true });
-  const write = (id: string, options: PageOptions) => writeFileSync(ledger.path("patterns", `${id}.md`), page(id, options));
+  const write = (id: string, options: PageOptions) =>
+    writeFileSync(ledger.path("patterns", `${id}.md`), page(id, options));
   return { ctx, ledger, root, write };
 }
 
@@ -81,7 +90,9 @@ describe("propose", () => {
     write("rp-001", { count: 26, promotedTo: "guardrails" });
     expect(propose(ctx, ledger, root, 3)).toBe("nothing to promote");
     expect(loadPatterns(ledger).get("rp-001")!.meta.promoted_count).toBe(26);
-    expect(ledger.git(["log", "-1", "--format=%s"]).stdout.trim()).toBe("propose: bookkeeping (promoted_count baseline)");
+    expect(ledger.git(["log", "-1", "--format=%s"]).stdout.trim()).toBe(
+      "propose: bookkeeping (promoted_count baseline)",
+    );
     expect(skillCandidates(loadPatterns(ledger))).toEqual([]);
   });
 
@@ -120,14 +131,19 @@ describe("rollback, retire and promote by hand", () => {
     expect(readFileSync(ledger.path("guardrails.md")).equals(before)).toBe(false);
     expect(rollback(ledger).startsWith("reverted 'propose: guardrails +rp-002'")).toBe(true);
     expect(readFileSync(ledger.path("guardrails.md")).equals(before)).toBe(true);
-    expect(ledger.git(["log", "-1", "--format=%s"]).stdout.startsWith('Revert "propose: guardrails +rp-002')).toBe(true);
+    expect(ledger.git(["log", "-1", "--format=%s"]).stdout.startsWith('Revert "propose: guardrails +rp-002')).toBe(
+      true,
+    );
   });
 
   test("rollback --to reverts every later commit, but the raw events stay append-only", () => {
     const { ctx, ledger, root, write } = setup();
     write("rp-001", { count: 3 });
     const base = ledger.commit("seed rp-001")!;
-    const baseBytes = { guard: readFileSync(ledger.path("guardrails.md")), page: readFileSync(ledger.path("patterns", "rp-001.md")) };
+    const baseBytes = {
+      guard: readFileSync(ledger.path("guardrails.md")),
+      page: readFileSync(ledger.path("patterns", "rp-001.md")),
+    };
     propose(ctx, ledger, root, 3);
     appendEvents(ledger, [
       makeEvent({
@@ -199,7 +215,10 @@ describe("rollback, retire and promote by hand", () => {
     expect(readFileSync(ledger.path("log.md"), "utf8")).toContain("- run 3");
     expect(Number(ledger.git(["rev-list", "--count", "HEAD"]).stdout.trim())).toBe(commitsBefore + 1);
     expect(ledger.git(["status", "--porcelain"]).stdout.trim()).toBe("");
-    expect(ledger.git(["diff", "--name-only", base, "HEAD"]).stdout.trim().split("\n")).toEqual(["log.md", EVENTS_FILE]);
+    expect(ledger.git(["diff", "--name-only", base, "HEAD"]).stdout.trim().split("\n")).toEqual([
+      "log.md",
+      EVENTS_FILE,
+    ]);
   });
 
   test("rollback --to refuses a dirty wiki layer and a revision off the ledger's history, changing nothing", () => {
@@ -220,7 +239,10 @@ describe("rollback, retire and promote by hand", () => {
 
   test("a pattern's id is its file name, whatever its frontmatter claims", () => {
     const { ledger, write } = setup();
-    writeFileSync(ledger.path("patterns", "rp-001.md"), page("rp-001", { count: 3 }).replace("id: rp-001", "id: ../../escape"));
+    writeFileSync(
+      ledger.path("patterns", "rp-001.md"),
+      page("rp-001", { count: 3 }).replace("id: rp-001", "id: ../../escape"),
+    );
     write("rp-002", { count: 1 });
     const patterns = loadPatterns(ledger);
     expect([...patterns.keys()]).toEqual(["rp-001", "rp-002"]);
@@ -230,13 +252,19 @@ describe("rollback, retire and promote by hand", () => {
 
   test("an unusable knowledgebase draft skips only its own proposal; every promotion still lands", () => {
     const { ctx, ledger, root, write } = setup();
-    writeFileSync(ledger.path("patterns", "rp-001.md"), page("rp-001", { count: 3 }).replace("id: rp-001", "id: ../../escape"));
+    writeFileSync(
+      ledger.path("patterns", "rp-001.md"),
+      page("rp-001", { count: 3 }).replace("id: rp-001", "id: ../../escape"),
+    );
     write("rp-1234567", { count: 3 });
     write("rp-003", { count: 3 });
     expect(propose(ctx, ledger, root, 3)).toBe("promoted rp-001,rp-003,rp-1234567 to guardrails");
     expect(guardrails(ledger)).toContain("- [rp-1234567] Do the one thing.");
     const drafts = readdirSync(ledger.path("proposals")).sort();
-    expect(drafts).toEqual([`learn-${basename(root).toLowerCase()}-rp-001.json`, `learn-${basename(root).toLowerCase()}-rp-003.json`]);
+    expect(drafts).toEqual([
+      `learn-${basename(root).toLowerCase()}-rp-001.json`,
+      `learn-${basename(root).toLowerCase()}-rp-003.json`,
+    ]);
     expect(readFileSync(ledger.path("log.md"), "utf8")).toContain("skipped knowledgebase draft for rp-1234567");
     expect(loadPatterns(ledger).get("rp-1234567")!.meta.promoted_to).toBe("guardrails");
   });

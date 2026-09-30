@@ -117,12 +117,16 @@ describe("catalog completeness", () => {
 
   test("file-backed sections report an authored entry whose file is missing", () => {
     const { issues } = run({
-      "catalog.yaml": catalogYaml("schemas:\n  - id: ticket\n    status: authored\npolicies:\n  - id: review\n    status: authored\n"),
+      "catalog.yaml": catalogYaml(
+        "schemas:\n  - id: ticket\n    status: authored\npolicies:\n  - id: review\n    status: authored\n",
+      ),
     });
-    expect(issues.filter((i) => i.rule === "catalog.entry-without-file").map((i) => i.file).sort()).toEqual([
-      "policies/review.yaml",
-      "schemas/ticket.schema.json",
-    ]);
+    expect(
+      issues
+        .filter((i) => i.rule === "catalog.entry-without-file")
+        .map((i) => i.file)
+        .sort(),
+    ).toEqual(["policies/review.yaml", "schemas/ticket.schema.json"]);
   });
 
   test("an undeclared schema or policy file is an error", () => {
@@ -133,12 +137,12 @@ describe("catalog completeness", () => {
       "profiles/rogue.yaml": "a: 1\n",
       "adapters/rogue/CONTRACT.md": "# Rogue\n",
     });
-    expect(issues.filter((i) => i.rule === "catalog.file-without-entry").map((i) => i.file).sort()).toEqual([
-      "adapters/rogue",
-      "policies/rogue.yaml",
-      "profiles/rogue.yaml",
-      "schemas/rogue.schema.json",
-    ]);
+    expect(
+      issues
+        .filter((i) => i.rule === "catalog.file-without-entry")
+        .map((i) => i.file)
+        .sort(),
+    ).toEqual(["adapters/rogue", "policies/rogue.yaml", "profiles/rogue.yaml", "schemas/rogue.schema.json"]);
   });
 
   test("a fully coherent tree produces no errors", () => {

@@ -38,7 +38,9 @@ const POLICY_FILE = "policies/invocation.yaml";
 const CLOSURE_KEY = "no_operation_exposed";
 
 function obj(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function strings(value: unknown): string[] {

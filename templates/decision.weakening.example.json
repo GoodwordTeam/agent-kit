@@ -99,9 +99,7 @@
       "by": "reviewer-standards",
       "choice": "lower-floor",
       "rationale": "Acceptable only because the weakening is recorded and the receipt still reports a failed run. A lowered floor that produced a passing receipt would be the case this checkpoint exists to refuse.",
-      "unresolved_assumptions": [
-        "Whether the missing test lands before the floor is restored."
-      ],
+      "unresolved_assumptions": ["Whether the missing test lands before the floor is restored."],
       "escalate": false,
       "at": "2026-09-19T09:00:00Z",
       "saw_other_judgment": false

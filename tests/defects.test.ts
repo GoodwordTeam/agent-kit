@@ -56,7 +56,8 @@ const CONTRACT = [
 ].join("\n");
 
 /** A sentence that is genuinely in §5, and a sentence that is genuinely in §12. */
-const IN_SECTION_5 = "Every adapted file needs a provenance row of the form `donor@commit:path`, and that path must exist at the pin.";
+const IN_SECTION_5 =
+  "Every adapted file needs a provenance row of the form `donor@commit:path`, and that path must exist at the pin.";
 const IN_SECTION_12 = "A protocol is shared phase logic a skill delegates to, and is not an entrypoint.";
 
 function entry(title: string, lead: string, quote: string | null): string {
@@ -123,9 +124,7 @@ describe("an open entry's quotation must resolve in the section it cites", () =>
     // entry now points at a section that does not contain what it quotes, which
     // is the defect rather than an escape from it."
     expect(CONTRACT).toContain(IN_SECTION_12);
-    expect(rulesFor(entry("migrated", "§5 requires:", IN_SECTION_12))).toEqual([
-      "defects.entry-quotation-dangling",
-    ]);
+    expect(rulesFor(entry("migrated", "§5 requires:", IN_SECTION_12))).toEqual(["defects.entry-quotation-dangling"]);
   });
 
   test("an entry that quotes nothing fails, and is not skipped for having nothing to compare", () => {
@@ -150,12 +149,28 @@ describe("an open entry's quotation must resolve in the section it cites", () =>
     // on the closing line. Scoped correctly to §5 the quotation is missing and
     // the entry fails; re-scoped to §12 it resolves and the entry passes, which
     // is the generous direction this rule exists to refuse.
-    const adjacent = ["### closing line names another section", "", "§5 requires:", "", `> ${IN_SECTION_12}`, "Compare §12.", ""].join("\n");
+    const adjacent = [
+      "### closing line names another section",
+      "",
+      "§5 requires:",
+      "",
+      `> ${IN_SECTION_12}`,
+      "Compare §12.",
+      "",
+    ].join("\n");
     expect(rulesFor(adjacent)).toEqual(["defects.entry-quotation-dangling"]);
 
     // The converse, so the assertion above is about the scoping and not about
     // the quotation: the same shape whose quotation really is in §5 passes.
-    const benign = ["### closing line names another section", "", "§5 requires:", "", `> ${IN_SECTION_5}`, "Compare §12.", ""].join("\n");
+    const benign = [
+      "### closing line names another section",
+      "",
+      "§5 requires:",
+      "",
+      `> ${IN_SECTION_5}`,
+      "Compare §12.",
+      "",
+    ].join("\n");
     expect(rulesFor(benign)).toEqual([]);
   });
 
@@ -194,28 +209,44 @@ describe("an open entry's quotation must resolve in the section it cites", () =>
   test("rewrapping the quoted paragraph is not a change: whitespace is collapsed", () => {
     // §10 states this bar in as many words, and it is the reason the comparison
     // is on the text rather than on the bytes.
-    const rewrapped = ["> Every adapted file needs a provenance row", "> of the form `donor@commit:path`, and that path", "> must exist at the pin."].join("\n");
+    const rewrapped = [
+      "> Every adapted file needs a provenance row",
+      "> of the form `donor@commit:path`, and that path",
+      "> must exist at the pin.",
+    ].join("\n");
     const wrapped = ["### rewrapped", "", "§5 requires:", "", rewrapped, "", "Trailing prose.", ""].join("\n");
     expect(rulesFor(wrapped)).toEqual([]);
   });
 
   test("an elision joins fragments that must each resolve, and in order", () => {
-    const ordered = entry("elided", "§5 requires:", "Every adapted file needs a provenance row [...] must exist at the pin.");
+    const ordered = entry(
+      "elided",
+      "§5 requires:",
+      "Every adapted file needs a provenance row [...] must exist at the pin.",
+    );
     expect(rulesFor(ordered)).toEqual([]);
 
     // The same two fragments the other way round did not appear in that order,
     // so an elision that admits them would let an entry quote a sentence the
     // contract never wrote.
-    const reversed = entry("elided backwards", "§5 requires:", "must exist at the pin. [...] Every adapted file needs a provenance row");
+    const reversed = entry(
+      "elided backwards",
+      "§5 requires:",
+      "must exist at the pin. [...] Every adapted file needs a provenance row",
+    );
     expect(rulesFor(reversed)).toEqual(["defects.entry-quotation-dangling"]);
   });
 
   test("a subsection is addressable in its own right", () => {
-    expect(rulesFor(entry("subsection", "§5.1 requires:", "A row keyed `target:` is skipped by the parser"))).toEqual([]);
+    expect(rulesFor(entry("subsection", "§5.1 requires:", "A row keyed `target:` is skipped by the parser"))).toEqual(
+      [],
+    );
   });
 
   test("every failing entry names its own title and the section it cites", () => {
-    const ctx = ctxFor({ [DEFECTS_FILE]: defects(entry("the parser skips target rows", "§5 requires:", "a purple elephant")) });
+    const ctx = ctxFor({
+      [DEFECTS_FILE]: defects(entry("the parser skips target rows", "§5 requires:", "a purple elephant")),
+    });
     const issue = checkContractDefects(ctx).find((i) => i.rule === "defects.entry-quotation-dangling");
     expect(issue?.file).toBe(DEFECTS_FILE);
     expect(issue?.message).toContain("the parser skips target rows");
@@ -261,13 +292,22 @@ describe("the retirement rule's file shape: nothing is marked resolved and left 
   test("a section that is neither ## Open nor a retirement heading is left alone", () => {
     // The limit of the word list, stated as a test. This gate rejects a second
     // entry list and a retirement heading; it does not police the file's prose.
-    const file = [defects(entry("open one", "§5 requires:", IN_SECTION_5)), "", "## How to file one", "", "Prose, and no entries.", ""].join("\n");
+    const file = [
+      defects(entry("open one", "§5 requires:", IN_SECTION_5)),
+      "",
+      "## How to file one",
+      "",
+      "Prose, and no entries.",
+      "",
+    ].join("\n");
     const ctx = ctxFor({ [DEFECTS_FILE]: file });
     expect(checkContractDefects(ctx).filter((i) => i.severity === "error")).toEqual([]);
   });
 
   test("an entry above ## Open is outside it, not inside it by being first", () => {
-    const file = ["# Contract defects", "", entry("floating", "§5 requires:", IN_SECTION_5), "", OPEN_HEADING, ""].join("\n");
+    const file = ["# Contract defects", "", entry("floating", "§5 requires:", IN_SECTION_5), "", OPEN_HEADING, ""].join(
+      "\n",
+    );
     const ctx = ctxFor({ [DEFECTS_FILE]: file });
     expect(checkContractDefects(ctx).filter((i) => i.rule === "defects.entry-outside-open")).toHaveLength(1);
   });
@@ -294,7 +334,10 @@ describe("the check says what it examined, because zero failures is not a pass",
 
 describe("the contract and the file are both authorities, and an absent one is said", () => {
   test("no AUTHORING.md is a skip naming the check, not a tree that passed", () => {
-    const root = makeTree({ "catalog.yaml": CATALOG, [DEFECTS_FILE]: defects(entry("one", "§5 requires:", IN_SECTION_5)) });
+    const root = makeTree({
+      "catalog.yaml": CATALOG,
+      [DEFECTS_FILE]: defects(entry("one", "§5 requires:", IN_SECTION_5)),
+    });
     const { catalog } = loadCatalog(root);
     if (catalog === null) throw new Error("fixture has no catalog");
     const issues = checkContractDefects({ root, catalog });
@@ -368,7 +411,11 @@ describe("against the repository's own contract and defects file", () => {
     // The paired control. The repository's Open section is empty, so the pass
     // above examines nothing and is not evidence on its own; these two are.
     const real = quotableFromSectionTen();
-    expect(checkContractDefects(realCtx(defects(entry("real", "§10 requires:", real)))).filter((i) => i.severity === "error")).toEqual([]);
+    expect(
+      checkContractDefects(realCtx(defects(entry("real", "§10 requires:", real)))).filter(
+        (i) => i.severity === "error",
+      ),
+    ).toEqual([]);
 
     const altered = `${real} And one sentence the contract does not contain.`;
     const issues = checkContractDefects(realCtx(defects(entry("altered", "§10 requires:", altered)))).filter(

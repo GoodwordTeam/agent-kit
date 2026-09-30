@@ -36,16 +36,8 @@
     "hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "immutable": true,
     "reviewers_may_edit_source": false,
-    "includes": [
-      "diff",
-      "tests",
-      "prior-findings",
-      "verification-receipts"
-    ],
-    "excludes": [
-      "implementer-narrative",
-      "other-reviewer-judgments"
-    ]
+    "includes": ["diff", "tests", "prior-findings", "verification-receipts"],
+    "excludes": ["implementer-narrative", "other-reviewer-judgments"]
   },
   "authorship": {
     "implementer": "implementer",
@@ -116,9 +108,7 @@
   "packs_attached": [
     {
       "pack": "pack-test",
-      "matched_rules": [
-        "changed-paths-include-tests"
-      ],
+      "matched_rules": ["changed-paths-include-tests"],
       "rationale": "The fix changes a loader that the suite covers directly, so the test pack's constraints apply to this pass.",
       "evidence": [
         {
@@ -171,13 +161,8 @@
   ],
   "delta_scope": {
     "boundary": "affected-behavior",
-    "affected_behavior": [
-      "Which artifact directories the loader reads.",
-      "What every caller of the loader receives."
-    ],
-    "touched_dependencies": [
-      "src/config/defaults.ts"
-    ],
+    "affected_behavior": ["Which artifact directories the loader reads.", "What every caller of the loader receives."],
+    "touched_dependencies": ["src/config/defaults.ts"],
     "affected_surface": [
       {
         "repo": "example-org/example-service",
@@ -186,9 +171,7 @@
         "symbol": "loadArtifacts"
       }
     ],
-    "excluded": [
-      "The report formatter, whose behaviour does not change with the size of the returned set."
-    ]
+    "excluded": ["The report formatter, whose behaviour does not change with the size of the returned set."]
   },
   "packet": {
     "prior_review": {
@@ -204,9 +187,7 @@
       }
     ],
     "fix_diff": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-    "input_hashes": [
-      "sha256:3333333333333333333333333333333333333333333333333333333333333333"
-    ],
+    "input_hashes": ["sha256:3333333333333333333333333333333333333333333333333333333333333333"],
     "dispositions": [
       {
         "finding": {

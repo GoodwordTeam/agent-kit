@@ -176,7 +176,8 @@ export const UNIVERSAL_NEVER_ROWS: ReadonlyArray<GovernedNeverRow> = [
   {
     ruling: "closure-requires-independent-verification",
     clauses: ["independent verification closes a finding"],
-    description: "Only independent verification closes a finding: reading a patch is the author's confidence, not a receipt.",
+    description:
+      "Only independent verification closes a finding: reading a patch is the author's confidence, not a receipt.",
   },
   {
     ruling: "required-lane-failure-is-unavailable",
@@ -186,9 +187,10 @@ export const UNIVERSAL_NEVER_ROWS: ReadonlyArray<GovernedNeverRow> = [
 ];
 
 /** Kept for the callers that only need the citations. */
-export const MANDATORY_NEVER_RULINGS: ReadonlyArray<string> = UNIVERSAL_NEVER_ROWS.map((row) => row.ruling).filter(
-  (ruling): ruling is string => ruling !== null,
-);
+export const MANDATORY_NEVER_RULINGS: ReadonlyArray<string> = UNIVERSAL_NEVER_ROWS.values()
+  .map((row) => row.ruling)
+  .filter((ruling): ruling is string => ruling !== null)
+  .toArray();
 
 /** What twenty-seven seats say: they judge, and judging is all they do. */
 export const AUTHORSHIP_PLAIN_ROW: GovernedNeverRow = {
@@ -204,7 +206,8 @@ export const AUTHORSHIP_PLAIN_ROW: GovernedNeverRow = {
 export const AUTHORSHIP_CONVERSE_ROW: GovernedNeverRow = {
   ruling: null,
   clauses: ["a finding, a receipt, a review record or a ticket", "never closes or approves what it produced"],
-  description: "the converse authorship row, naming what this seat writes and ruling out a finding, a receipt, a review record or a ticket",
+  description:
+    "the converse authorship row, naming what this seat writes and ruling out a finding, a receipt, a review record or a ticket",
 };
 
 /**
@@ -224,7 +227,8 @@ export const PRODUCING_SEATS: ReadonlyArray<string> = ["implementer", "plan-revi
 export const STANDARDS_GROUNDING_ROW: GovernedNeverRow = {
   ruling: null,
   clauses: ["cites an actual project rule or returns empty", "never an invented preference"],
-  description: "the standards-grounding row, \"cites an actual project rule or returns empty; an absent standard is never an invented preference\"",
+  description:
+    'the standards-grounding row, "cites an actual project rule or returns empty; an absent standard is never an invented preference"',
 };
 
 /** The seat §12.2 names, because it carries no tier of its own to derive from. */
@@ -285,7 +289,7 @@ export function splitSections(text: string): Section[] {
   for (const [i, raw] of lines.entries()) {
     const line = raw ?? "";
     if (/^\s*```/.test(line)) fenced = !fenced;
-    if (!fenced && /^## /.test(line)) {
+    if (!fenced && line.startsWith("## ")) {
       if (current !== null) out.push({ heading: current.heading, line: current.line, text: current.body.join("\n") });
       current = { heading: line.trimEnd(), line: i + 1, body: [] };
       continue;
@@ -303,7 +307,10 @@ function hasAntiRationalizationTable(text: string): boolean {
       .split("|")
       .map((c) => c.trim())
       .filter((c) => c.length > 0);
-    if (cells.length === 3 && cells.every((c, i) => c.toLowerCase() === (ANTI_RATIONALIZATION_COLUMNS[i] as string).toLowerCase())) {
+    if (
+      cells.length === 3 &&
+      cells.every((c, i) => c.toLowerCase() === (ANTI_RATIONALIZATION_COLUMNS[i] as string).toLowerCase())
+    ) {
       return true;
     }
   }
@@ -326,7 +333,9 @@ export function citedRulings(text: string): string[] {
  * matches wherever the author happened to break the line.
  */
 export function neverRows(text: string): string[] {
-  return listItems(text).map(normalizeRow).filter((row) => row.length > 0);
+  return listItems(text)
+    .map(normalizeRow)
+    .filter((row) => row.length > 0);
 }
 
 /**
@@ -352,15 +361,15 @@ export function listItems(text: string): string[] {
     if (current !== null) current.push(line);
   }
   if (current !== null) rows.push(current.join(" "));
-  return rows.map((row) => row.replace(/\s+/g, " ").trim()).filter((row) => row.length > 0);
+  return rows
+    .values()
+    .map((row) => row.replace(/\s+/g, " ").trim())
+    .filter((row) => row.length > 0)
+    .toArray();
 }
 
 function normalizeRow(text: string): string {
-  return text
-    .replace(/[`*_]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  return text.replace(/[`*_]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 /** A row satisfies a governed row when it carries the citation, if any, and every clause. */
@@ -457,12 +466,7 @@ function blockForm(lines: ReadonlyArray<string>): string {
 
 /** Wording without its punctuation or markup: the bar a quoted row is held to. */
 function looseForm(text: string): string {
-  return text
-    .replace(/[`*"]/g, "")
-    .replace(/;/g, ".")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  return text.replace(/[`*"]/g, "").replace(/;/g, ".").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 /**
@@ -673,7 +677,7 @@ function rowPopulationNote(population: RowPopulation): Issue {
       population.bodies === 1 ? "body" : "bodies"
     }: ${population.universal} for each universal row, ${population.plain} for the plain authorship row, ${
       population.converse
-    } for the converse, ${population.standards} for standards grounding. A seat short of its population carried no ${"## Never"} row this could find and is reported above. The converse is the one row §12.2 describes in prose instead of setting, so those ${population.converse} are held to its clauses and to no verbatim form; everything else counted here was compared with §12.2's own text.`,
+    } for the converse, ${population.standards} for standards grounding. A seat short of its population carried no ## Never row this could find and is reported above. The converse is the one row §12.2 describes in prose instead of setting, so those ${population.converse} are held to its clauses and to no verbatim form; everything else counted here was compared with §12.2's own text.`,
   );
 }
 
@@ -720,7 +724,11 @@ function checkSections(
   // Order is checked over the required headings that are actually present, so a
   // missing heading is reported once as missing rather than again as misplaced.
   const expected = required.filter((h) => present.has(h));
-  const actual = sections.filter((s) => expected.includes(s.heading)).map((s) => s.heading);
+  const actual = sections
+    .values()
+    .filter((s) => expected.includes(s.heading))
+    .map((s) => s.heading)
+    .toArray();
   for (const [i, heading] of actual.entries()) {
     if (expected[i] === heading) continue;
     const at = present.get(heading);
@@ -805,7 +813,13 @@ function checkOneBody(
   if (section === "skills" || section === "protocols") {
     const skill = section === "skills";
     issues.push(
-      ...checkSections(file, sections, skill ? SKILL_SECTIONS : PROTOCOL_SECTIONS, skill ? SKILL_FORBIDDEN : PROTOCOL_FORBIDDEN, true),
+      ...checkSections(
+        file,
+        sections,
+        skill ? SKILL_SECTIONS : PROTOCOL_SECTIONS,
+        skill ? SKILL_FORBIDDEN : PROTOCOL_FORBIDDEN,
+        true,
+      ),
     );
     const gates = sections.find((s) => s.heading === "## Hard gates");
     if (gates !== undefined && !hasAntiRationalizationTable(gates.text)) {
@@ -994,7 +1008,10 @@ export function counterpartFamilies(root: string): {
   for (const raw of lines.slice(start + 2)) {
     const line = raw.trim();
     if (!line.startsWith("|")) break;
-    const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
     const seat = cells[0] === undefined ? [] : [...cells[0].matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
     const counterparts = cells[1] === undefined ? [] : [...cells[1].matchAll(BACKTICKED_ID)].map((m) => m[1] ?? "");
     if (seat.length !== 1 || seat[0] === undefined || counterparts.length === 0) continue;
@@ -1141,11 +1158,47 @@ function checkCounterpartTable(ctx: CheckContext, families: ReadonlyMap<string, 
  * number it cannot read is left alone rather than guessed at.
  */
 const CARDINALS: ReadonlyArray<string> = [
-  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-  "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
-  "nineteen", "twenty", "twenty-one", "twenty-two", "twenty-three", "twenty-four", "twenty-five",
-  "twenty-six", "twenty-seven", "twenty-eight", "twenty-nine", "thirty", "thirty-one", "thirty-two",
-  "thirty-three", "thirty-four", "thirty-five", "thirty-six", "thirty-seven", "thirty-eight", "thirty-nine", "forty",
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+  "twenty",
+  "twenty-one",
+  "twenty-two",
+  "twenty-three",
+  "twenty-four",
+  "twenty-five",
+  "twenty-six",
+  "twenty-seven",
+  "twenty-eight",
+  "twenty-nine",
+  "thirty",
+  "thirty-one",
+  "thirty-two",
+  "thirty-three",
+  "thirty-four",
+  "thirty-five",
+  "thirty-six",
+  "thirty-seven",
+  "thirty-eight",
+  "thirty-nine",
+  "forty",
 ];
 
 const CENSUS_SENTENCE = /\b([A-Za-z-]+) seats? of ([A-Za-z-]+) are named here\b/;

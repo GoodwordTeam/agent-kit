@@ -104,7 +104,10 @@ profiles:
   });
 
   test("catalog.exactly-one-default-profile-matching-package-default-profile catches a second default", () => {
-    const catalog = clean.replace("  - id: autonomy\n    status: contract\n", "  - id: autonomy\n    status: contract\n    default: true\n");
+    const catalog = clean.replace(
+      "  - id: autonomy\n    status: contract\n",
+      "  - id: autonomy\n    status: contract\n    default: true\n",
+    );
     expect(rulesOf(checkCatalogRules(ctxFor({ "catalog.yaml": catalog })))).toContain(
       "catalog.exactly-one-default-profile-matching-package-default-profile",
     );
@@ -183,7 +186,8 @@ describe("skill manifest rules", () => {
     const ctx = ctxFor({
       "catalog.yaml": catalog,
       "skills/diagnose/skill.yaml": "id: diagnose\ninvocation: M\nrequires: [artifact-write]\noutputs:\n  - id: note\n",
-      "skills/super-ship/skill.yaml": "id: super-ship\ninvocation: U\nrequires: [repository-read]\noutputs:\n  - id: note\n",
+      "skills/super-ship/skill.yaml":
+        "id: super-ship\ninvocation: U\nrequires: [repository-read]\noutputs:\n  - id: note\n",
     });
     expect(rulesOf(checkSkillManifests(ctx))).toEqual([]);
   });
@@ -200,7 +204,8 @@ describe("skill manifest rules", () => {
   test("skill.budget-enforces-only-declared-limits catches a budget this package computes itself", () => {
     const ctx = ctxFor({
       "catalog.yaml": catalog,
-      "skills/super-review/skill.yaml": "id: super-review\ninvocation: U\nbudget:\n  provided_by: skill\n  enforces: []\n",
+      "skills/super-review/skill.yaml":
+        "id: super-review\ninvocation: U\nbudget:\n  provided_by: skill\n  enforces: []\n",
     });
     expect(rulesOf(checkSkillManifests(ctx))).toContain("skill.budget-enforces-only-declared-limits");
   });
@@ -212,31 +217,41 @@ describe("pack manifest rules", () => {
     status: contract
 `;
   const goodRule =
-    "id: pack-secure\nactivation:\n  rules:\n    - id: auth-surface\n      artifact_kinds: [source-file]\n      semantics: [authentication]\n      paths: [\"src/auth/**\"]\n  examples:\n    - artifact: src/auth/session.ts\n      attaches: true\n      why: authentication boundary\n    - artifact: src/util/pad.ts\n      attaches: false\n      why: no security semantics\n  classifier_optional: true\n";
+    'id: pack-secure\nactivation:\n  rules:\n    - id: auth-surface\n      artifact_kinds: [source-file]\n      semantics: [authentication]\n      paths: ["src/auth/**"]\n  examples:\n    - artifact: src/auth/session.ts\n      attaches: true\n      why: authentication boundary\n    - artifact: src/util/pad.ts\n      attaches: false\n      why: no security semantics\n  classifier_optional: true\n';
 
   test("a consistent pack manifest produces no pack rule issues", () => {
-    expect(rulesOf(checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": goodRule })))).toEqual([]);
+    expect(
+      rulesOf(checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": goodRule }))),
+    ).toEqual([]);
   });
 
   test("pack.activation-requires-artifact-and-semantics catches a path-only rule", () => {
     const manifest =
-      "id: pack-secure\nactivation:\n  rules:\n    - id: by-extension\n      artifact_kinds: []\n      semantics: []\n      paths: [\"**/*.ts\"]\n  examples:\n    - artifact: a\n      attaches: true\n      why: x\n    - artifact: b\n      attaches: false\n      why: y\n";
-    expect(rulesOf(checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": manifest })))).toContain(
-      "pack.activation-requires-artifact-and-semantics",
-    );
+      'id: pack-secure\nactivation:\n  rules:\n    - id: by-extension\n      artifact_kinds: []\n      semantics: []\n      paths: ["**/*.ts"]\n  examples:\n    - artifact: a\n      attaches: true\n      why: x\n    - artifact: b\n      attaches: false\n      why: y\n';
+    expect(
+      rulesOf(checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": manifest }))),
+    ).toContain("pack.activation-requires-artifact-and-semantics");
   });
 
   test("pack.activation-requires-artifact-and-semantics requires a negative example", () => {
     const manifest = goodRule.replace("attaches: false", "attaches: true");
-    expect(rulesOf(checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": manifest })))).toContain(
-      "pack.activation-requires-artifact-and-semantics",
-    );
+    expect(
+      rulesOf(checkPackManifests(ctxFor({ "catalog.yaml": catalog, "packs/pack-secure/pack.yaml": manifest }))),
+    ).toContain("pack.activation-requires-artifact-and-semantics");
   });
 
   test("pack.attachment-records-rationale-and-matched-rule catches a record with no matched rule", () => {
     const record = JSON.stringify({
       schema: "review",
-      packs_attached: [{ pack: "pack-secure", matched_rules: [], rationale: "felt right", evidence: [{ ref: "e" }], attached_at: "2026-09-19T00:00:00Z" }],
+      packs_attached: [
+        {
+          pack: "pack-secure",
+          matched_rules: [],
+          rationale: "felt right",
+          evidence: [{ ref: "e" }],
+          attached_at: "2026-09-19T00:00:00Z",
+        },
+      ],
     });
     const ctx = ctxFor({ "catalog.yaml": catalog, "templates/review.json": record });
     expect(rulesOf(checkPackManifests(ctx))).toContain("pack.attachment-records-rationale-and-matched-rule");
@@ -358,7 +373,9 @@ describe("profile capabilities", () => {
         "profiles/maintainer.yaml": "id: maintainer\nincludes: [unclosed\n",
       }),
     );
-    expect(issues.map((i) => [i.rule, i.severity, i.file])).toEqual([["profile.unparseable", "error", "profiles/maintainer.yaml"]]);
+    expect(issues.map((i) => [i.rule, i.severity, i.file])).toEqual([
+      ["profile.unparseable", "error", "profiles/maintainer.yaml"],
+    ]);
   });
 
   test("profiles listing only capabilities pass", () => {

@@ -119,17 +119,20 @@ describe("policies/invocation.yaml", () => {
   });
 
   test("a grant-bearing operation that does not stop on an unvalidatable grant is an error", () => {
-    const policy = POLICY.replace("on_unvalidatable_grant: stop-for-explicit-invocation", "on_unvalidatable_grant: proceed");
+    const policy = POLICY.replace(
+      "on_unvalidatable_grant: stop-for-explicit-invocation",
+      "on_unvalidatable_grant: proceed",
+    );
     expect(rulesOf(checkPolicies(ctxFor(policy)))).toContain("policy.side-door-on-unvalidatable-grant");
   });
 
   test.each(["delegated-grant", "explicit-or-delegated", "active-review-run"])(
     "the rule applies to authority %s, which is reached through a grant",
     (authority) => {
-      const policy = POLICY.replace("authority: delegated-grant\n    grant:", `authority: ${authority}\n    grant:`).replace(
-        "on_unvalidatable_grant: stop-for-explicit-invocation",
-        "on_unvalidatable_grant: not-applicable",
-      );
+      const policy = POLICY.replace(
+        "authority: delegated-grant\n    grant:",
+        `authority: ${authority}\n    grant:`,
+      ).replace("on_unvalidatable_grant: stop-for-explicit-invocation", "on_unvalidatable_grant: not-applicable");
       expect(rulesOf(checkPolicies(ctxFor(policy)))).toContain("policy.side-door-on-unvalidatable-grant");
     },
   );
@@ -151,7 +154,9 @@ describe("policies/invocation.yaml", () => {
     side_effects: [kb-publish, artifact-write]
     on_unvalidatable_grant: not-applicable
 `;
-    const issue = checkPolicies(ctxFor(policy)).find((i) => i.rule === "policy.remote-side-effect-under-model-authority");
+    const issue = checkPolicies(ctxFor(policy)).find(
+      (i) => i.rule === "policy.remote-side-effect-under-model-authority",
+    );
     expect(issue?.severity).toBe("error");
     expect(issue?.message).toContain("kb-publish");
   });
@@ -270,7 +275,9 @@ policies:`;
 `;
     const issues = checkPolicies(ctxFor(policy, catalog));
     expect(rulesOf(issues)).toContain("policy.per-entrypoint-misplaced");
-    expect(issues.find((i) => i.rule === "policy.per-entrypoint-misplaced")?.message).toContain("entrypoints.per_entrypoint");
+    expect(issues.find((i) => i.rule === "policy.per-entrypoint-misplaced")?.message).toContain(
+      "entrypoints.per_entrypoint",
+    );
   });
 
   test("the authored policy's per-entrypoint block agrees with the catalog", () => {

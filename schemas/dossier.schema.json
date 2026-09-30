@@ -106,7 +106,10 @@
           },
           {
             "description": "An unread inference is 'assumed'. Only a hit read in the source at this revision is 'confirmed'.",
-            "if": { "properties": { "discovered_by": { "const": "graph" }, "confirmation": { "const": "confirmed" } }, "required": ["discovered_by", "confirmation"] },
+            "if": {
+              "properties": { "discovered_by": { "const": "graph" }, "confirmation": { "const": "confirmed" } },
+              "required": ["discovered_by", "confirmation"]
+            },
             "then": { "required": ["excerpt"] }
           }
         ]
@@ -136,7 +139,18 @@
         "required": ["area", "why", "consequence"],
         "properties": {
           "area": { "$ref": "common.schema.json#/$defs/nonempty_string" },
-          "why": { "enum": ["budget-exhausted", "index-stale", "index-unavailable", "access-denied", "out-of-scope", "generated-code", "binary-or-opaque", "not-searched"] },
+          "why": {
+            "enum": [
+              "budget-exhausted",
+              "index-stale",
+              "index-unavailable",
+              "access-denied",
+              "out-of-scope",
+              "generated-code",
+              "binary-or-opaque",
+              "not-searched"
+            ]
+          },
           "consequence": { "$ref": "common.schema.json#/$defs/nonempty_string" },
           "provider": { "$ref": "common.schema.json#/$defs/nonempty_string" }
         }
@@ -175,7 +189,9 @@
             "properties": {
               "what": { "$ref": "common.schema.json#/$defs/nonempty_string" },
               "why": { "$ref": "common.schema.json#/$defs/nonempty_string" },
-              "suggested_tool": { "enum": ["lexical", "path", "symbol-index", "graph", "manual-read", "prototype", "diagnose"] }
+              "suggested_tool": {
+                "enum": ["lexical", "path", "symbol-index", "graph", "manual-read", "prototype", "diagnose"]
+              }
             }
           }
         },
@@ -195,7 +211,15 @@
             "contains": {
               "anyOf": [
                 { "properties": { "available": { "const": false } }, "required": ["available"] },
-                { "properties": { "index": { "properties": { "freshness": { "enum": ["stale", "unknown"] } }, "required": ["freshness"] } }, "required": ["index"] }
+                {
+                  "properties": {
+                    "index": {
+                      "properties": { "freshness": { "enum": ["stale", "unknown"] } },
+                      "required": ["freshness"]
+                    }
+                  },
+                  "required": ["index"]
+                }
               ]
             }
           }

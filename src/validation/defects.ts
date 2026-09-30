@@ -215,7 +215,10 @@ export function checkContractDefects(ctx: CheckContext): Issue[] {
   const issues: Issue[] = [];
   const found = entries(defects);
 
-  for (const heading of defects.split("\n").filter((line) => /^##\s/.test(line)).map((line) => line.trim())) {
+  for (const heading of defects
+    .split("\n")
+    .filter((line) => /^##\s/.test(line))
+    .map((line) => line.trim())) {
     if (heading === OPEN_HEADING || !isRetirementHeading(heading)) continue;
     issues.push(
       error(
@@ -265,13 +268,20 @@ export function checkContractDefects(ctx: CheckContext): Issue[] {
     // present and unjudged and only the authority is missing, which is the
     // blocking case -- the same distinction §12.2's anchors turned out to need.
     const reason = `${
-      contract === null ? `${CONTRACT_FILE} is not in this tree` : `${CONTRACT_FILE} has no numbered sections this can index`
+      contract === null
+        ? `${CONTRACT_FILE} is not in this tree`
+        : `${CONTRACT_FILE} has no numbered sections this can index`
     }, so the quotations in ${open.length} open ${
       open.length === 1 ? "entry" : "entries"
     } were not resolved against it. §10 scopes the comparison to the cited section, and a section index that could not be built is the case that rule says to fail closed on rather than widen.`;
     issues.push(
       open.length === 0
-        ? skipped("defects.contract-unreadable", DEFECTS_FILE, QUOTATION_CHECK, `${reason} No entry is open, so nothing in this tree went unexamined and the run still passes.`)
+        ? skipped(
+            "defects.contract-unreadable",
+            DEFECTS_FILE,
+            QUOTATION_CHECK,
+            `${reason} No entry is open, so nothing in this tree went unexamined and the run still passes.`,
+          )
         : unavailable("defects.contract-unreadable", DEFECTS_FILE, QUOTATION_CHECK, reason),
     );
     return issues;

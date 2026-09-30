@@ -61,7 +61,8 @@ export const skillsArea: LearnArea = {
       },
     },
     run: {
-      usage: "skills run [--repo P]                        discovery at most once a day, then refresh candidate use counts",
+      usage:
+        "skills run [--repo P]                        discovery at most once a day, then refresh candidate use counts",
       run: (args, ctx) => {
         const root = needRoot(args, ctx);
         if (root === null) return 2;
@@ -82,7 +83,9 @@ export const skillsArea: LearnArea = {
             `${id}  ${info.status.padEnd(9)} ${info.name.padEnd(32)} scope=${info.scope} uses=${info.uses} evidence=${info.evidence} ${info.confidence}`,
           );
         }
-        ctx.io.out(`${rows.length} candidates, ${registry.rejected.length} rejected names, ${Object.keys(registry.seen_sessions).length} sessions seen`);
+        ctx.io.out(
+          `${rows.length} candidates, ${registry.rejected.length} rejected names, ${Object.keys(registry.seen_sessions).length} sessions seen`,
+        );
         return 0;
       },
     },

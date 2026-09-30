@@ -32,8 +32,16 @@ const DOCUMENT = JSON.stringify({ schema: "ticket", id: "ticket-1" }, null, 2);
  */
 const MALFORMED: ReadonlyArray<{ name: string; body: string; rule: string }> = [
   { name: "no schema member", body: JSON.stringify({ id: "ticket-1" }), rule: "schemas.document-no-schema-member" },
-  { name: "schema is not a string", body: JSON.stringify({ schema: 7, id: "ticket-1" }), rule: "schemas.document-schema-not-a-string" },
-  { name: "top-level array", body: JSON.stringify([{ schema: "ticket", id: "ticket-1" }]), rule: "schemas.document-not-a-mapping" },
+  {
+    name: "schema is not a string",
+    body: JSON.stringify({ schema: 7, id: "ticket-1" }),
+    rule: "schemas.document-schema-not-a-string",
+  },
+  {
+    name: "top-level array",
+    body: JSON.stringify([{ schema: "ticket", id: "ticket-1" }]),
+    rule: "schemas.document-not-a-mapping",
+  },
 ];
 
 describe("a file under templates/ that no loader accepts", () => {

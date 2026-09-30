@@ -32,7 +32,12 @@ export interface PromptSection {
  * then the inputs. Inputs come last and are labelled as data, because review
  * comments and observations are untrusted text.
  */
-export function buildPrompt(role: LearnRole, outputContract: string, inputs: readonly PromptSection[], env: NodeJS.ProcessEnv = process.env): string {
+export function buildPrompt(
+  role: LearnRole,
+  outputContract: string,
+  inputs: readonly PromptSection[],
+  env: NodeJS.ProcessEnv = process.env,
+): string {
   const parts = [
     loadRole(role, env),
     "## Output contract (enforced by the runtime)",

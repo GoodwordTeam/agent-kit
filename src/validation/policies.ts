@@ -95,8 +95,8 @@ function vocabularies(root: string): { authority: Set<string>; covers: Set<strin
     if (values.length === 0) return;
     if (name === "authority" || name === "remote_side_effect") into.clear();
     for (const value of values) {
-      const text = str(value);
-      if (text !== null) into.add(text);
+      const member = str(value);
+      if (member !== null) into.add(member);
     }
   };
   readEnum("authority", authority);
@@ -152,22 +152,38 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
     const declaredAuthority = str(block["authority"]);
     if (declaredAuthority !== null && !AUTHORITY.has(declaredAuthority)) {
       issues.push(
-        error("policy.unknown-authority", POLICY_FILE, `entrypoints.${group}.authority is ${declaredAuthority}, which is not a value of common#/$defs/authority`),
+        error(
+          "policy.unknown-authority",
+          POLICY_FILE,
+          `entrypoints.${group}.authority is ${declaredAuthority}, which is not a value of common#/$defs/authority`,
+        ),
       );
     }
 
-    const listed = arr(block["skills"]).map(str).filter((v): v is string => v !== null);
+    const listed = arr(block["skills"])
+      .map(str)
+      .filter((v): v is string => v !== null);
     const count = block["count"];
     if (typeof count === "number" && count !== listed.length) {
       issues.push(
-        error("policy.entrypoint-count-mismatch", POLICY_FILE, `entrypoints.${group}.count is ${count} but ${listed.length} skill(s) are listed`),
+        error(
+          "policy.entrypoint-count-mismatch",
+          POLICY_FILE,
+          `entrypoints.${group}.count is ${count} but ${listed.length} skill(s) are listed`,
+        ),
       );
     }
 
     for (const id of listed) {
       const entry = catalogSkills.get(id);
       if (entry === undefined) {
-        issues.push(error("policy.skill-not-in-catalog", POLICY_FILE, `entrypoints.${group} lists ${id}, which catalog.yaml does not declare`));
+        issues.push(
+          error(
+            "policy.skill-not-in-catalog",
+            POLICY_FILE,
+            `entrypoints.${group} lists ${id}, which catalog.yaml does not declare`,
+          ),
+        );
         continue;
       }
       classified.add(id);
@@ -214,7 +230,13 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
   for (const [skillId, named] of Object.entries(perEntrypoint)) {
     const entry = catalogSkills.get(skillId);
     if (entry === undefined) {
-      issues.push(error("policy.skill-not-in-catalog", POLICY_FILE, `per_entrypoint names ${skillId}, which catalog.yaml does not declare`));
+      issues.push(
+        error(
+          "policy.skill-not-in-catalog",
+          POLICY_FILE,
+          `per_entrypoint names ${skillId}, which catalog.yaml does not declare`,
+        ),
+      );
       continue;
     }
     // Agreement is entry-for-entry, so it fails in both directions. Only the
@@ -237,18 +259,30 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
       const declaredAuthority = str(record["authority"]);
       if (declaredAuthority !== null && !AUTHORITY.has(declaredAuthority)) {
         issues.push(
-          error("policy.unknown-authority", POLICY_FILE, `per_entrypoint.${skillId}.${name}.authority is ${declaredAuthority}, which is not a value of common#/$defs/authority`),
+          error(
+            "policy.unknown-authority",
+            POLICY_FILE,
+            `per_entrypoint.${skillId}.${name}.authority is ${declaredAuthority}, which is not a value of common#/$defs/authority`,
+          ),
         );
       }
       const catalogEntrypoint = entry.entrypoints?.[name];
       if (catalogEntrypoint === undefined) {
         issues.push(
-          error("policy.entrypoint-disagrees-with-catalog", POLICY_FILE, `per_entrypoint.${skillId} declares entrypoint ${name}, which catalog.yaml does not`),
+          error(
+            "policy.entrypoint-disagrees-with-catalog",
+            POLICY_FILE,
+            `per_entrypoint.${skillId} declares entrypoint ${name}, which catalog.yaml does not`,
+          ),
         );
         continue;
       }
       const invocation = str(record["invocation"]);
-      if (invocation !== null && catalogEntrypoint.invocation !== undefined && invocation !== catalogEntrypoint.invocation) {
+      if (
+        invocation !== null &&
+        catalogEntrypoint.invocation !== undefined &&
+        invocation !== catalogEntrypoint.invocation
+      ) {
         issues.push(
           error(
             "policy.entrypoint-disagrees-with-catalog",
@@ -283,7 +317,11 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
     const id = str(record["id"]);
     if (id === null || !OPERATION_ID.test(id)) {
       issues.push(
-        error("policy.malformed-operation-id", POLICY_FILE, `operations[${i}] id ${id ?? "is missing"} does not match common#/$defs/operation_id (<domain>.<action>)`),
+        error(
+          "policy.malformed-operation-id",
+          POLICY_FILE,
+          `operations[${i}] id ${id ?? "is missing"} does not match common#/$defs/operation_id (<domain>.<action>)`,
+        ),
       );
     } else if (seen.has(id)) {
       issues.push(error("policy.duplicate-operation-id", POLICY_FILE, `operation id ${id} is declared more than once`));
@@ -294,10 +332,16 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
     const label = id ?? `operations[${i}]`;
     const exposedBy = str(record["exposed_by"]);
     if (exposedBy === null) {
-      issues.push(error("policy.operation-exposed-by-unknown-skill", POLICY_FILE, `${label} declares no exposed_by skill`));
+      issues.push(
+        error("policy.operation-exposed-by-unknown-skill", POLICY_FILE, `${label} declares no exposed_by skill`),
+      );
     } else if (!catalogSkills.has(exposedBy)) {
       issues.push(
-        error("policy.operation-exposed-by-unknown-skill", POLICY_FILE, `${label} is exposed_by ${exposedBy}, which catalog.yaml does not declare`),
+        error(
+          "policy.operation-exposed-by-unknown-skill",
+          POLICY_FILE,
+          `${label} is exposed_by ${exposedBy}, which catalog.yaml does not declare`,
+        ),
       );
     }
 
@@ -306,7 +350,11 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
       const entry = catalogSkills.get(exposedBy);
       if (entry !== undefined && entry.entrypoints !== undefined && entry.entrypoints[entrypointName] === undefined) {
         issues.push(
-          error("policy.entrypoint-disagrees-with-catalog", POLICY_FILE, `${label} names entrypoint ${entrypointName} on ${exposedBy}, which catalog.yaml does not declare`),
+          error(
+            "policy.entrypoint-disagrees-with-catalog",
+            POLICY_FILE,
+            `${label} names entrypoint ${entrypointName} on ${exposedBy}, which catalog.yaml does not declare`,
+          ),
         );
       }
     }
@@ -316,7 +364,11 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
       if (callerId === null) continue;
       if (!catalogSkills.has(callerId)) {
         issues.push(
-          error("policy.operation-callable-by-unknown-skill", POLICY_FILE, `${label} is callable_by ${callerId}, which catalog.yaml does not declare`),
+          error(
+            "policy.operation-callable-by-unknown-skill",
+            POLICY_FILE,
+            `${label} is callable_by ${callerId}, which catalog.yaml does not declare`,
+          ),
         );
       }
     }
@@ -326,7 +378,11 @@ export function checkPolicies(ctx: CheckContext): Issue[] {
       issues.push(error("policy.unknown-authority", POLICY_FILE, `${label} declares no authority`));
     } else if (!AUTHORITY.has(operationAuthority)) {
       issues.push(
-        error("policy.unknown-authority", POLICY_FILE, `${label} authority is ${operationAuthority}, which is not a value of common#/$defs/authority`),
+        error(
+          "policy.unknown-authority",
+          POLICY_FILE,
+          `${label} authority is ${operationAuthority}, which is not a value of common#/$defs/authority`,
+        ),
       );
     }
 

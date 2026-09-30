@@ -48,14 +48,17 @@ export function resolveProfile(root: string, catalog: Catalog, profileId: string
   const declaredDefault = catalog.package.defaultProfile;
   const hasDefault = declaredDefault.length > 0 && catalog.get("profiles", declaredDefault) !== undefined;
   const selected = profileId ?? (hasDefault ? declaredDefault : undefined);
-  if (selected === "all" && catalog.get("profiles", "all") === undefined) return { profile: "all", skills: all, issues: [] };
+  if (selected === "all" && catalog.get("profiles", "all") === undefined)
+    return { profile: "all", skills: all, issues: [] };
   if (selected === undefined) return { profile: "all", skills: all, issues: [] };
 
   if (catalog.get("profiles", selected) === undefined) {
     return {
       profile: selected,
       skills: [],
-      issues: [error("packaging.unknown-profile", "catalog.yaml", `Profile '${selected}' is not declared in catalog.yaml.`)],
+      issues: [
+        error("packaging.unknown-profile", "catalog.yaml", `Profile '${selected}' is not declared in catalog.yaml.`),
+      ],
     };
   }
 
@@ -65,7 +68,9 @@ export function resolveProfile(root: string, catalog: Catalog, profileId: string
     try {
       const parsed = parseYaml(text) as unknown;
       const record =
-        parsed !== null && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+        parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>)
+          : {};
       const declared = Array.isArray(record["skills"])
         ? (record["skills"] as unknown[]).filter((s): s is string => typeof s === "string")
         : null;
@@ -74,7 +79,13 @@ export function resolveProfile(root: string, catalog: Catalog, profileId: string
         const known = new Set(all);
         for (const id of declared) {
           if (!known.has(id)) {
-            issues.push(error("packaging.profile-unknown-member", file, `Profile '${selected}' lists skill '${id}', which catalog.yaml does not declare.`));
+            issues.push(
+              error(
+                "packaging.profile-unknown-member",
+                file,
+                `Profile '${selected}' lists skill '${id}', which catalog.yaml does not declare.`,
+              ),
+            );
           }
         }
         return { profile: selected, skills: declared.filter((id) => known.has(id)), issues };
@@ -88,7 +99,10 @@ export function resolveProfile(root: string, catalog: Catalog, profileId: string
     }
   }
 
-  const fromCatalog = catalog.bySection("skills").filter((e) => e.profiles.includes(selected)).map((e) => e.id);
+  const fromCatalog = catalog
+    .bySection("skills")
+    .filter((e) => e.profiles.includes(selected))
+    .map((e) => e.id);
   return {
     profile: selected,
     skills: fromCatalog,

@@ -38,7 +38,9 @@ function fakeDeps(bins: string[], stdout = ""): SetupDeps & { calls: string[][] 
 
 /** A context whose judge command is `judge`, and whose claude-mem lives under the fake home. */
 function context(deps: SetupDeps, extra: Record<string, string> = {}): TestContext {
-  return testContext({ env: { AK_LEARN_JUDGE: "judge", CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: "", ...extra } });
+  return testContext({
+    env: { AK_LEARN_JUDGE: "judge", CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: "", ...extra },
+  });
 }
 
 describe("setup doctor", () => {
@@ -80,7 +82,8 @@ describe("setup seed", () => {
     const repo = gitRepo(join(scratch(), "repo"));
     mkdirSync(join(repo, "sub"));
     expect(seed(ctx, join(repo, "sub"), { skipGithub: true })).toBe(0);
-    for (const loop of ["review", "memory", "skills"] as const) expect(existsSync(join(loopDir(ctx.config, repo, loop), ".git"))).toBe(true);
+    for (const loop of ["review", "memory", "skills"] as const)
+      expect(existsSync(join(loopDir(ctx.config, repo, loop), ".git"))).toBe(true);
     expect(Object.values(readRegistry(ctx.config)).map((entry) => entry.root)).toEqual([repo]);
     expect(ctx.prompts).toEqual([]);
     expect(ctx.out.some((line) => line.startsWith("dry ingest: "))).toBe(true);
@@ -103,7 +106,9 @@ describe("setup verify", () => {
   test("a fresh machine fails every check it can make", () => {
     const deps = fakeDeps(["bun", "git"]);
     const ctx = context(deps);
-    const failed = verifyChecks(ctx, deps).filter((r) => !r.ok).map((r) => r.label);
+    const failed = verifyChecks(ctx, deps)
+      .filter((r) => !r.ok)
+      .map((r) => r.label);
     expect(failed).toEqual([
       "claude SessionStart hook",
       "claude Stop hook",

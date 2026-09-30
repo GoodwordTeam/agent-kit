@@ -44,15 +44,10 @@
     }
   ],
   "applies_to": {
-    "domains": [
-      "authority",
-      "charters"
-    ],
+    "domains": ["authority", "charters"],
     "paths": [],
     "packs": [],
-    "skills": [
-      "super-bound"
-    ]
+    "skills": ["super-bound"]
   },
   "guidance": [
     "Read the charter for the action by name before reading any grant that would cover it.",

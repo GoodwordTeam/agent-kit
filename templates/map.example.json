@@ -20,18 +20,14 @@
   "created_at": "2026-09-19T09:00:00Z",
   "status": "open",
   "destination": "A specification for moving session storage off the shared cache that the team can build against.",
-  "notes": [
-    "The shared cache is also used by rate limiting; that use stays."
-  ],
+  "notes": ["The shared cache is also used by rate limiting; that use stays."],
   "decisions_so_far": [
     {
       "gist": "Sessions move to the primary database, not a second cache.",
       "ticket": "map-sessions-store"
     }
   ],
-  "not_yet_specified": [
-    "How long-lived sessions are expired once they leave the cache."
-  ],
+  "not_yet_specified": ["How long-lived sessions are expired once they leave the cache."],
   "out_of_scope": [
     {
       "gist": "Replacing the cache for rate limiting.",
@@ -39,9 +35,5 @@
       "ticket": "map-sessions-rate-limit"
     }
   ],
-  "tickets": [
-    "map-sessions-store",
-    "map-sessions-migration",
-    "map-sessions-rate-limit"
-  ]
+  "tickets": ["map-sessions-store", "map-sessions-migration", "map-sessions-rate-limit"]
 }

@@ -26,9 +26,7 @@
   "specification": {
     "problem": "The artifact loader reads only the top-level directory, so nested run artifacts are silently missing from every report.",
     "solution": "The loader walks the run directory recursively and reports each file it skipped with the reason.",
-    "non_goals": [
-      "Changing the on-disk layout of run artifacts."
-    ],
+    "non_goals": ["Changing the on-disk layout of run artifacts."],
     "acceptance_criteria": [
       {
         "id": "AC-1",
@@ -45,12 +43,8 @@
         "why": "It is the highest seam that sees both the walk and the skip report without a running service."
       }
     ],
-    "verification_commands": [
-      "bun test tests/loader.test.ts"
-    ],
-    "out_of_scope": [
-      "Loading artifacts from remote storage."
-    ]
+    "verification_commands": ["bun test tests/loader.test.ts"],
+    "out_of_scope": ["Loading artifacts from remote storage."]
   },
   "specification_hash": "sha256:ffab1849ba829732cd3275ff94f8b69895652d4d22d6fba59614bb70b9e8a099",
   "specification_approval": {

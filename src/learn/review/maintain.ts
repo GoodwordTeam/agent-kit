@@ -50,19 +50,40 @@ const PATCH_OPS: ReadonlySet<string> = new Set(["append", "replace", "insert_aft
  * text, so an event cannot close its own fence and speak outside it.
  */
 export function formatEvent(event: ReviewEvent): string {
-  const keys = ["hash", "source", "kind", "pr", "severity", "author", "path", "line", "in_reply_to", "obs_id", "ts"] as const;
+  const keys = [
+    "hash",
+    "source",
+    "kind",
+    "pr",
+    "severity",
+    "author",
+    "path",
+    "line",
+    "in_reply_to",
+    "obs_id",
+    "ts",
+  ] as const;
   const head = keys
+    .values()
     .filter((key) => event[key] !== null && event[key] !== undefined)
     .map((key) => `${key}=${String(event[key])}`)
+    .toArray()
     .join(" ");
-  const text = (event.text ?? "").slice(0, 1500);
-  const longest = Math.max(2, ...(text.match(/`+/g) ?? []).map((run) => run.length));
+  const body = (event.text ?? "").slice(0, 1500);
+  const longest = Math.max(2, ...(body.match(/`+/g) ?? []).map((run) => run.length));
   const fence = "`".repeat(longest + 1);
-  return `${fence}event ${head}\n${text}\n${fence}`;
+  return `${fence}event ${head}\n${body}\n${fence}`;
 }
 
-export function maintainerPrompt(ctx: LearnContext, ledger: Ledger, patterns: ReadonlyMap<string, Pattern>, events: readonly ReviewEvent[]): string {
-  const listing = [...patterns.values()].map((p) => `- ${p.id}: ${str(p.meta, "title")} — ${section(p.body, "Problem").slice(0, 200)}`).join("\n");
+export function maintainerPrompt(
+  ctx: LearnContext,
+  ledger: Ledger,
+  patterns: ReadonlyMap<string, Pattern>,
+  events: readonly ReviewEvent[],
+): string {
+  const listing = [...patterns.values()]
+    .map((p) => `- ${p.id}: ${str(p.meta, "title")} — ${section(p.body, "Problem").slice(0, 200)}`)
+    .join("\n");
   return buildPrompt(
     "pattern-maintainer",
     MAINTAINER_CONTRACT,
@@ -96,7 +117,14 @@ export interface ApplyState {
 }
 
 export function emptyState(patterns: Map<string, Pattern>): ApplyState {
-  return { patterns, tally: { total: 0, repeat: 0, fresh: 0 }, processed: {}, newIds: new Set(), notes: [], rejected: [] };
+  return {
+    patterns,
+    tally: { total: 0, repeat: 0, fresh: 0 },
+    processed: {},
+    newIds: new Set(),
+    notes: [],
+    rejected: [],
+  };
 }
 
 function text(value: unknown): string {
@@ -105,7 +133,9 @@ function text(value: unknown): string {
 
 function records(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value)
-    ? value.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object" && !Array.isArray(item))
+    ? value.filter(
+        (item): item is Record<string, unknown> => item !== null && typeof item === "object" && !Array.isArray(item),
+      )
     : [];
 }
 
@@ -114,12 +144,14 @@ function strings(value: unknown): string[] {
 }
 
 /** Any C0 control character or DEL: a line break in a single-line field could forge a frontmatter key. */
+// oxlint-disable-next-line eslint/no-control-regex -- matching control characters is this pattern's whole purpose
 const CONTROL = /[\u0000-\u001f\u007f]/;
 
 /** A repo-relative path, or null. Absolute paths, parent traversal and control characters are refused. */
 function teamTarget(value: unknown): string | null {
   const target = text(value);
-  if (target === "" || CONTROL.test(target) || target.startsWith("/") || target.split(/[\\/]/).includes("..")) return null;
+  if (target === "" || CONTROL.test(target) || target.startsWith("/") || target.split(/[\\/]/).includes(".."))
+    return null;
   return target;
 }
 
@@ -184,7 +216,12 @@ export function applyReply(
       continue;
     }
     try {
-      pattern.body = patchBody(pattern.body, op as PatchOp, typeof update.target === "string" ? update.target : "", body);
+      pattern.body = patchBody(
+        pattern.body,
+        op as PatchOp,
+        typeof update.target === "string" ? update.target : "",
+        body,
+      );
     } catch (error) {
       logLine(ledger, `skipped patch on ${id}: ${(error as Error).message}`);
       continue;
@@ -262,7 +299,10 @@ export function maintain(ctx: LearnContext, ledger: Ledger): string {
     const chunk = pending.slice(i, i + size);
     const reply = ctx.judge(maintainerPrompt(ctx, ledger, state.patterns, chunk));
     if (!validReply(reply)) {
-      logLine(ledger, `maintainer: judge reply unusable on batch ${i / size + 1}; ${chunk.length} events left unprocessed`);
+      logLine(
+        ledger,
+        `maintainer: judge reply unusable on batch ${i / size + 1}; ${chunk.length} events left unprocessed`,
+      );
       continue;
     }
     applyReply(ctx, ledger, chunk, reply, state);
@@ -276,13 +316,19 @@ export function maintain(ctx: LearnContext, ledger: Ledger): string {
 
   for (const pattern of state.patterns.values()) savePattern(pattern);
   const doneEvents = pending.filter((event) => event.hash in state.processed);
-  const prs = [...new Set(doneEvents.filter((event) => event.pr).map((event) => String(event.pr)))].sort().join(",") || "-";
+  const prs =
+    [...new Set(doneEvents.filter((event) => event.pr).map((event) => String(event.pr)))].sort().join(",") || "-";
   const rate = repeatRate(state.tally);
   const { total, repeat, fresh } = state.tally;
   rebuildIndex(ledger, state.patterns, `| ${todayUtc()} | ${prs} | ${total} | ${repeat} | ${fresh} | ${rate} |`);
-  logLine(ledger, `prs=${prs} events=${done} findings=${total} repeats=${repeat} new_patterns=${state.newIds.size} — ${state.notes.join(" / ")}`);
+  logLine(
+    ledger,
+    `prs=${prs} events=${done} findings=${total} repeats=${repeat} new_patterns=${state.newIds.size} — ${state.notes.join(" / ")}`,
+  );
   impactRow(ledger, "run", "-", `prs=${prs} findings=${total} repeats=${repeat}`);
   writeJson(ledger.path(PROCESSED_FILE), { ...processed, ...state.processed });
-  ledger.commit(`maintain: ${prs === "-" ? "no-pr" : prs} +${done} events, ${state.newIds.size} new patterns, repeat ${rate}`);
+  ledger.commit(
+    `maintain: ${prs === "-" ? "no-pr" : prs} +${done} events, ${state.newIds.size} new patterns, repeat ${rate}`,
+  );
   return `processed ${done} events; ${state.newIds.size} new patterns; repeat rate ${rate}`;
 }

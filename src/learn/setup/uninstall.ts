@@ -46,7 +46,7 @@ function restoreMem(ctx: LearnContext, deps: SetupDeps): void {
     rmSync(memPreviousPath(ctx), { force: true });
     return;
   }
-  const settings = readJsonObject<Record<string, unknown>>(settingsPath);
+  const settings = readJsonObject<Record<string, unknown>>(settingsPath, {});
   if (settings === null) {
     ctx.io.err(invalidJsonMessage(settingsPath));
     return;
@@ -57,24 +57,25 @@ function restoreMem(ctx: LearnContext, deps: SetupDeps): void {
     ["CLAUDE_MEM_MODE", MEM_MODE],
   ];
   let changed = false;
+  const unset = new Set<string>();
   for (const [key, value] of ours) {
     if (settings[key] !== value) continue;
     const before = previous[key];
-    if (before === undefined || before === null) delete settings[key];
+    if (before === undefined || before === null) unset.add(key);
     else settings[key] = before;
     changed = true;
   }
   // The record is spent once read, matched or not; a later wire records afresh.
   rmSync(memPreviousPath(ctx), { force: true });
   if (!changed) return;
-  writeJsonWithBackup(settingsPath, settings);
+  writeJsonWithBackup(settingsPath, Object.fromEntries(Object.entries(settings).filter(([key]) => !unset.has(key))));
   ctx.io.out(`${settingsPath}: observation budget and mode restored to their values before wire`);
 }
 
 export function uninstall(ctx: LearnContext, deps: SetupDeps, options: { purge?: boolean } = {}): number {
   for (const path of [claudeSettingsPath(ctx), join(codexHome(ctx, deps), "hooks.json")]) {
     if (!existsSync(path)) continue;
-    const doc = readJsonObject<HookDoc>(path);
+    const doc = readJsonObject<HookDoc>(path, {});
     if (doc === null) {
       ctx.io.err(invalidJsonMessage(path));
       continue;
@@ -110,7 +111,9 @@ export function uninstall(ctx: LearnContext, deps: SetupDeps, options: { purge?:
     rmSync(ctx.config.runtimeDir, { recursive: true, force: true });
     ctx.io.out(`${ctx.config.runtimeDir}: purged`);
   } else {
-    ctx.io.out(`ledgers under ${join(ctx.config.configDir, "projects")}/*/agent-kit were kept (they are your data; --purge removes them)`);
+    ctx.io.out(
+      `ledgers under ${join(ctx.config.configDir, "projects")}/*/agent-kit were kept (they are your data; --purge removes them)`,
+    );
   }
   return 0;
 }

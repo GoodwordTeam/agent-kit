@@ -1,0 +1,5 @@
+# Formatting-only commits, skipped by `git blame` when blame.ignoreRevsFile points here
+# (GitHub reads this file automatically).
+
+# Format the tree with oxfmt
+863bfd9388163bffa6b2b31f217436998dbb3849

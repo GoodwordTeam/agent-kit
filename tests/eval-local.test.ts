@@ -6,7 +6,16 @@
  */
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -133,7 +142,10 @@ function run(args: string[], env: Record<string, string> = {}) {
   for (const c of CASES) {
     const file = join(bundle, "evals", c.dir, "case.yaml");
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `name: ${c.name}\ntags: [${(c.tags ?? []).join(", ")}]\nexecution:\n  prompt: p\n  allowed_tools: [${c.tools.join(", ")}]\n`);
+    writeFileSync(
+      file,
+      `name: ${c.name}\ntags: [${(c.tags ?? []).join(", ")}]\nexecution:\n  prompt: p\n  allowed_tools: [${c.tools.join(", ")}]\n`,
+    );
   }
   mkdirSync(join(dir, "home"));
   const json = join(dir, "out", "result.json");
@@ -153,13 +165,29 @@ function run(args: string[], env: Record<string, string> = {}) {
   });
   const read = (p: string) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : null);
   const argvFile = join(dir, "argv.jsonl");
-  const calls: string[][] = existsSync(argvFile) ? readFileSync(argvFile, "utf8").trim().split("\n").map((l) => JSON.parse(l)) : [];
+  const calls: string[][] = existsSync(argvFile)
+    ? readFileSync(argvFile, "utf8")
+        .trim()
+        .split("\n")
+        .map((l) => JSON.parse(l))
+    : [];
   const pathFile = join(dir, "path.txt");
   const tmpFile = join(dir, "tmpdir.txt");
   const hostTmp = existsSync(tmpFile) ? readFileSync(tmpFile, "utf8") : null;
   const hostPath = existsSync(pathFile) ? readFileSync(pathFile, "utf8").split(":") : [];
-  return { status: r.status, stdout: r.stdout, stderr: r.stderr, result: read(json), receipt: read(json.replace(/\.json$/, ".receipt.json")), calls,
-           dir, hostTmp, hostPath, hostGit: read(join(dir, "git.json")), developerGit };
+  return {
+    status: r.status,
+    stdout: r.stdout,
+    stderr: r.stderr,
+    result: read(json),
+    receipt: read(json.replace(/\.json$/, ".receipt.json")),
+    calls,
+    dir,
+    hostTmp,
+    hostPath,
+    hostGit: read(join(dir, "git.json")),
+    developerGit,
+  };
 }
 
 const names = (result: { cases: Array<{ name: string }> }) => result.cases.map((c) => c.name).sort();
@@ -170,7 +198,10 @@ describe("eval-local: several --case flags across grant groups", () => {
     expect(r.stderr).not.toContain("No eval cases found");
     expect(r.status).toBe(0);
     expect(names(r.result)).toEqual(["case-one", "case-three", "case-two"]);
-    expect(r.receipt.invocations.map((i: { cases: string[] }) => i.cases)).toEqual([["case-one", "case-two"], ["case-three"]]);
+    expect(r.receipt.invocations.map((i: { cases: string[] }) => i.cases)).toEqual([
+      ["case-one", "case-two"],
+      ["case-three"],
+    ]);
     expect(r.receipt.partial).toBe(false);
   });
 
@@ -198,16 +229,19 @@ describe("eval-local: the selected corpus matches its instrument", () => {
   test.each([
     ["env-allowlist", []],
     ["inherited-env", ["--inherit-env"]],
-  ] as const)("under %s the host resolves git to the receipt's executable through a directory holding only it", (method, flags) => {
-    const r = run(["--case", "case-three", ...flags]);
-    expect(r.status).toBe(0);
-    expect(r.receipt.isolation.method).toBe(`host-sandbox+${method}`);
-    expect(r.receipt.tooling.git).toEqual({ source: "xcrun", path: r.developerGit });
-    const first = r.hostPath[0]!;
-    expect(r.hostGit).toEqual({ git: join(first, "git"), real: r.developerGit, first: ["git"] });
-    expect(first).not.toBe(dirname(r.developerGit));
-    expect(existsSync(first)).toBe(false);
-  });
+  ] as const)(
+    "under %s the host resolves git to the receipt's executable through a directory holding only it",
+    (method, flags) => {
+      const r = run(["--case", "case-three", ...flags]);
+      expect(r.status).toBe(0);
+      expect(r.receipt.isolation.method).toBe(`host-sandbox+${method}`);
+      expect(r.receipt.tooling.git).toEqual({ source: "xcrun", path: r.developerGit });
+      const first = r.hostPath[0]!;
+      expect(r.hostGit).toEqual({ git: join(first, "git"), real: r.developerGit, first: ["git"] });
+      expect(first).not.toBe(dirname(r.developerGit));
+      expect(existsSync(first)).toBe(false);
+    },
+  );
 });
 
 describe("eval-local: the receipt checks what each group was meant to run", () => {

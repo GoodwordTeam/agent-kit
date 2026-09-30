@@ -12,7 +12,9 @@ const read = (path: string): Record<string, unknown> => JSON.parse(readFileSync(
 describe("the bundled verification predicate", () => {
   test("agrees with ajv over every receipt fixture and representative malformed shapes", () => {
     const fixtureDir = join(ROOT, "tests", "fixtures", "verification-zero-exit");
-    const fixtures = readdirSync(fixtureDir).filter((name) => name.endsWith(".json")).map((name) => read(join(fixtureDir, name)));
+    const fixtures = readdirSync(fixtureDir)
+      .filter((name) => name.endsWith(".json"))
+      .map((name) => read(join(fixtureDir, name)));
     const templates = [
       "verification.example.json",
       "verification.weakened.example.json",
@@ -38,7 +40,9 @@ describe("the bundled verification predicate", () => {
     ];
 
     for (const receipt of [...fixtures, ...templates, ...malformed]) {
-      expect(verificationShapeReasons(receipt).length === 0, JSON.stringify(receipt)).toBe(validate(receipt) as boolean);
+      expect(verificationShapeReasons(receipt).length === 0, JSON.stringify(receipt)).toBe(
+        validate(receipt) as boolean,
+      );
     }
   });
 });

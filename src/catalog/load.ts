@@ -65,13 +65,13 @@ export interface PackageInfo {
 
 export class Catalog {
   constructor(
-    readonly package_: PackageInfo,
+    readonly packageInfo: PackageInfo,
     readonly entries: ReadonlyArray<CatalogEntry>,
     readonly raw: Record<string, unknown>,
   ) {}
 
   get package(): PackageInfo {
-    return this.package_;
+    return this.packageInfo;
   }
 
   bySection(section: Section): CatalogEntry[] {
@@ -94,9 +94,7 @@ export interface LoadResult {
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function asStringList(value: unknown): string[] {
@@ -122,7 +120,16 @@ export function loadCatalog(root: string): LoadResult {
   const path = join(root, "catalog.yaml");
   const text = readTextIfPresent(path);
   if (text === null) {
-    return { catalog: null, issues: [error("catalog.missing", "catalog.yaml", "catalog.yaml not found; it is the source of truth for what must exist.")] };
+    return {
+      catalog: null,
+      issues: [
+        error(
+          "catalog.missing",
+          "catalog.yaml",
+          "catalog.yaml not found; it is the source of truth for what must exist.",
+        ),
+      ],
+    };
   }
 
   let doc: unknown;
@@ -130,16 +137,19 @@ export function loadCatalog(root: string): LoadResult {
     doc = parseYaml(text);
   } catch (cause) {
     const reason = cause instanceof Error ? cause.message : String(cause);
-    return { catalog: null, issues: [error("catalog.unparseable", "catalog.yaml", `catalog.yaml is not valid YAML: ${reason}`)] };
+    return {
+      catalog: null,
+      issues: [error("catalog.unparseable", "catalog.yaml", `catalog.yaml is not valid YAML: ${reason}`)],
+    };
   }
 
-  const root_ = asRecord(doc);
-  if (Object.keys(root_).length === 0) {
+  const rootDoc = asRecord(doc);
+  if (Object.keys(rootDoc).length === 0) {
     return { catalog: null, issues: [error("catalog.unparseable", "catalog.yaml", "catalog.yaml is not a mapping.")] };
   }
 
   const issues: Issue[] = [];
-  const pkg = asRecord(root_["package"]);
+  const pkg = asRecord(rootDoc["package"]);
   const packageInfo: PackageInfo = {
     id: typeof pkg["id"] === "string" ? pkg["id"] : "",
     name: typeof pkg["name"] === "string" ? pkg["name"] : "",
@@ -155,7 +165,7 @@ export function loadCatalog(root: string): LoadResult {
 
   const entries: CatalogEntry[] = [];
   for (const section of ALL_SECTIONS) {
-    const list = root_[section];
+    const list = rootDoc[section];
     if (list === undefined || list === null) continue;
     if (!Array.isArray(list)) {
       issues.push(error("catalog.section-not-a-list", "catalog.yaml", `Section '${section}' must be a list.`));
@@ -170,7 +180,9 @@ export function loadCatalog(root: string): LoadResult {
         continue;
       }
       if (seen.has(id)) {
-        issues.push(error("catalog.duplicate-id", "catalog.yaml", `Section '${section}' declares id '${id}' more than once.`));
+        issues.push(
+          error("catalog.duplicate-id", "catalog.yaml", `Section '${section}' declares id '${id}' more than once.`),
+        );
         continue;
       }
       seen.add(id);
@@ -180,7 +192,11 @@ export function loadCatalog(root: string): LoadResult {
       if (statusRaw === "authored") status = "authored";
       else if (statusRaw !== "contract" && statusRaw !== undefined) {
         issues.push(
-          warning("catalog.unknown-status", "catalog.yaml", `Entry '${section}/${id}' has status '${String(statusRaw)}'; expected 'contract' or 'authored'.`),
+          warning(
+            "catalog.unknown-status",
+            "catalog.yaml",
+            `Entry '${section}/${id}' has status '${String(statusRaw)}'; expected 'contract' or 'authored'.`,
+          ),
         );
       }
 
@@ -207,7 +223,7 @@ export function loadCatalog(root: string): LoadResult {
 
   issues.push(...idsInTwoAddressableSections(entries));
 
-  return { catalog: new Catalog(packageInfo, entries, root_), issues };
+  return { catalog: new Catalog(packageInfo, entries, rootDoc), issues };
 }
 
 /**

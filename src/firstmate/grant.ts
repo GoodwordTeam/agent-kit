@@ -50,7 +50,9 @@ const real = (path: string): string => (existsSync(path) ? realpathSync(path) : 
 
 export function grant(args: GrantArgs, akRoot: string, ledgerDir: string): GrantResult {
   if (!Object.hasOwn(GRANT_OPERATIONS, args.operation)) {
-    return no(`${args.operation} is not an operation a Firstmate binding grants; only ${Object.keys(GRANT_OPERATIONS).join(", ")} are`);
+    return no(
+      `${args.operation} is not an operation a Firstmate binding grants; only ${Object.keys(GRANT_OPERATIONS).join(", ")} are`,
+    );
   }
   const operation = args.operation as GrantOperation;
 
@@ -71,23 +73,35 @@ export function grant(args: GrantArgs, akRoot: string, ledgerDir: string): Grant
   const at = realpathSync(path);
   const sha = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   const entry = join(ledgerDir, `${binding.run_id}.json`);
-  if (!existsSync(entry)) return no(`binding ${path} names run ${binding.run_id}, which ak firstmate bind never registered in ${ledgerDir}`);
+  if (!existsSync(entry))
+    return no(`binding ${path} names run ${binding.run_id}, which ak firstmate bind never registered in ${ledgerDir}`);
   let record: LedgerRecord;
   try {
     record = JSON.parse(readFileSync(entry, "utf8")) as LedgerRecord;
   } catch {
     return no(`ledger record ${entry} is unreadable`);
   }
-  if (typeof record !== "object" || record === null || typeof record.binding_path !== "string" || typeof record.binding_sha256 !== "string") {
+  if (
+    typeof record !== "object" ||
+    record === null ||
+    typeof record.binding_path !== "string" ||
+    typeof record.binding_sha256 !== "string"
+  ) {
     return no(`ledger record ${entry} is unreadable`);
   }
-  if (record.binding_path !== at) return no(`binding ${path} is not the ${record.binding_path} ak firstmate bind registered for run ${binding.run_id}`);
-  if (record.binding_sha256 !== sha) return no(`binding ${path} hashes to ${sha}, not the ${record.binding_sha256} ak firstmate bind registered`);
+  if (record.binding_path !== at)
+    return no(
+      `binding ${path} is not the ${record.binding_path} ak firstmate bind registered for run ${binding.run_id}`,
+    );
+  if (record.binding_sha256 !== sha)
+    return no(`binding ${path} hashes to ${sha}, not the ${record.binding_sha256} ak firstmate bind registered`);
   const top = git(args.cwd, ["rev-parse", "--show-toplevel"]);
   const worktree = top.code === 0 && top.text !== "" ? real(top.text) : real(args.cwd);
-  if (isInside(at, worktree)) return no(`binding ${path} is inside the worktree ${worktree}, which the worker can write`);
+  if (isInside(at, worktree))
+    return no(`binding ${path} is inside the worktree ${worktree}, which the worker can write`);
   for (const dir of [binding.project.path, binding.project.workspace]) {
-    if (dir !== undefined && isInside(at, real(dir))) return no(`binding ${path} is inside the project ${dir}, which the worker can write`);
+    if (dir !== undefined && isInside(at, real(dir)))
+      return no(`binding ${path} is inside the project ${dir}, which the worker can write`);
   }
 
   const gate = GRANT_OPERATIONS[operation];

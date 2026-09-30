@@ -25,7 +25,8 @@ export const REVIEW_SEED: Readonly<Record<string, string>> = {
   "guardrails.md": "",
   "pending-team-promotions.md":
     "# Pending team promotions\n\nProposals for tracked repo files. Apply by hand, then mark `applied:` with the commit.\n",
-  "skill-impact.md": "# Skill impact\n\n| date | action | pattern | repeat rate before | note |\n|---|---|---|---|---|\n",
+  "skill-impact.md":
+    "# Skill impact\n\n| date | action | pattern | repeat rate before | note |\n|---|---|---|---|---|\n",
   "log.md": "# Maintainer log\n",
   ".gitignore": "raw/.last_run\nraw/.pipeline.log\n.lock*\n",
 };

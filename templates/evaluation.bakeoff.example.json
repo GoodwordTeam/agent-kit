@@ -55,9 +55,7 @@
     "candidate": "Candidate A",
     "artifact": "worktree bakeoff-a, src/config/parse.ts"
   },
-  "decisive_reasons": [
-    "Only A meets both hard constraints."
-  ],
+  "decisive_reasons": ["Only A meets both hard constraints."],
   "contributions": [
     {
       "what": "B's wording for the unknown-key message.",
@@ -112,17 +110,11 @@
     "position": {
       "take": "Candidate A",
       "why": "It meets every hard constraint on the project's own parser.",
-      "trade_offs": [
-        "Slightly more code than B."
-      ],
-      "conditions": [
-        "A parser swap would reopen the choice."
-      ]
+      "trade_offs": ["Slightly more code than B."],
+      "conditions": ["A parser swap would reopen the choice."]
     },
     "evidence": {
-      "verified": [
-        "The parser exposes key positions (src/config/yaml.ts:18)."
-      ],
+      "verified": ["The parser exposes key positions (src/config/yaml.ts:18)."],
       "assumptions": []
     },
     "independence": true

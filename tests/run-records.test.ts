@@ -76,13 +76,20 @@ describe("the handoff record", () => {
   });
 
   test("re-verified evidence is not marked stale", () => {
-    const marked = { claim: "The loader suite passed.", kind: "statement", reverified: true, stale: { bound_to: "yesterday" } };
+    const marked = {
+      claim: "The loader suite passed.",
+      kind: "statement",
+      reverified: true,
+      stale: { bound_to: "yesterday" },
+    };
     expect(validate({ ...base, evidence: [marked] })).toBe(false);
   });
 
   test("a statement that tests passed is not a receipt", () => {
     const receipt = { id: "example-verification-1", schema: "verification", hash: `sha256:${"7".repeat(64)}` };
-    expect(validate({ ...base, evidence: [{ claim: "Green.", kind: "statement", receipt, reverified: true }] })).toBe(false);
+    expect(validate({ ...base, evidence: [{ claim: "Green.", kind: "statement", receipt, reverified: true }] })).toBe(
+      false,
+    );
     expect(validate({ ...base, evidence: [{ claim: "Green.", kind: "receipt", reverified: true }] })).toBe(false);
   });
 
@@ -123,7 +130,10 @@ describe("the evaluation record", () => {
 
   test("a Blocked judgment leaves the outcome unresolved", () => {
     const { position: _, ...rest } = judge;
-    const blocked = { ...rest, blocked: { floor: "insufficient-project-grounding", needed: ["Name the incumbent parser."] } };
+    const blocked = {
+      ...rest,
+      blocked: { floor: "insufficient-project-grounding", needed: ["Name the incumbent parser."] },
+    };
     expect(validate({ ...bakeoff, judge: blocked })).toBe(false);
     expect(validate({ ...bakeoff, status: "unresolved", judge: blocked })).toBe(true);
   });
@@ -139,7 +149,9 @@ describe("the evaluation record", () => {
   });
 
   test("selected leaves no decision-critical premise without evidence", () => {
-    expect(validate({ ...bakeoff, premises: [{ premise: "The parser exposes key positions.", evidence: [] }] })).toBe(false);
+    expect(validate({ ...bakeoff, premises: [{ premise: "The parser exposes key positions.", evidence: [] }] })).toBe(
+      false,
+    );
   });
 
   test("a human-experience question is evaluated by a named human", () => {
@@ -159,7 +171,9 @@ describe("the evaluation record", () => {
       settled_by: "automated-criteria",
     };
     expect(validate(technical)).toBe(false);
-    expect(validate({ ...technical, acceptance_results: [{ ref: "example-verification-3", kind: "receipt" }] })).toBe(true);
+    expect(validate({ ...technical, acceptance_results: [{ ref: "example-verification-3", kind: "receipt" }] })).toBe(
+      true,
+    );
   });
 
   test("a prototype stopped without a human records why and claims no settlement", () => {
@@ -312,7 +326,9 @@ describe("the run ledger", () => {
 
   test("one open escalation is admitted and a second is refused", () => {
     expect(validate({ ...base, entries: [...entries, open("example-decision-3")] })).toBe(true);
-    expect(validate({ ...base, entries: [...entries, open("example-decision-3"), open("example-decision-4")] })).toBe(false);
+    expect(validate({ ...base, entries: [...entries, open("example-decision-3"), open("example-decision-4")] })).toBe(
+      false,
+    );
   });
 
   test("a ruling reads what, why and what it costs if wrong", () => {
@@ -325,7 +341,9 @@ describe("the run ledger", () => {
   });
 
   test("an escalation carries no ruling", () => {
-    expect(validate({ ...base, entries: [{ ...entries[1], ruling: (entries[0] as { ruling: unknown }).ruling }] })).toBe(false);
+    expect(
+      validate({ ...base, entries: [{ ...entries[1], ruling: (entries[0] as { ruling: unknown }).ruling }] }),
+    ).toBe(false);
   });
 
   test("a checkpoint outside the charter categories is refused", () => {

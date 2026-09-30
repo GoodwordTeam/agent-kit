@@ -103,7 +103,9 @@ describe("pairedBootstrap", () => {
   });
 
   test("the same seed gives the same interval", () => {
-    expect(pairedBootstrap(cases, { seed: 3, iterations: 500 })).toEqual(pairedBootstrap(cases, { seed: 3, iterations: 500 }));
+    expect(pairedBootstrap(cases, { seed: 3, iterations: 500 })).toEqual(
+      pairedBootstrap(cases, { seed: 3, iterations: 500 }),
+    );
   });
 
   test("identical arms give a zero-width interval at zero", () => {
