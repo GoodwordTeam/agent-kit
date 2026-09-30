@@ -96,6 +96,14 @@ absence is recorded (`policies/limits.yaml`).
 3. Record the base commit, then open the worktree this ticket owns
    (`protocols/worktree-ownership/PROTOCOL.md`). The worktree handle is bound to this ticket and is
    retired when the ticket integrates, never retasked.
+   On the standalone path, open the task-bound run next, from inside that worktree with the
+   ticket's branch checked out and before implementation:
+   `node <this skill's directory>/../../bin/ak-gate.mjs open --ticket <ticket-file>`. The run binds
+   to the branch checked out where it runs, and later gate commands on that branch resolve the
+   pointer it writes. A run never closed by `ship-preflight` stays the branch's default until a
+   new `open`, and the gate does not tell an earlier task's unclosed run from this one, so every
+   new task opens a new run, even on a branch that already has one. A Firstmate binding already supplies a unique
+   `--run` and `--dir`; keep that path unchanged and do not open another run.
 4. Dispatch one implementer (`roles/implementer/ROLE.md`) with the ticket as its single source of
    requirements. It spawns no implementers of its own, and no second implementer runs against this
    worktree.
@@ -128,8 +136,9 @@ absence is recorded (`policies/limits.yaml`).
     ruling and every out-of-scope observation collected into the report.
 13. When both check seats pass, record the gate: `node <this skill's directory>/../../bin/ak-gate.mjs record --gate build-checks`
     (the bundle's `bin/`, two directories above this skill). super-ship refuses to ship without it.
-    Run it from the project checkout; the run defaults to the branch and the records to the
-    repository's git directory, and a binding's brief supplies `--run` and `--dir` when it has them.
+    Run it from the project checkout; the run defaults to the branch's opened-run pointer (or the
+    branch-named v1 run when none was opened) and records default to the repository's git directory.
+    A binding's brief supplies `--run` and `--dir` when it has them.
 
 ## Hard gates
 
