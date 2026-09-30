@@ -61,6 +61,7 @@ export function auditRun(a: AuditArgs): string[] {
     if (head === undefined) refusals.push(`refused: gate ship-preflight has no current evidence (no record for run ${b.run_id} in ${dir})`);
   }
   if (head !== undefined || !gates.includes("ship-preflight")) {
+    // Judged on phase records; a binding-declared evidence run needs `open` to accept the binding's run id.
     refusals.push(...checkGates({ dir, run: b.run_id, gates, project, head }).refusals);
   }
 
