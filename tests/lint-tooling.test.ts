@@ -171,8 +171,20 @@ describe("the repository's tool configs", () => {
 const BASELINE_PATH = "tools/oxlint/baseline.json";
 const recorded = (counts: Record<string, Record<string, number>>) => `${JSON.stringify(counts, null, 2)}\n`;
 
+/** Keep the machine's git config (signing, hooks) out of the temp repos. */
+const GIT_ISOLATION = [
+  "-c",
+  "user.name=t",
+  "-c",
+  "user.email=t@t",
+  "-c",
+  "commit.gpgsign=false",
+  "-c",
+  "core.hooksPath=/dev/null",
+];
+
 function gitIn(root: string, ...args: string[]) {
-  const run = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: root, encoding: "utf8" });
+  const run = spawnSync("git", [...GIT_ISOLATION, ...args], { cwd: root, encoding: "utf8" });
   if (run.status !== 0) throw new Error(`git ${args.join(" ")}: ${run.stderr}`);
 }
 
@@ -190,8 +202,8 @@ function commit(root: string, message: string) {
   gitIn(root, "commit", "-q", "-m", message);
 }
 
-function check(root: string) {
-  const run = spawnSync("bun", [GROWTH, "--root", root, "base"], { encoding: "utf8" });
+function check(root: string, ref = "base") {
+  const run = spawnSync("bun", [GROWTH, "--root", root, ref], { encoding: "utf8" });
   return { status: run.status, out: `${run.stdout}${run.stderr}` };
 }
 
@@ -225,7 +237,7 @@ describe("baseline growth since the merge base", () => {
       "src/a.ts": LOAD,
       [BASELINE_PATH]: recorded({ "src/a.ts": { r: 3 } }),
     });
-    spawnSync("git", ["mv", "src/a.ts", "src/loader.ts"], { cwd: root });
+    gitIn(root, "mv", "src/a.ts", "src/loader.ts");
     writeFileSync(join(root, BASELINE_PATH), recorded({ "src/loader.ts": { r: 3 } }));
     commit(root, "rename");
     expect(check(root).status).toBe(0);
@@ -258,5 +270,49 @@ describe("baseline growth since the merge base", () => {
     writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 1 } }));
     commit(root, "shrink");
     expect(check(root).status).toBe(0);
+  });
+
+  test("every rename is found among other changes that sort before, between and after them", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/0.ts": "export const zero = 0;\n",
+      "src/a.ts": LOAD,
+      "src/m.ts": "export const m = 1;\n",
+      "src/p.ts": "export const parse = () => 2;\n".repeat(20),
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 2 }, "src/p.ts": { r: 1 } }),
+    });
+    writeFileSync(join(root, "src/0.ts"), "export const zero = 1;\n");
+    gitIn(root, "rm", "-q", "src/m.ts");
+    gitIn(root, "mv", "src/a.ts", "src/b.ts");
+    gitIn(root, "mv", "src/p.ts", "src/z.ts");
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/b.ts": { r: 2 }, "src/z.ts": { r: 1 } }));
+    commit(root, "edit, delete and rename twice");
+    expect(check(root).status).toBe(0);
+  });
+
+  test("main shrinking the baseline after the branch forked does not fail the branch", () => {
+    const root = repo({
+      ".oxlintrc.json": ONE_RULE,
+      "src/a.ts": LOAD,
+      [BASELINE_PATH]: recorded({ "src/a.ts": { r: 3 } }),
+    });
+    gitIn(root, "checkout", "-q", "-b", "topic");
+    writeFileSync(join(root, "src/b.ts"), "export const b = 2;\n");
+    commit(root, "unrelated branch work");
+    gitIn(root, "checkout", "-q", "main");
+    writeFileSync(join(root, BASELINE_PATH), recorded({ "src/a.ts": { r: 1 } }));
+    commit(root, "main fixes two");
+    gitIn(root, "checkout", "-q", "topic");
+    expect(check(root, "main").status).toBe(0);
+  });
+
+  test("a ref with no merge base is a usage error that says to fetch history", () => {
+    const root = repo({ ".oxlintrc.json": ONE_RULE, "src/a.ts": LOAD, [BASELINE_PATH]: recorded({}) });
+    gitIn(root, "checkout", "-q", "--orphan", "unrelated");
+    commit(root, "no shared history");
+    gitIn(root, "checkout", "-q", "main");
+    const run = check(root, "unrelated");
+    expect(run.status).toBe(2);
+    expect(run.out).toContain("no merge base");
   });
 });

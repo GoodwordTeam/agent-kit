@@ -48,6 +48,7 @@ package built into dist/:
   Copied unmodified to tools/oxlint/anti-slop/, with its LICENSE and an
   UPSTREAM.md recording the source. It carries an adapted copy of ESLint
   Stylistic's padding-line-between-statements rule — Copyright OpenJS
-  Foundation and other contributors, MIT License,
+  Foundation and other contributors, and Copyright (c) 2023-PRESENT ESLint
+  Stylistic contributors, MIT License,
   https://github.com/eslint-stylistic/eslint-stylistic @ 435c3ea0fd26a5fef9042c4b36b6e165fbbf8d08 —
   whose license is tools/oxlint/anti-slop/vendor/eslint-stylistic/LICENSE.

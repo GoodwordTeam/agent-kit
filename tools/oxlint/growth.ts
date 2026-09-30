@@ -5,7 +5,8 @@
  * the one at the merge base of <base-ref> and fails when any file and rule recorded more.
  *
  * Growth passes in the two cases `--allow-growth` exists for, and only those. A renamed file may carry
- * its old path's counts to the new path. A change to `.oxlintrc.json` means a rule is being adopted, so
+ * its old path's counts to the new path; "renamed" is what `git diff -M` pairs, which needs the new file
+ * to be at least half the old one, so commit a move before rewriting the file. A change to `.oxlintrc.json` means a rule is being adopted, so
  * growth passes and the baseline diff is what the reviewer reads.
  *
  *   bun tools/oxlint/growth.ts [--root <dir>] <base-ref>
@@ -72,13 +73,19 @@ function renamesSince(root: string, mergeBase: string): Map<string, string> {
 export function main(argv: readonly string[]): number {
   const args = [...argv];
   const rootAt = args.indexOf("--root");
-  const root = rootAt >= 0 ? resolve(args.splice(rootAt, 2)[1] ?? ".") : process.cwd();
+  const rootArg = rootAt >= 0 ? args.splice(rootAt, 2)[1] : ".";
   const [ref] = args;
-  if (ref === undefined || args.length !== 1) {
+  if (rootArg === undefined || ref === undefined || args.length !== 1) {
     console.error("usage: growth.ts [--root <dir>] <base-ref>");
     return 2;
   }
 
+  const top = git(resolve(rootArg), ["rev-parse", "--show-toplevel"]);
+  if (top.status !== 0) {
+    console.error(`lint:growth: ${resolve(rootArg)} is not inside a git repository.`);
+    return 2;
+  }
+  const root = top.stdout.trim();
   const found = git(root, ["merge-base", ref, "HEAD"]);
   const mergeBase = found.stdout.trim();
   if (found.status !== 0 || mergeBase === "") {
@@ -86,8 +93,15 @@ export function main(argv: readonly string[]): number {
     return 2;
   }
   const short = mergeBase.slice(0, 8);
-  const recorded = git(root, ["show", `${mergeBase}:${BASELINE}`]);
-  const base = recorded.status === 0 ? parseBaseline(recorded.stdout, `${BASELINE} at ${short}`) : new Map();
+  const recordedAtBase = git(root, ["cat-file", "-e", `${mergeBase}:${BASELINE}`]).status === 0;
+  let base: Counts = new Map();
+  if (recordedAtBase) {
+    const shown = git(root, ["show", `${mergeBase}:${BASELINE}`]);
+    if (shown.status !== 0) throw new Error(`git show ${short}:${BASELINE} failed`);
+    base = parseBaseline(shown.stdout, `${BASELINE} at ${short}`);
+  } else {
+    console.log(`lint:growth: ${short} has no ${BASELINE}; every recorded count is growth.`);
+  }
   const grown = growth(base, readBaseline(root), renamesSince(root, mergeBase));
   if (grown.length === 0) {
     console.log(`lint:growth: the baseline records nothing beyond ${short}.`);
@@ -95,13 +109,15 @@ export function main(argv: readonly string[]): number {
   }
 
   for (const g of grown) console.log(`${g.file}: ${g.rule} ${g.allowed} -> ${g.actual} since ${short}`);
-  const adopting = git(root, ["diff", "--quiet", mergeBase, "--", CONFIG]).status === 1;
+  const configDiff = git(root, ["diff", "--quiet", mergeBase, "--", CONFIG]).status;
+  if (configDiff !== 0 && configDiff !== 1) throw new Error(`git diff ${short} -- ${CONFIG} failed`);
+  const adopting = configDiff === 1;
   if (adopting) {
     console.log(`lint:growth: ${CONFIG} changed since ${short}, so a rule is being adopted; the growth above passes.`);
     return 0;
   }
   console.log(
-    `lint:growth: the baseline grew since ${short} with no rule adopted and no file moved. Fix the violations; the baseline only shrinks.`,
+    `lint:growth: the baseline grew since ${short} beyond what renamed files carry, and ${CONFIG} is unchanged. Fix the violations; the baseline only shrinks. A moved file counts as renamed once it is staged or committed and git pairs it with its old path.`,
   );
   return 1;
 }

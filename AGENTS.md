@@ -226,7 +226,8 @@ leaves the count unchanged and passes.
 compares the tree with whatever baseline it finds, so a hand-edited or `--allow-growth` baseline
 passes it. `tools/oxlint/growth.ts` compares the baseline with its copy at the merge base with
 `origin/main`, and CI and the gate both run it. A renamed file may carry its old path's counts,
-and no more. Any other growth passes only when `.oxlintrc.json` changed in the same branch,
+and no more. "Renamed" is what `git diff -M` pairs: the new file must be at least half the old
+one, so commit a move before rewriting the file. Any other growth passes only when `.oxlintrc.json` changed in the same branch,
 because that is a rule being adopted; the growth is printed either way.
 
 oxfmt owns whitespace, so anti-slop's `require-readable-spacing` is off. Markdown, YAML,
