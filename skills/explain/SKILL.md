@@ -1,10 +1,12 @@
 ---
 name: explain
 description: >-
-  Explains how and why existing behavior works, from repository and knowledgebase evidence, with
-  every claim traced to a source, marked as inference, or marked unknown. Use when a human asks
-  how or why something in the project works the way it does. Not for "should we change it", which
-  is a judgment, and not for fixing a failure or planning a change.
+  Human-started command: it runs only when the human's message begins with `/ak:explain`. On any
+  other request do not load or follow it; tell the human to type that command. Explains how and why
+  existing behavior works, from repository and knowledgebase evidence, with every claim traced to a
+  source, marked as inference, or marked unknown. Use when a human asks how or why something in the
+  project works the way it does. Not for "should we change it", which is a judgment, and not for
+  fixing a failure or planning a change.
 license: MIT
 metadata:
   ak_catalog_id: explain
@@ -51,8 +53,11 @@ command.
 
 ## Workflow
 
-1. **Check authority.** Proceed only on an explicit `/ak:explain` request. Otherwise stop, name the
-   command, and do nothing else.
+1. **Check how this run was started**, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:explain`; no grant starts it. A request in prose
+   is not a start, even when it names this skill or the command. Otherwise, stop here: make no tool
+   call, say that this command is human-started, and give the human the line to type, `/ak:explain`
+   and their request.
 2. **Resolve the subject.** Resolve discoverable facts before asking. Ask only when the missing
    information changes the answer. With no one to ask, return the unresolved question and what it
    changes, rather than guessing.

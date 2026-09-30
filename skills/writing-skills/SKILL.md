@@ -1,10 +1,12 @@
 ---
 name: writing-skills
 description: >-
-  Authors a new skill or edits an existing one in this package, test-first: a failing eval case
-  and a recorded baseline come before any wording, and the change stops as a candidate for a
-  separate review. Use when a human asks to write, change or harden a skill, protocol, role or
-  reference in this catalog. Not for project documentation, and not for promoting a change.
+  Human-started command: it runs only when the human's message begins with `/ak:writing-skills`. On
+  any other request do not load or follow it; tell the human to type that command. Authors a new
+  skill or edits an existing one in this package, test-first: a failing eval case and a recorded
+  baseline come before any wording, and the change stops as a candidate for a separate review. Use
+  when a human asks to write, change or harden a skill, protocol, role or reference in this catalog.
+  Not for project documentation, and not for promoting a change.
 license: MIT
 metadata:
   ak_catalog_id: writing-skills
@@ -50,8 +52,11 @@ command.
 
 ## Workflow
 
-1. **Check authority.** Proceed only on an explicit `/ak:writing-skills` request. Otherwise stop,
-   name the command, and change nothing.
+1. **Check how this run was started**, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:writing-skills`; no grant starts it. A request in
+   prose is not a start, even when it names this skill or the command. Otherwise, stop here: make no
+   tool call, say that this command is human-started, and give the human the line to type,
+   `/ak:writing-skills` and their request.
 2. **Read the contract.** Read `AGENTS.md`, `AUTHORING.md`, the target's `catalog.yaml` entry, the
    rulings that bind it in `policies/resolved-conflicts.yaml`, and the current output of
    `bun run ak validate`. They govern; this skill does not restate them. Where they are silent or

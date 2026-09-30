@@ -1,12 +1,13 @@
 ---
 name: ideate
 description: >-
-  Generates many grounded candidate ideas on an identified subject, critiques every one of them in
-  an independent reviewer context, rejects the weak ones with a reason from a closed list, and
-  returns a bounded set of survivors with a Not Doing list. Use when a human wants ideas,
-  improvements or directions before any one of them is chosen. Not for judging options already on
-  the table, not for defining a direction already chosen, and not for building anything. A
-  recommendation is not authorization.
+  Human-started command: it runs only when the human's message begins with `/ak:ideate`. On any
+  other request do not load or follow it; tell the human to type that command. Generates many
+  grounded candidate ideas on an identified subject, critiques every one of them in an independent
+  reviewer context, rejects the weak ones with a reason from a closed list, and returns a bounded
+  set of survivors with a Not Doing list. Use when a human wants ideas, improvements or directions
+  before any one of them is chosen. Not for judging options already on the table, not for defining a
+  direction already chosen, and not for building anything. A recommendation is not authorization.
 license: MIT
 metadata:
   ak_catalog_id: ideate
@@ -55,8 +56,11 @@ choosing a survivor, planning it, or expanding the subject the human named.
 
 ## Workflow
 
-1. Check authority. Continue only if a human started this run with `/ak:ideate`. Otherwise stop,
-   name the command and do nothing else.
+1. Check how this run was started, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:ideate`; no grant starts it. A request in prose is
+   not a start, even when it names this skill or the command. Otherwise, stop here: make no tool
+   call, say that this command is human-started, and give the human the line to type, `/ak:ideate`
+   and their request.
 2. Classify the request. A bounded option set, a chosen direction or a build-to-compare request is
    routed (see Not for) and the run stops.
 3. Identify the subject, within the question limit.

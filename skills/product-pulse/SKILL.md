@@ -1,11 +1,13 @@
 ---
 name: product-pulse
 description: >-
-  Reads the product's configured signal sources over a lookback window and publishes a one-page
-  pulse report (headlines, usage, system performance, followups) with deltas against the prior equal
-  window and the strategy's key metrics carried forward. Use when a human wants a read on how the
-  product is doing and runs /ak:product-pulse. Not a dashboard, not permission to change the
-  roadmap, never a write to any product system, and never started by the model on its own.
+  Human-started command: it runs only when the human's message begins with `/ak:product-pulse`. On
+  any other request do not load or follow it; tell the human to type that command. Reads the
+  product's configured signal sources over a lookback window and publishes a one-page pulse report
+  (headlines, usage, system performance, followups) with deltas against the prior equal window and
+  the strategy's key metrics carried forward. Use when a human wants a read on how the product is
+  doing and runs /ak:product-pulse. Not a dashboard, not permission to change the roadmap, and never
+  a write to any product system.
 license: MIT
 metadata:
   ak_catalog_id: product-pulse
@@ -51,8 +53,11 @@ only writes are its own configuration page and its reports, both in the knowledg
 
 ## Workflow
 
-1. **Check authority.** Continue only if a human started this run with `/ak:product-pulse`.
-   Otherwise stop, say that a human starts this skill, and name the command.
+1. **Check how this run was started**, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:product-pulse`; no grant starts it. A request in
+   prose is not a start, even when it names this skill or the command. Otherwise, stop here: make no
+   tool call, say that this command is human-started, and give the human the line to type,
+   `/ak:product-pulse` and their request.
 2. **Resolve the window.** Apply a 15-minute trailing buffer to its upper bound to absorb ingestion
    lag: a `24h` window reads `[now - 24h - 15m, now - 15m]`. The prior window is the same length,
    immediately before.

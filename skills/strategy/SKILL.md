@@ -1,11 +1,13 @@
 ---
 name: strategy
 description: >-
-  Interviews a human for the product's standing strategy (purpose, positioning, users, key metrics,
-  tracks and boundaries), pushes back on weak answers, and publishes the result as the product's
-  strategy page in the knowledgebase. Use when a human starts or revisits a product's direction and
-  runs /ak:strategy. Not for planning features, scheduling work or updating the tracker, not for a
-  library with no product framing, and never started by the model on its own.
+  Human-started command: it runs only when the human's message begins with `/ak:strategy`. On any
+  other request do not load or follow it; tell the human to type that command. Interviews a human
+  for the product's standing strategy (purpose, positioning, users, key metrics, tracks and
+  boundaries), pushes back on weak answers, and publishes the result as the product's strategy page
+  in the knowledgebase. Use when a human starts or revisits a product's direction and runs
+  /ak:strategy. Not for planning features, scheduling work or updating the tracker, and not for a
+  library with no product framing.
 license: MIT
 metadata:
   ak_catalog_id: strategy
@@ -54,8 +56,11 @@ it and had an edit round.
 
 ## Workflow
 
-1. **Check authority.** Continue only if a human started this run with `/ak:strategy`. Otherwise
-   stop, say that a human starts this skill, and name the command.
+1. **Check how this run was started**, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:strategy`; no grant starts it. A request in prose
+   is not a start, even when it names this skill or the command. Otherwise, stop here: make no tool
+   call, say that this command is human-started, and give the human the line to type, `/ak:strategy`
+   and their request.
 2. **Ground, then show it.** Build a model of the product from the inputs and show it in three to
    five lines, each naming its source: what the product seems to be, who it seems to serve, where
    attention has gone. Invite correction. A repository with nothing substantive is a normal path:

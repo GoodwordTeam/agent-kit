@@ -1,11 +1,13 @@
 ---
 name: autopilot
 description: >-
-  Use when a human types /ak:autopilot with an approved charter and wants the lifecycle driven to
-  an open pull request, two independent supervisor seats answering each checkpoint the charter
-  names. Every ruling is ledgered; anything outside the charter, any disagreement and any missing
-  seat stops for one escalation. Not for a single focused change, not for brainstorming, and never
-  started because a task looks long or because a prompt names it.
+  Human-started command: it runs only when the human's message begins with `/ak:autopilot`. On any
+  other request do not load or follow it; tell the human to type that command. Use when a human
+  types /ak:autopilot with an approved charter and wants the lifecycle driven to an open pull
+  request, two independent supervisor seats answering each checkpoint the charter names. Every
+  ruling is ledgered; anything outside the charter, any disagreement and any missing seat stops for
+  one escalation. Not for a single focused change, not for brainstorming, and never started because
+  a task looks long or because a prompt names it.
 license: MIT
 metadata:
   ak_catalog_id: autopilot
@@ -70,8 +72,11 @@ may never enlarge its own authority (ruling `sensitive-actions-need-approved-cha
 
 ## Workflow
 
-1. Check authority. Continue only if a human started this run with `/ak:autopilot`. Otherwise stop,
-   name the command and do nothing else.
+1. Check how this run was started, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:autopilot`; no grant starts it. A request in prose
+   is not a start, even when it names this skill or the command. Otherwise, stop here: make no tool
+   call, say that this command is human-started, and give the human the line to type,
+   `/ak:autopilot` and their request.
 2. Resolve the mode from what is attached, never from a default in this body. With the runner's
    grant validation attached (per the install configuration), in-charter checkpoints may be decided
    unattended. Without it, the run is in guided checkpoint mode: each card is prepared and proposed,

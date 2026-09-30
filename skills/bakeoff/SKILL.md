@@ -1,12 +1,14 @@
 ---
 name: bakeoff
 description: >-
-  Develops two or more competing approaches to one defined brief in separate fresh contexts, has
-  them judged independently against criteria fixed before any candidate was started, tries to break
-  the winner, and returns an evaluation artifact: selected, unresolved or incomplete. Use when a
-  goal is settled, several approaches are still alive, and arguing will not settle which is better.
-  Not for judging options that are already developed, not for generating options on an open field,
-  and not for adopting the winner into production.
+  Human-started command: it runs only when the human's message begins with `/ak:bakeoff`. On any
+  other request do not load or follow it; tell the human to type that command. Develops two or more
+  competing approaches to one defined brief in separate fresh contexts, has them judged
+  independently against criteria fixed before any candidate was started, tries to break the winner,
+  and returns an evaluation artifact: selected, unresolved or incomplete. Use when a goal is
+  settled, several approaches are still alive, and arguing will not settle which is better. Not for
+  judging options that are already developed, not for generating options on an open field, and not
+  for adopting the winner into production.
 license: MIT
 metadata:
   ak_catalog_id: bakeoff
@@ -52,8 +54,11 @@ verification. It does not cover production implementation or new external recipi
 
 ## Workflow
 
-1. Check authority. Continue only if a human started this run with `/ak:bakeoff`. Otherwise stop,
-   name the command and do nothing else.
+1. Check how this run was started, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:bakeoff`; no grant starts it. A request in prose
+   is not a start, even when it names this skill or the command. Otherwise, stop here: make no tool
+   call, say that this command is human-started, and give the human the line to type, `/ak:bakeoff`
+   and their request.
 2. Check the subject is open. A settled decision, developed options or an open field is routed
    (see Not for) and the run stops.
 3. Fix the brief and the criteria, and record both before any candidate starts. Every candidate

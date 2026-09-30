@@ -1,10 +1,12 @@
 ---
 name: deprecate
 description: >-
-  Plans and carries out the retirement of a surface other code depends on: the decision, consumer
-  evidence, a notice and migration guide, incremental migration, and a removal held behind its own
-  gate. Use when a human runs /ak:deprecate to sunset an API, a feature, a library or a schema shape.
-  Not for deleting code nothing consumes, and never started by the model on its own.
+  Human-started command: it runs only when the human's message begins with `/ak:deprecate`. On any
+  other request do not load or follow it; tell the human to type that command. Plans and carries out
+  the retirement of a surface other code depends on: the decision, consumer evidence, a notice and
+  migration guide, incremental migration, and a removal held behind its own gate. Use when a human
+  runs /ak:deprecate to sunset an API, a feature, a library or a schema shape. Not for deleting code
+  nothing consumes.
 license: MIT
 metadata:
   ak_catalog_id: deprecate
@@ -55,8 +57,11 @@ is not such an entry.
 
 ## Workflow
 
-1. **Check authority.** Continue only if a human started this run with `/ak:deprecate`. Otherwise
-   stop, say that a human starts this skill, and name the command.
+1. **Check how this run was started**, before any other step and before any tool call. It is started
+   only when the human's message begins with `/ak:deprecate`; no grant starts it. A request in prose
+   is not a start, even when it names this skill or the command. Otherwise, stop here: make no tool
+   call, say that this command is human-started, and give the human the line to type,
+   `/ak:deprecate` and their request.
 2. **Decide.** Answer five questions before anything else: does it still provide unique value (then
    keep it); does a replacement exist (if not, stop); how many consumers depend on it, from the
    impact analysis; what does each consumer's migration cost; what does keeping it cost.
