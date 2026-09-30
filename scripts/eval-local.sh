@@ -17,24 +17,48 @@
 # feature flags and any model override. So by default the host runs under `env -i` with only the
 # variables in `pass_env` below (plus LC_* and any names listed in $AK_EVAL_PASS_ENV).
 # --inherit-env skips that and hands the host the whole shell environment; it exists for the
-# control run in scripts/eval-isolation-probe.sh and is recorded in the receipt.
+# control run in scripts/eval-isolation-probe.sh and is recorded in the receipt. Either way the
+# host's PATH and TMPDIR are the script's own: PATH gains the git directory described below, and
+# TMPDIR is the per-run directory described under "Reads".
 #
 # Why the ~/.docker shuffle: the eval sandbox refuses to start a Bash-granting case while any symlink
 # sits under ~/.docker, and Docker Desktop keeps symlinks in ~/.docker/cli-plugins and ~/.docker/bin.
 # The script moves those two directories aside for the run and puts them back on every exit path,
 # including Ctrl-C. Nothing else under ~/.docker is touched. Run it only by hand; CI never calls it.
 #
-# Reads: dist/claude-code (run `bun run build` first), or $AK_EVAL_BUNDLE. Writes: evals/results/
+# Reads: dist/claude-code (run `bun run ak build --profile all` first), or $AK_EVAL_BUNDLE. Writes: evals/results/
 # under the bundle, the JSON result to $AK_EVAL_JSON (default: a temp file whose path is printed),
-# and the receipt beside it as <result>.receipt.json. Each run's trace is copied under
-# <result>.traces/<case dir>/<arm>-<n>.jsonl, because the host leaves it in a temporary directory
-# that the system cleans.
+# and the receipt beside it as <result>.receipt.json. The host runs with --keep-temp, which its
+# help describes as "Preserve scaffold dirs for debugging"; each trace the host reports is then
+# copied under <result>.traces/<case dir>/<arm>-<n>.jsonl when it is still there, and the scaffold
+# the host kept for that run is removed. The host is given a temporary directory of its own as
+# TMPDIR, removed on every exit path. Host 2.1.285 creates its scaffolds under os.tmpdir() except
+# on macOS, where it uses /tmp whatever TMPDIR says; there a scaffold the host never reported (an
+# interrupted or crashed invocation) stays under /tmp/e-*. Whether a trace survives the
+# invocation's return on the real host is unverified until the next paid run.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 bundle="${AK_EVAL_BUNDLE:-$root/dist/claude-code}"
-[[ -d "$bundle" ]] || { echo "eval-local: no $bundle; run 'bun run build' first" >&2; exit 2; }
+[[ -d "$bundle" ]] || { echo "eval-local: no $bundle; run 'bun run ak build --profile all' first" >&2; exit 2; }
 command -v jq >/dev/null || { echo "eval-local: jq is required" >&2; exit 2; }
+
+# /usr/bin/git on macOS is a developer-tool shim. Inside the eval sandbox it cannot update the
+# cache it uses to locate the real executable, so every Git-backed case stops before the behavior
+# under test. Resolve the concrete executable while still outside the sandbox and put a directory
+# holding only a symlink to it first on the child's PATH, so nothing else beside it is shadowed.
+# Other platforms keep the ordinary PATH resolution. Whether the sandbox runs the executable is
+# unverified until a paid run exercises it; the receipt's summary line says so.
+host_git="$(command -v git 2>/dev/null || true)"
+host_git_source=path
+if command -v xcrun >/dev/null 2>&1; then
+  xcode_git="$(xcrun -f git 2>/dev/null || true)"
+  if [[ -n "$xcode_git" && -x "$xcode_git" ]]; then
+    host_git="$xcode_git"
+    host_git_source=xcrun
+  fi
+fi
+[[ -n "$host_git" && -x "$host_git" ]] || { echo "eval-local: git is required" >&2; exit 2; }
 
 # The script reads four of the host's options itself: --case and --tag (to know which cases run),
 # --eval-dir (where they live) and --max-cost-usd (one budget across every invocation). --case and
@@ -99,7 +123,7 @@ if [[ "$bundle" == "$root/dist/claude-code" ]]; then
   fresh=true
   if [[ -n "$(cd "$root" && find catalog.yaml skills packs protocols roles references adapters schemas policies profiles provenance src evals -newer "$bundle" -print -quit 2>/dev/null)" ]]; then
     fresh=false
-    echo "eval-local: $bundle is older than its sources; run 'bun run build' to measure this tree" >&2
+    echo "eval-local: $bundle is older than its sources; run 'bun run ak build --profile all' to measure this tree" >&2
   fi
 fi
 bundle_sha="$(cd "$bundle" && find . -type f ! -path './evals/results/*' -print0 | LC_ALL=C sort -z \
@@ -118,23 +142,10 @@ if [[ "$scaffold" == auto ]]; then
   fi
 fi
 
-pass_env=(HOME USER LOGNAME PATH SHELL TERM LANG TMPDIR
-  HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy NODE_EXTRA_CA_CERTS SSL_CERT_FILE
-  ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL CLAUDE_CODE_OAUTH_TOKEN
-  CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CONFIG_DIR)
-read -r -a extra <<<"${AK_EVAL_PASS_ENV:-}"
-while IFS= read -r name; do pass_env+=("$name"); done < <(compgen -e | grep '^LC_' || true)
-runner=()
-passed=()
-if [[ "$isolation" == env-allowlist ]]; then
-  runner=(env -i)
-  for name in "${pass_env[@]}" "${extra[@]+"${extra[@]}"}"; do
-    if [[ -n "${!name+set}" ]]; then runner+=("$name=${!name}"); passed+=("$name"); fi
-  done
-fi
-
 aside="$(mktemp -d "${TMPDIR:-/tmp}/ak-docker-aside.XXXXXX")"
 moved=()
+git_shim=""
+host_tmp=""
 # shellcheck disable=SC2329 # invoked by the EXIT trap
 restore() {
   local name
@@ -146,9 +157,44 @@ restore() {
     fi
   done
   rmdir "$aside" 2>/dev/null || true
+  rm -rf "$git_shim"
+  if [[ -n "$host_tmp" ]]; then
+    chmod -R u+rwx "$host_tmp" 2>/dev/null || true
+    rm -rf "$host_tmp" || echo "eval-local: could not remove $host_tmp" >&2
+  fi
 }
 trap restore EXIT
 trap 'exit 130' INT TERM
+git_shim="$(mktemp -d "${TMPDIR:-/tmp}/ak-git-shim.XXXXXX")"
+ln -s "$host_git" "$git_shim/git"
+host_path="$git_shim:$PATH"
+host_tmp="$(mktemp -d "${TMPDIR:-/tmp}/ak-eval-host.XXXXXX")"
+
+pass_env=(HOME USER LOGNAME PATH SHELL TERM LANG TMPDIR
+  HTTP_PROXY HTTPS_PROXY NO_PROXY http_proxy https_proxy no_proxy NODE_EXTRA_CA_CERTS SSL_CERT_FILE
+  ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL CLAUDE_CODE_OAUTH_TOKEN
+  CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CONFIG_DIR)
+read -r -a extra <<<"${AK_EVAL_PASS_ENV:-}"
+while IFS= read -r name; do pass_env+=("$name"); done < <(compgen -e | grep '^LC_' || true)
+runner=()
+passed=()
+if [[ "$isolation" == env-allowlist ]]; then
+  runner=(env -i)
+  for name in "${pass_env[@]}" "${extra[@]+"${extra[@]}"}"; do
+    if [[ "$name" == PATH ]]; then
+      runner+=("PATH=$host_path")
+      passed+=(PATH)
+    elif [[ "$name" == TMPDIR ]]; then
+      runner+=("TMPDIR=$host_tmp")
+      passed+=(TMPDIR)
+    elif [[ -n "${!name+set}" ]]; then
+      runner+=("$name=${!name}")
+      passed+=("$name")
+    fi
+  done
+else
+  runner=(env "PATH=$host_path" "TMPDIR=$host_tmp")
+fi
 
 for name in cli-plugins bin; do
   if [[ -e "$HOME/.docker/$name" || -L "$HOME/.docker/$name" ]]; then
@@ -264,7 +310,7 @@ for i in "${!groups[@]}"; do
     fi
     cap=(--max-cost-usd "$left")
   fi
-  command=(claude plugin eval "$target" --no-publish --json "$out" "${args[@]+"${args[@]}"}" "${grant[@]+"${grant[@]}"}" "${cap[@]+"${cap[@]}"}")
+  command=(claude plugin eval "$target" --no-publish --keep-temp --json "$out" "${args[@]+"${args[@]}"}" "${grant[@]+"${grant[@]}"}" "${cap[@]+"${cap[@]}"}")
   printf -v cmdline '%q ' "${command[@]}"
   echo "eval-local: group $((i + 1))/${#groups[@]}: grant [${key:-none}]" >&2
   set +e
@@ -282,6 +328,11 @@ for i in "${!groups[@]}"; do
         to="$traces_dir/$dir/$arm-$n.jsonl"
         mkdir -p "$(dirname "$to")"
         cp "$from" "$to"
+      fi
+      kept="$(dirname "$(dirname "$from")")"
+      if [[ "$(basename "$kept")" == e-* && -d "$kept" ]]; then
+        chmod -R u+rwx "$kept" 2>/dev/null || true
+        rm -rf "$kept" || echo "eval-local: could not remove $kept" >&2
       fi
       jq -nc --arg dir "$dir" --arg name "$name" --arg arm "$arm" --argjson run "$n" --arg from "$from" --arg to "$to" \
         '{dir: $dir, name: $name, arm: $arm, run: $run, hostPath: $from, copy: (if $to == "" then null else $to end)}' >>"$traces"
@@ -339,7 +390,14 @@ fi
 
 # Per case and arm: n runs, passes (a run passes when every grader that counts toward the score
 # passed; with-only graders do not count toward the score), the rate with its 95% Wilson interval,
-# and the fired count on the with arm. A run fired when every with-only `tool_used` grader on the
+# and the fired count on the with arm. The graders that count are read from the runs, whose
+# withOnly boolean is the mark the receipt reads; a case-level definition carries it as
+# config.arm. A run the host cut
+# short for budget carries skippedPaidGraders and each skipped grader as failed with the
+# explanation "skipped: cost ceiling" (research/evals/2026-09-28-a1-rerun/budget-skipped-run.json);
+# those verdicts are missing, not negative, so the run is ungraded unless a scored grader failed.
+# The host's score counts a skipped grader as weight not earned, so a case's score and delta, and
+# the overall figures, are withheld while any run has a missing verdict, graded or not. A run fired when every with-only `tool_used` grader on the
 # Skill tool passed; the case's grader definitions in the result name them. Other with-only graders,
 # such as a negative's check that the workflow was not carried out, are not firing. A case with no
 # such grader has fired null.
@@ -347,6 +405,7 @@ fi
 jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
    --arg bundle_sha "$bundle_sha" --argjson fresh "$fresh" --arg install "$install" \
    --argjson donors "$donors" --arg host "$host_version" --arg isolation "$isolation" \
+   --arg host_git "$host_git" --arg host_git_source "$host_git_source" \
    --argjson status "$status" --arg json "$json" --arg grant_source "$grant_source" \
    --slurpfile invocations "$invocations" --slurpfile traces "$traces" --arg scaffold "$scaffold" \
    --argjson exclusions "$exclusions" --argjson budget "${budget:-null}" \
@@ -356,20 +415,43 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
       | (($p + $z2 / (2 * $n)) / (1 + $z2 / $n)) as $c
       | ((1.96 * ((($p * (1 - $p)) / $n + $z2 / (4 * $n * $n)) | sqrt)) / (1 + $z2 / $n)) as $h
       | {lo: ([0, $c - $h] | max), hi: ([1, $c + $h] | min)} end;
-  def pass: [.graders[]? | select(.withOnly | not) | .passed] | length > 0 and all;
-  def arm($runs): ($runs | length) as $n | ([$runs[] | select(pass)] | length) as $k
-      | {n: $n, passes: $k, rate: (if $n == 0 then null else $k / $n end), wilson95: wilson($k; $n)};
+  def verdicts($run; $expected): [$expected[] as $name
+      | [$run.graders[]? | select(.name == $name)
+         | if $run.skippedPaidGraders == true and ((.explanation // "") | startswith("skipped:")) then null else .passed end]
+        | first];
+  def graded($run; $expected): ($expected | length) > 0
+      and (verdicts($run; $expected) | any(. == false) or all(type == "boolean"));
+  def passed($run; $expected): ($expected | length) > 0
+      and (verdicts($run; $expected) | all(. == true));
+  def arm($runs; $expected): ($runs | length) as $n
+      | ([$runs[] | select(graded(.; $expected))] | length) as $g
+      | ([$runs[] | select(passed(.; $expected))] | length) as $k
+      | {n: $n, graded: $g, ungraded: (if ($expected | length) == 0 then 0 else $n - $g end), passes: $k,
+         rate: (if $g == 0 then null else $k / $g end), wilson95: wilson($k; $g)};
   def fired($runs; $skill): [$runs[] | [.graders[]? | select(.withOnly and (.name | IN($skill[]))) | .passed]]
       | if (map(length) | add // 0) == 0 then null
         else {n: length, fired: map(select(length > 0 and all)) | length} end;
   def skill_graders: [.graders[]? | select(.type == "tool_used" and .config.tool == "Skill") | .name];
+  def score_graders: [(.arms // {})[][]?.graders[]? | select(.withOnly | not) | .name] | unique;
+  def complete: score_graders as $expected
+      | [(.arms // {})[][]? | verdicts(.; $expected) | any(. == null)] | any | not;
   (.costUsd | if type == "number" then . * 10000 | round / 10000 else . end) as $cost
+  | [.cases[] | score_graders as $expected
+                | arm(.arms.with // []; $expected) as $with | arm(.arms.without // []; $expected) as $without
+                | complete as $complete
+                | {name, dir, with: $with, without: $without, fired: fired(.arms.with // []; skill_graders),
+                   score: (if $complete then .aggregates.score else null end),
+                   scoreWithout: (if $complete then .aggregates.scoreWithout else null end),
+                   delta: (if $complete then .aggregates.delta else null end)}] as $cases
+  | ([$cases[] | .with.ungraded + .without.ungraded] | add // 0) as $ungraded
+  | ([.cases[] | complete] | all) as $complete
   | {
     measured: {revision: $revision, dirty: $dirty},
     bundle: {path: $bundle, sha256: $bundle_sha, freshAgainstSources: $fresh},
     install: $install,
     donorsPresent: $donors,
     host: $host,
+    tooling: {git: {path: $host_git, source: $host_git_source}},
     isolation: {method: ("host-sandbox+" + $isolation), envPassed: (if $isolation == "inherited-env" then "all" else $ARGS.positional end)},
     grants: {source: $grant_source, union: ([$invocations[].grant[]] | unique)},
     scaffold: $scaffold,
@@ -377,11 +459,10 @@ jq --arg revision "$revision" --argjson dirty "$dirty" --arg bundle "$bundle" \
     invocations: $invocations,
     exitStatus: $status,
     result: $json,
-    cases: [.cases[] | {name, dir, with: arm(.arms.with // []), without: arm(.arms.without // []),
-                        fired: fired(.arms.with // []; skill_graders), score: .aggregates.score,
-                        scoreWithout: .aggregates.scoreWithout, delta: .aggregates.delta}],
-    overall: {score: .aggregates.overallScore, meanDelta: .aggregates.meanDelta,
-              mergedFrom: (.merged // 1)},
+    cases: $cases,
+    overall: {score: (if $complete then .aggregates.overallScore else null end),
+              meanDelta: (if $complete then .aggregates.meanDelta else null end),
+              ungraded: $ungraded, mergedFrom: (.merged // 1)},
     traces: $traces,
     costUsd: $cost, durationSeconds: .durationSeconds,
     budget: $budget, over_budget: ($budget != null and $cost > $budget),
@@ -396,7 +477,7 @@ jq -r 'select(.over_budget) | "eval-local: spent $\(.costUsd) against a cap of $
 echo
 jq -r '
   def n: if type == "number" then (. * 1000 | round / 1000 | tostring) else "-" end;
-  def ci: "\(.passes)/\(.n) [\(.wilson95.lo | n),\(.wilson95.hi | n)]";
+  def ci: "\(.passes)/\(.graded) [\(.wilson95.lo | n),\(.wilson95.hi | n)]\(if .ungraded > 0 then " + \(.ungraded) ungraded" else "" end)";
   (["case", "with", "without", "delta", "fired"] | @tsv),
   (.cases[] | [.name[0:60], (.with | ci), (.without | ci), (.delta | n),
                (if .fired then "\(.fired.fired)/\(.fired.n)" else "-" end)] | @tsv),
@@ -407,7 +488,7 @@ jq -r '
 ' "$receipt" | column -t -s $'\t' || echo "eval-local: could not summarise $receipt" >&2
 jq -r '"eval-local: measured \(.bundle.path) (sha256 \(.bundle.sha256[0:12]), fresh=\(.bundle.freshAgainstSources))",
        "eval-local: tree \(.measured.revision)\(if .measured.dirty then " (dirty)" else "" end)  .donors=\(.donorsPresent)  install=\(.install)",
-       "eval-local: host \(.host)  isolation \(.isolation.method)"' "$receipt" 2>/dev/null || true
+       "eval-local: host \(.host)  isolation \(.isolation.method)  git=\(.tooling.git.path) (on the sandbox PATH; unverified in the live sandbox)"' "$receipt" 2>/dev/null || true
 echo "eval-local: full result in $json"
 echo "eval-local: receipt in $receipt"
 exit "$status"

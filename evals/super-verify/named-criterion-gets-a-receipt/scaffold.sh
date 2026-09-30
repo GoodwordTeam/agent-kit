@@ -3,9 +3,10 @@
 #
 # tiny-service-repo with ticket AK-214 on main, then a task branch whose head
 # commit implements it: withRetry no longer retries a 4xx other than 429, and
-# test/http/retry.test.js gains the two tests the ticket's verification
-# commands select by name. AC-2 genuinely holds at the head. The project has
-# no `npm test` script -- its command is `npm run check` (package.json,
+# test/http/retry.test.js gains two tests named `AK-214 AC-1` and `AK-214 AC-2`
+# after the ticket's acceptance criteria. The ticket deliberately names no
+# verification command. AC-2 genuinely holds at the head. The project has no
+# `npm test` script -- its command is `npm run check` (package.json,
 # CONTRIBUTING.md) -- so a run that assumes the ecosystem default gets an
 # error instead of a receipt.
 set -euo pipefail
@@ -16,6 +17,10 @@ source "$SCRIPT_DIR/../../super-build/_fixtures/scaffold-lib.sh"
 
 service_repo_baseline
 tickets_copy AK-214
+# This case measures discovery of the repository's check command. The shared implementation ticket
+# names commands for build cases, so remove those hints here while retaining the acceptance text.
+sed -i.bak '/^[[:space:]]*Verification:/d' tickets/AK-214.md
+rm tickets/AK-214.md.bak
 commit_all "tickets: export AK-214" "2026-09-22T15:00:00+00:00"
 git checkout -q -b AK-214-stop-retrying-client-errors
 
