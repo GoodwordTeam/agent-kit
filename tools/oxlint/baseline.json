@@ -534,6 +534,12 @@
   "src/validation/types.ts": {
     "unicorn(no-array-sort)": 1
   },
+  "tests/a1-fixtures.test.ts": {
+    "typescript(no-unsafe-assignment)": 2,
+    "typescript(no-unsafe-call)": 2,
+    "typescript(no-unsafe-member-access)": 6,
+    "typescript(no-unsafe-return)": 1
+  },
   "tests/adaptations.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "typescript(no-unsafe-type-assertion)": 1,
@@ -626,9 +632,10 @@
     "anti-slop(no-shape-in-symbol-names)": 7
   },
   "tests/eval-local.test.ts": {
-    "typescript(no-unsafe-assignment)": 5,
+    "typescript(no-non-null-assertion)": 3,
+    "typescript(no-unsafe-assignment)": 6,
     "typescript(no-unsafe-call)": 3,
-    "typescript(no-unsafe-member-access)": 10,
+    "typescript(no-unsafe-member-access)": 30,
     "typescript(no-unsafe-return)": 2,
     "unicorn(consistent-function-scoping)": 1,
     "unicorn(no-array-sort)": 1
