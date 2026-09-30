@@ -283,15 +283,17 @@
     "typescript(no-unsafe-type-assertion)": 2
   },
   "src/lifecycle/gate.ts": {
-    "anti-slop(no-chained-type-assertions)": 1,
-    "anti-slop(no-known-value-widening)": 4,
-    "anti-slop(no-runtime-typeof)": 18,
-    "anti-slop(no-unknown-parameters)": 1,
-    "anti-slop(no-unsafe-dictionary-type)": 3,
-    "anti-slop(require-safety-comment-for-type-assertion)": 12,
-    "typescript(no-non-null-assertion)": 6,
-    "typescript(no-unsafe-type-assertion)": 10,
-    "unicorn(no-array-sort)": 2
+    "anti-slop(no-chained-type-assertions)": 2,
+    "anti-slop(no-conditional-empty-object-spread)": 1,
+    "anti-slop(no-known-value-widening)": 10,
+    "anti-slop(no-runtime-typeof)": 40,
+    "anti-slop(no-shape-in-symbol-names)": 6,
+    "anti-slop(no-unknown-parameters)": 6,
+    "anti-slop(no-unsafe-dictionary-type)": 16,
+    "anti-slop(require-safety-comment-for-type-assertion)": 24,
+    "typescript(no-non-null-assertion)": 8,
+    "typescript(no-unsafe-type-assertion)": 20,
+    "unicorn(no-array-sort)": 3
   },
   "src/packaging/build.ts": {
     "unicorn(no-array-sort)": 1
@@ -1004,13 +1006,26 @@
     "unicorn(consistent-function-scoping)": 9
   },
   "tests/lifecycle/check.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "typescript(no-non-null-assertion)": 9,
+    "anti-slop(no-runtime-typeof)": 1,
+    "anti-slop(no-shape-in-symbol-names)": 2,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "typescript(no-non-null-assertion)": 28,
     "typescript(no-unnecessary-type-assertion)": 1,
-    "typescript(no-unsafe-assignment)": 4,
-    "typescript(no-unsafe-member-access)": 3,
-    "typescript(no-unsafe-type-assertion)": 2,
+    "typescript(no-unsafe-assignment)": 18,
+    "typescript(no-unsafe-call)": 3,
+    "typescript(no-unsafe-member-access)": 19,
+    "typescript(no-unsafe-type-assertion)": 5,
     "unicorn(no-array-sort)": 1
+  },
+  "tests/lifecycle/verification-predicate.test.ts": {
+    "anti-slop(no-shape-in-symbol-names)": 3,
+    "anti-slop(no-unsafe-dictionary-type)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "typescript(no-dynamic-delete)": 1,
+    "typescript(no-non-null-assertion)": 2,
+    "typescript(no-unnecessary-type-assertion)": 1,
+    "typescript(no-unsafe-return)": 1
   },
   "tests/links.test.ts": {
     "unicorn(no-array-sort)": 1
