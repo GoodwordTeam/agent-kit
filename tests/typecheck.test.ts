@@ -126,7 +126,7 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     expect(run.status).toBe(0);
   });
 
-  test("every file in src/, tests/ and tools/oxlint/ is in the checked set", () => {
+  test("every file in src/, tests/ and the top of tools/oxlint/ is in the checked set", () => {
     // The population check. A clean typecheck over zero files is byte-identical
     // to a clean typecheck over the whole tree, and `include` is a glob that can
     // silently stop matching a new directory.
@@ -136,16 +136,16 @@ describe("the tree typechecks, and the typechecker is doing work", () => {
     expect(files.length).toBeGreaterThan(30);
     expect(files.filter((file) => !checked.has(file))).toEqual([]);
 
-    // And the exclusion is the one documented in `tsconfig.json`, not a wider
-    // one that happens to still satisfy the line above. Each directory the
-    // config claims to cover contributes at least one file, and the vendored
-    // plugin contributes none, so `owned` is the set the config documents
-    // rather than whatever happens to be reachable from it.
-    expect(files.filter((file) => file.startsWith("tests/fixtures"))).toEqual([]);
+    // Each directory the config claims to cover contributes at least one file,
+    // so the line above cannot pass by comparing nothing against `checked`.
     expect(files.some((file) => file.startsWith("src/"))).toBe(true);
     expect(files.some((file) => file.startsWith("tests/"))).toBe(true);
     expect(files.some((file) => file.startsWith("tools/oxlint/"))).toBe(true);
-    expect(files.filter((file) => file.startsWith("tools/oxlint/anti-slop/"))).toEqual([]);
+
+    // And the vendored plugin stays out of the checked set. `include` names the
+    // top of `tools/oxlint/` with a non-recursive glob on purpose, so widening
+    // it to `**` would put upstream's code under this tree's `strict`.
+    expect([...checked].filter((file) => file.startsWith("tools/oxlint/anti-slop/"))).toEqual([]);
   });
 
   test("the population check survives being reached through a symlink", () => {
