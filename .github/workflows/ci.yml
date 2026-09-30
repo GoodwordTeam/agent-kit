@@ -30,6 +30,8 @@ jobs:
           node-version: 24
       - run: bun install --frozen-lockfile
       - run: bun run lint
+      # The baseline may only shrink relative to main; fetch-depth 0 above is what gives it a merge base.
+      - run: bun run lint:growth
       - run: bun run fmt:check
       - run: bun test
       - run: bun run validate

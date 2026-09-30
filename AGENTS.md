@@ -174,6 +174,7 @@ bun test                 # validator, selector and packager units, incl. invalid
 bun run ak validate      # catalog complete, schemas valid, links closed, no denylist hits
 bun run ak build         # the packager runs on this tree and writes dist/ for every host
 bun run lint             # oxlint through the ratchet: no violation beyond tools/oxlint/baseline.json
+bun run lint:growth      # the baseline records nothing beyond its copy at the merge base with origin/main
 bun run fmt:check        # oxfmt: code and JSON formatted; `bun run fmt` fixes it
 ```
 
@@ -220,6 +221,15 @@ the file. The reviewer checks that the counts moved with the file, with the old 
 the new path added carrying the same counts, rather than any count rising. The ratchet counts per
 file and rule, so fixing one violation while adding another of the same rule in the same file
 leaves the count unchanged and passes.
+
+`bun run lint:growth` holds the "only shrinks" half that the ratchet cannot see: the ratchet
+compares the tree with whatever baseline it finds, so a hand-edited or `--allow-growth` baseline
+passes it. `tools/oxlint/growth.ts` compares the baseline with its copy at the merge base with
+`origin/main`, and CI and the gate both run it. A renamed file may carry its old path's counts,
+and no more. "Renamed" is what `git diff -M` pairs between the merge base and the tree, which takes
+at least 50% similar content. A file rewritten past that in the same branch reads as new, so land
+the move on main before the rewrite. Any other growth passes only when `.oxlintrc.json` changed in
+the same branch, because that is a rule being adopted; the growth is printed either way.
 
 oxfmt owns whitespace, so anti-slop's `require-readable-spacing` is off. Markdown, YAML,
 fixtures, donor material, recorded eval evidence and the eval inputs that receipts pin by sha256
