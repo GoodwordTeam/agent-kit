@@ -1,8 +1,8 @@
 # no-mistakes gate configuration for agent-kit.
 #
 # Bun project (bun.lock). `bun test` runs the full suite AND typechecks the
-# tree (tests/typecheck.test.ts shells out to node_modules/.bin/tsc over all
-# of src/ and tests/ — see that file's header) whenever the whole suite runs,
+# tree (tests/typecheck.test.ts shells out to node_modules/.bin/tsc over what
+# tsconfig.json includes — see that file's header) whenever the whole suite runs,
 # so no separate typecheck command is needed. The lint role runs the other
 # gates AGENTS.md lists under "Before you commit": `bun run lint` (oxlint
 # through tools/oxlint/ratchet.ts, failing on any violation beyond
