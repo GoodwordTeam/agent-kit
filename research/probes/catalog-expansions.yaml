@@ -42,13 +42,19 @@ roles:
 
 references:
   baseline: 4
-  catalog: 5
+  catalog: 7
   expansions:
     - ids: [tracker-of-record]
       reason: >-
         The vendor-neutral tracker adapter needs one reference that says which ticket system is
         the record, the rules every tracker binding obeys, and how its first backend is set up.
       commits: [32863f4]
+    - ids: [delegation, structural-checks]
+      reason: >-
+        Ticket and merge-time delegation assessments need shared scoring and sensitive-floor
+        guidance, while project-declared diff checks need separate command and receipt semantics
+        that lifecycle bodies can load without duplicating either contract.
+      commits: [c5c94bd]
 
 schemas:
   baseline: 14
