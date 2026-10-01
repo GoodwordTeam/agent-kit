@@ -70,10 +70,11 @@ a role and policy. No new public entrypoint.
   and `merge` and `deploy` remain sensitive actions.
 - **Advisor placement is host-conditional and model-free.** Apply ruling
   `advisor-consultation-follows-class` through short hooks in `super-bound`, `super-verify` and
-  `super-review`, with shared detail in `delegation` if needed. The captain's words are: "/advisor
-  is a great skill on claude code, can we call it out on our super skills on agent kit? Based on
-  risk scoring we could leverage advisors to chime in". Consultation adds judgment evidence; it
-  grants no authority and hosts without that facility remain valid.
+  `super-review`, with the shared class-conditional detail kept once in `delegation`, which all
+  three load. The captain's words are: "/advisor is a great skill on claude code, can we call it
+  out on our super skills on agent kit? Based on risk scoring we could leverage advisors to chime
+  in". Consultation adds judgment evidence; it grants no authority and hosts without that facility
+  remain valid.
 - **Keep the bodies small by using the new references.** Skill bodies stay inside the `AUTHORING.md` §1
   size rule. Shared scoring, floor, consultation, command and receipt detail belongs in `delegation`
   or `structural-checks`; each body keeps only its operational hook.
@@ -91,9 +92,14 @@ a role and policy. No new public entrypoint.
   `oracle-from-criteria`, and `protected-tests-unchanged`. `tdd` adds the independent-oracle step
   for `green` tickets. `policies/authority-defaults.yaml` records the class-to-checkpoint map, and
   `autopilot` enforces it.
-- **Two loader edits accompany the references.** `super-bound`, `super-review` and `super-ship`
-  declare and link `delegation`; `super-verify` declares and links `structural-checks`, then consumes
-  project-check receipts under ruling `project-checks-block-only-as-constraints`.
+- **Two loader edits accompany the references.** `super-bound`, `super-verify`, `super-review` and
+  `super-ship` declare and link `delegation`; `super-verify` alone declares and links
+  `structural-checks`, then consumes project-check receipts under ruling
+  `project-checks-block-only-as-constraints`.
+- **The independent-oracle step is self-contained.** `structural-checks` carries command
+  declaration and receipt semantics only. The `tdd` step, reached through `super-build`, binds
+  ruling `unreviewed-work-needs-independent-oracle` in its own body and loads neither reference;
+  `super-build` is not a loader of either.
 - **The money action already exists.** `policies/authority-defaults.yaml` already lists
   `money-movement` among the actions no charter grants by default; batch 11 consumes that vocabulary
   rather than adding another action.
@@ -138,6 +144,10 @@ These are facts about the run, not the contract.
 - **Report provenance uses anchored local sources.** Add exact report ranges to
   `provenance/adaptations.d/delegation.yaml` for each authored file that adapts report material. The
   brief itself needs no row unless report text is quoted.
+- **The conversation-map rows already exist.** `provenance/conversation-map.yaml` carries one row
+  each for `references/delegation` and `references/structural-checks`, `origin: conversation`, with
+  plan `§` locators. Do not add a second row for either destination; if authoring changes what a
+  row says, edit that row.
 - **Model routing remains stripped.** Host-conditional advisor language names a facility and an
   evidence obligation, never a model, provider route, price or effort ladder. `src/denylist.ts`
   remains a batch gate.

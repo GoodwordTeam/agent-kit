@@ -818,7 +818,7 @@ references:
     batch: 11
     provenance_origin: conversation
     status: contract
-    loaded_by: [super-bound, super-review, super-ship]
+    loaded_by: [super-bound, super-verify, super-review, super-ship]
     summary: >-
       Evidence-backed delegation classes, sensitive floors, ticket and merge assessments, and
       the records lifecycle skills consume without recomputing the scorer.
