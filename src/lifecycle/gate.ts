@@ -43,7 +43,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 // ── the snapshot ─────────────────────────────────────────────────────────────
 
@@ -141,6 +141,22 @@ export const GATES = [
   "ship-preflight",
 ] as const;
 export type Gate = (typeof GATES)[number];
+export const DELEGATION_CLASSES = ["green", "yellow-agent", "yellow-owner", "red"] as const;
+export type DelegationClass = (typeof DELEGATION_CLASSES)[number];
+export const AUTHOR_KINDS = ["human", "agent"] as const;
+export type AuthorKind = (typeof AUTHOR_KINDS)[number];
+
+const BUNDLED_ADAPTER_IDS: readonly string[] = [];
+
+/** The ids a gate record's host may carry: the directories under `adapters/`, which `ak build` writes into the bundled copy. */
+export function adapterIds(): readonly string[] {
+  if (BUNDLED_ADAPTER_IDS.length > 0) return BUNDLED_ADAPTER_IDS;
+  const at = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "adapters");
+  if (!existsSync(at)) return [];
+  return readdirSync(at, { withFileTypes: true })
+    .flatMap((entry) => (entry.isDirectory() ? [entry.name] : []))
+    .toSorted();
+}
 
 /** What super-ship checks before it starts: every phase before it. */
 export const PRE_SHIP_GATES: readonly Gate[] = ["build-checks", "verify", "review-full", "review-readiness"];
@@ -160,6 +176,8 @@ export interface GateRecord {
   gate: Gate;
   snapshot: Snapshot;
   recorded_at: string;
+  class?: DelegationClass;
+  implementer?: { author_kind: AuthorKind; host: string };
   evidence?: ArtifactRef[];
 }
 
@@ -371,12 +389,27 @@ export interface RecordArgs {
   gate: Gate;
   project: string;
   receipts?: readonly string[];
+  delegationClass?: DelegationClass;
+  implementer?: { author_kind: AuthorKind; host: string };
   now?: () => Date;
+}
+
+function implementerWellFormed(implementer: GateRecord["implementer"]): boolean {
+  return (
+    implementer === undefined ||
+    (AUTHOR_KINDS.includes(implementer?.author_kind) && adapterIds().includes(implementer?.host))
+  );
 }
 
 export function recordGate(
   a: RecordArgs,
 ): { ok: true; path: string; record: GateRecord; skipped: string[] } | { ok: false; reason: string } {
+  if (!implementerWellFormed(a.implementer)) {
+    return {
+      ok: false,
+      reason: `the implementer needs an author kind of human or agent and a host that is one of ${adapterIds().join(", ")}`,
+    };
+  }
   const snapshot = takeSnapshot(a.project);
   if (typeof snapshot === "string") return { ok: false, reason: snapshot };
   if ((a.receipts?.length ?? 0) > 0 && readRunRecord(a.dir, a.run) === undefined) {
@@ -446,6 +479,11 @@ export function recordGate(
   const name = `${snapshot.revision}-${snapshot.diff_hash.replace(/^sha256:/, "").slice(0, 16)}.json`;
   const path = join(a.dir, safeRunId(a.run), a.gate, name);
   const previous = readObject(path) as Partial<GateRecord> | undefined;
+  const recordedClass = a.delegationClass ?? DELEGATION_CLASSES.find((known) => known === previous?.class);
+  const implementer =
+    a.implementer ?? (implementerWellFormed(previous?.implementer) ? previous?.implementer : undefined);
+  if (recordedClass !== undefined) record.class = recordedClass;
+  if (implementer !== undefined) record.implementer = implementer;
   if (record.schema_version === 2 && previous?.schema_version === 2 && Array.isArray(previous.evidence)) {
     const recorded = new Set(refs.map((ref) => ref.id));
     const earlier = previous.evidence.filter((ref) => {
@@ -485,7 +523,9 @@ export function readRecords(dir: string, run: string, gate: Gate): GateRecord[] 
       g.gate === gate &&
       typeof g.recorded_at === "string" &&
       typeof g.snapshot?.revision === "string" &&
-      typeof g.snapshot?.diff_hash === "string"
+      typeof g.snapshot?.diff_hash === "string" &&
+      (g.class === undefined || DELEGATION_CLASSES.includes(g.class)) &&
+      implementerWellFormed(g.implementer)
     ) {
       const evidenceValid =
         g.schema_version === 1 ||
@@ -1086,7 +1126,7 @@ export const LIFECYCLE_USAGE = [
   "ak lifecycle — the gate records each lifecycle phase leaves, and the check super-ship runs first",
   "",
   "  ak lifecycle open --ticket <file> [--dir <dir>] [--project <dir>]",
-  "  ak lifecycle record --gate <gate> [--receipt <file> ...] [--run <id>] [--dir <dir>] [--project <dir>]",
+  "  ak lifecycle record --gate <gate> [--receipt <file> ...] [--class <class> --author-kind <kind> --host <id>] [--run <id>] [--dir <dir>] [--project <dir>]",
   "  ak lifecycle check [--evidence] [--gates <g,g>] [--run <id>] [--dir <dir>] [--project <dir>] [--json]",
   "",
   `  gates: ${GATES.join(", ")}`,
@@ -1100,7 +1140,7 @@ export const LIFECYCLE_USAGE = [
 
 const FLAGS: Record<string, readonly string[]> = {
   open: ["ticket", "dir", "project"],
-  record: ["gate", "receipt", "run", "dir", "project"],
+  record: ["gate", "receipt", "class", "author-kind", "host", "run", "dir", "project"],
   check: ["evidence", "gates", "run", "dir", "project", "json"],
 };
 
@@ -1199,6 +1239,28 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
       io.err("ak lifecycle record: --receipt is only valid with --gate verify");
       return 2;
     }
+    const classFlag = str("class");
+    const authorKindFlag = str("author-kind");
+    const host = str("host");
+    const identityMembers = [classFlag, authorKindFlag, host].filter((value) => value !== undefined).length;
+    if (identityMembers !== 0 && identityMembers !== 3) {
+      io.err("ak lifecycle record: --class, --author-kind, and --host must be supplied together");
+      return 2;
+    }
+    const delegationClass = DELEGATION_CLASSES.find((known) => known === classFlag);
+    if (classFlag !== undefined && delegationClass === undefined) {
+      io.err(`ak lifecycle record: --class must be one of ${DELEGATION_CLASSES.join(", ")}`);
+      return 2;
+    }
+    const authorKind = AUTHOR_KINDS.find((known) => known === authorKindFlag);
+    if (authorKindFlag !== undefined && authorKind === undefined) {
+      io.err(`ak lifecycle record: --author-kind must be one of ${AUTHOR_KINDS.join(", ")}`);
+      return 2;
+    }
+    if (host !== undefined && !adapterIds().includes(host)) {
+      io.err(`ak lifecycle record: --host must be one of ${adapterIds().join(", ")}`);
+      return 2;
+    }
     const opened = readRunRecord(dir, run);
     if (opened?.closed_at !== undefined) {
       const live = gate === "ship-preflight" ? takeSnapshot(project) : undefined;
@@ -1211,7 +1273,16 @@ export function main(argv: readonly string[], io: Io, cwd: string = process.cwd(
         return 1;
       }
     }
-    const r = recordGate({ dir, run, gate, project, receipts: receipts.map((path) => resolve(cwd, path)) });
+    const implementer = authorKind !== undefined && host !== undefined ? { author_kind: authorKind, host } : undefined;
+    const r = recordGate({
+      dir,
+      run,
+      gate,
+      project,
+      receipts: receipts.map((path) => resolve(cwd, path)),
+      delegationClass,
+      implementer,
+    });
     if (!r.ok) {
       io.err(`ak lifecycle record: ${r.reason}`);
       return 1;
