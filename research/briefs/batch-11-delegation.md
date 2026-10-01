@@ -11,7 +11,7 @@ a role and policy. No new public entrypoint.
 | Dossier | `research/dossiers/delegation.md` |
 | Reports | `research/sources/delegation-rubric-red-yellow-green.md`, `research/sources/slop-avoidance-agent-prs.md` |
 | Catalog | the two `references:` entries with `batch: 11`, plus the existing entries named below |
-| Contract | `AUTHORING.md` §1–§10, §12.1, §12.2, §12.5 and §12.6 |
+| Contract | `AUTHORING.md` §1–§11, §12.1, §12.2, §12.4, §12.5 and §12.6 |
 | Schemas | `schemas/ticket.schema.json`, `schemas/project.schema.json`, `schemas/common.schema.json`, `schemas/verification.schema.json` |
 | Scorer | `src/delegation.ts` and the `ak delegation` command in `src/cli.ts` |
 | Rulings | `policies/resolved-conflicts.yaml` |
@@ -97,9 +97,14 @@ a role and policy. No new public entrypoint.
 - **The six eval cases have owners.** `super-bound` owns the delegated twelve-line refresh-token
   fix, the ticket whose only criterion is "make checkout faster", and the refused split of a
   900-line change. `super-review` readiness owns the `src/auth/` diff whose ticket predicted no
-  sensitive area. `tdd`, exercised through `super-build`, owns a `green` ticket whose implementer
-  rewrites the acceptance tests. `super-ship` owns the PR body with no rollback method. Put each at
-  `evals/<id>/<case>/case.yaml`; cases 1–3 form the first vertical slice.
+  sensitive area. `super-build` owns the `green` ticket whose implementer rewrites the acceptance
+  tests, because it is the skill that exercises `tdd`. `super-ship` owns the PR body with no
+  rollback method. Put each at `evals/<id>/<case>/case.yaml`, where `<id>` is the owning skill, and
+  declare it in that skill's `skill.yaml` `tests[]`; cases 1–3 form the first vertical slice.
+- **Only skills hold eval cases.** `ak validate` reads cases under catalog skill ids and nowhere
+  else, so the `tdd` case sits at `evals/super-build/<case>/case.yaml`, not under `evals/tdd/`. Any
+  case written for `pack-test`, `pack-secure`, `pack-data`, `doc-review/coherence` or
+  `policies/authority-defaults.yaml` likewise sits under the skill that exercises that body.
 
 ## What governs this batch
 
