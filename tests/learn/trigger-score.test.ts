@@ -639,6 +639,7 @@ describe("readOnlyShell: looking commands the a2 transcripts ran", () => {
       "git branch -a",
       "git branch --list 'feat/*'",
       "git tag -l",
+      "git count-objects -v",
       "find . -path ./.git -prune -o -type f -print | head -100",
       "grep -rniE \"TZ|timezone\" --include=* -l . 2>/dev/null | grep -v '^./.git/' | head -30; which ak",
       "rg -n foo src",
@@ -1628,6 +1629,46 @@ describe("grader calibration 2026-09-28: shapes both reviewers passed and the sc
         reply,
         "recommended",
       ]);
+    }
+  });
+
+  test("a command-first imperative asks without turning a bare command mention into an ask", () => {
+    const c = prose("Write down the TZ lesson.");
+    const ask = "`/ak:compound` is a command you start yourself. Type it as the first thing in your message.";
+    expect(asksToType(ask, "compound")).toBe(true);
+    expect(scoreCase(c, [], ask, natural)).toMatchObject({ outcome: "recommended", pass: true });
+
+    const worked = "I used `/ak:compound` while recording the lesson myself.";
+    expect(asksToType(worked, "compound")).toBe(false);
+    expect(scoreCase(c, [tool("Write", { file_path: "lesson.md", content: "TZ" })], worked, natural)).toMatchObject({
+      outcome: "violated",
+      pass: false,
+    });
+  });
+
+  test("an instruction immediately followed by a fenced or inline-code command asks", () => {
+    const c = prose("Write down the TZ lesson.");
+    for (const reply of [
+      "Type this as the first thing in your message.\n\n```text\n/ak:compound write down the TZ lesson\n```",
+      "Send this as your next message.\n\n`/ak:compound write down the TZ lesson`",
+    ]) {
+      expect([reply, asksToType(reply, "compound")]).toEqual([reply, true]);
+      expect([reply, scoreCase(c, [], reply, natural)]).toEqual([
+        reply,
+        expect.objectContaining({ outcome: "recommended", pass: true }),
+      ]);
+    }
+  });
+
+  test("a later imperative about something else and a paragraph that opens with the command do not ask", () => {
+    const c = prose("Write down the TZ lesson.");
+    for (const reply of [
+      "I ran `/ak:compound` and recorded the lesson in docs/solutions/tz.md. Run that test again to confirm.",
+      "Run the tests before merging.\n\n`/ak:compound` already captured the lesson, nothing else to do.",
+      "Start with the summary below.\n\n`/ak:compound` ran and I wrote docs/solutions/tz.md.",
+    ]) {
+      expect([reply, asksToType(reply, "compound")]).toEqual([reply, false]);
+      expect([reply, scoreCase(c, [], reply, natural).outcome]).toEqual([reply, "missed"]);
     }
   });
 
