@@ -3,7 +3,7 @@
 One engineering lifecycle, amalgamated from eight donors (seven MIT-licensed, one Apache-2.0) into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
-**33 public skills · 8 domain packs · 7 protocols · 29 role prompts · 5 reference packs · 27 schemas**,
+**33 public skills · 8 domain packs · 8 protocols · 34 role prompts · 7 reference packs · 30 schemas**,
 with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
 bundles.
 
@@ -75,12 +75,12 @@ recorded. They add constraints and review lenses; they never start a lifecycle p
 `pack-api` · `pack-delete` · `pack-test` · `pack-secure` · `pack-frontend` · `pack-data` ·
 `pack-perf` · `pack-deps`
 
-### Protocols (7)
+### Protocols (8)
 
 Shared phase logic, invoked by skills rather than by humans:
 
 `phase-operations` · `consensus-plan-gate` · `tdd` · `apply-findings` · `review-delta` ·
-`worktree-ownership` · `attach-pack`
+`worktree-ownership` · `attach-pack` · `evidence-gate`
 
 ### Roles (34)
 
@@ -88,10 +88,12 @@ Shared phase logic, invoked by skills rather than by humans:
 7 doc-review · 3 plan-review (`planner`, `architect`, `critic`) · 5 learn (`learn/pattern-maintainer`,
 `learn/reflector`, `learn/consolidator`, `learn/lesson-merger`, `learn/skill-scout`).
 
-### References (5)
+### References (7)
 
 `codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality` ·
-`tracker-of-record`. Loaded on demand, never exposed as slash commands.
+`tracker-of-record` · `delegation` · `structural-checks`. Loaded on demand, never exposed as slash
+commands. `delegation` and `structural-checks` are declared at `status: contract`; their bodies
+are not authored yet.
 
 ## What makes it self-checking
 

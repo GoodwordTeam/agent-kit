@@ -1181,6 +1181,37 @@ capabilities:
       The transcript is explicit that the prose pass, the document findings engine and the verdict
       skill are three different jobs and must not be merged.
 
+  - id: delegation
+    capability: Delegation classes, sensitive floors, and the ticket-time and merge-time assessments lifecycle skills consume
+    disposition: reference
+    destination: references/delegation
+    locator: plan §10; plan §1.5
+    origin: conversation
+    acceptance_test: >-
+      Loaded on demand by `super-bound`, `super-verify`, `super-review` and `super-ship`; not a
+      command. A ticket that touches a trust boundary is not built under a delegated `build-go`,
+      and a diff touching a sensitive area its ticket did not predict raises the class
+      (release scenarios 25 and 26).
+    note: >-
+      No pinned donor implements this. Plan §10 scenarios 25 and 26 specify the behavior and plan
+      §1.5 records that the report-derived material is attributed per file; those exact report
+      citations live on the anchored-local rows in provenance/adaptations.d/delegation.yaml, not
+      in this locator.
+
+  - id: structural-checks
+    capability: Project-declared diff-scoped check commands and the receipt semantics for structural and test-strength evidence
+    disposition: reference
+    destination: references/structural-checks
+    locator: plan §10; plan §1.5
+    origin: conversation
+    acceptance_test: >-
+      Loaded on demand by `super-verify`; not a command. A number set as guidance never becomes a
+      finding and blocks only as a named mandatory constraint, and a test that kills no mutant on
+      changed lines does not count as verification strength (release scenarios 27 and 28).
+    note: >-
+      No pinned donor implements this. Plan §10 scenarios 27 and 28 specify the behavior; report
+      attribution stays on the anchored-local rows in provenance/adaptations.d/delegation.yaml.
+
   # =========================================================================
   # Cross-cutting contracts with no donor path
   # =========================================================================
