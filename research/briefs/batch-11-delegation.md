@@ -74,9 +74,9 @@ a role and policy. No new public entrypoint.
   is a great skill on claude code, can we call it out on our super skills on agent kit? Based on
   risk scoring we could leverage advisors to chime in". Consultation adds judgment evidence; it
   grants no authority and hosts without that facility remain valid.
-- **Keep the bodies small by using the new references.** Skill bodies keep the `AUTHORING.md` §1
-  150-line target and 300-line cap. Shared scoring, floor, consultation, command and receipt detail
-  belongs in `delegation` or `structural-checks`; each body keeps only its operational hook.
+- **Keep the bodies small by using the new references.** Skill bodies stay inside the `AUTHORING.md` §1
+  size rule. Shared scoring, floor, consultation, command and receipt detail belongs in `delegation`
+  or `structural-checks`; each body keeps only its operational hook.
 - **Batch 11 changes these existing entries.** `super-bound` writes delegation, readiness and
   assumptions per ticket and orders stacks as refactor, schema expand, flagged behavior, consumer,
   backfill, then schema contract as a separate ticket. `super-align` turns vague terms such as
