@@ -9,8 +9,8 @@ tested.
 
 Observations marked **verified (donor)** were read from the pinned clone at
 `compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1`. Observations marked
-**verified (CLI)** were taken from `codex-cli 0.154.0` on this machine. Everything else is a
-requirement on the packager.
+**verified (CLI)** were taken from `codex-cli 0.154.0` on this machine, except where §4 names a
+later version for the install pair. Everything else is a requirement on the packager.
 
 ---
 
@@ -61,6 +61,7 @@ confirms it.
 
 ```text
 dist/codex/
+├── .claude-plugin/marketplace.json # local marketplace registration for Codex CLI
 ├── .codex-plugin/plugin.json   # identity, skill registration, no interface block
 ├── skills/<id>/SKILL.md        # same bodies as dist/claude-code, different generated keys
 ├── skills/<id>/references/
@@ -152,6 +153,14 @@ codex plugin list
 codex plugin remove <plugin>
 ```
 
+Verified (CLI), `codex-cli 0.159.2`, for this bundle as a local marketplace. The first command
+reads `.claude-plugin/marketplace.json` at the marketplace root and fails without one:
+
+```bash
+codex plugin marketplace add <dist/codex>
+codex plugin add ak@agent-kit
+```
+
 `codex plugin marketplace add` accepts `--ref` for Git sources. The packager records the exact
 command pair for the pinned target CLI version in the release notes; see the unverified-command note
 in §1.
@@ -181,15 +190,18 @@ Tests this adapter owns, in `tests/adapters/`:
    `name` is compared manifest-to-manifest (`:403`); and the donor's own `package.json` carries no
    `license` key at all. The `license` clause is therefore this package's own release condition,
    `origin: conversation`, and is marked as such rather than attributed upstream.
+
+   The Codex marketplace's plugin `name` and `metadata.version` agree with
+   `dist/codex/.codex-plugin/plugin.json`.
 3. **No leaked host keys** — the codex bundle contains no `disable-model-invocation` and no
    `allowed-tools`; the claude-code bundle contains both where required. A key from one host's set
    appearing in the other's bundle is a failure.
 4. **Non-trigger corpus completeness** — every U skill in the codex bundle has a non-trigger eval
    case, and every such case's prompt is drawn from that skill's `## Not for` section.
-5. **Install smoke test** — `codex plugin marketplace add <dist/codex>` followed by
-   `codex plugin add`, then confirming the skills are listed. Run manually against the pinned CLI
-   version at release time and recorded as a receipt; not a CI gate, because it requires a host
-   install.
+5. **Install smoke test** — the bundle carries the marketplace manifest required by
+   `codex plugin marketplace add <dist/codex>`; follow it with `codex plugin add ak@agent-kit`, then
+   confirm the skills are listed. Run manually against the pinned CLI version at release time and
+   record it as a receipt; it is not a CI gate because it requires a host install.
 
 **Reported honestly, not worked around:** with no verified host-native eval runner for this host, the
 behavioral corpus is executed against the claude-code bundle and, when a runner is attached, through
