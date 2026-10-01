@@ -31,6 +31,7 @@ describe("matrix", () => {
     const text = readFileSync(join(import.meta.dir, "evals", "eval-matrix.example.yaml"), "utf8");
     const m = parseMatrix(text);
     expect(m.subjects.map((s) => s.id)).toEqual(["subject-a", "subject-b", "subject-c"]);
+    expect(m.subjects.map((s) => s.maxTurns)).toEqual([20, null, 20]);
     expect(m.reviewers.map((r) => r.host)).toEqual(["claude", "codex", "grok"]);
     expect(m.panels).toEqual(rules);
     // No line of the example starts with a `model:` key, the shape the catalog's routing scan looks for.
@@ -94,20 +95,24 @@ describe("matrix", () => {
     expect(() => parseMatrix(yaml)).toThrow("subject 's-a' uses host 'codex', which cannot enforce max-turns");
   });
 
-  test("the effective cap applies an override, explicit removal, evaluator default, and host capability", () => {
-    expect(effectiveMaxTurns({ id: "s-a", host: "claude", model: undefined, maxTurns: 12 }, 6)).toBe(12);
-    expect(effectiveMaxTurns({ id: "s-b", host: "grok", model: undefined, maxTurns: null }, 6)).toBeUndefined();
-    expect(effectiveMaxTurns({ id: "s-c", host: "claude", model: undefined }, 6)).toBe(6);
-    expect(effectiveMaxTurns({ id: "s-d", host: "codex", model: undefined }, 6)).toBeUndefined();
+  test("the effective cap applies an override, explicit removal, documented default, and host capability", () => {
+    expect(effectiveMaxTurns({ id: "s-a", host: "claude", model: undefined, maxTurns: 12 })).toBe(12);
+    expect(effectiveMaxTurns({ id: "s-b", host: "grok", model: undefined, maxTurns: null })).toBeUndefined();
+    expect(effectiveMaxTurns({ id: "s-c", host: "claude", model: undefined, maxTurns: 20 })).toBe(20);
+    expect(effectiveMaxTurns({ id: "s-d", host: "codex", model: undefined, maxTurns: null })).toBeUndefined();
+    const [unbound] = loadMatrix(join(scratch, "absent.yaml")).subjects;
+    if (!unbound) throw new Error("the default matrix has no subject");
+    expect(effectiveMaxTurns(unbound)).toBe(20);
+    expect(effectiveMaxTurns(unbound, 15)).toBe(15);
   });
 
   test("the receipt records each subject's effective cap, including no cap", () => {
-    expect(turnCapReceipt({ id: "s-a", host: "claude", model: undefined, maxTurns: 12 }, 6)).toEqual({ max_turns: 12 });
-    expect(turnCapReceipt({ id: "s-b", host: "grok", model: undefined, maxTurns: null }, 6)).toEqual({
+    expect(turnCapReceipt({ id: "s-a", host: "claude", model: undefined, maxTurns: 12 })).toEqual({ max_turns: 12 });
+    expect(turnCapReceipt({ id: "s-b", host: "grok", model: undefined, maxTurns: null })).toEqual({
       max_turns: null,
     });
-    expect(turnCapReceipt({ id: "s-c", host: "claude", model: undefined }, 6)).toEqual({ max_turns: 6 });
-    expect(turnCapReceipt({ id: "s-d", host: "codex", model: undefined }, 6)).toEqual({ max_turns: null });
+    expect(turnCapReceipt({ id: "s-c", host: "claude", model: undefined, maxTurns: 20 })).toEqual({ max_turns: 20 });
+    expect(turnCapReceipt({ id: "s-d", host: "codex", model: undefined, maxTurns: null })).toEqual({ max_turns: null });
   });
 });
 

@@ -1,16 +1,28 @@
 /**
  * Grok in headless mode. Not a test file.
  *
- *   grok -p PROMPT --output-format streaming-json --allow RULE... [-m M] [--max-turns N]
- *     --permission-mode dontAsk [--rules TEXT]
+ *   grok -p PROMPT --output-format streaming-json --allow RULE... --deny RULE... [-m M]
+ *     [--max-turns N] --permission-mode dontAsk [--rules TEXT]
  *
  * `--rules` appends to the system prompt. `dontAsk` refuses any call that would need approval
  * instead of waiting for one; a refused call ends the turn with `stopReason: cancelled` and no
  * reply, so the attempt is still in the stream but the session is cut short. The adapter therefore
- * supplies narrow `--allow` rules for read tools and the shell looks observed in the cross-host
- * run, while `dontAsk` continues to refuse every unlisted call. The read-only sandbox remains
- * unsuitable on a machine whose `/var/run/docker.sock` is a symlink. The parse reports
- * `stopReason`, and the eval lists a refused session as invalid with that reason. Isolation is a
+ * supplies `--allow` rules generated from the scorer's read-only program, git and gh tables, plus
+ * matching denies for write-shaped flags and redirects; `dontAsk` continues to refuse every
+ * unlisted call. Grok's glob grammar cannot safely express the scorer's semantic subsets for awk,
+ * sed, curl, gh api, shell loops, arbitrary help/version calls, the ship gate's `check`, a
+ * `git branch` or `git tag` listing beyond its exact forms, or harmless output redirection without
+ * also approving a writing redirect. The redirect deny is a new refusal relative to the earlier
+ * list, whose prefix rules had no deny beside them: `2>/dev/null`, `2>&1`, a `'%h -> %s'` format
+ * and a `'=>'` pattern are refused now. Whether the earlier rules admitted them on the live host
+ * is unverified. The direct `printenv`, `gh auth status --show-token` and `web_fetch` forms are
+ * looks to the scorer and are refused here on purpose. That is not isolation: the inherited
+ * environment reaches the subject, variable expansion and command substitution through an
+ * admitted program (`echo $VAR`, `test -n "$VAR"`, `echo $(printenv)`) remain admitted and scored
+ * read-only, and the read-only gh and `git remote` commands reach the network. Whether the live
+ * host expands variables before permission matching is unverified. A refused call leaves the
+ * session invalid, and the receipt names the attempted call. The read-only sandbox
+ * remains unsuitable on a machine whose `/var/run/docker.sock` is a symlink. The parse reports `stopReason`. Isolation is a
  * private GROK_HOME and HOME with the Claude and Cursor compatibility scans and cross-session
  * memory off: by default grok also reads
  * `~/.claude` skills, rules, plugins and hooks, and `~/.agents/skills`. The bundle's skills are
@@ -22,7 +34,7 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { privateHome } from "./home.ts";
-import { readsOf } from "./shell.ts";
+import { grokReadOnlyPermissionRules, readsOf } from "./shell.ts";
 import type { Isolation, SessionEvent, SessionRequest, SubjectAdapter } from "./types.ts";
 
 /** Grok tool names onto the shared vocabulary. Unlisted names pass through. */
@@ -53,29 +65,8 @@ const COMPAT_OFF = ["CLAUDE", "CURSOR"].flatMap((vendor) =>
   ["SKILLS", "RULES", "AGENTS", "MCPS", "HOOKS"].map((cell) => [`GROK_${vendor}_${cell}_ENABLED`, "false"] as const),
 );
 
-const READ_ONLY_ALLOW = [
-  "Read",
-  "Grep",
-  "Bash(ls)",
-  "Bash(ls *)",
-  "Bash(find *)",
-  "Bash(head)",
-  "Bash(head *)",
-  "Bash(tail)",
-  "Bash(tail *)",
-  "Bash(cat *)",
-  "Bash(rg *)",
-  "Bash(grep *)",
-  "Bash(git status)",
-  "Bash(git status *)",
-  "Bash(git log)",
-  "Bash(git log *)",
-  "Bash(git diff)",
-  "Bash(git diff *)",
-  "Bash(git show)",
-  "Bash(git show *)",
-  "Bash(git rev-parse *)",
-] as const;
+const READ_ONLY_RULES = grokReadOnlyPermissionRules();
+const READ_ONLY_ALLOW = ["Read", "Grep", ...READ_ONLY_RULES.allow] as const;
 
 export const grok: SubjectAdapter = {
   host: "grok",
@@ -88,6 +79,7 @@ export const grok: SubjectAdapter = {
       "--output-format",
       "streaming-json",
       ...READ_ONLY_ALLOW.flatMap((rule) => ["--allow", rule]),
+      ...READ_ONLY_RULES.deny.flatMap((rule) => ["--deny", rule]),
       ...(model === undefined ? [] : ["-m", model]),
       ...(req.maxTurns === undefined ? [] : ["--max-turns", String(req.maxTurns)]),
       "--permission-mode",

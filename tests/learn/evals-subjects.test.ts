@@ -9,7 +9,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync,
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PACKAGE_ROOT } from "../../src/learn/core/roles.ts";
-import { skillLoads } from "./evals/trigger-eval.ts";
+import { invalidSession, readOnlyShell, skillLoads } from "./evals/trigger-eval.ts";
 import { claude } from "./evals/subjects/claude.ts";
 import { codex } from "./evals/subjects/codex.ts";
 import { grok } from "./evals/subjects/grok.ts";
@@ -28,6 +28,26 @@ const scratch = realpathSync(mkdtempSync(join(tmpdir(), "ak-subjects-test-")));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const req: SessionRequest = { prompt: "Load the greet skill.", cwd: "/scratch/repo", env: {}, timeoutMs: 1000 };
+
+// Grok's documented grammar: a segment runs when some allow glob matches it whole and no deny glob does.
+const admits = (segment: string) => {
+  const argv = grok.command(req, undefined);
+  const matching = (flag: string) =>
+    argv
+      .flatMap((value, index) => {
+        const rule = argv[index + 1];
+        return value === flag && rule?.startsWith("Bash(") ? [rule.slice(5, -1)] : [];
+      })
+      .some((glob) =>
+        new RegExp(
+          `^${glob
+            .split("*")
+            .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+            .join(".*")}$`,
+        ).test(segment),
+      );
+  return matching("--allow") && !matching("--deny");
+};
 
 describe("claude", () => {
   test("a live session: the Skill call, the reply, cost and turns", () => {
@@ -189,6 +209,90 @@ describe("grok", () => {
     expect(parsed.stopReason).toBe("cancelled");
   });
 
+  test("every segment of an archived read-only chain Grok refused is now admitted", () => {
+    const parsed = grok.parse(fixture("grok-cancelled-read.jsonl"));
+    const command = String(tools(parsed.events).at(-1)?.input.command);
+    expect(command).toBe(
+      "git status -sb && git branch -vv && gh pr list --state open --json number,title,url; echo ---",
+    );
+    expect(readOnlyShell(command)).toBe(true);
+    for (const segment of command.split(/ && |; /)) expect([segment, admits(segment)]).toEqual([segment, true]);
+  });
+
+  test("looks the scorer accepts are admitted in their common forms", () => {
+    for (const look of [
+      "git count-objects -v",
+      "git remote -v",
+      "git --no-pager log --oneline -5",
+      "git branch --show-current",
+      "git tag --list",
+      "bun run ak validate",
+      "sort",
+      "sort -u",
+      "rg --pretty needle src",
+      "git reflog show",
+      "git --no-pager branch -vv",
+      "git --no-pager remote -v",
+    ]) {
+      expect([look, readOnlyShell(look)]).toEqual([look, true]);
+      expect([look, admits(look)]).toEqual([look, true]);
+    }
+  });
+
+  test("the direct environment and token forms stay refused and named, while expansion through echo is admitted", () => {
+    const parsed = grok.parse(fixture("grok-refused-disclosure.doc-derived.jsonl"));
+    const command = String(tools(parsed.events).at(-1)?.input.command);
+    expect(command.split("; ")).toEqual(["printenv GH_TOKEN", "gh auth status --show-token"]);
+    for (const look of [...command.split("; "), "printenv"]) {
+      expect([look, readOnlyShell(look)]).toEqual([look, true]);
+      expect([look, admits(look)]).toEqual([look, false]);
+    }
+    expect(admits("gh auth status")).toBe(true);
+    for (const look of ["echo $GH_TOKEN", "echo ${GH_TOKEN}", "echo $(printenv)", 'test -n "$GH_TOKEN"']) {
+      expect([look, readOnlyShell(look)]).toEqual([look, true]);
+      expect([look, admits(look)]).toEqual([look, true]);
+    }
+    expect(invalidSession({ ...parsed, exitCode: 0, timedOut: false }, 20)).toBe(
+      `host cancelled refused Bash call: ${command}`,
+    );
+    const argv = grok.command(req, undefined);
+    expect(argv.flatMap((value, index) => (value === "--allow" ? [argv[index + 1]] : []))).not.toContain("WebFetch");
+  });
+
+  test("every segment with a redirect is refused, the harmless forms included", () => {
+    for (const look of ["ls -la 2>/dev/null", "git status 2>&1", "git log --format='%h -> %s'", "grep -rn '=>' src"]) {
+      expect([look, readOnlyShell(look)]).toEqual([look, true]);
+      expect([look, admits(look)]).toEqual([look, false]);
+    }
+  });
+
+  test("no rule admits a segment the scorer calls a write", () => {
+    for (const write of [
+      "git branch -v -D main",
+      "git branch -vv newname",
+      "git tag -l -d v1",
+      "git remote add origin url",
+      "git --no-pager diff --output=out.patch",
+      "node -e 'code' ak-gate.mjs check x",
+      "gh pr create --fill",
+      "find . -name x -delete",
+      "find . -execdir rm {} +",
+      "find . -okdir rm {} +",
+      "find . -fprintf out.txt %p",
+      "sort -o out.txt in.txt",
+      "sort -ro out.txt in.txt",
+      "sort -uo out.txt in.txt",
+      "ls > out.txt",
+    ]) {
+      expect([write, readOnlyShell(write)]).toEqual([write, false]);
+      expect([write, admits(write)]).toEqual([write, false]);
+    }
+    expect(admits("sed -n 'w out.txt' notes.md")).toBe(false);
+    expect(admits("rg --pre cat needle")).toBe(false);
+    expect(admits("rg --pre=cat needle")).toBe(false);
+    expect(grok.command(req, undefined)).not.toContain("Bash");
+  });
+
   test("a session that ends normally reports its stop reason", () => {
     expect(grok.parse(JSON.stringify({ type: "end", stopReason: "end_turn", num_turns: 1 })).stopReason).toBe(
       "end_turn",
@@ -214,29 +318,7 @@ describe("grok", () => {
   test("argv: observed read-only looks are allowed without blanket shell or mutation approval", () => {
     const argv = grok.command(req, undefined);
     const allow = argv.flatMap((value, index) => (value === "--allow" ? [argv[index + 1]] : []));
-    expect(allow).toEqual([
-      "Read",
-      "Grep",
-      "Bash(ls)",
-      "Bash(ls *)",
-      "Bash(find *)",
-      "Bash(head)",
-      "Bash(head *)",
-      "Bash(tail)",
-      "Bash(tail *)",
-      "Bash(cat *)",
-      "Bash(rg *)",
-      "Bash(grep *)",
-      "Bash(git status)",
-      "Bash(git status *)",
-      "Bash(git log)",
-      "Bash(git log *)",
-      "Bash(git diff)",
-      "Bash(git diff *)",
-      "Bash(git show)",
-      "Bash(git show *)",
-      "Bash(git rev-parse *)",
-    ]);
+    expect(allow).toEqual(expect.arrayContaining(["Read", "Grep", "Bash(find *)", "Bash(git show *)"]));
     expect(argv).not.toContain("--always-approve");
     expect(allow).not.toContain("Bash");
     expect(allow.some((rule) => rule?.startsWith("Write") || rule?.startsWith("Edit"))).toBe(false);
