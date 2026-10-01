@@ -832,7 +832,7 @@ references:
       evidence, blocking only through named mandatory constraints.
 
 # ---------------------------------------------------------------------------
-# Schemas — 27. `common` holds shared $defs and validates no document itself.
+# Schemas — 30. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
