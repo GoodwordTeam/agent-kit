@@ -775,7 +775,7 @@ roles:
       candidate for each. Repeated corrections become guardrails, not skills.
 
 # ---------------------------------------------------------------------------
-# References — 5. Loaded on demand. Never exposed as slash commands.
+# References — 7. Loaded on demand. Never exposed as slash commands.
 # ---------------------------------------------------------------------------
 references:
   - id: codebase-design
@@ -814,6 +814,22 @@ references:
     summary: >-
       Which ticket system is the record, the rules every tracker binding obeys, and the
       linear-linearis setup and guarded invocation, shipped inside the plugin.
+  - id: delegation
+    batch: 11
+    provenance_origin: conversation
+    status: contract
+    loaded_by: [super-bound, super-review, super-ship]
+    summary: >-
+      Evidence-backed delegation classes, sensitive floors, ticket and merge assessments, and
+      the records lifecycle skills consume without recomputing the scorer.
+  - id: structural-checks
+    batch: 11
+    provenance_origin: conversation
+    status: contract
+    loaded_by: [super-verify]
+    summary: >-
+      Project-declared diff-scoped commands and receipt semantics for structural and test-strength
+      evidence, blocking only through named mandatory constraints.
 
 # ---------------------------------------------------------------------------
 # Schemas — 27. `common` holds shared $defs and validates no document itself.
