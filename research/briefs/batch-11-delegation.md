@@ -83,7 +83,8 @@ a role and policy. No new public entrypoint.
   migration a separate ticket and a `destructive-data` action. `pack-test` adds
   `test-strength-evidence` only when the project declares a mutation command,
   `oracle-from-criteria`, and `protected-tests-unchanged`. `tdd` adds the independent-oracle step
-  for `green` tickets. `autopilot` enforces the class-to-checkpoint map.
+  for `green` tickets. `policies/authority-defaults.yaml` records the class-to-checkpoint map, and
+  `autopilot` enforces it.
 - **Two loader edits accompany the references.** `super-bound`, `super-review` and `super-ship`
   declare and link `delegation`; `super-verify` declares and links `structural-checks`, then consumes
   project-check receipts under ruling `project-checks-block-only-as-constraints`.
