@@ -38,6 +38,12 @@ a role and policy. No new public entrypoint.
 
 ## Facts you can't get from those files
 
+- **The ruling rows do not name your id yet.** In `policies/resolved-conflicts.yaml` the five
+  delegation rows bind only `schemas`, the record surfaces that landed first, so reading your id
+  out of the `binds` groups finds nothing. The table above is the assignment. The change that
+  lands each body also adds its id to the matching `binds` group of every ruling the table gives
+  it (`references`, `skills`, `packs`, `protocols`, `roles` or `policies`), in the same commit as
+  the citation, so `ak validate` checks the binding from then on.
 - **The decisions board is closed.** D1 keeps ticket-time and merge-time assessments. D2 keeps
   factor semantics central while project weights and cut points remain configurable and advisory.
   D3 attributes report-derived material through exact anchored-local report citations. D4 records
