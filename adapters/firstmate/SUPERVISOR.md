@@ -7,18 +7,39 @@ only when the task in front of you needs it; this index is enough to route.
 
 | Step | Command | What it proves |
 |---|---|---|
-| Apply patches 0001 then 0002 | A maintainer, by hand, to a clone at `a5d78f8` | Nothing in `ak` applies them |
-| Preflight | `ak firstmate preflight --fm-home <home> --project <repo>` | Upstream commit, both patches applied in order, host capabilities, the pinned bundle's contents, the project's no-mistakes `auto_fix` values, the evidence store |
-| Install | `ak firstmate install --fm-home <home>` | Writes `config/agent-kit.env`, `config/agent-kit/worker-settings.json` and, with `--evidence`, `config/agent-kit/evidence.env`; nothing else |
+| Build the full bundle | `ak build --profile all` | Both host bundles contain autopilot and the lifecycle |
+| Stock preflight | `ak firstmate preflight --fm-home <home> --project <repo>` | Normal brief and spawn commands, checkout, host and bundle; no patch, pin or no-mistakes auto-fix policy required |
+| Start the runner | `ak runner serve --socket <private> --state-dir <private> --worker-root <task-worktree> --run-id <id> ...` | Private charter, standing grant, evidence and separately dispatched seats are checked at run time |
 
-Preflight fails closed. With no knowledgebase configured, a home can only run in dry-run against a
-labeled mock evidence store (`--evidence mock --evidence-location <dir>`).
+Use `adapters/runner-contract/CLI.md` for the request and private configuration shapes.
+
+The stock preflight reports guided mode without a runner socket. A socket is a candidate, not a
+grant: `start` must validate the standing grant in a captain-approved charter and the worker's
+first autopilot step must read that attestation. The runner's state and evidence are outside the
+worker worktree and Git common directory.
 
 ## Per task
 
-Brief the task with `--mode agent-kit`. The patched fm-brief calls `ak firstmate bind`, which writes
-the binding into `data/<task-id>/` and returns the section it inserts into the brief. Spawn, relaunch
-and promote carry the same contract, because all three read it from `fm_dod_block`.
+Use `ak firstmate brief` to render an Agent Kit section into a normal Firstmate brief. Spawn the
+task with its existing `--mode no-mistakes`, `direct-PR` or `local-only`. Firstmate's own status,
+inbox, recovery and merge policy remain authoritative. Dispatch both supervisor seats as separate
+ordinary crewmates, never as children of the implementing worker, and submit their judgments to
+the runner. A seat launcher may automate that dispatch through stock Firstmate commands.
+
+For each frozen card, obtain a peer-free packet with `ak runner call packet`, then call
+`ak firstmate seat-launch` once for each seat. It uses stock `fm-brief.sh --scout` and
+`fm-spawn.sh --scout`. After each seat's report arrives, call `ak firstmate seat-judge`; it checks
+the scout task record and submits the bounded verdict under the supervisor token. Keep that token
+in a mode-0600 file outside this home, the worktree and any git checkout (default
+`~/.config/agent-kit/runner/<run>/admin.token`) and never name its path in a brief; on a same-user
+install this guards against accidents, not against a deliberately adversarial worker. Steer the
+implementer to `decide` after both judgments are recorded. Request shapes are in
+`adapters/runner-contract/CLI.md`.
+`seat-judge` writes its runner request beside that private token, not in the scout's writable
+`data/<task>/` directory.
+
+No-mistakes auto-fix values need not be zero. If the pipeline changes the head, the runner
+invalidates prior verification and review evidence; sync, verify and review again before done.
 
 ## Who owns what
 
@@ -26,12 +47,23 @@ and promote carry the same contract, because all three read it from `fm_dod_bloc
 |---|---|---|
 | Intake, dispatch, worktree, steering, recovery, PR watch, merge where yolo allows it, teardown | Scout, build, verify, review, fixes, delta review, the fix-cycle cap, the ship decision | Re-running test and lint on the shipped head, push, pull request, CI |
 
-Review judgment is the worker's alone. Do not add a reviewer to an `agent-kit` task, and do not answer
-one of its parked no-mistakes gates yourself: the worker fixes the problem through its lifecycle and
-ships again.
+The runner decides checkpoints from two independent supervisor judgments and charter evidence.
+The implementer does not review its own patch. A missing seat, a failed seat launcher or disagreement is one
+escalation through Firstmate's normal needs-decision protocol; relay the human's ruling with
+`ak runner call answer`, which settles that card with the chosen option. Only the card's approving
+option advances the run; any other choice keeps it at that stage, opens nothing, and sends the worker
+back to prepare a revised card. After a human's non-approving answer, every later card for that
+operation escalates to a human again until one approves. The runner always offers `no` as a refusal
+even when the worker's card omitted it, and a human `retry` also keeps the human gate. A supervisor
+may call `ak runner call cancel` with actor and rationale before completion; the ledger records
+who stopped the run, why and when. It does not undo an already confirmed effect or reconcile a
+performed effect still awaiting read-back. `adapters/runner-contract/CLI.md` owns
+the full `answer` rules.
 
-When a checkpoint needs two independent judgments, dispatch them as separate agents. Never ask the
-worker's own helpers.
+## Legacy patched binding
+
+The commands below document existing patched-home installations. Stock Firstmate does not call
+`ak firstmate bind`, `install` or `grant`, and does not add an `agent-kit` delivery mode.
 
 ## What your binding grants
 
@@ -40,9 +72,10 @@ The binding is your grant to the worker for `review.full`, `review.readiness` an
 When the check refuses, the worker stops and sends `needs-decision`: decide it yourself or ask the
 captain. Merge is never on the binding and stays yours.
 
-The binding is still the grant for `ship.prepare`, but on this host a delegated ship ends in a
-`needs-input` stop naming trusted evidence as unavailable, not a `done … PR <url>` line, until a
-runner supplies trusted evidence.
+The binding remains the grant for the three operations in this adapter. For a charter-bound
+autopilot run, start the separate `ak runner` service with the charter, private state, two seat
+launchers and verification command before handing its worker token and socket to the crewmate.
+Without that live service, autonomous ship stops with trusted evidence unavailable.
 
 ## What the worker sends back
 

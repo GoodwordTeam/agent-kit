@@ -26,6 +26,8 @@ import { install, remove } from "./install.ts";
 import { preflight } from "./preflight.ts";
 import { validateBinding, type Binding } from "./schema.ts";
 import { OUTCOMES, statusLine, type Outcome } from "./status.ts";
+import { preflightStock, stockBrief } from "./stock.ts";
+import { judgeSeat, launchSeat } from "./seat.ts";
 
 interface Io {
   out: (line: string) => void;
@@ -33,10 +35,18 @@ interface Io {
 }
 
 export const FIRSTMATE_USAGE = [
-  "ak firstmate — bind agent-kit to a Firstmate home patched with 0001-agent-kit-mode then 0002-agent-kit-audit",
+  "ak firstmate — use agent-kit with stock Firstmate briefs and delivery modes",
   "",
   "  ak firstmate preflight --fm-home <dir> --project <dir> [--host claude-code|codex]",
-  "                         [--evidence kb|mock --evidence-location <dir>] [--json]",
+  "                         [--runner-socket <path>] [--json]",
+  "  ak firstmate brief --run <id> --charter <file> --runner-socket <path>",
+  "                     --worker-token <token> --delivery no-mistakes|direct-PR|local-only",
+  "  ak firstmate seat-launch --fm-home <home> --task-id <id> --project-name <name>",
+  "                            --project-dir <dir> --packet <file> --evidence-dir <dir>",
+  "                            --captain-intent-file <file> --implementer-worktree <dir> [--harness <host>]",
+  "  ak firstmate seat-judge --fm-home <home> --task-id <id> --packet <file>",
+  "                           --seat <id> --actor <id> --runner-socket <path> --admin-token-file <file>",
+  "  Legacy patched-home commands (optional): preflight --legacy-patched, bind, install, remove, grant, status",
   "  ak firstmate bind --fm-home <dir> --task-id <id> --project <dir> --mode agent-kit",
   "                    --binding-out <file> [--host …] [--evidence … --evidence-location …]",
   "                    [--charter <file>] [--dry-run]",
@@ -49,12 +59,36 @@ export const FIRSTMATE_USAGE = [
   "                      audit the run: a current gate record per required gate, grants that match the ledger",
   "  ak firstmate grant --binding <file> --operation review.full|review.readiness|ship.prepare [--cwd <dir>]",
   "",
-  "Nothing here applies the patches or writes Firstmate state. See adapters/firstmate/CONTRACT.md.",
+  "Seat launch uses stock Firstmate task commands; no command applies the legacy patches. See adapters/firstmate/CONTRACT.md.",
 ];
 
-const BOOL = new Set(["json", "dry-run", "verify"]);
+const BOOL = new Set(["json", "dry-run", "verify", "legacy-patched"]);
 const ALLOWED: Record<string, readonly string[]> = {
-  preflight: ["fm-home", "project", "host", "evidence", "evidence-location", "bundle-dir", "pins-dir", "json"],
+  preflight: [
+    "fm-home",
+    "project",
+    "host",
+    "runner-socket",
+    "legacy-patched",
+    "evidence",
+    "evidence-location",
+    "bundle-dir",
+    "pins-dir",
+    "json",
+  ],
+  brief: ["run", "charter", "runner-socket", "worker-token", "delivery"],
+  "seat-launch": [
+    "fm-home",
+    "task-id",
+    "project-name",
+    "project-dir",
+    "packet",
+    "evidence-dir",
+    "captain-intent-file",
+    "implementer-worktree",
+    "harness",
+  ],
+  "seat-judge": ["fm-home", "task-id", "packet", "seat", "actor", "runner-socket", "admin-token-file"],
   bind: [
     "fm-home",
     "task-id",
@@ -183,18 +217,93 @@ export function runFirstmate(argv: readonly string[], io: Io, ledgerDir: string 
     case "preflight": {
       if (!need(a, ["fm-home", "project"], io, sub)) return 2;
       const fmHome = resolve(str(a, "fm-home")!);
-      const result = preflight(
-        {
-          fmHome,
-          project: resolve(str(a, "project")!),
-          host,
-          evidence: evidence ?? evidenceFromEnv(readHomeEnv(fmHome)),
-        },
-        opts,
-      );
+      const project = resolve(str(a, "project")!);
+      const result =
+        a.flags.get("legacy-patched") === true
+          ? preflight({ fmHome, project, host, evidence: evidence ?? evidenceFromEnv(readHomeEnv(fmHome)) }, opts)
+          : preflightStock(fmHome, project, host, opts.akRoot, opts.bundleDir, str(a, "runner-socket"));
       if (a.flags.get("json") === true) io.out(JSON.stringify(result, null, 2));
       else for (const c of result.checks) io.out(`${c.ok ? "ok  " : "FAIL"}  ${c.id.padEnd(20)} ${c.detail}`);
       return result.ok ? 0 : 1;
+    }
+    case "brief": {
+      if (!need(a, ["run", "charter", "runner-socket", "worker-token", "delivery"], io, sub)) return 2;
+      const delivery = str(a, "delivery");
+      if (delivery !== "no-mistakes" && delivery !== "direct-PR" && delivery !== "local-only") {
+        io.err("ak firstmate brief: --delivery must be a stock Firstmate mode");
+        return 2;
+      }
+      const run = str(a, "run");
+      const charter = str(a, "charter");
+      const socket = str(a, "runner-socket");
+      const workerToken = str(a, "worker-token");
+      if (run === undefined || charter === undefined || socket === undefined || workerToken === undefined) return 2;
+      try {
+        io.out(stockBrief({ run, charter, socket, workerToken, delivery }));
+        return 0;
+      } catch (cause) {
+        io.err(`ak firstmate brief: ${cause instanceof Error ? cause.message : String(cause)}`);
+        return 1;
+      }
+    }
+    case "seat-launch": {
+      if (
+        !need(
+          a,
+          [
+            "fm-home",
+            "task-id",
+            "project-name",
+            "project-dir",
+            "packet",
+            "evidence-dir",
+            "captain-intent-file",
+            "implementer-worktree",
+          ],
+          io,
+          sub,
+        )
+      )
+        return 2;
+      try {
+        const result = launchSeat({
+          fmHome: str(a, "fm-home") ?? "",
+          taskId: str(a, "task-id") ?? "",
+          projectName: str(a, "project-name") ?? "",
+          projectDir: str(a, "project-dir") ?? "",
+          packetPath: str(a, "packet") ?? "",
+          evidenceDir: str(a, "evidence-dir") ?? "",
+          captainIntentFile: str(a, "captain-intent-file") ?? "",
+          implementerWorktree: str(a, "implementer-worktree") ?? "",
+          harness: str(a, "harness"),
+        });
+        io.out(JSON.stringify(result, null, 2));
+        return 0;
+      } catch (cause) {
+        io.err(`ak firstmate seat-launch: ${cause instanceof Error ? cause.message : String(cause)}`);
+        return 1;
+      }
+    }
+    case "seat-judge": {
+      if (!need(a, ["fm-home", "task-id", "packet", "seat", "actor", "runner-socket", "admin-token-file"], io, sub))
+        return 2;
+      try {
+        const result = judgeSeat({
+          fmHome: str(a, "fm-home") ?? "",
+          taskId: str(a, "task-id") ?? "",
+          packetPath: str(a, "packet") ?? "",
+          seat: str(a, "seat") ?? "",
+          actor: str(a, "actor") ?? "",
+          runnerSocket: str(a, "runner-socket") ?? "",
+          adminTokenFile: str(a, "admin-token-file") ?? "",
+          akRoot: opts.akRoot,
+        });
+        io.out(JSON.stringify(result, null, 2));
+        return 0;
+      } catch (cause) {
+        io.err(`ak firstmate seat-judge: ${cause instanceof Error ? cause.message : String(cause)}`);
+        return 1;
+      }
     }
     case "bind": {
       if (!need(a, ["fm-home", "task-id", "project", "mode", "binding-out"], io, sub)) return 2;

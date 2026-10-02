@@ -1,6 +1,8 @@
 # adapters/runner-contract — host-neutral runner contract
 
-Contract only. No implementation lives here.
+The local implementation is `src/runner/`; this file remains the host-neutral contract. The
+implementation exposes a supervisor-owned service and a worker-facing `ak runner call` client.
+Its service must run with a state directory and charter outside the worker's writable scope.
 
 Neither coding-agent host this package targets can validate a delegated grant, attest that two seats
 were independent, deliver a durable event, or carry a run across a restart
@@ -52,10 +54,12 @@ skill's mode ceiling on a host that does not provide the capability (ruling
 
 `event-delivery` is deliberately **not** a row, although this contract owns it. It has no stated
 behavior for an unconfigured runner (§6 says what may be done on receipt, not what happens when
-nothing is delivered), so nothing here says its absence refuses. A skill requiring it stays capped at
-`guided` on a host that lacks it, attached runner or not, and `profiles/autonomy` still does not
-install against a host on its own. `tracker-access` is not a row here because this contract does not
-supply it: `adapters/tracker/CONTRACT.md` §1 does, with the fallback it depends on stated beside it.
+nothing is delivered), so nothing here says its absence refuses. The local service (§9) stores a
+delivered `event` with its key, but nothing yet hands a stored event to the run; that consumer is
+the follow-up that would make this a row. A skill requiring it stays capped at `guided` on a host
+that lacks it, attached runner or not, and `profiles/autonomy` still does not install against a host
+on its own. `tracker-access` is not a row here because this contract does not supply it:
+`adapters/tracker/CONTRACT.md` §1 does, with the fallback it depends on stated beside it.
 
 ---
 
@@ -64,6 +68,12 @@ supply it: `adapters/tracker/CONTRACT.md` §1 does, with the fallback it depends
 **Skills never issue their own grants.** No skill, protocol, role or phase operation in this catalog
 constructs, widens, infers or self-signs a grant. A skill presents a grant it was handed; the runner
 decides whether it is valid.
+
+ADR-0007 adds a separate standing **start** grant for autopilot only. It is
+`common#/$defs/standing_grant_ref`, not a phase `grant_ref`: Firstmate presents it before creating
+the run, and the runner matches its charter hash, run id, controller and cover against the active
+charter's `standing_grants` entry and human approval. It grants no checkpoint or sensitive action.
+Every later phase still follows the validation sequence below.
 
 A grant is `schemas/common.schema.json#/$defs/grant_ref`: a `charter_hash`, a `covers` value drawn
 from `checkpoint_category`, `grantable_action` or `sensitive_action`, and an optional `decision`
@@ -325,3 +335,124 @@ Tests this adapter owns, in `tests/adapters/` and `tests/scenarios/`:
 11. **Evidence freshness** — a code change invalidates older green receipts (scenario 10).
 12. **Transition prerequisites** — every illegal `run_state` edge is refused, with the failed check
     named.
+
+---
+
+## 9. Local service under Firstmate
+
+Request shapes and task setup are in `CLI.md`. This section states the trust boundary.
+
+`ak runner serve --socket <path> --state-dir <path> --worker-root <path> --run-id <id>
+--admin-token-file <path> --seat-config <path> --verify-config <path> --effect-config <path>` starts a
+task-scoped service. Firstmate owns the process, two distinct 32-character-or-longer tokens, the
+active charter, the seat configuration and the state directory. The supervisor token lives in a
+mode-0600 file outside the Firstmate home, outside the worker root and outside every git checkout and
+git directory, by default `~/.config/agent-kit/runner/<run>/admin.token`; its path is never written
+into a brief or any other worker-visible file. `serve` and `ak firstmate seat-judge` refuse a token
+file that breaks any of these rules. The worker token comes from `AK_RUNNER_WORKER_TOKEN`. The endpoint refuses another run id. Firstmate passes only `AK_RUNNER_SOCKET` and
+`AK_RUNNER_TOKEN` (the worker token) to a Claude Code or Codex worker. Both use
+`ak runner call <verb> --json <request-file>`; the service checks the token and verb before
+touching run state. `start` first validates the autopilot.start standing grant against the
+captain-approved charter (ADR-0007) and records `start_authority` before any seat dispatch.
+`start`, `collect`, `revision`, `judge`, `answer`, `cancel`, `verify`, `charge`, `effect`, `event` and
+`complete` require the supervisor token. A worker can read `status` and `ledger`, freeze a `prepare`
+card and ask `decide` to apply the next validated grant. `sync` observes the worker's current Git
+revision and diff; `run-verify` executes only the supervisor-configured command and stores its
+output privately.
+
+The runner's Git snapshot hashes raw worktree bytes, symlink targets, executable bits and index
+entries instead of trusting a Git text diff. At service start it pins an absolute Git executable
+outside the worker root; nested repositories use the same executable and a runner-private Git home.
+Its Git calls disable fsmonitor, hooks and the global excludes file, run with a filtered `PATH`,
+have a ten-second timeout with a kill signal, and do not invoke textconv or attribute clean filters.
+A nonregular Git index or HEAD refuses the snapshot. A tracked edit in an inspected repository
+therefore changes the runner's `diff_hash` even when worker Git config claims the tree is clean.
+An attached submodule or embedded repository with a `.git` entry is hashed recursively the same
+way, together with its `HEAD` (or `unborn`),
+and an entry the runner cannot read, such as a nested repository whose Git fails or a socket,
+refuses the snapshot instead of being skipped. Git's untracked-file selection still applies:
+`.git/info/exclude` can hide a top-level untracked file, nested repository ignores can hide nested
+edits, and a gitlink with no `.git` entry is not traversed. The raw fingerprint also omits
+**untracked** `.omc/` and `.omx/` harness scratch; tracked files in those paths count.
+Recursively hashing raw bytes costs I/O proportional to the selected files, including attached
+nested repositories. Standalone lifecycle snapshots retain
+their original Git-diff behavior. This change in runner fingerprint format makes evidence from an
+older runner binary stale on upgrade: sync, recollect and verify it before proceeding.
+
+At `decide`, the service checks the charter, grant, current state, evidence and cap before invoking
+the two configured launchers. It sends each launcher the same frozen question, option ids and
+evidence hashes, operation and approving option on stdin, without either judgment. The service runs
+seat launchers from its private state directory, with runner tokens, runtime preloads and worker-root
+`PATH` entries removed from their environment. Under stock Firstmate, the launchers dispatch
+separate ordinary crewmates through its normal brief/spawn path; the implementing worker never
+spawns them. Each launcher returns a JSON object containing
+`choice` and `rationale`. The service strips runner tokens from the launched environment, records
+distinct actors, dispatch ids and lineages, and refuses a missing or ineligible seat. A launcher that
+exits non-zero, prints unparseable output, or returns an invalid answer or a choice outside the card's
+options refuses the card: the run goes to `needs-input` with a `runner:seat-independence` escalation
+that carries each launcher's error, and the seat is not relaunched. Without a seat configuration the
+supervisor may submit separate judgments with `judge`, and a missing judgment blocks the card.
+
+Every card names its approving option in `approve`, one of its `options`; `prepare` refuses a card
+without it and refuses `no` or `retry` as approving options. The runner adds `no` as a refusal to
+every human escalation even if the worker omitted it, and recommends it as the default. Only the
+card's non-reserved approving choice advances the run, whether two seats agree on it or a human
+answers with it. Any other choice (no, revise, hold, reject) is recorded as the ruling, leaves the run at the same
+stage with that operation as its next permitted action, issues no grant and authorizes no effect: a
+non-approving `ship.prepare` never unlocks `pr-open` or a push. The way forward is a revised card that
+an approving decision then settles. The packet and escalation name both the operation and its
+approving option, so a seat or human can see which choice would advance. An identical artifact after
+a non-approving seat ruling is not re-dispatched; a revised artifact may return to the seats.
+
+`answer` settles the escalated card with the human's or supervisor's ruling: the `card_id`, a
+`choice` from the card's options or the runner's `no`, the `actor` who ruled and a `rationale`. An excluded actor cannot
+answer. The card becomes decided with that choice, so `decide` replays the ruling and no seat is
+relaunched, and the run moves exactly as an agreeing pair of seats with that choice would move it.
+The ledger entry is marked answered and carries the choice, actor, rationale and time; the card's
+decision artifact keeps the refusal, because a `decided` artifact needs two seat judgments. A
+resubmitted card cannot override the ruling: `prepare` refuses the same operation and artifact at
+the same revision and diff. After a human non-approving answer, even a revised artifact or changed
+worker revision remains human-gated for that operation until a human approves; `decide` escalates
+before launching seats. A `retry` option, when the card lists one, reopens the checkpoint but is
+itself non-approving, so the next card still needs a human. A supervisor `cancel` with actor and
+rationale moves any run state, including `needs-input` or `cap-reached`, to the durable `cancelled`
+stop. Cancellation does not undo confirmed remote effects.
+`decide` rejects a card that is not the next permitted action with an error and leaves the run as it
+was, so no escalation is ever opened for a checkpoint the run has not reached and every escalation's
+options are exactly the choices `answer` accepts. An approving answer is held to the same elapsed and
+budget caps as `decide`: at a cap the run goes to `cap-reached` instead of advancing. A
+`cap-reached` run is not answerable, because raising a cap needs a new human-approved charter.
+`cancel` refuses a completed run and records actor, rationale and time in the run ledger. A
+performed remote effect that was pending read-back when cancellation occurred remains unconfirmed;
+cancellation does not reconcile or undo it. Firstmate must inspect the remote system separately.
+
+The service checks the active charter schema, recomputes its canonical hash, verifies its human
+approval and refuses any changed charter on resume. `collect` snapshots only files outside the
+worker root into the private file store in `src/runner/evidence.ts`, and every consumer re-reads and
+re-hashes the stored bytes. A KB-backed store is a follow-up. `verify` and autonomous ship consume the runner-owned snapshot at the current
+revision. The service writes a decision artifact per checkpoint and a schema-checked run ledger
+beside the restart record. A restart reads the next permitted action and returns prior decisions
+without redispatching them. `effect` resolves its read-back and perform command arrays only from a
+supervisor-owned service configuration, never from a request file: it reads before and after,
+persists its deterministic key before performing the effect, and never reports completion without
+matching read-back. Both commands run from the private state directory with the same sanitized
+environment as the seat launchers. A remote effect requires the most recent ship decision to approve
+the current snapshot; an older approval cannot outvote a later refusal. The worker cannot supply
+these commands, even through an admin call that reads
+a worker-authored request file. Repository effects also refuse a target outside the charter's
+repository list. `ship.prepare` leaves the run `ready-to-ship`; only a confirmed PR-open read-back
+transitions it to `pr-open`. A changed head requires a new verification and review before completion.
+
+The path checks reject a state, socket, charter, seat configuration or source gate record that
+resolves inside the worker root. The state check also rejects Git's common directory for a linked
+worktree, including the primary checkout's shared `.git/agent-kit/evidence` path. These checks
+and the token-file rules guard against accidental exposure; they are not isolation. On a same-user
+install a deliberately adversarial worker can still read the token file, the state directory and the
+evidence store, because nothing here changes operating-system permissions. A charter that omits
+`runner-grants` or `trusted-evidence` cannot gain either merely because a service was started; a new
+human-approved charter is needed.
+
+`run-verify` is the deliberate exception to the private child directory: it runs the worker's own
+verification command from the worker root and strips runner tokens. The verifier therefore executes
+worker-controlled code under the service's OS identity; an adversarial deployment must isolate that
+identity from supervisor credentials and private files outside the process environment too.
