@@ -1,12 +1,13 @@
 # Execution contract for super-bound (schemas/skill.schema.json).
 # Prose mirror: skills/super-bound/SKILL.md. The two are one statement in two forms.
 id: super-bound
-version: 0.1.1
+version: 0.2.0
 kind: lifecycle
 invocation: U
 summary: >-
   Requirements/spec, implementation plan, dependency DAG, ownership boundaries, acceptance criteria
-  and verification commands. Decision tickets are never implementation tickets.
+  and verification commands, with evidenced readiness, assumptions and delegation per ticket.
+  Decision tickets are never implementation tickets.
 
 triggers:
   - An approved direction exists and the work needs a specification, a plan and tickets before
@@ -52,6 +53,7 @@ entrypoints:
 
 requires:
   - repository-read
+  - process-exec
   - kb-read
   - kb-write
   - human-channel
@@ -73,10 +75,10 @@ inputs:
       through the knowledgebase adapter's readContext.
   - id: project-guidance
     schema: project
-    required: false
+    required: true
     summary: >-
-      Configured change-size and test-shape guidance. Absent, the starting points are advisory and
-      nothing enforces them.
+      Configured change-size, test-shape and delegation guidance consumed by ak delegation. Absent,
+      the skill returns needs-input rather than inventing scorer inputs.
   - id: charter
     schema: charter
     required: false
@@ -99,21 +101,31 @@ outputs:
     schema: ticket
     summary: >-
       type implementation, id shape bound-<spec>-<slice>; interfaces, owned files, blocking edges,
-      acceptance criteria and a verification command.
+      acceptance criteria, verification, readiness, resolved assumptions and the exact ticket-time
+      delegation record returned by ak delegation.
   - id: decision-ticket
     schema: ticket
     summary: >-
       type decision, emitted for each fork the zero-context check exposed, in place of the
-      implementation ticket that could not be written.
+      implementation ticket that could not be written, with delegation, readiness and assumptions
+      persisted when assessment reached them.
 
 side_effects: [artifact-write, scratch-write, kb-draft, kb-publish]
 
 references:
   - domain-modeling
+  - delegation
 
 hard_gates:
   - A decision ticket is never emitted as executable work; a ticket that fails the zero-context
     check is reclassified, not shipped.
+  - Every ticket carries all six named readiness criteria plus vague_terms, assumptions items using
+    text and resolved_as, and exact successful ak delegation output; missing evidence stops after
+    persistence.
+  - A direction spanning independently deployable stack phases is split in order with schema
+    contract separate; refusal emits a decision ticket rather than one zero-context failure.
+  - On a supporting host, a ticket whose class requires consultation is not approved until its
+    kb_refs cites the consultation artifact; an unsupported host remains valid and cites none.
   - Approval binds to the specification's hash, not the whole plan's; a changed specification does
     not inherit the old approval.
   - No ticket ships with an unfinished-content marker, with a vague error-handling instruction in
@@ -125,10 +137,13 @@ hard_gates:
 
 stop_conditions:
   - complete when the specification is approved at its hash, every acceptance criterion is covered
-    by a ticket, and every published artifact's read-back matched what was sent.
+    by a ticket, every implementation ticket carries its three evidence blocks, and every published
+    artifact's read-back matched what was sent.
   - needs-input when the run was started by neither the typed command nor a validated grant, there
-    is no approved alignment result, the approval binds to a different revision, a grant is missing
-    at bound.run, or new evidence invalidated a settled decision.
+    is no approved alignment result, the approval binds to a different revision, project guidance
+    or a grant is missing, the scorer fails, readiness remains vague, an assumption remains open,
+    a document-review decision is left open, or new evidence invalidated a settled decision. A
+    completed assessment persists its three evidence blocks on the returned draft before this stop.
   - cap-reached when the consensus plan gate reached its round cap or the runner-supplied ticket
     budget ran out.
   - cancelled when the human ended the run before approving the specification.
@@ -138,8 +153,10 @@ failure_outcomes:
   - status: needs-input
     meaning: >-
       A prerequisite the run cannot supply itself: a start by the typed command or a validated
-      grant, an approved direction, an approval bound to this revision, a grant, or a settled
-      decision that new evidence has not invalidated.
+      grant, an approved direction, an approval bound to this revision, project delegation
+      guidance, a grant, a current `ak` on `PATH`, a scorer that returns its record, readiness
+      free of vague terms, a resolution for every open assumption, an answer to every open
+      document-review decision, or a settled decision that new evidence has not invalidated.
     next_permitted_action: >-
       Return the blocking item; do not proceed on a substitute. For a start by neither the typed
       command nor a grant, return the command to type and nothing else.
@@ -190,9 +207,10 @@ provenance:
       path: skills/engineering/to-tickets/SKILL.md
       license: MIT
       adaptation: >-
-        Vertical-slice rules, blocking edges and the wide-refactor carve-out; the donor's split
-        between a local issue directory and a real tracker becomes the knowledgebase adapter, and
-        parallel-safety is widened past edges to shared generated artifacts and file ownership.
+        Blocking edges; the donor's split between a local issue directory and a real tracker
+        becomes the knowledgebase adapter, and parallel-safety is widened past edges to shared
+        generated artifacts and file ownership. The vertical-slice rule and the wide-refactor
+        carve-out from the same source are carried by the delegation reference.
     - donor: superpowers
       commit: b36e0829c6d0140e93cfef2ca599b1b07d4a7797
       path: skills/writing-plans/SKILL.md
@@ -228,17 +246,28 @@ provenance:
     - entrypoint-phase-operation-split
     - numeric-heuristics-are-guidance
     - central-kb-owns-project-artifacts
+    - sensitive-surface-sets-the-floor
+    - delegation-class-is-authority-not-finding
+    - advisor-consultation-follows-class
 
 tests:
-  - id: approved-direction-produces-spec-and-tickets
+  - id: approved-direction-stops-at-open-decisions
+    kind: adversarial
+    given: >-
+      A human brings an approved direction for a bounded feature, bound to the current revision, with
+      a project record carrying delegation guidance, and asks for the plan.
+    expect: >-
+      The skill writes and reviews the decision-level specification, then stops at unresolved review
+      decisions and presents them to the human without binding approval or emitting executable work.
+  - id: approved-spec-produces-tickets
     kind: positive
     given: >-
-      A human brings an approved direction for a bounded feature, bound to the current revision, and
-      asks for the plan.
+      A reviewed specification has every decision answered and a human approval bound to its current
+      hash, while slicing and ticket ownership remain unsettled.
     expect: >-
-      The skill reads the repository's own configuration, writes a decision-level specification with
-      named test seams, runs the document review, takes an approval bound to the artifact hash, and
-      emits tickets each carrying consumed and produced signatures and a verification command.
+      The skill consumes the current review and approval, emits zero-context tickets with interfaces,
+      ownership, verification, delegation, readiness and assumptions, and runs ak delegation for
+      every implementation ticket.
   - id: reviewed-ticket-does-not-reopen-bounding
     kind: negative
     given: >-
@@ -282,6 +311,29 @@ tests:
     expect: >-
       The skill stops with needs-input, names kb-write as the capability the host does not provide,
       and writes no requirements page, plan record or ticket into the working repository.
+  - id: delegated-refresh-token-rotation
+    kind: adversarial
+    given: >-
+      An approved twelve-line refresh-token rotation fix is ready for bounding, and the requester
+      wants the implementation delegated.
+    expect: >-
+      The auth floor makes the persisted ak delegation result red regardless of size. The ticket
+      names human authorship, limits agent work to bounded assistance such as regression tests, and
+      does not treat the request to delegate as lowering evidence.
+  - id: vague-checkout-speed-criterion
+    kind: adversarial
+    given: The approved direction's only acceptance criterion is to make checkout faster.
+    expect: >-
+      The vague term becomes a frontier question, readiness fails on the affected criteria and
+      their evidence rather than on a total, and no implementation ticket fills in the target.
+  - id: refused-oversized-change-split
+    kind: adversarial
+    given: >-
+      The approved change is estimated at nine hundred lines and the requester refuses to split it.
+    expect: >-
+      The skill orders a verifiable stack as refactor, schema expand, flagged behavior, consumer,
+      backfill and a separate schema-contract ticket, or emits a decision ticket when the refusal
+      leaves no zero-context implementation slice.
 
 body:
   line_budget: 150

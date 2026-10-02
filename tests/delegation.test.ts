@@ -1,10 +1,12 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { describe, expect, test } from "bun:test";
 
 import validProject from "./fixtures/delegation/valid.project.json" with { type: "json" };
 import validTicket from "./fixtures/delegation/valid.ticket.json" with { type: "json" };
+import { loadCatalog } from "../src/catalog/load.ts";
 import { runCli } from "../src/cli.ts";
 import {
   scoreDelegation,
@@ -13,8 +15,10 @@ import {
   type DelegationRecord,
   type DelegationTicket,
 } from "../src/delegation.ts";
+import { planBundle } from "../src/packaging/plan.ts";
 import { makeTree } from "./helpers/tree.ts";
 
+const REPO = join(import.meta.dir, "..");
 const FIXTURES = join(import.meta.dir, "fixtures", "delegation");
 
 const FACTORS: DelegationRecord["factors"] = {
@@ -198,3 +202,51 @@ test("ak delegation names the block a record lacks", () => {
     err: "ak delegation: project has no guidance.delegation block (weights and cut points)",
   });
 });
+
+test("the bare scorer command the packaged super-bound body names scores with a current ak on PATH and is absent without one", () => {
+  const { catalog } = loadCatalog(REPO);
+  if (catalog === null) throw new Error("no catalog");
+  const { files } = planBundle({ root: REPO, catalog }, "claude-code", {});
+  const skill = files.get("skills/super-bound/SKILL.md");
+  const script = files.get("bin/ak");
+  if (skill === undefined || script === undefined) throw new Error("the bundle lacks super-bound or bin/ak");
+  const root = makeTree({});
+  mkdirSync(join(root, "path"));
+  writeFileSync(join(root, "path", "ak"), script.contents, { mode: 0o755 });
+  writeFileSync(join(root, "ticket.json"), JSON.stringify(validTicket));
+  writeFileSync(join(root, "project.json"), JSON.stringify(validProject));
+
+  // The packaged body is the generated interface a host reads: every scorer command it prints must run.
+  const body = skill.contents.replace(/\s+/g, " ");
+  const commands = [...body.matchAll(/`([^`]*\bdelegation <ticket> --project <project-record>)`/g)].map(
+    (match) => match[1] ?? "",
+  );
+  expect(commands).toEqual(Array(2).fill("ak delegation <ticket> --project <project-record>"));
+  expect(body).toContain("A current `ak` on `PATH` is a prerequisite");
+  const bun = dirname(process.execPath);
+  const ak = (command: string, ticketPath: string, path = `${join(root, "path")}:${bun}`) => {
+    const [program = "", ...argv] = command
+      .replace("<ticket>", ticketPath)
+      .replace("<project-record>", "project.json")
+      .split(" ");
+    return spawnSync(program, argv, { cwd: root, encoding: "utf8", env: { PATH: path } });
+  };
+
+  const expected: string[] = [];
+  runCli(["delegation", "ticket.json", "--project", "project.json"], {
+    cwd: root,
+    io: { out: (line) => expected.push(line), err: () => {} },
+  });
+  const [command = ""] = commands;
+  const scored = ak(command, "ticket.json");
+  expect({ status: scored.status, stderr: scored.stderr }).toEqual({ status: 0, stderr: "" });
+  expect(scored.stdout.trimEnd()).toBe(expected.join("\n"));
+
+  const missing = ak(command, "absent.json");
+  expect({ status: missing.status, stderr: missing.stderr.trimEnd(), stdout: missing.stdout }).toEqual({
+    status: 1,
+    stderr: "ak delegation: ticket does not exist: absent.json",
+    stdout: "",
+  });
+  expect(ak(command, "ticket.json", bun).error).toMatchObject({ code: "ENOENT" });
+}, 60_000);

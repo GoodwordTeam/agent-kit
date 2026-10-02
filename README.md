@@ -37,7 +37,10 @@ ak update
 nonzero on FAIL. Use `ak doctor --json` for machine-readable findings. `ak update` refreshes each
 installed host and reports old and new versions; it is safe to rerun. If the curl-installed
 `bin/ak` differs from the published command, update warns and gives the download remedy. Add
-`$HOME/.local/bin` to `PATH` if it is not already there. The `published` branch
+`$HOME/.local/bin` to `PATH` if it is not already there. The same command carries
+`ak delegation <ticket> --project <project-record>`, which `/ak:super-bound` runs to score each
+ticket, so that skill needs a current `ak` on `PATH`
+([`skills/super-bound/SKILL.md`](skills/super-bound/SKILL.md)). The `published` branch
 is created by `.github/workflows/publish-bundle.yml` after a green push to `main`. On the first
 merge, wait for that workflow to complete before using the commands above; no release tag is
 needed. Later bundle changes require a new matching version in `catalog.yaml` and `package.json`;
@@ -132,8 +135,7 @@ Shared phase logic, invoked by skills rather than by humans:
 
 `codebase-design` · `domain-modeling` · `engineering-principles` · `prose-quality` ·
 `tracker-of-record` · `delegation` · `structural-checks`. Loaded on demand, never exposed as slash
-commands. `delegation` and `structural-checks` are declared at `status: contract`; their bodies
-are not authored yet.
+commands. `structural-checks` is declared at `status: contract`; its body is not authored yet.
 
 ## What makes it self-checking
 

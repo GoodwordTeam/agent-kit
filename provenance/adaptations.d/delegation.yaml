@@ -1,4 +1,34 @@
 adaptations:
+  - path: references/delegation/REFERENCE.md
+    source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L21-34
+    rationale: Sensitive surfaces and their overriding effect became the never-lowered delegation floor without importing the report's sample thresholds.
+  - path: references/delegation/REFERENCE.md
+    source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L177-219
+    rationale: The evidenced factors, four classes and authorship meanings became the shared class vocabulary while project weights and cut points remain advisory.
+  - path: references/delegation/REFERENCE.md
+    source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L256-265
+    rationale: Ticket-time and merge-time assessment, raise-only recomputation and named-human lowering became the two-snapshot lifecycle.
+  - path: references/delegation/REFERENCE.md
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L82-98
+    rationale: Transparent size, diffusion, hotspot and prior-fix inputs became optional complexity evidence rather than a learned or package-wide gate.
+  - path: references/delegation/REFERENCE.md
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-136
+    rationale: The six readiness criteria, vague-term pass and assumption resolution became per-ticket evidence and frontier questions.
+  - path: references/delegation/REFERENCE.md
+    source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md
+    rationale: The vertical-slice rule and the wide-refactor carve-out moved here from the super-bound body, where they now sit beside the ordered stack that the reports supply.
+  - path: policies/authority-defaults.yaml
+    source: local:mission-brief-risk-tiering-and-slop-avoidance@sha256:90abd48e019f09ea3d58c11028148fc971dbefe145c70c0822364f15b1729b38#L150-159
+    rationale: The captain's class-to-checkpoint table became the authoritative policy map while merge and deploy remain sensitive for every class.
+  - path: evals/super-bound/delegated-refresh-token-rotation/case.yaml
+    source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L244-245
+    rationale: The report's refresh-token worked example supplies the sensitive-floor expectation without printing it in the requester prompt.
+  - path: evals/super-bound/vague-checkout-speed-criterion/case.yaml
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-136
+    rationale: The readiness and vague-term research supplies the failure shape while the requester prompt states only the underspecified criterion.
+  - path: evals/super-bound/refused-oversized-change-split/case.yaml
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L138-150
+    rationale: The report's stack order supplies the grader expectation while the requester prompt states only the large change and refusal.
   - path: catalog.yaml
     source: local:verifier-seat-design-report@sha256:19f676e5ce53035aaa7c25653d743119aacfa5c15879421021b63100e9110dea#L47-94
     rationale: >-

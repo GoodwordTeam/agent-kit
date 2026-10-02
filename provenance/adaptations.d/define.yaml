@@ -71,9 +71,10 @@ adaptations:
       publish.
   - path: skills/super-bound/SKILL.md
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/to-tickets/SKILL.md
-    rationale: Vertical-slice rules, blocking edges and the wide-refactor carve-out. The donor's
-      split between a local issue directory and a real tracker becomes the knowledgebase adapter,
-      and parallel-safety is widened past edges to shared generated artifacts and file ownership.
+    rationale: Blocking edges. The donor's split between a local issue directory and a real
+      tracker becomes the knowledgebase adapter, and parallel-safety is widened past edges to
+      shared generated artifacts and file ownership. The vertical-slice rule and the wide-refactor
+      carve-out from the same source are carried by references/delegation/REFERENCE.md.
   - path: skills/super-bound/SKILL.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/writing-plans/SKILL.md
     rationale: Zero-context calibration, the consumed and produced interfaces block, task
@@ -116,8 +117,18 @@ adaptations:
       map drawn.
   - path: skills/super-bound/skill.yaml
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/constraint-driven-development/SKILL.md
-    rationale: The project-guidance input the detect-before-you-ask step reads, declared as
-      optional because absent configuration leaves the starting points advisory.
+    rationale: The project-guidance input the detect-before-you-ask step reads. The project record
+      is now a required input because the delegation scorer never invents its guidance, while the
+      size and test-shape starting points it carries stay advisory.
+  - path: skills/super-bound/SKILL.md
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-136
+    rationale: The readiness and assumption procedures became a per-ticket workflow hook, with shared criteria deferred to the delegation reference.
+  - path: skills/super-bound/SKILL.md
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L138-150
+    rationale: The reversible stack order became the slicing sequence, with schema contract isolated as its own ticket and numeric size guidance left advisory.
+  - path: skills/super-bound/skill.yaml
+    source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-150
+    rationale: The execution contract mirrors the body's readiness, assumption and ordered-stack obligations without reproducing their shared rubric.
 
   # ---- skills/wayfind ----
   - path: skills/wayfind/SKILL.md
