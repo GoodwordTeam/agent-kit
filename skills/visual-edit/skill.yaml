@@ -1,0 +1,242 @@
+# Execution contract for visual-edit (schemas/skill.schema.json).
+# Prose mirror: skills/visual-edit/SKILL.md. The two are one statement in two forms.
+id: visual-edit
+version: 0.1.0
+kind: standalone
+invocation: U
+summary: >-
+  Open named routes from a running local app as URL-backed frames for human visual edits, apply
+  pending revisions through source, and emit a verification receipt.
+
+triggers:
+  - A human explicitly asks to compare real routes or responsive states from a running local app.
+  - A human explicitly asks to make style, text or layout edits visually and apply them to source.
+
+non_triggers:
+  - Static mock-ups, copied markup or screenshots.
+  - Comparing product alternatives that have not been implemented in the running app.
+  - Behavior, state-model or cross-file changes that require an approved implementation ticket.
+  - Runtime verification with no visual editing session.
+
+prerequisites:
+  - kind: capability
+    ref: >-
+      The Design editor hosted at https://design.agent-native.com, reached through its MCP
+      connector or WebMCP. No local editor is started. Applying a handoff the human supplies,
+      already pulled, needs the connector only to acknowledge.
+  - kind: capability
+    ref: >-
+      The @agent-native/core CLI available to connect the running app. The bridge token and the
+      daemon on 127.0.0.1:7331 are made by the run, not brought to it.
+  - kind: approval
+    ref: >-
+      Only to save or share the design: an account on the editor. Opening routes, comparing
+      viewports and applying pending edits run signed out.
+  - kind: environment
+    ref: >-
+      A local dev server whose requested routes respond, started with the project's own dev
+      command when it is down.
+
+entrypoints:
+  visual-edit:
+    invocation: U
+    authority: explicit
+    summary: >-
+      Open and verify URL-backed route frames, hold visual changes pending, apply the selected batch
+      through source, confirm the running app and acknowledge the revision the pull returned.
+
+requires:
+  - repository-read
+  - repository-write
+  - process-exec
+  - network-fetch
+  - human-channel
+  - artifact-write
+
+inputs:
+  - id: editor-connection
+    required: true
+    summary: >-
+      The hosted editor's MCP or WebMCP connection and the @agent-native/core CLI. The run mints
+      or generates the bridge token and starts the matching daemon. An account on the editor is
+      needed only to save or share the design.
+  - id: running-app
+    required: true
+    summary: The repository root, dev-server URL and responding requested routes.
+  - id: route-set
+    required: true
+    summary: Ordered route paths, human labels and named viewports; routes are discovered only when absent.
+  - id: acceptance-criteria
+    required: false
+    summary: >-
+      Named criteria the resulting receipt may support in super-verify's evidence matrix. Without
+      them the batch is still applied and receipted.
+  - id: approved-ticket
+    schema: ticket
+    required: false
+    summary: Required before a pending batch beyond style, literal text or local layout enters super-build.
+
+outputs:
+  - id: canvas-session
+    summary: >-
+      Design URL, design and connection ids, ordered routes, named viewports and the completed
+      pre-handoff checklist. Secrets are excluded.
+  - id: applied-edit-receipt
+    schema: verification
+    summary: >-
+      A probe receipt per applied handoff, made from assets/receipt.example.json and written
+      under the member rules in references/receipt.md. Its parameters name route, viewport and the revision
+      or, where the WebMCP pull returned none, the handoff digest and that no acknowledgment
+      channel exists; artifacts name changed source files and digests; source_revision binds the code;
+      observed records the dev-server confirmation. supports lists the supplied criteria and the
+      receipt is consumable by super-verify; with none supplied it carries no_criteria instead,
+      saying so and naming what was verified, the running app showing the applied edit.
+  - id: build-handoff
+    summary: >-
+      For a broader change, the unchanged pending visual revision plus the approved-ticket
+      requirement handed to super-build. No partial source edit is included.
+
+side_effects: [workspace-write, process-exec, artifact-write, external-fetch]
+
+child_skills:
+  - prototype
+  - super-build
+  - super-verify
+
+constraints:
+  static-output-may-replace-running-route: false
+  canvas-may-write-source-directly: false
+  source-may-change-before-pre-handoff-verification: false
+  pending-revision-may-be-acknowledged-before-confirmation: false
+  receipted-revision-may-be-applied-again: false
+  compiled-route-may-bypass-the-coding-agent: false
+  broader-change-may-bypass-super-build: false
+
+hard_gates:
+  - A missing editor connector, CLI, dev server or route stops with its named prerequisite, as
+    does a bridge that does not come up, and a missing account stops a save or share; generated
+    markup never substitutes. For a handoff the human supplies, already pulled, the connector stop
+    comes at acknowledgment, after apply and receipt.
+  - The running app is the source of truth. Requested screens are URL-backed frames at the named
+    viewports, never copied markup or static snapshots.
+  - The connection, requested frames and Code panel are verified before canvas handoff.
+  - Canvas changes remain pending. Compiled routes and source files change only through the coding
+    agent. Where the MCP connector pull returned a revision, it is acknowledged, and only after
+    source application, receipt validation and dev-server confirmation. A WebMCP pull returns no
+    revision and has no acknowledgment.
+  - A change beyond style, literal text or local layout requires an approved ticket and super-build.
+  - An applied batch has a schema-valid receipt bound to source revision and environment, before
+    any acknowledgment (ruling `closure-requires-independent-verification`).
+
+stop_conditions:
+  - complete when the verified canvas is ready with no pending batch, or one pending batch is
+    applied, confirmed and receipted, and acknowledged when its pull returned a revision.
+  - needs-input when invocation or a named prerequisite is missing, or a broader change lacks an
+    approved implementation ticket.
+
+failure_outcomes:
+  - status: needs-input
+    meaning: >-
+      The command was not explicit, a named connector, CLI, bridge, server or route prerequisite
+      is missing, a save or share was asked for without the account, or a broader change has no
+      approved ticket. A supplied handoff is applied and receipted before a missing connector
+      stops the acknowledgment; the receipt stands and the revision stays pending.
+    next_permitted_action: >-
+      Supply the named prerequisite or approved ticket and invoke the command again. A handoff
+      already receipted, its artifact digests still matching source, is then acknowledged only and
+      not applied again.
+  - status: failed
+    meaning: >-
+      The editor or bridge rejected the connection, source conflicts could not be reconciled, the
+      dev server did not reflect the write, or the receipt did not validate. The revision stays pending.
+    next_permitted_action: >-
+      Restore the failed connection or source state, then resume from the pending revision; one
+      already receipted is acknowledged only.
+  - status: cancelled
+    meaning: The human cancelled; an unapplied revision stays pending and unacknowledged.
+    next_permitted_action: null
+
+limits:
+  missing-prerequisites: 0
+
+budget:
+  provided_by: runner
+  enforces:
+    - missing-prerequisites
+
+packaging:
+  generated_frontmatter:
+    disable-model-invocation: true
+  hosts:
+    - adapter: claude-code
+      mode: manual
+      unsupported:
+        - >-
+          artifact-write is storage only: the host does not compute or check the receipt hash, so
+          envelope hash binding is this package's own work.
+    - adapter: codex
+      mode: manual
+      unsupported:
+        - suppression of model invocation, which this host cannot express
+        - >-
+          artifact-write is storage only: the host does not compute or check the receipt hash, so
+          envelope hash binding is this package's own work.
+
+provenance:
+  origin: donor
+  donor_sources:
+    - donor: builderio-skills
+      commit: eb07be67e6d924b958445f706f5ac386243df6b4
+      path: skills/visual-edit/SKILL.md
+      license: MIT
+      adaptation: >-
+        The running app and route URLs remain the source of truth; routes become URL-backed frames
+        at named viewports; visual changes stay pending until the coding agent applies source and
+        acknowledges the revision; compiled routes stay on that agent path. The connection, route
+        frames and code view are verified before handoff. The editor stays the donor's hosted
+        app, the connector's open call mints the bridge token before the bridge starts, a
+        signed-out WebMCP session generates the token and starts the bridge before it opens, and
+        the account gates only save and share.
+    - donor: builderio-skills
+      commit: eb07be67e6d924b958445f706f5ac386243df6b4
+      path: skills/visual-edit/README.md
+      license: MIT
+      adaptation: >-
+        Deliberate route and viewport selection plus the pending source-edit handoff become the
+        concise public workflow. Agent-kit adds named prerequisite failures, super-build boundaries
+        and a verification receipt consumable by super-verify.
+  resolved_conflicts:
+    - closure-requires-independent-verification
+
+tests:
+  - id: compares-two-routes-at-desktop-and-mobile
+    kind: positive
+    given: >-
+      The human asks to compare two named routes at desktop and mobile. The project declares its
+      dev-server address and command, and no editor connector is available.
+    expect: >-
+      The skill holds the four route-and-viewport combinations, checks the prerequisites by using
+      them and returns needs-input naming the first one it could not confirm. No frame is reported
+      as opened, and no static comparison is produced.
+  - id: compiled-route-edit-applies-through-source
+    kind: adversarial
+    given: >-
+      The human supplies a pending revision already pulled for a compiled route and asks for it to
+      be applied and acknowledged. No acceptance criteria are supplied and no editor connector is
+      available.
+    expect: >-
+      The skill edits the authored source through the coding agent, confirms the change on the
+      running dev server and emits a receipt carrying no_criteria. It then returns needs-input
+      naming the editor connector, with the revision left pending and unacknowledged.
+  - id: missing-prerequisite-stops-without-static-fallback
+    kind: negative
+    given: >-
+      No editor connector is available while the human asks to open the running app for visual
+      editing.
+    expect: >-
+      The skill returns needs-input naming the first prerequisite it could not confirm and creates
+      no generated markup, screenshot or static canvas fallback.
+
+body:
+  line_budget: 150
+  hard_cap: 300

@@ -3,6 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { loadCatalog } from "../src/catalog/load.ts";
+import { HOST_IDS } from "../src/packaging/hosts.ts";
+import { planBundle } from "../src/packaging/plan.ts";
 import { checkDocument, indexDocuments } from "../src/validation/docrules.ts";
 import { checkSchemas } from "../src/validation/schemas.ts";
 import { makeTree } from "./helpers/tree.ts";
@@ -13,8 +15,15 @@ const ROOT = join(import.meta.dir, "..");
 const FIXTURES = join(import.meta.dir, "fixtures", "verification-zero-exit");
 const SCHEMAS = join(ROOT, "schemas");
 
+function parseReceipt(source: string): Receipt {
+  // SAFETY: every source is a JSON object document from this repository: a
+  // fixture, a shipped template or a planned bundle file. The schema checks
+  // under test read each member as unknown and reject any other shape.
+  return JSON.parse(source) as Receipt;
+}
+
 function readJson(path: string): Receipt {
-  return JSON.parse(readFileSync(path, "utf8")) as Receipt;
+  return parseReceipt(readFileSync(path, "utf8"));
 }
 
 function fixture(name: string): Receipt {
@@ -109,4 +118,41 @@ describe("verification exit disagreement", () => {
     expectVerdict(readJson(join(ROOT, "templates", "verification.example.json")), true);
     expectVerdict(readJson(join(ROOT, "templates", "verification.weakened.example.json")), true, [decision]);
   });
+});
+
+describe("verification receipt without acceptance criteria", () => {
+  const { supports, ...unsupported } = readJson(join(ROOT, "templates", "verification.example.json"));
+  const noCriteria = "No acceptance criteria were supplied; the running app showed the applied edit.";
+
+  test("accepts a receipt that states no criteria were supplied in place of supports", () => {
+    expectVerdict({ ...unsupported, no_criteria: noCriteria }, true);
+  });
+
+  test("rejects a receipt that names neither criteria nor their absence", () => {
+    expect(akValidateAccepts(unsupported)).toBe(false);
+    expect(akValidateAccepts({ ...unsupported, supports: [] })).toBe(false);
+    expect(akValidateAccepts({ ...unsupported, no_criteria: "  " })).toBe(false);
+  });
+
+  test("rejects a receipt that both supports criteria and states none were supplied", () => {
+    expect(akValidateAccepts({ ...unsupported, supports, no_criteria: noCriteria })).toBe(false);
+  });
+
+  test("every host's visual-edit bundle carries a receipt template that is valid in both forms", () => {
+    const { catalog } = loadCatalog(ROOT);
+    if (catalog === null) throw new Error("repository has no catalog");
+    for (const host of HOST_IDS) {
+      const plan = planBundle({ root: ROOT, catalog }, host, {});
+      const shipped = plan.files.get("skills/visual-edit/assets/receipt.example.json")?.contents;
+      if (shipped === undefined) throw new Error(`${host} bundle carries no visual-edit receipt template`);
+      const template = parseReceipt(shipped);
+      expect(template.kind).toBe("probe");
+      expectVerdict(template, true);
+      const { no_criteria: stated, ...criteria } = template;
+      expect(stated).toBeString();
+      expectVerdict({ ...criteria, supports }, true);
+    }
+    // This plans the repository's real bundle once per host and compiles every
+    // schema four times, which does not fit the default limit on a busy host.
+  }, 30_000);
 });

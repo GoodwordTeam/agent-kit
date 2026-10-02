@@ -1,9 +1,9 @@
 # agent-kit
 
-One engineering lifecycle, amalgamated from eight donors (seven MIT-licensed, one Apache-2.0) into a single installable
+One engineering lifecycle, amalgamated from nine donors (eight MIT-licensed, one Apache-2.0) into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
-**34 public skills · 8 domain packs · 8 protocols · 34 role prompts · 7 reference packs · 30 schemas**,
+**35 public skills · 8 domain packs · 8 protocols · 34 role prompts · 7 reference packs · 30 schemas**,
 with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
 bundles.
 
@@ -93,13 +93,13 @@ still go to the supervisor, and merge and deploy are never on it (`docs/decision
 Every entry is declared in `catalog.yaml`. The validator fails on an entry with no directory and on a
 directory with no entry.
 
-### Skills (34)
+### Skills (35)
 
 | Group | Members |
 |---|---|
 | **Lifecycle** (7) | `super-align` U · `super-bound` U · `super-scout` M · `super-build` M · `super-verify` M · `super-review` U/M · `super-ship` U |
 | **Supervisor** (1) | `autopilot` U |
-| **Standalone** (20) | `verify` U · `compound` U · `compound-refresh` U · `ideate` U · `pov` U · `bakeoff` U · `doc-review` M · `receiving-review` U · `diagnose` M · `improve-architecture` U · `doubt-driven` U · `simplify` M · `research` M · `source-driven` M · `deprecate` U · `explain` U · `triage` U · `strategy` U · `product-pulse` U · `writing-skills` U |
+| **Standalone** (21) | `verify` U · `visual-edit` U · `compound` U · `compound-refresh` U · `ideate` U · `pov` U · `bakeoff` U · `doc-review` M · `receiving-review` U · `diagnose` M · `improve-architecture` U · `doubt-driven` U · `simplify` M · `research` M · `source-driven` M · `deprecate` U · `explain` U · `triage` U · `strategy` U · `product-pulse` U · `writing-skills` U |
 | **Primitives** (4) | `prototype` M · `handoff` M · `wait-what` M · `wayfind` U |
 | **Operational** (2) | `babysit-pr` U · `ultraqa` U |
 
@@ -178,10 +178,11 @@ and the release scenario that tests it; the ids below are the lookup keys.
 
 ## Provenance
 
-Eight donors, pinned to exact commits in `provenance/upstream.lock.yaml`. Six MIT donors make up the
+Nine donors, pinned to exact commits in `provenance/upstream.lock.yaml`. Six MIT donors make up the
 engineering lifecycle (pinned 2026-09-18): `EveryInc/compound-engineering-plugin`, `obra/superpowers`,
 `mattpocock/skills`, `addyosmani/agent-skills`, `Yeachan-Heo/oh-my-claudecode`,
-`Yeachan-Heo/oh-my-codex`. Two more feed the opt-in learning runtime: `BayramAnnakov/claude-reflect`
+`Yeachan-Heo/oh-my-codex`. `BuilderIO/skills` (MIT, pinned at its 2026-09-30 commit) is the source of
+`visual-edit`. Two more feed the opt-in learning runtime: `BayramAnnakov/claude-reflect`
 (MIT) and `thedotmack/claude-mem`, which is **Apache-2.0**, not MIT. Its licence text and NOTICE are in
 `provenance/licenses/`, the root `NOTICE` carries its NOTICE, and each file adapted from it records
 what was changed.
