@@ -12,18 +12,49 @@ import { describeInstall, loadInstallConfig } from "../../../src/packaging/insta
 import { hasErrors } from "../../../src/validation/types.ts";
 
 /** Variables that make a nested host CLI believe it runs inside the parent session. */
-const NESTED_SESSION_VARS = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"];
+const NESTED_SESSION_VARS = new Set(["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"]);
+
+/**
+ * Process plumbing and network basics every host may inherit; `scripts/eval-local.sh` passes the
+ * same proxy and CA names. Locale categories are admitted by prefix below.
+ */
+const PROCESS_ENV = new Set([
+  "PATH",
+  "HOME",
+  "TMPDIR",
+  "SHELL",
+  "TERM",
+  "LANG",
+  "USER",
+  "LOGNAME",
+  "HTTP_PROXY",
+  "HTTPS_PROXY",
+  "NO_PROXY",
+  "http_proxy",
+  "https_proxy",
+  "no_proxy",
+  "NODE_EXTRA_CA_CERTS",
+  "SSL_CERT_FILE",
+]);
 
 export function option(argv: readonly string[], name: string): string | undefined {
   const i = argv.indexOf(name);
   return i >= 0 ? argv[i + 1] : undefined;
 }
 
-/** The caller's environment minus the nested-session markers. */
-export function cleanEnv(): Record<string, string> {
+/**
+ * The process basics, the variables explicitly declared by one subject adapter, and the names the
+ * operator lists in `$AK_EVAL_PASS_ENV` (whitespace-separated, as `scripts/eval-local.sh` reads it).
+ * A `CLAUDE_CODE_*` or `EVAL_*` name cannot be opted in: `runSubject` strips those prefixes with
+ * `withoutParentSession` after this, keeping only its auth and provider-routing names.
+ */
+export function cleanEnv(subjectEnv: readonly string[]): Record<string, string> {
+  const optIn = (process.env.AK_EVAL_PASS_ENV ?? "").split(/\s+/).filter((name) => name !== "");
+  const allowed = new Set([...PROCESS_ENV, ...subjectEnv, ...optIn]);
   const env: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined && !NESTED_SESSION_VARS.includes(key)) env[key] = value;
+  for (const key of [...allowed, ...Object.keys(process.env).filter((name) => name.startsWith("LC_"))]) {
+    const value = process.env[key];
+    if (value !== undefined && !NESTED_SESSION_VARS.has(key)) env[key] = value;
   }
   return env;
 }

@@ -16,6 +16,11 @@
  * auto-memory names the caller's real memory dir. `CLAUDE_CODE_DISABLE_CLAUDE_MDS` (what
  * `claude plugin eval` sets for its own children) and `CLAUDE_CODE_DISABLE_AUTO_MEMORY` close
  * both; `--no-session-persistence` keeps the run out of the caller's transcript store.
+ * Claude reads its login and provider credentials from the environment, so the adapter declares
+ * only those inputs below. The region, profile and credential variables Bedrock and Vertex read
+ * are declared only while the caller's matching `CLAUDE_CODE_USE_*` flag holds a value the host
+ * reads as on (`1`, `true`, `yes`, `on`, in any case), so cloud credentials exported for other
+ * work stay out; unrelated caller credentials are removed before the host starts.
  * research/evals/2026-09-25-isolation.md, "Direct `claude -p` subjects", has the measurements.
  */
 import type { Isolation, SessionEvent, SessionRequest, SubjectAdapter } from "./types.ts";
@@ -38,8 +43,26 @@ interface Line {
   num_turns?: number;
 }
 
+const BEDROCK_ENV = ["AWS_REGION", "AWS_PROFILE", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"];
+const VERTEX_ENV = ["ANTHROPIC_VERTEX_PROJECT_ID", "CLOUD_ML_REGION", "GOOGLE_APPLICATION_CREDENTIALS"];
+const TRUTHY = new Set(["1", "true", "yes", "on"]);
+const flagged = (name: string) => TRUTHY.has((process.env[name] ?? "").trim().toLowerCase());
+
 export const claude: SubjectAdapter = {
   host: "claude",
+  get env() {
+    return [
+      "ANTHROPIC_API_KEY",
+      "ANTHROPIC_AUTH_TOKEN",
+      "ANTHROPIC_BASE_URL",
+      "CLAUDE_CODE_OAUTH_TOKEN",
+      "CLAUDE_CODE_USE_BEDROCK",
+      ...(flagged("CLAUDE_CODE_USE_BEDROCK") ? BEDROCK_ENV : []),
+      "CLAUDE_CODE_USE_VERTEX",
+      ...(flagged("CLAUDE_CODE_USE_VERTEX") ? VERTEX_ENV : []),
+      "CLAUDE_CONFIG_DIR",
+    ];
+  },
   injection: "append-system-prompt",
   command(req: SessionRequest, model: string | undefined): string[] {
     return [
