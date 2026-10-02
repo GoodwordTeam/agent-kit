@@ -130,6 +130,7 @@ import {
   READ_ONLY_GIT,
   READ_ONLY_GIT_ACTIONS,
   READ_ONLY_PROGRAMS,
+  plainAssignmentSegment,
   readsOf,
   unwrap,
   words,
@@ -612,7 +613,8 @@ function newlinesAsSeparators(command: string): string {
 
 /**
  * True when every command in a list (split at `&&`, `||`, `;`, `|`, `&` and newlines) is a
- * read-only program and nothing is redirected to a file. Input (`<file`), a duplicated descriptor
+ * read-only program or a segment of plain `NAME=value` assignments that runs no nested command,
+ * and nothing is redirected to a file. Input (`<file`), a duplicated descriptor
  * (`2>&1`, `>&2`) and `/dev/null` are not files. A read-write open (`<>file`, `0<>file`) creates
  * its target, so it is a write. A `( … )` group is read through its commands, and a
  * `for x in <literal words>; do … done` loop through its body, where an `if … ; then … ; fi` may
@@ -649,7 +651,7 @@ export function readOnlyShell(command: string): boolean {
         redirect[2] === "<" || (redirect[3] === "&" ? /^(?:\d+|-)$/.test(target ?? "") : target === "/dev/null");
       if (!harmless) return false;
     }
-    return readOnlyProgram(program);
+    return plainAssignmentSegment(program) || readOnlyProgram(program);
   };
   const readOnlyFor = (start: number): number => {
     const header = commands[start]!;
