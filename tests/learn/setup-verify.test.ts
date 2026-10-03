@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loopDir } from "../../src/learn/core/paths.ts";
@@ -73,6 +74,25 @@ describe("setup doctor", () => {
     writeFileSync(judge, "");
     expect(doctor(context(deps, { AK_LEARN_JUDGE: judge }), deps)).toBe(0);
     expect(doctor(context(deps, { AK_LEARN_JUDGE: `${judge}.missing` }), deps)).toBe(1);
+  });
+
+  test("reports judge calls, failures and cost from the last 24 hours across rotation", () => {
+    const deps = fakeDeps(["bun", "git", "judge"]);
+    const ctx = context(deps);
+    mkdirSync(ctx.config.runtimeDir, { recursive: true });
+    const recent = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const old = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
+    writeFileSync(
+      join(ctx.config.runtimeDir, "judge-calls.1.jsonl"),
+      `${JSON.stringify({ at: recent, call_id: randomUUID(), outcome: "ok", total_cost_usd: 0.25 })}\n`,
+    );
+    writeFileSync(
+      join(ctx.config.runtimeDir, "judge-calls.jsonl"),
+      `${JSON.stringify({ at: recent, call_id: randomUUID(), outcome: "error", total_cost_usd: 0.5 })}\n${JSON.stringify({ at: old, call_id: randomUUID(), outcome: "error", total_cost_usd: 99 })}\n`,
+    );
+
+    expect(doctor(ctx, deps)).toBe(0);
+    expect(ctx.out).toContain("  judge calls (24h)  2 calls, 1 failure, $0.750000 total cost");
   });
 });
 

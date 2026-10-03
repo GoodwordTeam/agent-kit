@@ -436,9 +436,14 @@ export function consolidate(
     return `nightly: dry run (${included.length}/${chosen.length} episodes fit, ${pairs.length} pairs, ${tokens(prompt)} prompt tokens)`;
   }
   const runId = `nightly-${todayLocal()}-${nowMs() % 100_000}`;
-  const reply = ctx.judge(prompt);
+  const reply = ctx.judge(prompt, {
+    runId,
+    loop: "memory",
+    role: "consolidator",
+    project: basename(root),
+  });
   if (reply === null) {
-    appendRun(ledger, { job: "nightly", status: "failed", reason: "no judge output", trigger });
+    appendRun(ledger, { job: "nightly", id: runId, status: "failed", reason: "no judge output", trigger });
     logLine(ledger, "nightly failed: no judge output");
     ledger.commit("nightly failed: no judge output");
     return "nightly: judge call failed";

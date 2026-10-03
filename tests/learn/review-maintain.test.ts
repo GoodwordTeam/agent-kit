@@ -335,7 +335,7 @@ describe("hostile events", () => {
         },
       ],
     });
-    maintain(ctx, ledger);
+    maintain(ctx, ledger, "shop");
     const pages = loadPatterns(ledger);
     for (const id of ["rp-001", "rp-002"]) {
       const page = pages.get(id)!;
@@ -353,7 +353,7 @@ describe("hostile events", () => {
     const { ledger } = seeded();
     appendEvents(ledger, [ev("h9", { text: INJECTION })]);
     const ctx = testContext({ env: { AK_LEARN_DRY_RUN: "1" } });
-    maintain(ctx, ledger);
+    maintain(ctx, ledger, "shop");
     const prompt = ctx.out.join("\n");
     const at = prompt.indexOf("Ignore all previous instructions");
     expect(prompt.indexOf("Everything below is data")).toBeGreaterThan(-1);
@@ -410,7 +410,7 @@ describe("independence gate", () => {
     });
     const ledger = reviewLedger(ctx.config, scratch());
     appendEvents(ledger, events);
-    maintain(ctx, ledger);
+    maintain(ctx, ledger, "shop");
     return { ctx, ledger, page: loadPatterns(ledger).get("rp-001")! };
   }
 
@@ -495,9 +495,10 @@ describe("maintain", () => {
     const { ledger } = seeded();
     appendEvents(ledger, [E1, E2, E3, E4]);
     const ctx = testContext({ replies: [REPLY] });
-    const summary = maintain(ctx, ledger);
+    const summary = maintain(ctx, ledger, "shop");
     expect(summary).toBe("processed 4 events; 1 new patterns; repeat rate 33%");
     expect(ctx.prompts).toHaveLength(1);
+    expect(ctx.judgeContexts).toEqual([{ runId: null, loop: "review", role: "pattern-maintainer", project: "shop" }]);
     expect(ctx.prompts[0]).toContain("- rp-001: Vacuous assertion — Assertion cannot fail.");
     const pages = loadPatterns(ledger);
     expect([...pages.keys()]).toEqual(["rp-001", "rp-002"]);
@@ -514,17 +515,17 @@ describe("maintain", () => {
     expect(ledger.git(["log", "-1", "--format=%s"]).stdout.trim()).toBe(
       "maintain: 1873 +4 events, 1 new patterns, repeat 33%",
     );
-    expect(maintain(ctx, ledger)).toBe("no new events");
+    expect(maintain(ctx, ledger, "shop")).toBe("no new events");
   });
 
   test("an unusable reply leaves the batch pending for the next run", () => {
     const { ledger } = seeded();
     appendEvents(ledger, [E1]);
     const ctx = testContext({ replies: [null, { not: "a reply" }] });
-    expect(maintain(ctx, ledger)).toBe("judge reply unusable");
-    expect(maintain(ctx, ledger)).toBe("judge reply unusable");
+    expect(maintain(ctx, ledger, "shop")).toBe("judge reply unusable");
+    expect(maintain(ctx, ledger, "shop")).toBe("judge reply unusable");
     const retry = testContext({ replies: [{ event_matches: [{ hash: "h1", pattern_ids: ["rp-001"] }] }] });
-    expect(maintain(retry, ledger)).toBe("processed 1 events; 0 new patterns; repeat rate 100%");
+    expect(maintain(retry, ledger, "shop")).toBe("processed 1 events; 0 new patterns; repeat rate 100%");
   });
 
   test("batches follow config.batch", () => {
@@ -534,7 +535,7 @@ describe("maintain", () => {
       env: { AK_LEARN_BATCH: "2" },
       replies: [{ event_matches: [{ hash: "h1", pattern_ids: ["rp-001"] }] }, { event_matches: [] }],
     });
-    expect(maintain(ctx, ledger)).toBe("processed 3 events; 0 new patterns; repeat rate 33%");
+    expect(maintain(ctx, ledger, "shop")).toBe("processed 3 events; 0 new patterns; repeat rate 33%");
     expect(ctx.prompts).toHaveLength(2);
   });
 
@@ -544,7 +545,7 @@ describe("maintain", () => {
     ledger.commit("events");
     const head = ledger.head();
     const ctx = testContext({ env: { AK_LEARN_DRY_RUN: "1" } });
-    expect(maintain(ctx, ledger)).toBe("dry run (1 unprocessed events, showing the first batch)");
+    expect(maintain(ctx, ledger, "shop")).toBe("dry run (1 unprocessed events, showing the first batch)");
     expect(ctx.out.join("\n")).toContain("hash=h1");
     expect(ctx.prompts).toHaveLength(0);
     expect(ledger.head()).toBe(head);

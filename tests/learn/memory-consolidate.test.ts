@@ -334,6 +334,21 @@ function confirmedReply(o1: number, o2: number): Reply {
 }
 
 describe("nightly", () => {
+  test("a failed judge call records a failed run under the run id the judge call carried", () => {
+    const { ctx, root, ledger, review, source } = nightlyFixture(() => []);
+    try {
+      expect(consolidate(ctx, source, ledger, root, review)).toBe("nightly: judge call failed");
+    } finally {
+      source.close();
+    }
+    const runs = readJsonl<{ job: string; id: string; status: string }>(ledger.path("runs.jsonl")).filter(
+      (row) => row.job === "nightly",
+    );
+    expect(runs.map((row) => row.status)).toEqual(["failed"]);
+    expect(runs[0]?.id).toStartWith("nightly-");
+    expect(ctx.judgeContexts.map((context) => context?.runId)).toEqual([runs[0]?.id]);
+  });
+
   test("a lesson confirmed across two sessions is drafted for the knowledgebase and never published", () => {
     const { ctx, root, ledger, review, source, o1, o2 } = nightlyFixture((first, second) => [
       confirmedReply(first, second),
@@ -347,6 +362,11 @@ describe("nightly", () => {
       source.close();
     }
     expect(loadLessons(ledger).get("ls-001")!.meta.status).toBe("confirmed");
+    const nightlyRun = readJsonl<{ job: string; id: string }>(ledger.path("runs.jsonl")).find(
+      (row) => row.job === "nightly",
+    );
+    expect(ctx.judgeContexts.map((context) => context?.runId)).toEqual([nightlyRun?.id]);
+    expect(nightlyRun?.id).toStartWith("nightly-");
     // Consolidation is appended beside the episodes; episodes.jsonl itself is never rewritten.
     expect(readFileSync(ledger.path("episodes.jsonl"), "utf8")).toBe(episodesBefore);
     const marks = readJsonl<{ sid: string; run: string }>(ledger.path(CONSOLIDATED_FILE));

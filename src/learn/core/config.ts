@@ -11,11 +11,15 @@ import { join } from "node:path";
 export interface LearnConfig {
   /** `$CLAUDE_CONFIG_DIR`, else `~/.claude`. Ledgers live under `<configDir>/projects/`. */
   configDir: string;
-  /** Runtime-wide state outside any project: the project registry and the tick log. */
+  /** Runtime-wide state outside any project: the project registry, the tick log and the judge-call trace. */
   runtimeDir: string;
   /** The judge command as argv. The prompt goes to stdin; JSON comes back on stdout. */
   judgeCommand: string[];
   judgeTimeoutMs: number;
+  /** `AK_LEARN_TRACE=full`: also write each call's prompt and reply bodies beside the metadata trace. */
+  traceFull: boolean;
+  /** Maximum bytes in the current judge-call metadata file before rotation. Fixed; not an environment option. */
+  traceMaxBytes: number;
   /** claude-mem's SQLite database, opened read-only. */
   memDb: string;
   /** Review loop: events needed before a pattern is active, and before it is promoted. */
@@ -121,6 +125,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): LearnConfig {
     runtimeDir: join(configDir, "agent-kit", "learn"),
     judgeCommand: judge,
     judgeTimeoutMs: int(env, "AK_LEARN_JUDGE_TIMEOUT_S", 300) * 1000,
+    traceFull: env.AK_LEARN_TRACE === "full",
+    traceMaxBytes: 10 * 1024 * 1024,
     memDb:
       env.AK_LEARN_MEM_DB && env.AK_LEARN_MEM_DB.trim() !== "" ? env.AK_LEARN_MEM_DB : join(memDir, "claude-mem.db"),
     activeAt: int(env, "AK_LEARN_ACTIVE_AT", 2),

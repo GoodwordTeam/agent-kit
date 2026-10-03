@@ -1,16 +1,23 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DEFAULT_JUDGE, loadConfig, splitCommand } from "../../src/learn/core/config.ts";
 import { parseLearnArgs } from "../../src/learn/core/context.ts";
-import { commandJudge, declaredUnavailable, extractJson } from "../../src/learn/core/judge.ts";
+import {
+  commandJudge,
+  declaredUnavailable,
+  extractJson,
+  judgeTraceSummary,
+  type JudgeTraceRow,
+} from "../../src/learn/core/judge.ts";
 import { acquireLock, Ledger } from "../../src/learn/core/ledger.ts";
 import { parsePage, patchBody, renderPage } from "../../src/learn/core/pages.ts";
 import { loopDir, projectFolderName, reflectFolderName, rootOf } from "../../src/learn/core/paths.ts";
 import { buildPrompt } from "../../src/learn/core/roles.ts";
+import { readJsonl } from "../../src/learn/core/store.ts";
 import { ClaudeMemSource, jsonList } from "../../src/learn/sources/claude-mem.ts";
 import { run } from "../../src/learn/core/proc.ts";
-import { gitRepo, MemFixture, scratch, stubRoles } from "./helpers.ts";
+import { gitRepo, MemFixture, projectScratch, scratch, stubRoles } from "./helpers.ts";
 
 describe("paths", () => {
   test("the two folder conventions differ exactly on underscores and dots", () => {
@@ -84,11 +91,328 @@ describe("declared unavailable", () => {
     const script = join(dir, "judge.sh");
     writeFileSync(script, `echo x >> '${calls}'\necho '{"unavailable": "observation ids missing"}'\n`);
     const judge = commandJudge({ ...loadConfig({}), judgeCommand: ["sh", script], judgeTimeoutMs: 10_000 });
-    expect(judge("prompt")).toBeNull();
+    expect(judge("prompt", { loop: "review", role: "pattern-maintainer", project: "shop", runId: null })).toBeNull();
     expect(readFileSync(calls, "utf8")).toBe("x\n");
     expect(declaredUnavailable({ unavailable: "why" })).toBe("why");
     expect(declaredUnavailable({ unavailable: "why", memory: "m" })).toBeNull();
     expect(declaredUnavailable(null)).toBeNull();
+  });
+});
+
+describe("judge call trace", () => {
+  test("a failed command records each attempt with process evidence", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      writeFileSync(script, `printf '%s' '${"x".repeat(3_000)}' >&2\nexit 17\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+      };
+      const judge = commandJudge(config);
+
+      expect(judge("prompt", { loop: "review", role: "pattern-maintainer", project: "shop", runId: null })).toBeNull();
+
+      const rows = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"));
+      expect(rows).toHaveLength(2);
+      expect(rows.map((row) => row.attempt)).toEqual([1, 2]);
+      expect(rows.map((row) => row.exit_code)).toEqual([17, 17]);
+      expect(rows.every((row) => !row.timed_out)).toBe(true);
+      expect(rows.every((row) => row.call_id !== "")).toBe(true);
+      expect(new Set(rows.map((row) => row.call_id)).size).toBe(2);
+      const first = rows[0];
+      if (first === undefined) throw new Error("expected the first judge trace row");
+      expect(first).toMatchObject({
+        run_id: null,
+        loop: "review",
+        role: "pattern-maintainer",
+        project: "shop",
+        prompt_sha256: "cf07194ee232eb531e15f690000d19846dea69cf05504782658afcfacb9228a2",
+        prompt_chars: 6,
+      });
+      expect(first.duration_ms).toBeGreaterThanOrEqual(0);
+      expect(first.stderr_tail.length).toBe(2_048);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a successful envelope records host metadata without writing bodies by default", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      const envelope = {
+        type: "result",
+        result: '{"answer":"kept"}',
+        model: "fixture-binding",
+        usage: { input_tokens: 11, output_tokens: 7 },
+        total_cost_usd: 0.125,
+        session_id: "session-123",
+        is_error: false,
+      };
+      writeFileSync(script, `printf '%s\\n' '${JSON.stringify(envelope)}'\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+      };
+
+      expect(
+        commandJudge(config)("prompt", {
+          loop: "skills",
+          role: "skill-scout",
+          project: "shop",
+          runId: null,
+        }),
+      ).toEqual({ answer: "kept" });
+
+      const row = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"))[0];
+      if (row === undefined) throw new Error("expected a judge trace row");
+      expect(row).toMatchObject({
+        model: "fixture-binding",
+        usage: { input_tokens: 11, output_tokens: 7 },
+        total_cost_usd: 0.125,
+        session_id: "session-123",
+        is_error: false,
+      });
+      expect(existsSync(join(config.runtimeDir, "judge-bodies"))).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("the default host envelope names its model through per-model usage", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      const envelope = {
+        type: "result",
+        subtype: "success",
+        result: '{"answer":"kept"}',
+        total_cost_usd: 0.2,
+        modelUsage: { "fixture-binding": { inputTokens: 4, outputTokens: 53, costUSD: 0.2 } },
+      };
+      writeFileSync(script, `printf '%s\\n' '${JSON.stringify(envelope)}'\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+      };
+
+      expect(
+        commandJudge(config)("prompt", { loop: "skills", role: "skill-scout", project: "shop", runId: null }),
+      ).toEqual({ answer: "kept" });
+
+      const row = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"))[0];
+      if (row === undefined) throw new Error("expected a judge trace row");
+      expect(row).toMatchObject({ model: "fixture-binding", total_cost_usd: 0.2 });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("an error envelope without a result keeps every field it does carry", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      const envelope = {
+        type: "result",
+        subtype: "error_during_execution",
+        is_error: true,
+        usage: { input_tokens: 11, output_tokens: 0 },
+        total_cost_usd: 0.03,
+        session_id: 42,
+      };
+      writeFileSync(script, `printf '%s\\n' '${JSON.stringify(envelope)}'\nexit 1\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+      };
+
+      expect(
+        commandJudge(config)("prompt", { loop: "skills", role: "skill-scout", project: "shop", runId: null }),
+      ).toBeNull();
+
+      const row = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"))[0];
+      if (row === undefined) throw new Error("expected a judge trace row");
+      expect(row).toMatchObject({
+        exit_code: 1,
+        model: null,
+        usage: { input_tokens: 11, output_tokens: 0 },
+        total_cost_usd: 0.03,
+        session_id: null,
+        is_error: true,
+      });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("a trace that cannot be written leaves the judge reply intact", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      writeFileSync(script, `printf '%s\\n' '{"result":"{\\"answer\\":\\"kept\\"}"}'\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+      };
+      mkdirSync(join(config.runtimeDir, ".."), { recursive: true });
+      writeFileSync(config.runtimeDir, "not a directory");
+
+      expect(
+        commandJudge(config)("prompt", { loop: "review", role: "pattern-maintainer", project: "shop", runId: null }),
+      ).toEqual({ answer: "kept" });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("full tracing writes prompt and reply bodies under the call id", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      writeFileSync(script, `printf '%s\\n' '{"result":"{\\"answer\\":\\"kept\\"}"}'\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config"), AK_LEARN_TRACE: "full" }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+      };
+
+      expect(
+        commandJudge(config)("private prompt", {
+          loop: "memory",
+          role: "reflector",
+          project: "shop",
+          runId: null,
+        }),
+      ).toEqual({ answer: "kept" });
+
+      const row = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"))[0];
+      if (row === undefined) throw new Error("expected a judge trace row");
+      expect(readFileSync(join(config.runtimeDir, "judge-bodies", `${row.call_id}.prompt`), "utf8")).toBe(
+        "private prompt",
+      );
+      expect(readFileSync(join(config.runtimeDir, "judge-bodies", `${row.call_id}.reply`), "utf8")).toBe(
+        '{"answer":"kept"}',
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("the metadata trace rotates before it exceeds the configured size", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      writeFileSync(script, `printf '%s\\n' '{"result":"{\\"answer\\":\\"kept\\"}"}'\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+        traceMaxBytes: 800,
+      };
+      const judge = commandJudge(config);
+      const context = { loop: "review", role: "pattern-maintainer", project: "shop", runId: null } as const;
+
+      expect(judge("first", context)).toEqual({ answer: "kept" });
+      expect(judge("second", context)).toEqual({ answer: "kept" });
+
+      const current = join(config.runtimeDir, "judge-calls.jsonl");
+      expect(statSync(current).size).toBeLessThanOrEqual(800);
+      expect(existsSync(join(config.runtimeDir, "judge-calls.1.jsonl"))).toBe(true);
+      expect(readFileSync(current, "utf8").trim().split("\n")).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+function outcomes(body: string) {
+  const dir = projectScratch();
+  try {
+    const script = join(dir, "judge.sh");
+    writeFileSync(script, body);
+    const config = {
+      ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config") }),
+      judgeCommand: ["sh", script],
+      judgeTimeoutMs: 10_000,
+    };
+    const reply = commandJudge(config)("prompt", {
+      loop: "review",
+      role: "pattern-maintainer",
+      project: "shop",
+      runId: null,
+    });
+    return {
+      reply,
+      rows: readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl")),
+      failures: judgeTraceSummary(config).failures,
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+describe("judge call outcome", () => {
+  test("a usable reply is ok and is not a failure", () => {
+    const { reply, rows, failures } = outcomes(`echo '{"answer":"kept"}'\n`);
+    expect(reply).toEqual({ answer: "kept" });
+    expect(rows.map((row) => row.outcome)).toEqual(["ok"]);
+    expect(failures).toBe(0);
+  });
+
+  test("prose with no JSON object is unparseable on both attempts and counts as two failures", () => {
+    const { reply, rows, failures } = outcomes("echo 'I could not decide.'\n");
+    expect(reply).toBeNull();
+    expect(rows.map((row) => row.outcome)).toEqual(["unparseable", "unparseable"]);
+    expect(rows.map((row) => row.exit_code)).toEqual([0, 0]);
+    expect(failures).toBe(2);
+  });
+
+  test("an empty reply, a declared unavailable and a failed command are each a failure", () => {
+    const empty = outcomes("exit 0\n");
+    expect(empty.rows.map((row) => row.outcome)).toEqual(["empty", "empty"]);
+    expect(empty.failures).toBe(2);
+    const unavailable = outcomes(`echo '{"unavailable": "observation ids missing"}'\n`);
+    expect(unavailable.reply).toBeNull();
+    expect(unavailable.rows.map((row) => row.outcome)).toEqual(["unavailable"]);
+    expect(unavailable.failures).toBe(1);
+    const failed = outcomes("exit 3\n");
+    expect(failed.rows.map((row) => row.outcome)).toEqual(["error", "error"]);
+    expect(failed.failures).toBe(2);
+  });
+});
+
+describe("judge body retention", () => {
+  test("bodies of calls rotated out of the metadata trace are removed with their rows", () => {
+    const dir = projectScratch();
+    try {
+      const script = join(dir, "judge.sh");
+      writeFileSync(script, `printf '%s\\n' '{"result":"{\\"answer\\":\\"kept\\"}"}'\n`);
+      const config = {
+        ...loadConfig({ CLAUDE_CONFIG_DIR: join(dir, "config"), AK_LEARN_TRACE: "full" }),
+        judgeCommand: ["sh", script],
+        judgeTimeoutMs: 10_000,
+        traceMaxBytes: 800,
+      };
+      const judge = commandJudge(config);
+      const context = { loop: "review", role: "pattern-maintainer", project: "shop", runId: null } as const;
+      for (const prompt of ["first", "second", "third"]) expect(judge(prompt, context)).toEqual({ answer: "kept" });
+
+      const retained = ["judge-calls.1.jsonl", "judge-calls.jsonl"].flatMap((name) =>
+        readJsonl<JudgeTraceRow>(join(config.runtimeDir, name)).map((row) => row.call_id),
+      );
+      expect(retained).toHaveLength(2);
+      expect(readdirSync(join(config.runtimeDir, "judge-bodies")).toSorted()).toEqual(
+        retained.flatMap((id) => [`${id}.prompt`, `${id}.reply`]).toSorted(),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
