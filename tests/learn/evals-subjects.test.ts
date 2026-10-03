@@ -21,6 +21,7 @@ import { adapterFor, BUNDLE_FOR, runSubject, withoutParentSession } from "./eval
 import { readsOf, unwrap, words } from "./evals/subjects/shell.ts";
 import type { SessionRequest, SubjectAdapter, TokenUsage, ToolEvent } from "./evals/subjects/types.ts";
 import { cleanEnv, evalInstrument } from "./evals/session.ts";
+import { SECRET_ENV, SECRET_VALUE } from "./evals/influence/scenarios.ts";
 
 const FIXTURES = join(import.meta.dir, "evals", "fixtures", "transcripts");
 const fixture = (name: string) => readFileSync(join(FIXTURES, name), "utf8");
@@ -33,8 +34,8 @@ afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 const req: SessionRequest = { prompt: "Load the greet skill.", cwd: "/scratch/repo", env: {}, timeoutMs: 1000 };
 
 // Grok's documented grammar: a segment runs when some allow glob matches it whole and no deny glob does.
-const admits = (segment: string) => {
-  const argv = grok.command(req, undefined);
+const admits = (segment: string, request: SessionRequest = req) => {
+  const argv = grok.command(request, undefined);
   const matching = (flag: string) =>
     argv
       .flatMap((value, index) => {
@@ -50,6 +51,23 @@ const admits = (segment: string) => {
         ).test(segment),
       );
   return matching("--allow") && !matching("--deny");
+};
+
+const denies = (segment: string) => {
+  const argv = grok.command(req, undefined);
+  return argv
+    .flatMap((value, index) => {
+      const rule = argv[index + 1];
+      return value === "--deny" && rule?.startsWith("Bash(") ? [rule.slice(5, -1)] : [];
+    })
+    .some((glob) =>
+      new RegExp(
+        `^${glob
+          .split("*")
+          .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+          .join(".*")}$`,
+      ).test(segment),
+    );
 };
 
 describe("claude", () => {
@@ -256,11 +274,32 @@ describe("grok", () => {
     for (const segment of command.split(/ && |; /)) expect([segment, admits(segment)]).toEqual([segment, true]);
   });
 
+  test("the smoke-3 environment inspection is admitted while embedded code is explicitly refused", () => {
+    const parsed = grok.parse(fixture("grok-smoke-3-env.doc-derived.jsonl"));
+    const command = String(tools(parsed.events).at(-1)?.input.command);
+    expect(command).toBe("env");
+    expect(parsed.stopReason).toBe("cancelled");
+    expect(parsed.turns).toBeUndefined();
+    expect(readOnlyShell(command)).toBe(true);
+    expect(admits(command)).toBe(true);
+
+    const trigger = { ...req, env: cleanEnv(grok.env) };
+    const influence = { ...req, env: { ...cleanEnv(grok.env), [SECRET_ENV]: SECRET_VALUE } };
+    expect(admits(command, trigger)).toBe(true);
+    expect(admits(command, influence)).toBe(false);
+    expect(denies(command)).toBe(false);
+
+    const embedded = "python3 -c code";
+    expect(readOnlyShell(embedded)).toBe(false);
+    expect(admits(embedded)).toBe(false);
+    expect(denies(embedded)).toBe(true);
+  });
+
   test("the mediator turns an assignment read chain into literal commands the rules admit, and the session is valid", () => {
     const discovery =
       'SESSION="/scratch/sessions/s1"; find "$SESSION" -maxdepth 3 -type d; echo \'=== FILES ===\'; find "$SESSION" -maxdepth 3 -type f -not -path \'*/terminal/*\' | head -80';
     expect(readOnlyShell(discovery)).toBe(true);
-    expect(discovery.split(/; | \| /).every(admits)).toBe(false);
+    expect(discovery.split(/; | \| /).every((segment) => admits(segment))).toBe(false);
     const mediated = rewriteAssignmentReadChain(discovery);
     expect(mediated).toBe(
       "find '/scratch/sessions/s1' '-maxdepth' '3' '-type' 'd' ; echo '=== FILES ===' ; find '/scratch/sessions/s1' '-maxdepth' '3' '-type' 'f' '-not' '-path' '*/terminal/*' | head '-80'",

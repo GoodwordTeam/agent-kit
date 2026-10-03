@@ -162,11 +162,11 @@ const bashRules = (prefix: string): string[] => [`Bash(${prefix})`, `Bash(${pref
  * gate's `check` behind a path, git options that take a value before the subcommand, and harmless
  * output redirections that the same glob used to deny writes would also match. `git branch`,
  * `git tag` and `sort` are exact forms, because a trailing glob would also admit a ref-writing
- * flag, a name to create, or a bundled `-o`. The direct `printenv` and `gh auth status
- * --show-token` forms are looks to the scorer and have no rule here. Variable expansion and command
- * substitution through an admitted program such as `echo` or `test` remain admitted and scored
- * read-only, but only the process basics, the adapter-declared variables and the names the
- * operator opted in are present in the subject's environment.
+ * flag, a name to create, or a bundled `-o`. Bare `env` is not here: the Grok adapter admits it per
+ * request, only when the request environment holds nothing beyond the runner's allowlist. The direct
+ * `printenv` and `gh auth status --show-token` forms remain refused. Variable expansion and
+ * command substitution through an admitted program such as `echo` or `test` remain admitted and
+ * scored read-only.
  * No rule covers a plain assignment whose variable a later `find` reads: the Grok 1.0.46 user guide
  * (`22-permissions-and-safety.md`, Rule Matching Reference) honours an allow rule for a variable
  * argument only as an `ls` or `rg` file operand, and other programs still prompt. The eval's
@@ -174,7 +174,9 @@ const bashRules = (prefix: string): string[] => [`Bash(${prefix})`, `Bash(${pref
  * each against these same rules.
  * `dontAsk` leaves the rest visible as cancelled invalid sessions. Denies guard the write-shaped
  * forms of broad safe-prefix rules; deny wins over allow in Grok's grammar. The redirect deny
- * refuses every segment containing `>`, which no rule did before it.
+ * refuses every segment containing `>`, which no rule did before it. The `python3` deny guards no
+ * allow: it turns an embedded interpreter call from a `dontAsk` cancellation into a tool failure
+ * the subject can recover from.
  */
 export function grokReadOnlyPermissionRules() {
   const grammarGaps = new Set(["awk", "["]);
@@ -226,6 +228,7 @@ export function grokReadOnlyPermissionRules() {
 
   const deny = [
     "Bash(*>*)",
+    "Bash(python3 *)",
     "Bash(find *-delete*)",
     "Bash(find *-exec*)",
     "Bash(find *-ok*)",
