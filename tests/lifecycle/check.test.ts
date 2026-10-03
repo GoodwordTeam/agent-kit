@@ -3,9 +3,9 @@
  * runs before it ships. Standalone only: every case is a plain temp git repository, with no Firstmate
  * home, binding or ledger anywhere.
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -23,6 +23,9 @@ import {
 import { GATE_FILE, planBundle } from "../../src/packaging/plan.ts";
 import { artifactHash } from "../../src/util/hash.ts";
 import { makeTree } from "../helpers/tree.ts";
+
+// Every case spawns git and the CLI several times, so the 5s default times out on a shared host.
+setDefaultTimeout(60_000);
 
 const REPO = join(import.meta.dir, "..", "..");
 
@@ -42,13 +45,23 @@ function git(cwd: string, ...args: string[]): string {
 }
 
 /** A repository on branch `feature`, one commit in, with the work uncommitted on top as a session leaves it. */
-function repo(): string {
+function buildRepo(): string {
   const dir = makeTree({ "src/a.js": "export const a = 1;\n" });
   git(dir, "init", "-q", "-b", "main");
   git(dir, "add", "-A");
   git(dir, "commit", "-q", "-m", "init");
   git(dir, "checkout", "-q", "-b", "feature");
   writeFileSync(join(dir, "src/a.js"), "export const a = 2;\n");
+  return dir;
+}
+
+// Initializing and committing a repository is pure fixture construction but repeatedly competes
+// for subprocess slots on a loaded host. Copy one module-level template for each isolated test.
+const REPO_TEMPLATE = buildRepo();
+
+function repo(): string {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), "ak-lifecycle-repo-")));
+  cpSync(REPO_TEMPLATE, dir, { recursive: true });
   return dir;
 }
 
@@ -305,7 +318,7 @@ describe("ak lifecycle check, standalone", () => {
     expect(checked.code).toBe(1);
     expect(checked.err).toContain("refused: evidence missing");
     expect(run).toMatch(/^feature-[0-9a-f]{12}$/);
-  }, 15_000);
+  });
 
   test("a wrong-task receipt is refused by name", () => {
     const dir = repo();
@@ -432,7 +445,7 @@ describe("ak lifecycle check, standalone", () => {
       expect(ak(dir, "record", "--gate", "verify", "--receipt", receiptPath).code).toBe(0);
       expect(ak(dir, "check").code).toBe(0);
     }
-  }, 15_000);
+  });
 
   test("a receipt for a check that did not run neither counts nor refuses beside passed evidence", () => {
     for (const status of ["not-run", "not-applicable"] as const) {
@@ -459,7 +472,7 @@ describe("ak lifecycle check, standalone", () => {
       expect(checked.code).toBe(0);
       expect(JSON.parse(checked.out.join("\n"))).toMatchObject({ outcome: "allowed", reasons: [] });
     }
-  }, 15_000);
+  });
 
   test("a ticket ref binds by id and artifact hash, with or without a schema, and never another schema", () => {
     for (const [schema, code] of [
@@ -477,7 +490,7 @@ describe("ak lifecycle check, standalone", () => {
       expect(checked.code).toBe(code);
       if (code === 1) expect(checked.err).toContain("refused: evidence wrong-task");
     }
-  }, 15_000);
+  });
 
   test("record refuses a receipt whose output log is not among its artifacts", () => {
     const dir = repo();
@@ -827,7 +840,7 @@ describe("ak lifecycle check, standalone", () => {
       expect(checked.code).toBe(0);
       expect(JSON.parse(checked.out.join("\n"))).toMatchObject({ run_id: run, outcome: "allowed" });
     }
-  }, 15_000);
+  });
 
   test("two opened branches whose names differ only in a separator each resolve their own run", () => {
     const dir = repo();
@@ -854,7 +867,7 @@ describe("ak lifecycle check, standalone", () => {
     expect(other.err).toContain(`no record for run ${runs["feat-x"]} `);
     record(dir, ...PRE_SHIP_GATES);
     expect(ak(dir, "check").out[0]).toContain(`ok: run ${runs["feat-x"]} has current evidence`);
-  }, 20_000);
+  });
 
   test("records taken before the first commit survive a mid-task merge from main on an opened run", () => {
     const dir = repo();
@@ -971,7 +984,7 @@ describe("the gate a bundle carries", () => {
       expect(refused.exitCode).toBe(1);
       expect(refused.stderr.toString()).toContain("refused: gate build-checks has no current evidence");
     }
-  }, 20_000);
+  });
 
   test("both byte-identical packaged gates enforce the strengthened evidence cases", () => {
     const { catalog } = loadCatalog(REPO);
