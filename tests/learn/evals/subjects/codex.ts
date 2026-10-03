@@ -1,9 +1,11 @@
 /**
  * Codex in exec mode. Not a test file.
  *
- *   codex exec --json --ephemeral --skip-git-repo-check --ignore-rules --sandbox read-only
+ *   codex exec --json --ephemeral --skip-git-repo-check --ignore-rules --sandbox SANDBOX
  *     --disable plugins --disable remote_plugin --disable apps [-m M] [-c developer_instructions=TEXT] PROMPT
  *
+ * The sandbox is `read-only` unless the request's case grant (`allowedTools`) names a mutating
+ * tool, which makes it `workspace-write`.
  * Appended context goes in as `developer_instructions`, a developer message after the host's own
  * instructions; codex has no append-to-system-prompt flag. There is no turn cap flag, so
  * `maxTurns` is not passed. Isolation is a private CODEX_HOME and HOME: codex reads skills from
@@ -26,6 +28,8 @@ import { join } from "node:path";
 import { privateHome } from "./home.ts";
 import { readsOf, unwrap } from "./shell.ts";
 import type { Isolation, SessionEvent, SessionRequest, SubjectAdapter, TokenUsage } from "./types.ts";
+
+const MUTATING_GRANTS = new Set(["Bash", "Delete", "Edit", "NotebookEdit", "Write"]);
 
 interface Item {
   id?: string;
@@ -138,7 +142,7 @@ export const codex: SubjectAdapter = {
       "--skip-git-repo-check",
       "--ignore-rules",
       "--sandbox",
-      "read-only",
+      req.allowedTools?.some((tool) => MUTATING_GRANTS.has(tool)) === true ? "workspace-write" : "read-only",
       "--disable",
       "plugins",
       "--disable",

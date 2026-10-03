@@ -30,6 +30,8 @@
  * read-only. Bare `env` is admitted only when the request environment holds nothing beyond what
  * `cleanEnv` yields for this adapter; a request carrying anything more, such as the influence eval's canary,
  * leaves `env` to `dontAsk`. Whether the live host expands variables before permission matching is unverified.
+ * A request carrying a case grant (`allowedTools`) replaces those generated rules: the `--allow`
+ * rules are the grant's `GRANT_RULES` entries alone, with no deny rules and no `env` rule.
  * A cancelled turn leaves the session invalid, and the receipt names the last attempted call. The
  * read-only sandbox
  * remains unsuitable on a machine whose `/var/run/docker.sock` is a symlink. The parse reports `stopReason`. Isolation is a
@@ -54,17 +56,17 @@ import { grokReadOnlyPermissionRules, readsOf } from "./shell.ts";
 import type { Isolation, SessionEvent, SessionRequest, SubjectAdapter } from "./types.ts";
 
 /** Grok tool names onto the shared vocabulary. Unlisted names pass through. */
-const TOOLS: Record<string, string> = {
-  read_file: "Read",
-  write: "Write",
-  search_replace: "Edit",
-  run_terminal_command: "Bash",
-  grep: "Grep",
-  web_search: "WebSearch",
-  web_fetch: "WebFetch",
-  todo_write: "TodoWrite",
-  spawn_subagent: "Task",
-};
+const TOOLS = new Map([
+  ["read_file", "Read"],
+  ["write", "Write"],
+  ["search_replace", "Edit"],
+  ["run_terminal_command", "Bash"],
+  ["grep", "Grep"],
+  ["web_search", "WebSearch"],
+  ["web_fetch", "WebFetch"],
+  ["todo_write", "TodoWrite"],
+  ["spawn_subagent", "Task"],
+]);
 
 interface Line {
   type?: string;
@@ -84,6 +86,22 @@ const COMPAT_OFF = ["CLAUDE", "CURSOR"].flatMap((vendor) =>
 const READ_ONLY_RULES = grokReadOnlyPermissionRules();
 const READ_ONLY_ALLOW = ["Read", "Grep", ...READ_ONLY_RULES.allow] as const;
 
+/**
+ * A case's shared-vocabulary grants onto the rule names the Grok 1.0.46 user guide lists
+ * (`22-permissions-and-safety.md`, Tool Names). A name with no rule there is not emitted: the same
+ * guide says invoking a skill never prompts, so `Skill` needs none.
+ */
+const GRANT_RULES = new Map([
+  ["Bash", "Bash(*)"],
+  ["Read", "Read"],
+  ["Edit", "Edit"],
+  ["Write", "Write"],
+  ["Grep", "Grep"],
+  ["Glob", "Glob"],
+  ["WebFetch", "WebFetch"],
+  ["WebSearch", "WebSearch"],
+]);
+
 const allowlisted = (env: Record<string, string>) => {
   const clean = cleanEnv(grok.env);
   return Object.entries(env).every(([name, value]) => clean[name] === value);
@@ -94,15 +112,20 @@ export const grok: SubjectAdapter = {
   env: ["GROK_HOME"],
   injection: "append-system-prompt",
   command(req: SessionRequest, model: string | undefined): string[] {
+    const allow =
+      req.allowedTools === undefined
+        ? READ_ONLY_ALLOW
+        : req.allowedTools.flatMap((tool) => GRANT_RULES.get(tool) ?? []);
+    const deny = req.allowedTools === undefined ? READ_ONLY_RULES.deny : [];
     return [
       "grok",
       "-p",
       req.prompt,
       "--output-format",
       "streaming-json",
-      ...READ_ONLY_ALLOW.flatMap((rule) => ["--allow", rule]),
-      ...(allowlisted(req.env) ? ["--allow", "Bash(env)"] : []),
-      ...READ_ONLY_RULES.deny.flatMap((rule) => ["--deny", rule]),
+      ...allow.flatMap((rule) => ["--allow", rule]),
+      ...(req.allowedTools === undefined && allowlisted(req.env) ? ["--allow", "Bash(env)"] : []),
+      ...deny.flatMap((rule) => ["--deny", rule]),
       ...(model === undefined ? [] : ["-m", model]),
       ...(req.maxTurns === undefined ? [] : ["--max-turns", String(req.maxTurns)]),
       "--permission-mode",
@@ -133,7 +156,7 @@ export const grok: SubjectAdapter = {
       } else if (line.type === "tool_call" && typeof line.toolName === "string") {
         flush();
         const rawInput = line.rawInput ?? {};
-        const name = TOOLS[line.toolName] ?? line.toolName;
+        const name = TOOLS.get(line.toolName) ?? line.toolName;
         const file = rawInput.target_file ?? rawInput.file_path ?? rawInput.path;
         events.push({
           kind: "tool",
