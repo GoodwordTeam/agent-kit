@@ -14,7 +14,10 @@ import { schedule } from "../../src/learn/setup/schedule.ts";
 import { parseLearnArgs } from "../../src/learn/core/context.ts";
 import { gitRepo, MemFixture, scratch, type TestContext, testContext } from "./helpers.ts";
 
-function fakeDeps(bins: string[], stdout = ""): SetupDeps & { calls: string[][] } {
+function fakeDeps(
+  bins: string[],
+  stdout = "",
+): SetupDeps & { calls: string[][]; envs: Array<NodeJS.ProcessEnv | undefined> } {
   const home = scratch("ak-home-");
   const packageRoot = scratch("ak-pkg-");
   const mode = join(packageRoot, "adapters", "observation-source", "claude-mem");
@@ -22,18 +25,21 @@ function fakeDeps(bins: string[], stdout = ""): SetupDeps & { calls: string[][] 
   writeFileSync(join(mode, `${MEM_MODE}.json`), "{}\n");
   const have = new Set(bins);
   const calls: string[][] = [];
+  const envs: Array<NodeJS.ProcessEnv | undefined> = [];
   return {
     home,
     platform: "darwin",
     uid: 501,
-    run: (cmd): RunResult => {
+    run: (cmd, options): RunResult => {
       calls.push([...cmd]);
+      envs.push(options?.env);
       return { code: 0, stdout, stderr: "", timedOut: false };
     },
     which: (bin) => (have.has(bin) ? `/usr/bin/${bin}` : null),
     ak: ["/opt/bun", "/pkg/src/cli.ts"],
     packageRoot,
     calls,
+    envs,
   };
 }
 
@@ -93,6 +99,34 @@ describe("setup doctor", () => {
 
     expect(doctor(ctx, deps)).toBe(0);
     expect(ctx.out).toContain("  judge calls (24h)  2 calls, 1 failure, $0.750000 total cost");
+  });
+
+  test("checks the scheduled default judge's auth without making a judge call", () => {
+    const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
+    const ctx = testContext({
+      env: { CLAUDE_CONFIG_DIR: "", HOME: deps.home, PATH: "/bin", ANTHROPIC_API_KEY: "operator-only" },
+    });
+    expect(doctor(ctx, deps)).toBe(0);
+    expect(ctx.out).toContain("  scheduled judge auth      OK       soft  logged in");
+    expect(ctx.prompts).toEqual([]);
+    const probe = deps.calls.findIndex((call) => call.join(" ") === "/usr/bin/claude auth status");
+    expect(probe).toBeGreaterThanOrEqual(0);
+    expect(deps.envs[probe]).toBeDefined();
+    expect(deps.envs[probe]).not.toHaveProperty("CLAUDE_CONFIG_DIR");
+    expect(deps.envs[probe]).not.toHaveProperty("ANTHROPIC_API_KEY");
+    expect(deps.envs[probe]?.HOME).toBe(deps.home);
+    expect(deps.envs[probe]?.PATH).toBe("/bin");
+    expect(deps.envs[probe]?.AK_LEARN_MEM_DB).toBe(ctx.env.AK_LEARN_MEM_DB);
+  });
+
+  test("the scheduled auth check keeps the config dir the operator's environment sets", () => {
+    const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
+    for (const configDir of [join(deps.home, ".claude"), join(deps.home, "elsewhere")]) {
+      const ctx = testContext({ env: { CLAUDE_CONFIG_DIR: configDir, HOME: deps.home } });
+      expect(doctor(ctx, deps)).toBe(0);
+      const probe = deps.calls.findLastIndex((call) => call.join(" ") === "/usr/bin/claude auth status");
+      expect(deps.envs[probe]?.CLAUDE_CONFIG_DIR).toBe(configDir);
+    }
   });
 });
 

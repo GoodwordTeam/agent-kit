@@ -1,13 +1,14 @@
 /**
- * `ak learn setup doctor` — report prerequisites, the resolved environment and
- * the last 24 hours of judge calls.
+ * `ak learn setup doctor` — report prerequisites, the scheduled judge's login,
+ * the resolved environment and the last 24 hours of judge calls.
  * Reads only; changes nothing.
  */
 import { existsSync } from "node:fs";
 import { isAbsolute } from "node:path";
+import { DEFAULT_JUDGE } from "../core/config.ts";
 import type { LearnContext } from "../core/context.ts";
 import { judgeTraceSummary } from "../core/judge.ts";
-import { schedulerKind } from "./schedule.ts";
+import { schedulerKind, unitEnvironment } from "./schedule.ts";
 import { codexHome, memDir, memWorkerScript, type SetupDeps } from "./wire.ts";
 
 export interface Check {
@@ -26,8 +27,44 @@ export function judgeBinary(ctx: LearnContext, deps: SetupDeps): string | null {
   return deps.which(bin);
 }
 
+/** What a scheduler gives a unit before the unit's own environment is applied. */
+const SCHEDULER_BASE = ["HOME", "USER", "LOGNAME"];
+
+/**
+ * Whether the default judge is logged in under the environment `setup schedule`
+ * would give the unit now, not the operator's shell and not an already
+ * installed unit. Free: it asks the host CLI for its auth status and makes no
+ * judge call. Null for a custom judge command, whose login this cannot read.
+ */
+function scheduledJudgeAuth(ctx: LearnContext, deps: SetupDeps): Check | null {
+  if (
+    ctx.config.judgeCommand.length !== DEFAULT_JUDGE.length ||
+    ctx.config.judgeCommand.some((arg, index) => arg !== DEFAULT_JUDGE[index])
+  ) {
+    return null;
+  }
+  const binary = judgeBinary(ctx, deps);
+  if (binary === null) {
+    return { name: "scheduled judge auth", ok: false, hard: false, why: "judge command is unavailable" };
+  }
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of SCHEDULER_BASE) {
+    if (ctx.env[key] !== undefined) env[key] = ctx.env[key];
+  }
+  for (const [key, value] of unitEnvironment(ctx)) env[key] = value;
+  const result = deps.run([binary, "auth", "status"], { env });
+  const loggedIn = result.code === 0 && /"loggedIn"\s*:\s*true/.test(result.stdout);
+  return {
+    name: "scheduled judge auth",
+    ok: loggedIn,
+    hard: false,
+    why: loggedIn ? "logged in" : "not logged in",
+  };
+}
+
 export function doctorChecks(ctx: LearnContext, deps: SetupDeps): Check[] {
   const gh = deps.which("gh");
+  const auth = scheduledJudgeAuth(ctx, deps);
   return [
     { name: "bun", ok: deps.which("bun") !== null, hard: true, why: "runs `ak learn` from hooks and the scheduler" },
     { name: "git", ok: deps.which("git") !== null, hard: true, why: "every ledger is a git repository" },
@@ -55,6 +92,7 @@ export function doctorChecks(ctx: LearnContext, deps: SetupDeps): Check[] {
       hard: false,
       why: "PR review threads for the review loop",
     },
+    ...(auth === null ? [] : [auth]),
   ];
 }
 
