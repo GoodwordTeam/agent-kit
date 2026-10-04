@@ -3,9 +3,10 @@
 What an agent needs, inside an installed plugin, to decide which ticket system a project uses and to
 reach it without leaking or borrowing a credential. The contract this condenses is
 `adapters/tracker/CONTRACT.md`, which does not ship with the plugin; the rules below are that
-contract's §2 and §5 and the `linear-linearis` binding's setup and invocation, restated so the
-plugin carries them (ruling `tracker-of-record-falls-back-to-kb`). `wayfind` loads it before its
-first ticket operation.
+contract's §2 and §5, the `linear-linearis` binding's setup and invocation, and the
+`linear-composio-connector` binding's setup, mapping and trust ceiling, restated so the plugin
+carries them (ruling `tracker-of-record-falls-back-to-kb`). `wayfind` loads it before its first
+ticket operation.
 
 ## Which system is the record
 
@@ -154,3 +155,78 @@ git --literal-pathspecs log --all --full-history --format=%h -1 -- "$f"   # any 
 `--all` covers every commit reachable from a ref, not unreachable objects. The token file must be
 readable by its owner only (no group or other bits; `chmod 600` sets that), as checked by both
 `ak tracker check` and `ak doctor`.
+
+## Setting up `linear-composio-connector`
+
+This binding reaches `linear` through the host's Composio connector and an account the operator has
+already connected. Its document is `adapters/tracker/backends/linear-composio-connector.md`, which
+exists only in a fork of this package; a project reaches it through a bundle built from that fork,
+used by explicit path, and `ak update` would replace that bundle with one that lacks it.
+
+**Trust ceiling, first.** No code in this package makes, gates or inspects a connector call, and the
+one backend tool, `LINEAR_RUN_QUERY_OR_MUTATION`, runs any GraphQL it is sent under the named
+account. Every "refuse" below is an instruction to the operator, and nothing stops an operator that
+ignores it. What checks the rules is `ak tracker check` and `ak doctor` (binding shape and account
+file hygiene, when run), a read-back after every write that selects `organization { id }`, team,
+project, parent, labels and state, and an audit read after each session of every issue in
+`defaults.team` with `defaults.label` updated in the window. Writes stay **guided**: one writer seat
+per run makes every write, one at a time, and reads each back.
+
+**Departures from the rules above.** Rule 1: the tool is the host's connector, not a project
+dependency; the operator uses one tool through one route. Rule 2: `token_file` holds the
+connected-account alias, which grants nothing on its own; the OAuth credential stays in the
+connector, and the alias is passed as `account` on every call. Rules 3 to 6 hold as written.
+
+**The binding.** `backend: linear-composio-connector`, `token_file: .linear-connected-account`,
+`defaults` with `account_kind: composio-connected-account`, `organization` and `team` (required) and
+optional `team_key`, `project`, `label` and `parent`, every scope value a lowercase UUID, and
+`statuses` mapping at least `draft`, `in-progress`, `done` and `cancelled`. Leave `blocked` unmapped
+for a team with no blocked state: `updateStatus(blocked)` is then refused before any call.
+
+**Setup, when a human asks.** Stop at the first step that fails.
+
+1. The human connects the account in the connector and names its alias. Never create, rename or
+   remove a connection.
+2. The human writes the alias, as the file's only word, into `.linear-connected-account` at the
+   project root and runs `chmod 600` on it.
+3. Write `ak.tracker.yaml` with the UUIDs the human confirms, and `statuses` in the team's names.
+4. Gitignore the account file in the project's `.gitignore` and commit that rule.
+5. Run `ak tracker check` from the fork checkout, or the fork bundle's `ak doctor`, then the
+   preflight below.
+6. Verify with one `readTickets` read under the account. An empty result is a fact.
+
+**Preflight, before any connector call.**
+
+1. `ak.tracker.yaml` is at or above the working directory, no higher than the git top level.
+2. The account file exists, holds exactly one word (`wc -w` prints `1`) and is exactly mode `600`
+   (`stat -f %Lp` or `stat -c %a` prints `600`). `ak tracker check` does not check those two: a
+   two-word or mode-`400` file passes it. It checks non-blank, owner-only, inside the folder,
+   ignored by a committed rule, untracked and absent from history, and a history scan that does not
+   finish is unavailable evidence, not a clean history.
+3. Once per session: `COMPOSIO_MANAGE_CONNECTIONS`, action `list`, toolkit `linear`, shows the alias
+   `ACTIVE`. Otherwise `needs-input`.
+4. Once per session: `query { organization { id } }` under the account returns exactly
+   `defaults.organization`. Otherwise no write in the session.
+5. Every `COMPOSIO_MULTI_EXECUTE_TOOL` call's tool entry carries `tool_slug`
+   `LINEAR_RUN_QUERY_OR_MUTATION` and `account` set to the alias from the file. Without `account`
+   the connector uses its default account.
+
+No other Linear tool slug is used; `LINEAR_UPDATE_ISSUE` in particular replaces all labels and moves
+issues between teams and projects.
+
+| Operation | Write (GraphQL) | Must read back |
+|---|---|---|
+| create | pre-read `issue(id)`, then `issueCreate` with client `id`, `teamId`, `projectId`, `parentId`, `labelIds: [label]`, draft `stateId`, no assignee | id, identifier, url, team, project, parent, labels, key footer, organization |
+| link a record | `attachmentCreate` with client `id` | the attachment by id and url |
+| blocking edge | `issueRelationCreate` with client `id`, `type: blocks`; both issues in the organization | one `blocks` edge |
+| claim | writer only, serialized: claim-record attachment, then `issueUpdate` `assigneeId` if unassigned | the current claim record names this seat |
+| update status | `issueUpdate` `stateId` only; resolution by `commentCreate` with client `id` | mapped state; team, project, labels, parent unchanged; one comment |
+| read | `issues` filtered by team id, project id and `labels.some` label id, paged | read-only; revision is the greatest `updatedAt` |
+
+Updates never pass `teamId`, `projectId`, `labelIds` or `parentId`. The client id is the first 16
+bytes of the runner contract's idempotency key, shaped as a version-4 UUID; a replay with the same
+input hash records success with no second effect, and one with a different hash stops and escalates.
+Claims are generation-numbered claim and release attachments that are never deleted; another seat's
+claim is refused naming the holder, and a stale claim is released only on evidence that the holding
+task ended. Whether Linear accepts client ids on attachments, relations and comments is not yet
+verified; until it is, a write of that kind whose outcome is unknown is not replayed.

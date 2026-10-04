@@ -9,6 +9,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import commonSchema from "../../schemas/common.schema.json" with { type: "json" };
 import trackerSchema from "../../schemas/tracker-binding.schema.json" with { type: "json" };
 import linearisSchema from "../../schemas/tracker-backends/linear-linearis.schema.json" with { type: "json" };
+import connectorSchema from "../../schemas/tracker-backends/linear-composio-connector.schema.json" with { type: "json" };
 import {
   BINDING_FILE,
   checkTrackerSecret,
@@ -126,9 +127,13 @@ const bindingAjv = new Ajv2020({ strict: false });
 bindingAjv.addSchema(commonSchema);
 const validBinding = bindingAjv.compile<TrackerBinding>(trackerSchema);
 const validLinearis = bindingAjv.compile<TrackerBinding>(linearisSchema);
+const validConnector = bindingAjv.compile<TrackerBinding>(connectorSchema);
 const bindingValidators: BindingValidators = {
   binding: validBinding,
-  backends: new Map([["linear-linearis", validLinearis]]),
+  backends: new Map([
+    ["linear-linearis", validLinearis],
+    ["linear-composio-connector", validConnector],
+  ]),
 };
 
 const ID = "ak@agent-kit";

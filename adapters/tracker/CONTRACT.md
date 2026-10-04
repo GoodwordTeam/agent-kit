@@ -321,6 +321,7 @@ phase, so it is an operator task the invocation law has no reason to govern.
 | Binding id | Reaches system | Document |
 |---|---|---|
 | `linear-linearis` | `linear` | `adapters/tracker/backends/linear-linearis.md` |
+| `linear-composio-connector` | `linear` | `adapters/tracker/backends/linear-composio-connector.md` |
 
 A binding is additive: a document under `backends/`, a row here and, where it constrains
 `defaults`, a schema at `schemas/tracker-backends/<id>.schema.json`. The generic binding schema
