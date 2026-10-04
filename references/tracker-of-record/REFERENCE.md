@@ -163,19 +163,38 @@ already connected. Its document is `adapters/tracker/backends/linear-composio-co
 exists only in a fork of this package; a project reaches it through a bundle built from that fork,
 used by explicit path, and `ak update` would replace that bundle with one that lacks it.
 
+**This section is a summary.** Before any write, the writer reads the full binding document from the
+fork's source checkout at its pinned revision. A built bundle, the fork's included, carries no
+`adapters/` directory, so the bundle path cannot supply it. The binding document defines
+the claim and release record formats, the footer, the intent lookup, the state lookup, the error
+mapping, the client-id fallback and discovering the tool's argument schema at call time. **No write
+is made from this section alone.** Without the full binding document at hand, no write is made at
+all.
+
 **Trust ceiling, first.** No code in this package makes, gates or inspects a connector call, and the
 one backend tool, `LINEAR_RUN_QUERY_OR_MUTATION`, runs any GraphQL it is sent under the named
 account. Every "refuse" below is an instruction to the operator, and nothing stops an operator that
 ignores it. What checks the rules is `ak tracker check` and `ak doctor` (binding shape and account
 file hygiene, when run), a read-back after every write that selects `organization { id }`, team,
-project, parent, labels and state, and an audit read after each session of every issue in
-`defaults.team` with `defaults.label` updated in the window. Writes stay **guided**: one writer seat
-per run makes every write, one at a time, and reads each back.
+project, parent, labels and state. After each session, an audit read lists every call in the
+connector's execution log for the selected account. A call through any other slug, or a mutation
+outside the binding's five, is a violation. Every issue id in any mutation, both ids of a relation
+included, is read by id whatever its current team or labels, and an id that cannot be read is a
+violation. If the log cannot be read, or lacks a log id the writer recorded at a write, the audit is
+UNAVAILABLE: the session is not complete, it is escalated, and a live qualification row fails
+closed. Writes stay **guided**. The run's coordinator designates one writer seat in a run receipt
+every seat can read, and that writer makes every write, one at a time, and reads each back. A new
+writer is designated only after the orchestrator shows the previous one settled, failed or
+cancelled; two live writers are never designated. The serial guarantee covers one run with one designated writer
+only. Concurrent runs, any other writer, or edits made in Linear reopen the claim race. The full binding document also extends the audit to every other connected Linear account's log, and refuses any write on an existing issue outside the `defaults` team, project and label; those rules live there and are not restated here.
 
 **Departures from the rules above.** Rule 1: the tool is the host's connector, not a project
 dependency; the operator uses one tool through one route. Rule 2: `token_file` holds the
 connected-account alias, which grants nothing on its own; the OAuth credential stays in the
-connector, and the alias is passed as `account` on every call. Rules 3 to 6 hold as written.
+connector, and the alias is passed as `account` on every call. Rule 3 holds in adapted form: an
+absent or blank account file refuses, and no call relies on the connector's default account. The
+`HOME` isolation clause has nothing to apply to, because no local tool runs. Rules 4 to 6 hold as
+written.
 
 **The binding.** `backend: linear-composio-connector`, `token_file: .linear-connected-account`,
 `defaults` with `account_kind: composio-connected-account`, `organization` and `team` (required) and
@@ -195,14 +214,17 @@ for a team with no blocked state: `updateStatus(blocked)` is then refused before
    preflight below.
 6. Verify with one `readTickets` read under the account. An empty result is a fact.
 
-**Preflight, before any connector call.**
+**Preflight, before any connector call.** The only carve-out is setup step 3's read-only discovery
+reads, which run before `defaults.organization` exists and need steps 1, 2, 3 and 5. No write is made
+until all five hold.
 
 1. `ak.tracker.yaml` is at or above the working directory, no higher than the git top level.
 2. The account file exists, holds exactly one word (`wc -w` prints `1`) and is exactly mode `600`
    (`stat -f %Lp` or `stat -c %a` prints `600`). `ak tracker check` does not check those two: a
    two-word or mode-`400` file passes it. It checks non-blank, owner-only, inside the folder,
-   ignored by a committed rule, untracked and absent from history, and a history scan that does not
-   finish is unavailable evidence, not a clean history.
+   ignored by a committed rule, untracked and absent from history. A history scan that does not
+   finish is unavailable evidence, not a clean history. Outside a git repository the check only
+   warns and skips the ignore, tracked and history checks.
 3. Once per session: `COMPOSIO_MANAGE_CONNECTIONS`, action `list`, toolkit `linear`, shows the alias
    `ACTIVE`. Otherwise `needs-input`.
 4. Once per session: `query { organization { id } }` under the account returns exactly
@@ -216,17 +238,38 @@ issues between teams and projects.
 
 | Operation | Write (GraphQL) | Must read back |
 |---|---|---|
-| create | pre-read `issue(id)`, then `issueCreate` with client `id`, `teamId`, `projectId`, `parentId`, `labelIds: [label]`, draft `stateId`, no assignee | id, identifier, url, team, project, parent, labels, key footer, organization |
-| link a record | `attachmentCreate` with client `id` | the attachment by id and url |
+| create | intent lookup, then pre-read `issue(id)`, then `issueCreate` with client `id`, `teamId`, draft `stateId`, and `projectId`, `parentId`, `labelIds: [label]` only when `defaults` sets them; no assignee | id, identifier, url, team, the scope `defaults` set, footer, organization |
+| link a record | `attachmentCreate` with client `id` and `metadata` carrying `akIntent`, `akKey` and `akInputHash` | the attachment by id and url, with all three metadata values |
 | blocking edge | `issueRelationCreate` with client `id`, `type: blocks`; both issues in the organization | one `blocks` edge |
 | claim | writer only, serialized: claim-record attachment, then `issueUpdate` `assigneeId` if unassigned | the current claim record names this seat |
 | update status | `issueUpdate` `stateId` only; resolution by `commentCreate` with client `id` | mapped state; team, project, labels, parent unchanged; one comment |
-| read | `issues` filtered by team id, project id and `labels.some` label id, paged | read-only; revision is the greatest `updatedAt` |
+| read | `issues` filtered by team id, plus project id and `labels.some` label id only when `defaults` sets them, paged | read-only; revision is the greatest `updatedAt` |
 
-Updates never pass `teamId`, `projectId`, `labelIds` or `parentId`. The client id is the first 16
-bytes of the runner contract's idempotency key, shaped as a version-4 UUID; a replay with the same
-input hash records success with no second effect, and one with a different hash stops and escalates.
-Claims are generation-numbered claim and release attachments that are never deleted; another seat's
-claim is refused naming the holder, and a stale claim is released only on evidence that the holding
-task ended. Whether Linear accepts client ids on attachments, relations and comments is not yet
-verified; until it is, a write of that kind whose outcome is unknown is not replayed.
+Updates never pass `teamId`, `projectId`, `labelIds` or `parentId`. Every paged connection is read to
+the end through `pageInfo`. A page error fails the whole read, a failed pre-read refuses its write,
+and a partial read is never used or given a revision.
+
+- **Idempotency.**
+  - The client id is the first 16 bytes of the runner contract's input-dependent operation key,
+    shaped as a version-4 UUID. Its pre-read detects only a same-input replay.
+  - A separate, input-independent intent, `sha256(run_id · operation_id · target_identity)`, is
+    written as an `ak-intent` footer. Before each create, the writer searches for it across the
+    organization, whatever the team.
+  - Same intent with the same input hash: success with no second effect. Same intent with a
+    different hash, or found more than once: stop, escalate, no write. A lookup that cannot run
+    refuses the create.
+  - A retry under another run is not detected.
+  - When the intent lookup finds nothing but `issue(id)` finds the issue: success with no write. The
+    lookup's miss is a detection defect, and creates are refused until Q-L5 is re-run.
+  - A returned id that differs from the client id sent is `failed`. The writer reports the stored
+    id, deletes nothing, and makes no further write of that kind until its fallback is re-tested.
+    Relations keep the existing-edge pre-read; they have no free text for a fallback.
+- **State lookup.** A mapped status resolves only when exactly one state of `defaults.team`, read by
+  team id, has a name that matches byte for byte. Anything else is `needs-input`. An issue whose
+  team is not `defaults.team` is refused as a scope violation.
+- **Claims.** Claims are generation-numbered claim and release attachments that are never deleted.
+  Another seat's claim is refused, naming the holder. A stale claim is released only on evidence
+  that the holding task ended.
+- **No replay until proven.** Whether Linear accepts client ids on attachments, relations and
+  comments is not yet verified. Until Q-L4 and Q-L10 pass, a write of those kinds whose outcome is
+  unknown is not replayed.
