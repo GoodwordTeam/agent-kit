@@ -187,9 +187,9 @@ binding is selected.
 **The project root** is the nearest directory at or above the working directory holding
 `ak.tracker.yaml`, searching no higher than `git rev-parse --show-toplevel` — the same search
 `findProjectRoot` performs for `ak tracker check`. With none up to the top level, the folder is
-unbound (CONTRACT §2). During setup (§4), before `ak.tracker.yaml` exists, the project root is the
-folder the human names to bind, at or below `git rev-parse --show-toplevel`, and every setup step
-uses that folder.
+unbound (CONTRACT §2). During setup (§4), whether the folder is unbound or a human asked to rebind
+a folder that already holds a binding, the project root is the folder the human names to bind, at
+or below `git rev-parse --show-toplevel`, and every setup step uses that folder.
 
 **The account file** is `token_file`, inside the project root. It holds exactly one word, the alias
 of the operator's connected Linear account, and nothing else. It is mode `600`, ignored by a rule in
@@ -200,10 +200,11 @@ read from the file for every call, never from the conversation or from memory.
 
 The operator makes no connector call unless all five hold. Steps 1, 2 and 5 hold for every call;
 steps 3 and 4 are checked once per session, before the first call. The one carve-out is setup's
-discovery (§4 step 3): before `ak.tracker.yaml` exists, read-only queries may run once steps 2, 3
-and 5 hold, with the account file read from the project root the human named. Discovery needs
-neither the binding (step 1) nor `defaults.organization` (step 4), and runs no mutation. No Linear
-mutation is made until all five hold against the written binding.
+discovery (§4 step 3): until this binding's `ak.tracker.yaml` is written, read-only queries may run
+once steps 2, 3 and 5 hold, with the account file read from the project root the human named.
+Discovery needs neither the binding (step 1) nor `defaults.organization` (step 4), and runs no
+mutation. On a rebind, discovery reads no existing binding and no existing token file; it ignores
+them for discovery only. No Linear mutation is made until all five hold against the written binding.
 
 1. `ak.tracker.yaml` is found at or above the working directory, no higher than the top level.
 2. The account file exists, is non-blank, holds a single word, and is exactly mode `600`. The
@@ -253,8 +254,10 @@ account, the agent performs these steps in order and stops at the first that fai
    discovery read returned it and the human confirmed it: the organization as the intended one, the
    team and any project, label or parent as selected. The agent then writes `ak.tracker.yaml` once
    and complete, with `backend`, `token_file`, `defaults` holding those values and `statuses` in the
-   team's own state names; it never writes a partial binding. Steps 3 and 4 write local files only;
-   no Linear mutation is made before step 5 passes.
+   team's own state names; it never writes a partial binding. On a rebind, the existing
+   `ak.tracker.yaml` stays unchanged until that complete replacement is ready, and is then replaced
+   in one step; the old token file is not read, moved, rewritten or removed. Steps 3 and 4 write
+   local files only; no Linear mutation is made before step 5 passes.
 4. **Gitignore the account file** in the project's `.gitignore` and commit that rule; an uncommitted
    rule protects only this checkout. Keep any older token file ignored as well, so a stray credential
    can never be committed.

@@ -207,11 +207,13 @@ for a team with no blocked state: `updateStatus(blocked)` is then refused before
 1. The human connects the account in the connector and names its alias. Never create, rename or
    remove a connection.
 2. The human writes the alias, as the file's only word, into `.linear-connected-account` at the
-   project root and runs `chmod 600` on it. Before `ak.tracker.yaml` exists, the project root is the
-   folder the human names to bind, at or below the git top level.
+   project root and runs `chmod 600` on it. During setup or a rebind the human asked for, the
+   project root is the folder the human names to bind, at or below the git top level.
 3. Discover with read-only queries under the account, then write `ak.tracker.yaml` once and
    complete, binding only values a discovery read returned and the human confirmed (organization,
-   team, optional scope), with `statuses` in the team's names. Never write a partial binding.
+   team, optional scope), with `statuses` in the team's names. Never write a partial binding. On a
+   rebind, the existing `ak.tracker.yaml` stays unchanged until the complete replacement is ready,
+   then is replaced in one step; the old token file is not read, moved, rewritten or removed.
 4. Gitignore the account file in the project's `.gitignore` and commit that rule. Steps 3 and 4
    write local files only; no Linear mutation is made before step 5 passes.
 5. Run `ak tracker check` from the fork checkout, or the fork bundle's `ak doctor`, then the
@@ -219,8 +221,9 @@ for a team with no blocked state: `updateStatus(blocked)` is then refused before
 6. Verify with one `readTickets` read under the account. An empty result is a fact.
 
 **Preflight, before any connector call.** The only carve-out is setup step 3's read-only discovery
-reads, which run before `ak.tracker.yaml` exists and need steps 2, 3 and 5, not steps 1 and 4. No
-Linear mutation is made until all five hold against the written binding.
+reads, which run until this binding's `ak.tracker.yaml` is written and need steps 2, 3 and 5, not
+steps 1 and 4. On a rebind they read no existing binding or token file. No Linear mutation is made
+until all five hold against the written binding.
 
 1. `ak.tracker.yaml` is at or above the working directory, no higher than the git top level.
 2. The account file exists, holds exactly one word (`wc -w` prints `1`) and is exactly mode `600`
