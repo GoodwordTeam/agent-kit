@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-kit.local/schemas/tracker-backends/linear-composio-connector.schema.json",
+  "title": "Tracker binding: linear-composio-connector",
+  "description": "What adapters/tracker/backends/linear-composio-connector.md reads from ak.tracker.yaml. token_file names the gitignored per-operator file holding the connected-account alias; every default is a pinned UUID scope, so no call relies on whatever the account defaults to.",
+  "type": "object",
+  "required": ["defaults", "statuses"],
+  "properties": {
+    "defaults": {
+      "type": "object",
+      "required": ["account_kind", "organization", "team"],
+      "propertyNames": { "enum": ["account_kind", "organization", "team", "team_key", "project", "label", "parent"] },
+      "properties": {
+        "account_kind": { "const": "composio-connected-account" },
+        "organization": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        },
+        "team": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+        "project": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+        "label": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+        "parent": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" }
+      }
+    },
+    "statuses": { "type": "object", "required": ["draft", "in-progress", "done", "cancelled"] }
+  }
+}

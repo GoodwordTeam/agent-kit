@@ -89,15 +89,23 @@ else
 fi
 
 SUBJECT="$SUBJECT" BASELINE_REV="${CATALOG_BASELINE:-a185bd1}" python3 - "$SRC" "$EXP" <<'PY'
-import os, subprocess, sys, yaml, collections
+import collections, functools, json, os, subprocess, sys
 
 BASELINE = {
     "skills": 33, "packs": 8, "protocols": 7, "roles": 29, "references": 4,
     "schemas": 14, "policies": 5, "profiles": 4, "adapters": 4,
 }
 
-catalog = yaml.safe_load(open(sys.argv[1]))
-expansions = yaml.safe_load(open(sys.argv[2])) or {}
+def load_yaml(text):
+    """Parse YAML with Bun, which this repository already requires, rather than PyYAML."""
+    r = subprocess.run(
+        ["bun", "-e", "process.stdout.write(JSON.stringify(Bun.YAML.parse(await Bun.stdin.text()) ?? null))"],
+        input=text, capture_output=True, text=True, check=True,
+    )
+    return json.loads(r.stdout)
+
+catalog = load_yaml(open(sys.argv[1]).read())
+expansions = load_yaml(open(sys.argv[2]).read()) or {}
 mismatches = []
 expanded = []
 skipped = []
@@ -109,12 +117,17 @@ def git(*args):
     r = subprocess.run(["git", *args], capture_output=True, text=True)
     return r.stdout if r.returncode == 0 else None
 
+@functools.cache
+def catalog_at(rev):
+    """The catalog at a revision, parsed once, or None when it cannot be read."""
+    text = git("show", f"{rev}:catalog.yaml")
+    return None if text is None else load_yaml(text) or {}
+
 def ids_at(rev, section):
     """The ids in one catalog section at a revision, or None when it cannot be read."""
-    text = git("show", f"{rev}:catalog.yaml")
-    if text is None:
+    doc = catalog_at(rev)
+    if doc is None:
         return None
-    doc = yaml.safe_load(text) or {}
     return {e.get("id") for e in doc.get(section) or [] if isinstance(e, dict)}
 
 def resolve(rev):

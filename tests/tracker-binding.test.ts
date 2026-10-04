@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -14,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { runCli } from "../src/cli.ts";
+import { checkToken, parseBinding } from "../src/maintenance/cli.ts";
 import {
   BINDING_FILE,
   checkTrackerBinding,
@@ -76,7 +79,8 @@ function writeToken(path: string, text = TOKEN): void {
 
 function project(files: Record<string, string>, repo = true): string {
   const dir = realpathSync(makeTree(files));
-  for (const name of Object.keys(files)) if (name.endsWith(".linear-token")) chmodSync(join(dir, name), 0o600);
+  for (const name of Object.keys(files))
+    if (name.endsWith(".linear-token") || name.endsWith(".linear-connected-account")) chmodSync(join(dir, name), 0o600);
   if (repo) {
     git(dir, "init", "-q");
     git(dir, "add", "-A");
@@ -490,5 +494,150 @@ describe("the guarded linearis call", () => {
     const section3 = backend.slice(backend.indexOf("\n## 3."));
     const reference = readFileSync(join(import.meta.dir, "../references/tracker-of-record/REFERENCE.md"), "utf8");
     expect(firstShBlock(reference)).toBe(firstShBlock(section3));
+  });
+});
+
+/** The source checkout's command, as an operator runs it, with no GIT_* variable from this process. */
+function trackerCheck(dir: string, kit = REPO) {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
+  const result = spawnSync(process.execPath, ["run", "src/cli.ts", "tracker", "check", dir], {
+    cwd: kit,
+    encoding: "utf8",
+    env,
+  });
+  return { code: result.status, out: `${result.stdout}${result.stderr}` };
+}
+
+/**
+ * adapters/tracker/backends/linear-composio-connector.md: the offline qualification matrix Q-O1..Q-O8.
+ *
+ * Each case runs the source checkout's real command, `bun run src/cli.ts tracker check <fixture>`, as a
+ * child process and reads its exit code and output. The account file holds a connected-account alias,
+ * which is not a credential; the checks are still the kit's unchanged secret-hygiene checks. Nothing
+ * here calls a connector or opens a network connection.
+ */
+describe("linear-composio-connector offline matrix", () => {
+  const ALIAS = "linear_fixture-alias";
+  const ACCOUNT = ".linear-connected-account";
+  const CONNECTOR = `backend: linear-composio-connector
+token_file: .linear-connected-account
+defaults:
+  account_kind: composio-connected-account
+  organization: b9e20950-eb5e-499b-a192-516407241f09
+  team: 0e4394e8-8d5c-4080-b9bf-cc40df21862d
+  team_key: ENG
+  project: 63131224-a0e7-47e3-b6e3-5c5101110196
+  label: 60e23a74-d9a3-4dba-942c-aba1891146d8
+  parent: 891d92eb-159f-4bb1-a311-6e22e9e0b06c
+statuses:
+  draft: Backlog
+  approved: Todo
+  in-progress: In Progress
+  done: Done
+  cancelled: Canceled
+`;
+
+  const bound = (binding = CONNECTOR, account: string | null = `${ALIAS}\n`) => {
+    const ignored = { [BINDING_FILE]: binding, ".gitignore": `${ACCOUNT}\n` };
+    return account === null ? project(ignored) : project({ ...ignored, [ACCOUNT]: account });
+  };
+
+  test("Q-O1: the binding, an owner-only alias file and a committed ignore rule exit 0", () => {
+    const result = trackerCheck(bound());
+    expect(result.code).toBe(0);
+    expect(result.out).toContain("ak tracker check: 0 errors");
+    expect(result.out).not.toContain(ALIAS);
+  });
+
+  test("Q-O2: an absent account file exits 1 with tracker.secret-absent", () => {
+    const result = trackerCheck(bound(CONNECTOR, null));
+    expect(result.code).toBe(1);
+    expect(result.out).toContain("tracker.secret-absent");
+  });
+
+  test("Q-O3: a blank account file exits 1 with tracker.secret-empty", () => {
+    const result = trackerCheck(bound(CONNECTOR, " \n\t\n"));
+    expect(result.code).toBe(1);
+    expect(result.out).toContain("tracker.secret-empty");
+  });
+
+  test("Q-O4: an account file at mode 644 exits 1 with tracker.secret-mode", () => {
+    const dir = bound();
+    chmodSync(join(dir, ACCOUNT), 0o644);
+    const result = trackerCheck(dir);
+    expect(result.code).toBe(1);
+    expect(result.out).toContain("tracker.secret-mode");
+  });
+
+  test("Q-O5: a tracked account file exits 1 with tracker.secret-tracked", () => {
+    const dir = bound();
+    git(dir, "add", "-f", ACCOUNT);
+    const result = trackerCheck(dir);
+    expect(result.code).toBe(1);
+    expect(result.out).toContain("tracker.secret-tracked");
+    expect(result.out).not.toContain(ALIAS);
+  });
+
+  test("Q-O6: a non-UUID organization, a missing team or missing statuses exit 1 with tracker.binding-invalid", () => {
+    const cases = [
+      CONNECTOR.replace("organization: b9e20950-eb5e-499b-a192-516407241f09", "organization: goodwoord"),
+      CONNECTOR.replace("  team: 0e4394e8-8d5c-4080-b9bf-cc40df21862d\n", ""),
+      CONNECTOR.slice(0, CONNECTOR.indexOf("statuses:")),
+    ];
+    for (const binding of cases) {
+      expect(binding).not.toBe(CONNECTOR);
+      const result = trackerCheck(bound(binding));
+      expect(result.code).toBe(1);
+      expect(result.out).toContain("tracker.binding-invalid");
+      expect(result.out).toContain("schemas/tracker-backends/linear-composio-connector.schema.json");
+    }
+  });
+
+  test("Q-O7: statuses without blocked pass the schema; the refusal of blocked is the document's", () => {
+    expect(CONNECTOR).not.toContain("blocked");
+    expect(trackerCheck(bound()).code).toBe(0);
+  });
+
+  test("Q-O8: the kit without this backend's document exits 1 with tracker.backend-unknown", () => {
+    const kit = realpathSync(mkdtempSync(join(tmpdir(), "ak-kit-without-connector-")));
+    for (const part of ["src", "schemas", "adapters"]) cpSync(join(REPO, part), join(kit, part), { recursive: true });
+    symlinkSync(join(REPO, "node_modules"), join(kit, "node_modules"));
+    rmSync(join(kit, "adapters/tracker/backends/linear-composio-connector.md"), { force: true });
+    rmSync(join(kit, "schemas/tracker-backends/linear-composio-connector.schema.json"), { force: true });
+    const dir = bound();
+    const control = trackerCheck(dir, kit);
+    expect(control.code).toBe(1);
+    expect(control.out).toContain("tracker.backend-unknown");
+    expect(trackerCheck(dir).code).toBe(0);
+  });
+
+  test("the defaults are closed: an unlisted key or another account_kind is tracker.binding-invalid", () => {
+    for (const binding of [
+      CONNECTOR.replace("  team_key: ENG\n", "  team_key: ENG\n  workspace: other\n"),
+      CONNECTOR.replace("account_kind: composio-connected-account", "account_kind: api-token"),
+    ]) {
+      const result = trackerCheck(bound(binding));
+      expect(result.code).toBe(1);
+      expect(result.out).toContain("tracker.binding-invalid");
+    }
+  });
+
+  test("tracker check does not check the alias's word count or the exact mode 600; the preflight does", () => {
+    const twoWords = bound(CONNECTOR, `${ALIAS} second-word\n`);
+    expect(trackerCheck(twoWords).code).toBe(0);
+    const readOnly = bound();
+    chmodSync(join(readOnly, ACCOUNT), 0o400);
+    expect(trackerCheck(readOnly).code).toBe(0);
+  });
+
+  test("ak doctor's embedded validators accept the binding and its account file", () => {
+    const dir = bound();
+    const parsed = parseBinding(dir);
+    expect(parsed.finding.level).toBe("PASS");
+    expect(parsed.finding.detail).toBe("linear-composio-connector parses");
+    expect(checkToken(dir, parsed.binding).level).toBe("PASS");
+    const invalid = parseBinding(bound(CONNECTOR.replace("team: 0e4394e8", "team: 0E4394E8")));
+    expect(invalid.finding.level).toBe("FAIL");
+    expect(invalid.finding.detail).toContain("linear-composio-connector.schema.json");
   });
 });

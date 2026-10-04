@@ -840,7 +840,8 @@ references:
     loaded_by: [wayfind]
     summary: >-
       Which ticket system is the record, the rules every tracker binding obeys, and the
-      linear-linearis setup and guarded invocation, shipped inside the plugin.
+      linear-linearis and linear-composio-connector setup and guarded invocation, shipped inside
+      the plugin.
   - id: delegation
     batch: 11
     provenance_origin: conversation
