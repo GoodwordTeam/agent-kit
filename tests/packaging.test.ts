@@ -366,6 +366,23 @@ describe("bundle planning", () => {
     expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(false);
   });
 
+  test("--profile resolves a profile a catalog.d/ fragment declares, with catalog.yaml unchanged", () => {
+    // What the fragment directory exists for: a downstream install ships its
+    // own member list without editing catalog.yaml.
+    const plan = planBundle(
+      ctxFor({
+        "catalog.d/downstream.yaml": "schema_version: 1\nprofiles:\n  - id: downstream\n    status: authored\n",
+        "profiles/downstream.yaml": "id: downstream\nskills: [beta]\n",
+      }),
+      "claude-code",
+      { profile: "downstream" },
+    );
+    expect(plan.issues.filter((i) => i.severity === "error")).toEqual([]);
+    const manifest: unknown = JSON.parse(plan.files.get(".claude-plugin/plugin.json")?.contents ?? "{}");
+    expect(manifest).toMatchObject({ skills: ["./skills/beta"] });
+    expect(recordOf(plan)).toMatchObject({ profile: "downstream" });
+  });
+
   test("an unknown profile is an error, not an empty bundle", () => {
     const plan = planBundle(ctxFor(), "claude-code", { profile: "nonesuch" });
     expect(plan.issues.some((i) => i.rule === "packaging.unknown-profile")).toBe(true);

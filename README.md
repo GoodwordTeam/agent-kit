@@ -205,6 +205,7 @@ Attribution: `NOTICE`. Full license texts: `provenance/licenses/`.
 | `AGENTS.md` | Maintainer guide and the invocation law |
 | `AUTHORING.md` | The contract every skill body obeys |
 | `catalog.yaml` | Single source of truth; drives validation and packaging |
+| `catalog.d/` | Fragments that add entries without editing `catalog.yaml`; upstream carries none, a downstream fork adds its own (`docs/decisions/0010-catalog-fragments.md`) |
 | `policies/resolved-conflicts.yaml` | Where the sources disagreed, and how it was settled |
 | `docs/decisions/` | ADRs |
 | `research/` | Design sources and ~7,000 lines of citation-verified donor dossiers |

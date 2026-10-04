@@ -2649,7 +2649,10 @@ own section says which (§12.5, §12.6).
 - Every donor file cited that the dossier did not name is listed in the handback (§10).
 - Authoring a body makes that entry's `status: contract` stale and raises
   `catalog.status-behind-body`. **`catalog.yaml` is owned outside this batch — report the entries you
-  authored and let its owner flip them to `authored`; do not edit it yourself.**
+  authored and let its owner flip them to `authored`; do not edit it yourself.** A `catalog.d/`
+  fragment is not a way around that. This repository declares its entries in `catalog.yaml` and
+  carries no fragments; the directory is a fork's surface for its own entries
+  (`docs/decisions/0010-catalog-fragments.md`).
 
 ### 12.5 Reference packs
 
