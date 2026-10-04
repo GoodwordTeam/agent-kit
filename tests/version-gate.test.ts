@@ -10,8 +10,15 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+// The fixture repositories ignore the operator's global git config: a global
+// excludes file listing dist/ would otherwise keep `git add dist` from staging
+// the published bundle.
 function git(cwd: string, ...args: string[]) {
-  const run = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd, encoding: "utf8" });
+  const run = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], {
+    cwd,
+    encoding: "utf8",
+    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" },
+  });
   if (run.status !== 0) throw new Error(run.stderr);
 }
 

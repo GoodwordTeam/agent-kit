@@ -27,13 +27,13 @@ skills:
       reason: >-
         Running-application verification needs a human-started, host-neutral command that records
         runtime receipts and a reusable recipe without changing the existing super-verify phase.
-      commits: [3a6b18c]
+      commits: [820a233]
     - ids: [visual-edit]
       reason: >-
         Visual edits made on a canvas of a running local app's routes need a human-started command
         that applies the pending revision through source and receipts it, which no existing skill
         covers: prototype answers unbuilt questions and super-build needs an approved ticket.
-      commits: [f13b193]
+      commits: [e777ab6]
 
 protocols:
   baseline: 7
