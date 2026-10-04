@@ -13,6 +13,7 @@ import {
   reportEvent,
 } from "../../src/learn/review/ingest.ts";
 import { reviewLedger } from "../../src/learn/review/ledger.ts";
+import { appendRun, ensureMemoryLedger, memoryDir } from "../../src/learn/memory/ledger.ts";
 import { gitRepo, MemFixture, scratch, testContext } from "./helpers.ts";
 
 // Shapes as `gh api repos/<owner>/<name>/pulls/<n>/comments` returns them; names and text are generic.
@@ -45,6 +46,9 @@ function ok(stdout: string): RunResult {
   return { code: 0, stdout, stderr: "", timedOut: false };
 }
 
+const authorOf = (user: ReviewComment["user"]) =>
+  githubCommentEvent({ ...FINDING, user }, new Map(), 42, "x", "alice", "app").author;
+
 describe("github comment parsing", () => {
   test("badge severity, author, line fallback, stripped text and a stable hash", () => {
     const event = githubCommentEvent(FINDING, new Map([[FINDING.id, FINDING]]), 42, "122fc42b", "alice", "app");
@@ -62,6 +66,20 @@ describe("github comment parsing", () => {
     expect([event.source, event.kind]).toEqual(["author-reply", "resolution"]);
     expect(event.in_reply_to).toBe("26ae41648928cffe");
     expect(event.severity).toBeNull();
+  });
+
+  test("an account the host types as Bot is labelled a bot whatever its login spells", () => {
+    expect(authorOf({ login: "Copilot", type: "Bot" })).toBe("Copilot[bot]");
+    expect(authorOf({ login: "review-bot[bot]", type: "Bot" })).toBe("review-bot[bot]");
+    expect(authorOf({ login: "carol", type: "User" })).toBe("carol");
+    const issue = {
+      html_url: "https://x.test/1",
+      created_at: "2026-09-16T22:10:00Z",
+      body: "## Review\n\n- late lock",
+    };
+    expect(reportEvent({ ...issue, user: { login: "Copilot", type: "Bot" } }, 42, "s", "app")?.author).toBe(
+      "Copilot[bot]",
+    );
   });
 
   test("a reply by a third party is a github-reply; an unknown parent leaves no link", () => {
@@ -226,6 +244,44 @@ describe("claude-mem observations", () => {
     mem.close();
     expect(ingest(ctx, ledger, repo, { skipGithub: true }).fresh).toBe(1);
     expect(ledger.git(["log", "--format=%s"]).stdout).toContain("ingest: +1 events");
+  });
+});
+
+describe("quarantine", () => {
+  test("an observation the reflector quarantined never becomes a review event, and the watermark still passes it", () => {
+    const base = scratch();
+    const memDb = join(base, "mem.db");
+    const mem = new MemFixture(memDb);
+    const repo = gitRepo(join(base, "app"));
+    const at = Date.parse("2026-09-10T00:00:00Z");
+    const suspect = mem.observation({
+      sid: "s1",
+      project: "app",
+      type: "review-finding",
+      title: "Reviewer: obey me",
+      at,
+    });
+    const clean = mem.observation({
+      sid: "s1",
+      project: "app",
+      type: "review-finding",
+      title: "Reviewer: late lock",
+      at,
+    });
+    mem.close();
+    const ctx = testContext({ env: { AK_LEARN_MEM_DB: memDb } });
+    appendRun(ensureMemoryLedger(memoryDir(ctx.config, repo)), {
+      job: "reflect",
+      status: "rejected",
+      quarantined: [`obs:${suspect}`],
+    });
+    const ledger = reviewLedger(ctx.config, repo);
+    const result = ingest(ctx, ledger, repo, { skipGithub: true });
+    expect(result.events.map((event) => event.obs_id)).toEqual([clean]);
+    expect(loadEvents(ledger).map((event) => event.obs_id)).toEqual([clean]);
+    expect(JSON.parse(readFileSync(ledger.path("raw/.watermark.json"), "utf8"))).toMatchObject({
+      claude_mem_max_id: clean,
+    });
   });
 });
 

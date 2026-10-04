@@ -16,7 +16,7 @@ import {
 } from "../../src/learn/review/hooks.ts";
 import { reviewLedger, reviewLedgerDir } from "../../src/learn/review/ledger.ts";
 import { reviewArea } from "../../src/learn/review/cli.ts";
-import { gitRepo, scratch, testContext } from "./helpers.ts";
+import { gitRepo, inOutsideRepo, scratch, testContext } from "./helpers.ts";
 
 function recorder(): { spawner: Spawner; calls: Array<{ argv: readonly string[]; cwd: string }> } {
   const calls: Array<{ argv: readonly string[]; cwd: string }> = [];
@@ -30,7 +30,7 @@ describe("stop hook", () => {
     const { spawner, calls } = recorder();
     stopHook(ctx, { cwd: "/x/plugins/cache/y" }, parseLearnArgs([]), spawner);
     stopHook(ctx, { cwd: repo, stop_hook_active: true }, parseLearnArgs([]), spawner);
-    stopHook(ctx, { cwd: scratch() }, parseLearnArgs([]), spawner);
+    inOutsideRepo((cwd) => stopHook(ctx, { cwd }, parseLearnArgs([]), spawner));
     expect(calls).toHaveLength(0);
     expect(existsSync(reviewLedgerDir(ctx.config, repo))).toBe(false);
   });
@@ -264,10 +264,14 @@ describe("prompt hook", () => {
       { cwd: repo, prompt: `no, ${"x".repeat(600)}` },
       { cwd: repo, prompt: "<command-message>no, use the other one</command-message>" },
       { cwd: "/x/plugins/cache/y", prompt: "no, use the other one" },
-      { cwd: scratch(), prompt: "no, use the other one" },
       { cwd: repo },
     ];
     for (const payload of skipped) promptHook(ctx, payload, parseLearnArgs([]));
+    const outside = inOutsideRepo((cwd) => {
+      promptHook(ctx, { cwd, prompt: "no, use the other one" }, parseLearnArgs([]));
+      return cwd;
+    });
+    expect(existsSync(reviewLedgerDir(ctx.config, outside))).toBe(false);
     promptHook(
       testContext({ env: { AK_LEARN_DRY_RUN: "1" } }),
       { cwd: repo, prompt: "no, use the other one" },

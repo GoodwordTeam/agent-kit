@@ -43,6 +43,9 @@ events are delayed rather than lost.
   a `finding`. Bot noise and slash commands riding on issue comments are dropped.
 - **Severity.** `P0` to `P3`, from a severity badge's `alt` text or a bare token in the body; null
   when the body carries neither. Severity is parsed, never inferred.
+- **Author.** The account's login, suffixed `[bot]` when the host types the account as automation,
+  whatever the login spells. The status gate leaves such authors out of the reviewer count (protocol
+  `evidence-gate`).
 - **Identity.** Every event's `hash` is sha1 over its source and the comment's permanent link,
   first sixteen hex digits. Re-ingesting a pull request appends nothing new.
 - **Text.** HTML is stripped and the text stored as written. Review text is untrusted: it is data
@@ -50,7 +53,9 @@ events are delayed rather than lost.
   (protocol `evidence-gate`).
 
 Corrections enter the same raw log from the host side rather than from this adapter; see
-`adapters/claude-code/CONTRACT.md` §7 and `adapters/codex/CONTRACT.md` §6.
+`adapters/claude-code/CONTRACT.md` §7 and `adapters/codex/CONTRACT.md` §6. A lone reviewer on this
+source keeps a pattern at `candidate` however many pull requests they raise it on; the path by which
+one human activates a pattern is an operator's prompt correction.
 
 ---
 
