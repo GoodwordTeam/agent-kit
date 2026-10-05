@@ -407,6 +407,8 @@ export function hookFile(ctx: LearnContext, deps: SetupDeps, host: Exclude<WireH
 /** A hook file opened for editing: `doc` holds its events only, and `contents` is the whole file again with the edits in place. */
 export interface OpenHookFile {
   doc: HookDoc;
+  /** Keys holding something other than a list of hook entries or an empty list: an event written there would replace it. */
+  unreadable: string[];
   contents: () => HookFileContents;
 }
 
@@ -422,8 +424,10 @@ export function openHookFile(file: HookFile): OpenHookFile | { refuse: string } 
   const found = file.bare ? raw : (raw.hooks ?? {});
   if (!isJsonObject(found)) return { refuse: `${file.path}: "hooks" is not an object; nothing written` };
   const events: Record<string, HookEntry[]> = {};
+  const unreadable: string[] = [];
   for (const [key, value] of Object.entries(found)) {
     if (isEventList(value)) events[key] = value;
+    else if (!Array.isArray(value) || value.length > 0) unreadable.push(key);
   }
   const original = new Set(Object.keys(events));
   const doc: HookDoc = { hooks: events };
@@ -437,7 +441,7 @@ export function openHookFile(file: HookFile): OpenHookFile | { refuse: string } 
     }
     return { ...out, ...now };
   };
-  return { doc, contents: () => (file.bare ? merged() : { ...raw, hooks: merged() }) };
+  return { doc, unreadable, contents: () => (file.bare ? merged() : { ...raw, hooks: merged() }) };
 }
 
 /** One part of a wire: the reason it cannot be done, or the write to make once every part is clear. */
@@ -446,6 +450,10 @@ type Plan = { refuse: string } | { apply: () => void };
 function hookFilePlan(ctx: LearnContext, file: HookFile, specs: readonly HookSpec[]): Plan {
   const opened = openHookFile(file);
   if ("refuse" in opened) return opened;
+  const blocked = specs.find((spec) => opened.unreadable.includes(spec.event));
+  if (blocked !== undefined) {
+    return { refuse: `${file.path}: "${blocked.event}" is not a list of hook entries; nothing written` };
+  }
   return {
     apply: () => {
       let changed = 0;

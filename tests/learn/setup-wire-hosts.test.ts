@@ -14,7 +14,15 @@ import { doctor } from "../../src/learn/setup/doctor.ts";
 import { BLOCK_BEGIN, BLOCK_END, tomlHooks } from "../../src/learn/setup/toml-hooks.ts";
 import { uninstall } from "../../src/learn/setup/uninstall.ts";
 import { verifyChecks } from "../../src/learn/setup/verify.ts";
-import { GROK_HOOKS_FILE, type Json, MEM_MODE, type SetupDeps, WIRE_HOSTS, wire } from "../../src/learn/setup/wire.ts";
+import {
+  claudeSettingsPath,
+  GROK_HOOKS_FILE,
+  type Json,
+  MEM_MODE,
+  type SetupDeps,
+  WIRE_HOSTS,
+  wire,
+} from "../../src/learn/setup/wire.ts";
 import { scratch, type TestContext, testContext } from "./helpers.ts";
 
 const AK = "/opt/bun /pkg/src/cli.ts learn hook";
@@ -192,6 +200,32 @@ describe("setup wire: Droid", () => {
     expect(wire(ctx, deps, { host: "droid" })).toBe(1);
     expect(ctx.err).toEqual([`${settings}: "hooks" is not an object; nothing written`]);
     expect(text(settings)).toBe('{"hooks": []}');
+  });
+
+  test("an event whose entries cannot be read is refused by name, in every file shape, and left as it was", () => {
+    const entries = '[{"matcher": null, "hooks": [{"type": "command", "command": "echo mine"}]}]';
+    for (const [host, file, body] of [
+      ["droid", join(".factory", "hooks.json"), `{"SessionStart": ${entries}}`],
+      ["droid", join(".factory", "settings.json"), `{"hooks": {"SessionStart": ${entries}}}`],
+      ["codex", join(".codex", "hooks.json"), `{"hooks": {"SessionStart": ["echo mine"]}}`],
+      ["claude", "settings.json", `{"hooks": {"Stop": {"hooks": []}}}`],
+    ] as const) {
+      const deps = fakeDeps();
+      const ctx = context(deps);
+      const path = put(host === "claude" ? claudeSettingsPath(ctx) : join(deps.home, file), body);
+      const event = host === "claude" ? "Stop" : "SessionStart";
+      expect(wire(ctx, deps, { host })).toBe(1);
+      expect(ctx.err).toEqual([`${path}: "${event}" is not a list of hook entries; nothing written`]);
+      expect(text(path)).toBe(body);
+      expect(existsSync(`${path}.bak`)).toBe(false);
+    }
+  });
+
+  test("an unreadable event nothing is wired on is carried through, and an empty one is filled", () => {
+    const deps = fakeDeps();
+    const hooks = put(join(deps.home, ".factory", "hooks.json"), '{"Stop": "later", "SessionStart": []}');
+    expect(wire(context(deps), deps, { host: "droid" })).toBe(0);
+    expect(json(hooks)).toEqual({ Stop: "later", SessionStart: [SESSION_START] });
   });
 });
 
