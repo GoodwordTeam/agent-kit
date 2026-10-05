@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { loopDir } from "../../src/learn/core/paths.ts";
+import { loopDir, projectFolderName, registryPath } from "../../src/learn/core/paths.ts";
 import { run, type RunResult } from "../../src/learn/core/proc.ts";
 import { readRegistry } from "../../src/learn/memory/registry.ts";
 import { createSetupArea } from "../../src/learn/setup/cli.ts";
@@ -125,6 +125,28 @@ describe("setup doctor", () => {
     expect(ctx.out).toContain("  runs (24h)         1 span: review ok 1");
   });
 
+  test("flags roots that share one claude-mem project", () => {
+    const deps = fakeDeps(["bun", "git", "judge"]);
+    const ctx = context(deps);
+    const first = gitRepo(join(scratch(), "first", "shop"));
+    const second = gitRepo(join(scratch(), "second", "shop"));
+    mkdirSync(ctx.config.runtimeDir, { recursive: true });
+    writeFileSync(
+      registryPath(ctx.config),
+      `${JSON.stringify({
+        [projectFolderName(first)]: { root: first, mem_project: "shop", last_seen: 1 },
+        [projectFolderName(second)]: { root: second, mem_project: "shop", last_seen: 2 },
+      })}\n`,
+    );
+
+    const check = doctorChecks(ctx, deps).find((candidate) => candidate.name === "registry hygiene");
+    expect(check).toMatchObject({ ok: false, hard: false });
+    expect(check?.why).toBe(
+      `registry warning: claude-mem project 'shop' has multiple roots; ${second} owns it and ${first} is not kept in the registry`,
+    );
+    expect(Object.keys(readRegistry(ctx.config))).toHaveLength(2);
+  });
+
   test("checks the scheduled default judge's auth without making a judge call", () => {
     const deps = fakeDeps(["bun", "git", "claude"], '{"loggedIn":true}\n');
     const ctx = testContext({
@@ -185,6 +207,21 @@ describe("setup seed", () => {
     const ctx = testContext();
     expect(inOutsideRepo((cwd) => seed(ctx, cwd, { skipGithub: true }))).toBe(1);
     expect(ctx.err[0]).toContain("is not inside a git repository");
+  });
+
+  test("a bare repository is refused before any ledger is created", () => {
+    const ctx = testContext();
+    const bare = join(scratch(), "bare.git");
+    mkdirSync(bare);
+    run(["git", "init", "-q", "--bare"], { cwd: bare });
+    expect(seed(ctx, bare, { skipGithub: true })).toBe(1);
+    expect(ctx.err).toEqual([
+      `ak learn setup seed: registry warning: ${bare} is a bare repository and cannot be registered`,
+    ]);
+    expect(ctx.out).toEqual([]);
+    for (const loop of ["review", "memory", "skills"] as const)
+      expect(existsSync(loopDir(ctx.config, bare, loop))).toBe(false);
+    expect(readRegistry(ctx.config)).toEqual({});
   });
 
   test("the CLI requires --repo", () => {

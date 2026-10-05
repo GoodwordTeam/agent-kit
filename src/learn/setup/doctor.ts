@@ -1,6 +1,7 @@
 /**
- * `ak learn setup doctor` — report prerequisites, the scheduled judge's login,
- * the resolved environment and the last 24 hours of judge calls and spans.
+ * `ak learn setup doctor` — report prerequisites, registry hygiene, the
+ * scheduled judge's login, the resolved environment and the last 24 hours of
+ * judge calls and spans.
  * Reads only; changes nothing.
  */
 import { existsSync } from "node:fs";
@@ -8,6 +9,7 @@ import { isAbsolute } from "node:path";
 import { DEFAULT_JUDGE } from "../core/config.ts";
 import type { LearnContext } from "../core/context.ts";
 import { judgeTraceSummary } from "../core/judge.ts";
+import { readRegistry, registryHygiene } from "../memory/registry.ts";
 import { schedulerKind, unitEnvironment } from "./schedule.ts";
 import { codexHome, memDir, memWorkerScript, type SetupDeps } from "./wire.ts";
 import { runsLine } from "../stats.ts";
@@ -66,6 +68,7 @@ function scheduledJudgeAuth(ctx: LearnContext, deps: SetupDeps): Check | null {
 export function doctorChecks(ctx: LearnContext, deps: SetupDeps): Check[] {
   const gh = deps.which("gh");
   const auth = scheduledJudgeAuth(ctx, deps);
+  const registryWarnings = registryHygiene(readRegistry(ctx.config)).warnings;
   return [
     { name: "bun", ok: deps.which("bun") !== null, hard: true, why: "runs `ak learn` from hooks and the scheduler" },
     { name: "git", ok: deps.which("git") !== null, hard: true, why: "every ledger is a git repository" },
@@ -92,6 +95,12 @@ export function doctorChecks(ctx: LearnContext, deps: SetupDeps): Check[] {
       ok: gh !== null && deps.run([gh, "auth", "status"]).code === 0,
       hard: false,
       why: "PR review threads for the review loop",
+    },
+    {
+      name: "registry hygiene",
+      ok: registryWarnings.length === 0,
+      hard: false,
+      why: registryWarnings.length === 0 ? "one eligible root per claude-mem project" : registryWarnings.join("; "),
     },
     ...(auth === null ? [] : [auth]),
   ];
