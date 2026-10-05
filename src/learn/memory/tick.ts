@@ -9,12 +9,12 @@
  * the privacy prompt and ignores every timeout. Git runs only in the ledgers,
  * which live under the config directory.
  */
-import { appendFileSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { LearnContext } from "../core/context.ts";
 import { acquireLock, Ledger } from "../core/ledger.ts";
 import { tickLogPath } from "../core/paths.ts";
-import { nowIso, nowMs, todayLocal } from "../core/store.ts";
+import { appendGated, nowIso, nowMs, todayLocal } from "../core/store.ts";
 import { loadEvents } from "../review/events.ts";
 import { deferredObservationIds } from "../review/ingest.ts";
 import { reviewLedger, reviewLedgerDir } from "../review/ledger.ts";
@@ -192,7 +192,7 @@ function tickLog(ctx: LearnContext, line: string): void {
   if (ctx.config.dryRun) return;
   const path = tickLogPath(ctx.config);
   mkdirSync(dirname(path), { recursive: true });
-  appendFileSync(path, `${line}\n`);
+  appendGated(ctx.config.runtimeDir, path, `${line}\n`);
 }
 
 /**
