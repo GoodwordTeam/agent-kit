@@ -302,17 +302,22 @@ describe("session-start for every host", () => {
     expect(existsSync(join(ctx.config.runtimeDir, "delivered"))).toBe(false);
   });
 
-  test("a carrier call's span records what it showed: the block once, then nothing", () => {
+  test("a carrier session leaves one span, for the call that delivered: repeat and --arm calls leave none", () => {
     for (const [host, stdin] of [
       ["kimi", "kimi/user-prompt-submit.stdin.json"],
       ["grok", "grok/post-tool-use.stdin.json"],
     ] as const) {
       const { ctx, root } = seeded();
+      const rows = () => spanRows(ctx.config).filter((row) => row.name === "hook.session-start");
       hook(ctx, ["--host", host], payload(stdin, root));
       hook(ctx, ["--host", host], payload(stdin, root));
-      const rows = spanRows(ctx.config).filter((row) => row.name === "hook.session-start");
-      expect(rows.map((row) => row.status)).toEqual(["ok", "nothing"]);
-      expect(rows.map((row) => row.attrs.shown)).toEqual([["rp-001", "ls-001"], []]);
+      hook(ctx, ["--host", host], payload(stdin, root));
+      expect(rows().map((row) => row.status)).toEqual(["ok"]);
+      expect(rows().map((row) => row.attrs.shown)).toEqual([["rp-001", "ls-001"]]);
+      hook(ctx, ["--host", host, "--arm"], payload(stdin, root));
+      expect(rows()).toHaveLength(1);
+      hook(ctx, ["--host", host], payload(stdin, root));
+      expect(rows().map((row) => row.status)).toEqual(["ok", "ok"]);
     }
   });
 

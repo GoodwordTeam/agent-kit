@@ -51,15 +51,20 @@ function inScope(label: HookLabel, ctx: LearnContext): boolean {
   return repoAllowed(ctx.config, HOOK_ROOT[label](payloadCwd(payload, ctx.cwd)));
 }
 
-/** Runs `body` as the hook's span; a throw is reported on stderr and the hook still exits 0. */
-function guarded(label: HookLabel, ctx: LearnContext, body: (ctx: LearnContext) => void): number {
+/** Runs `body` when the session is in scope; a throw is reported on stderr and the hook still exits 0. */
+function reported(label: HookLabel, ctx: LearnContext, body: () => void): number {
   try {
     if (!inScope(label, ctx)) return 0;
-    span(ctx, `hook.${label}`, "hook", body);
+    body();
   } catch (error) {
     ctx.io.err(`ak learn ${label}: ${(error as Error).message}`);
   }
   return 0;
+}
+
+/** Runs `body` as the hook's span, reported as above. */
+function guarded(label: HookLabel, ctx: LearnContext, body: (ctx: LearnContext) => void): number {
+  return reported(label, ctx, () => span(ctx, `hook.${label}`, "hook", body));
 }
 
 /**
@@ -131,22 +136,24 @@ const CARRIERS: Record<
  * `session-start --host H`: print the block on the session's first carrier
  * call and nothing after it; with `--arm`, clear the mark instead. A payload
  * that names no session prints nothing, because a block that cannot be marked
- * delivered would be repeated on every call. Returns the block it printed,
- * empty when it printed nothing.
+ * delivered would be repeated on every call. Only the call that builds the
+ * block is a span: one that arms, or finds the mark, leaves no row.
  */
-function carrierHook(ctx: LearnContext, host: CarrierHost, payload: SessionPayload, arm: boolean): string {
+function carrierHook(ctx: LearnContext, host: CarrierHost, payload: SessionPayload, arm: boolean): void {
   const carrier = CARRIERS[host];
   const sessionId = carrier.sessionId(payload) ?? "";
-  if (sessionId === "") return "";
+  if (sessionId === "") return;
   if (arm) {
     rearm(ctx.config, host, sessionId);
-    return "";
+    return;
   }
-  if (delivered(ctx.config, host, sessionId)) return "";
-  const block = carrier.block(ctx).trimEnd();
-  if (!claim(ctx.config, host, sessionId) || block === "") return "";
-  ctx.io.out(carrier.render(block));
-  return block;
+  if (delivered(ctx.config, host, sessionId)) return;
+  span(ctx, "hook.session-start", "hook", (traced) => {
+    const block = carrier.block(traced).trimEnd();
+    const printed = claim(traced.config, host, sessionId) ? block : "";
+    if (printed !== "") traced.io.out(carrier.render(printed));
+    recordExposure(traced, printed);
+  });
 }
 
 function sessionStartHook(args: LearnArgs, ctx: LearnContext): void {
@@ -154,16 +161,18 @@ function sessionStartHook(args: LearnArgs, ctx: LearnContext): void {
   const session = { ...ctx, cwd: payloadCwd(parsePayload(ctx.stdin), ctx.cwd) };
   const host = flag(args, "host");
   if (isCarrierHost(host)) {
-    recordExposure(session, carrierHook(session, host, payload, args.flags.has("arm")));
+    carrierHook(session, host, payload, args.flags.has("arm"));
     return;
   }
   if (host !== undefined) {
     ctx.io.err(`ak learn session-start: --host is ${Object.keys(CARRIERS).join(" or ")}`);
     return;
   }
-  const block = sessionStartBlock(session);
-  if (block.trim() !== "") ctx.io.out(block.trimEnd());
-  recordExposure(session, block);
+  span(session, "hook.session-start", "hook", (traced) => {
+    const block = sessionStartBlock(traced);
+    if (block.trim() !== "") traced.io.out(block.trimEnd());
+    recordExposure(traced, block);
+  });
 }
 
 export const hookArea: LearnArea = {
@@ -172,7 +181,7 @@ export const hookArea: LearnArea = {
     "session-start": {
       usage:
         "hook session-start [--host grok|kimi [--arm]]  print the merged context block (guardrails, memory, lessons, roster); --host: once per session, --arm: allow it again",
-      run: (args, ctx) => guarded("session-start", ctx, (hook) => sessionStartHook(args, hook)),
+      run: (args, ctx) => reported("session-start", ctx, () => sessionStartHook(args, ctx)),
     },
     stop: {
       usage: "hook stop [--source codex]    debounced: detach the review pipeline for this project",
