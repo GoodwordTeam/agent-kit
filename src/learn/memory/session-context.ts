@@ -165,3 +165,18 @@ export function sessionStartBlock(ctx: LearnContext): string {
   if (roster.trim() !== "") parts.push(roster.trim());
   return parts.length > 0 ? `${parts.join("\n\n")}\n` : "";
 }
+
+/**
+ * The same block within a character ceiling, for a host that clips what a
+ * hook hands the model. The token cap is lowered by the overshoot, so memory
+ * gives way by the usual trim; text no cap can shrink is cut on a line.
+ */
+export function sessionStartBlockWithin(ctx: LearnContext, maxChars: number): string {
+  let cap = ctx.config.memoryTokens;
+  let block = sessionStartBlock(ctx);
+  while (block.length > maxChars && cap > 0) {
+    cap = Math.max(0, cap - Math.ceil((block.length - maxChars) / 4) - 1);
+    block = sessionStartBlock({ ...ctx, config: { ...ctx.config, memoryTokens: cap } });
+  }
+  return hardCut(block, Math.floor(maxChars / 4) - 1);
+}

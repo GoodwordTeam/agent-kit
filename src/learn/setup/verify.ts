@@ -18,10 +18,14 @@ import {
   codexHome,
   countHook,
   type HookDoc,
+  hookCommands,
+  hostHome,
+  hostHooks,
   MEM_MODE,
   memDir,
   ourHookCommands,
   type SetupDeps,
+  wiredCount,
 } from "./wire.ts";
 
 export interface VerifyResult {
@@ -74,6 +78,15 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
     ] as const) {
       const n = countHook(codex, event, verb);
       check(`codex ${event} hook`, n === 1, `${n} entries`);
+    }
+  }
+  // A host installed after the last wire shows up here as a failed check, which is the prompt to wire again.
+  const hooks = hostHooks(hookCommands(deps));
+  for (const host of ["droid", "grok", "kimi"] as const) {
+    if (!existsSync(hostHome(ctx, deps, host))) continue;
+    for (const spec of hooks[host]) {
+      const n = wiredCount(ctx, deps, host, spec);
+      check(`${host} ${spec.event} hook`, n === 1, `${n} entries`);
     }
   }
 
