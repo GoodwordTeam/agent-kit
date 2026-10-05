@@ -101,10 +101,9 @@ export function testContext(
   const rolesDir = stubRoles(join(base, "roles"));
   const env: NodeJS.ProcessEnv = {
     ...process.env,
-    // Blanked so a test run inside one of these hosts never resolves the developer's real host home or session.
+    // Blanked so a test run inside one of these hosts never resolves the developer's real host home.
     FACTORY_HOME_OVERRIDE: "",
     GROK_HOME: "",
-    GROK_SESSION_ID: "",
     KIMI_CODE_HOME: "",
     CLAUDE_CONFIG_DIR: join(base, "config"),
     AK_LEARN_MEM_DB: join(base, "no-claude-mem.db"),

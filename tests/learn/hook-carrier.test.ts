@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import Ajv from "ajv";
-import { existsSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runLearn } from "../../src/learn/cli.ts";
 import { parseLearnArgs } from "../../src/learn/core/context.ts";
@@ -17,6 +17,7 @@ import { ensureMemoryLedger, memoryDir, SECTIONS, writeLesson } from "../../src/
 import { readRegistry } from "../../src/learn/memory/registry.ts";
 import { sessionStartBlock, sessionStartBlockWithin } from "../../src/learn/memory/session-context.ts";
 import { reviewLedger } from "../../src/learn/review/ledger.ts";
+import { rosterSection } from "../../src/learn/skills/roster.ts";
 import { gitRepo, scratch, type TestContext, testContext } from "./helpers.ts";
 
 const CLI = join(import.meta.dir, "..", "..", "src", "cli.ts");
@@ -222,18 +223,44 @@ describe("session-start --host grok", () => {
     );
     const small = sessionStartBlockWithin(ctx, 600);
     expect(small.length).toBeLessThanOrEqual(600);
-    expect(small).toEndWith("(truncated at the memory token cap)\n");
+    expect(small).toContain("- [rp-0] ");
+    expect(small).toEndWith(
+      "(truncated at the memory token cap)\n\n(skill roster shortened to fit this host's context limit)\n",
+    );
     expect(sessionStartBlockWithin(ctx, 1_000_000)).toBe(sessionStartBlock(ctx));
   });
 
-  test("the session falls back to GROK_SESSION_ID when the payload names none", () => {
-    const { ctx, root } = seeded(3, { GROK_SESSION_ID: "from-env" });
-    const stdin = JSON.stringify({ cwd: root });
-    expect(hook(ctx, GROK, stdin)).toHaveLength(1);
-    expect(hook(ctx, GROK, stdin)).toEqual([]);
-    expect(existsSync(markPath(ctx.config, "grok", "from-env"))).toBe(true);
-    const bare = seeded();
-    expect(hook(bare.ctx, GROK, JSON.stringify({ cwd: bare.root }))).toEqual([]);
+  test("a roster longer than Grok's clip is the part cut: guardrails, memory and lessons arrive whole", () => {
+    const { ctx, root } = seeded();
+    const before = sessionStartBlock(ctx);
+    const ahead = before.slice(0, before.indexOf(rosterSection(ctx, root).trim()));
+    const skills = join(ctx.config.configDir, "skills");
+    for (let i = 0; i < 150; i += 1) {
+      const name = `local-skill-${String(i).padStart(3, "0")}`;
+      mkdirSync(join(skills, name), { recursive: true });
+      writeFileSync(
+        join(skills, name, "SKILL.md"),
+        `---\nname: ${name}\ndescription: ${"does one narrow thing ".repeat(6)}\n---\n`,
+      );
+    }
+    expect(rosterSection(ctx, root).length).toBeGreaterThanOrEqual(11_955);
+    const fitted = carried(hook(ctx, GROK, payload("grok/post-tool-use.stdin.json", root)));
+    expect(fitted.length).toBeLessThanOrEqual(GROK_CONTEXT_CHARS);
+    expect(fitted.length).toBeGreaterThan(GROK_CONTEXT_CHARS * 0.95);
+    expect(ahead).toContain("- [rp-001] check the diff against the PR body");
+    expect(ahead).toContain("- never hand-edit dist/ [ls-001]");
+    expect(ahead).toContain("- shipped change number 2 of the refund flow [obs:102]");
+    expect(fitted).toStartWith(ahead);
+    expect(fitted).not.toContain("(truncated at the memory token cap)");
+    expect(fitted).toContain("- local-skill-000:");
+    expect(fitted).toEndWith("(skill roster shortened to fit this host's context limit)");
+    expect(fitted.split("\n").at(-2)).toMatch(/^- local-skill-\d{3}: .*\S$/);
+  });
+
+  test("a session whose payload names no id receives nothing", () => {
+    const { ctx, root } = seeded();
+    expect(hook(ctx, GROK, JSON.stringify({ cwd: root }))).toEqual([]);
+    expect(marks(ctx, "grok")).toEqual([]);
   });
 
   test("Grok's and Kimi's marks are separate", () => {

@@ -130,8 +130,15 @@ launch flag `--rules`, which appends its text to the session's system prompt. A 
 cannot set it, so `wire` does not use it; a launcher that passes the output of
 `ak learn hook session-start` through that flag delivers the block at session start, and on a
 wired machine the same session then receives it a second time with its first tool result. Grok
-clips `additionalContext` at 10,000 characters, so `sessionStartBlockWithin` lowers the memory cap
-until the whole block fits rather than letting the host cut it mid-line. Grok also loads Claude
+clips `additionalContext` at 10,000 characters, so `sessionStartBlockWithin` fits the block itself
+rather than letting the host cut it mid-line. Guardrails come first and are kept whole, memory and
+lessons keep their normal cap, and the skill roster takes whatever room is left: it is cut on a line
+and ends with a one-line note that it was shortened. The memory cap is lowered only when guardrails,
+memory and lessons overshoot the clip without the roster. The carrier is wired on `PostToolUse` with
+no matcher, because the first tool call of a session can be any tool. The cost is one CLI start after
+every tool call in every Grok session on the machine, which after the first finds the delivery mark
+and prints nothing. A subagent that runs `PostToolUse` under its own `sessionId` receives the full
+block once, and since no `SessionStart` runs for it, nothing re-arms its mark. Grok also loads Claude
 Code's hook entries by default (the compatibility rows of its hook-sources table), so on a machine
 wired for both, a Grok session runs Claude Code's two hooks as well: nothing in Grok reads what
 that `session-start` prints, and that `stop` queues the same debounced ingestion a Claude Code

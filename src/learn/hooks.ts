@@ -109,13 +109,13 @@ export const GROK_CONTEXT_CHARS = 10_000;
 const CARRIERS: Record<
   CarrierHost,
   {
-    sessionId: (payload: SessionPayload, env: NodeJS.ProcessEnv) => string | undefined;
+    sessionId: (payload: SessionPayload) => string | undefined;
     block: (ctx: LearnContext) => string;
     render: (block: string) => string;
   }
 > = {
   grok: {
-    sessionId: (payload, env) => payload.sessionId ?? env.GROK_SESSION_ID,
+    sessionId: (payload) => payload.sessionId,
     block: (ctx) => sessionStartBlockWithin(ctx, GROK_CONTEXT_CHARS),
     render: (block) =>
       JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: block } }),
@@ -136,7 +136,7 @@ const CARRIERS: Record<
  */
 function carrierHook(ctx: LearnContext, host: CarrierHost, payload: SessionPayload, arm: boolean): string {
   const carrier = CARRIERS[host];
-  const sessionId = carrier.sessionId(payload, ctx.env) ?? "";
+  const sessionId = carrier.sessionId(payload) ?? "";
   if (sessionId === "") return "";
   if (arm) {
     rearm(ctx.config, host, sessionId);
