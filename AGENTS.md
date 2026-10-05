@@ -254,6 +254,16 @@ fixtures, donor material, recorded eval evidence and the eval inputs that receip
 `ignorePatterns`). `tools/oxlint/anti-slop/` is vendored upstream code: update it from upstream
 as its `UPSTREAM.md` describes, and never edit it in place.
 
+## Token budget
+
+`tests/token-budget.test.ts` pins the size of every fixed text agent-kit hands an agent, in bytes
+and in chars/4 estimated tokens: this file, every file the bundle ships under `skills/` and
+`references/`, role prompts, the learning hook's session-start block, the judge prompts and the
+Firstmate brief texts. `tools/budget/surfaces.ts` lists them, and new agent-facing text belongs
+there. Any change in size fails `bun test`, naming the file and the delta. `bun run
+budget:baseline` lowers a pin after a shrink. Growth also needs `-- --allow-growth`, and the
+`tools/budget/baseline.json` diff is where review sees it.
+
 ## Receipts name their instrument
 
 A receipt that reports a check without naming what it ran the check *with* is not reproducible.
