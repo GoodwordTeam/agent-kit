@@ -17,6 +17,7 @@ import { codex, codexThreadStart, runCodexAppServer } from "./evals/subjects/cod
 import { grok } from "./evals/subjects/grok.ts";
 import { rewriteAssignmentReadChain } from "./evals/subjects/grok-mediator.ts";
 import { privateHome } from "./evals/subjects/home.ts";
+import { kimi } from "./evals/subjects/kimi.ts";
 import { adapterFor, BUNDLE_FOR, runSubject, withoutParentSession } from "./evals/subjects/index.ts";
 import { readsOf, unwrap, words } from "./evals/subjects/shell.ts";
 import type { SessionRequest, SubjectAdapter, TokenUsage, ToolEvent } from "./evals/subjects/types.ts";
@@ -602,6 +603,60 @@ describe("grok", () => {
   });
 });
 
+describe("kimi", () => {
+  test("argv binds one text-only prompt and parser returns the plain reply", () => {
+    expect(kimi.command(req, "bound-d")).toEqual([
+      "kimi",
+      "--prompt",
+      "Load the greet skill.",
+      "--output-format",
+      "text",
+      "--plan",
+      "--model",
+      "bound-d",
+    ]);
+    expect(kimi.parse('  {"verdict":"PASS","reason":"meets the criterion"}  \n')).toEqual({
+      events: [{ kind: "message", text: '{"verdict":"PASS","reason":"meets the criterion"}' }],
+      reply: '{"verdict":"PASS","reason":"meets the criterion"}',
+    });
+    expect(kimi.requestIds).toBe(false);
+    expect(kimi.injection).toBe("prompt-prefix");
+  });
+
+  test("a session runs read-only against an empty skills directory that is removed afterwards", async () => {
+    const bin = join(scratch, "kimi-bin");
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(
+      join(bin, "kimi"),
+      '#!/bin/sh\nfor arg in "$@"; do printf \'%s\\n\' "$arg"; done\n' +
+        'while [ "$#" -gt 0 ]; do [ "$1" = "--skills-dir" ] && dir="$2"; shift; done\n' +
+        "printf 'entries=%s\\n' \"$(ls -A \"$dir\" | wc -l | tr -d ' ')\"\n",
+      { mode: 0o755 },
+    );
+    const result = await runSubject(kimi, "reviewer-d", "bound-d", {
+      ...req,
+      cwd: scratch,
+      env: { PATH: `${bin}:${process.env.PATH ?? ""}` },
+      maxTurns: 1,
+    });
+    const lines = result.reply.split("\n");
+    const skills = lines[lines.indexOf("--skills-dir") + 1] ?? "";
+    expect(lines.slice(0, lines.indexOf("--skills-dir"))).toEqual([
+      "--prompt",
+      "Load the greet skill.",
+      "--output-format",
+      "text",
+      "--plan",
+      "--model",
+      "bound-d",
+    ]);
+    expect(lines.slice(lines.indexOf("--skills-dir") + 2)).toEqual(["entries=0"]);
+    expect(isAbsolute(skills)).toBe(true);
+    expect(existsSync(skills)).toBe(false);
+    expect(result).toMatchObject({ host: "kimi", exitCode: 0, timedOut: false });
+  });
+});
+
 describe("shell reads", () => {
   test("unwraps login shells and finds printed files across pipelines, skipping options, scripts and output redirects", () => {
     expect(unwrap("/bin/zsh -lc 'cat a b'")).toBe("cat a b");
@@ -849,7 +904,7 @@ describe("isolation", () => {
     ).toEqual({ ANTHROPIC_API_KEY: "k", PATH: "/bin" });
     const auth = { CLAUDE_CODE_OAUTH_TOKEN: "t", CLAUDE_CODE_USE_BEDROCK: "1", CLAUDE_CODE_USE_VERTEX: "1" };
     expect(withoutParentSession({ ...auth, CLAUDE_CODE_SSE_PORT: "1" })).toEqual(auth);
-    expect(BUNDLE_FOR).toEqual({ claude: "claude-code", codex: "codex", grok: "claude-code" });
+    expect(BUNDLE_FOR).toEqual({ claude: "claude-code", codex: "codex", grok: "claude-code", kimi: "claude-code" });
   });
 
   test("a refreshed credential is written back only while the caller's copy is unchanged", () => {
@@ -897,6 +952,7 @@ describe("runSubject", () => {
     expect(adapterFor("claude").host).toBe("claude");
     expect(adapterFor("codex").host).toBe("codex");
     expect(adapterFor("grok").host).toBe("grok");
+    expect(adapterFor("kimi").host).toBe("kimi");
   });
 
   test("a price table derives cost only for a matching bound Codex session", async () => {
