@@ -11,6 +11,7 @@ import { join } from "node:path";
 import { runLearn } from "../../src/learn/cli.ts";
 import { parseLearnArgs } from "../../src/learn/core/context.ts";
 import { run } from "../../src/learn/core/proc.ts";
+import { spanRows } from "../../src/learn/core/trace.ts";
 import { GROK_CONTEXT_CHARS, hookArea } from "../../src/learn/hooks.ts";
 import { claim, MARK_MAX_AGE_MS, markPath } from "../../src/learn/memory/delivery.ts";
 import { ensureMemoryLedger, memoryDir, SECTIONS, writeLesson } from "../../src/learn/memory/ledger.ts";
@@ -284,6 +285,20 @@ describe("session-start for every host", () => {
     expect(hook(ctx, [], stdin)).toEqual([sessionStartBlock(ctx).trimEnd()]);
     expect(hook(ctx, [], stdin)).toEqual([sessionStartBlock(ctx).trimEnd()]);
     expect(existsSync(join(ctx.config.runtimeDir, "delivered"))).toBe(false);
+  });
+
+  test("a carrier call's span records what it showed: the block once, then nothing", () => {
+    for (const [host, stdin] of [
+      ["kimi", "kimi/user-prompt-submit.stdin.json"],
+      ["grok", "grok/post-tool-use.stdin.json"],
+    ] as const) {
+      const { ctx, root } = seeded();
+      hook(ctx, ["--host", host], payload(stdin, root));
+      hook(ctx, ["--host", host], payload(stdin, root));
+      const rows = spanRows(ctx.config).filter((row) => row.name === "hook.session-start");
+      expect(rows.map((row) => row.status)).toEqual(["ok", "nothing"]);
+      expect(rows.map((row) => row.attrs.shown)).toEqual([["rp-001", "ls-001"], []]);
+    }
   });
 
   test("a session in a linked worktree reads and registers the main repository, on every host's path", () => {
