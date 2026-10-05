@@ -203,10 +203,10 @@ describe("setup wire: Droid", () => {
   });
 
   test("an event whose entries cannot be read is refused by name, in every file shape, and left as it was", () => {
-    const entries = '[{"matcher": null, "hooks": [{"type": "command", "command": "echo mine"}]}]';
+    const unreadable = '[{"matcher": null, "hooks": [{"type": "command", "command": "echo mine"}]}]';
     for (const [host, file, body] of [
-      ["droid", join(".factory", "hooks.json"), `{"SessionStart": ${entries}}`],
-      ["droid", join(".factory", "settings.json"), `{"hooks": {"SessionStart": ${entries}}}`],
+      ["droid", join(".factory", "hooks.json"), `{"SessionStart": ${unreadable}}`],
+      ["droid", join(".factory", "settings.json"), `{"hooks": {"SessionStart": ${unreadable}}}`],
       ["codex", join(".codex", "hooks.json"), `{"hooks": {"SessionStart": ["echo mine"]}}`],
       ["claude", "settings.json", `{"hooks": {"Stop": {"hooks": []}}}`],
     ] as const) {

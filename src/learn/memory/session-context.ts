@@ -192,10 +192,13 @@ export function sessionStartBlockWithin(ctx: LearnContext, maxChars: number): st
   const roster = `${rosterSection(ctx, root).trim()}\n`;
   const room = maxChars - ROSTER_SHORTENED.length - 1;
   let cap = ctx.config.memoryTokens;
-  let body = root === null ? "" : joined(blockBody(ctx, root, cap));
-  while (root !== null && body.length > room && cap > 0) {
-    cap = Math.max(0, cap - Math.ceil((body.length - room) / 4) - 1);
+  let body = "";
+  if (root !== null) {
     body = joined(blockBody(ctx, root, cap));
+    while (body.length > room && cap > 0) {
+      cap = Math.max(0, cap - Math.ceil((body.length - room) / 4) - 1);
+      body = joined(blockBody(ctx, root, cap));
+    }
   }
   body = hardCut(body, Math.floor(room / 4) - 1);
   const head = roster.slice(0, Math.max(0, room - body.length));
