@@ -181,7 +181,7 @@ export function sessionStartBlock(ctx: LearnContext): string {
 /**
  * The same block within a character ceiling, for a host that clips what a
  * hook hands the model. The roster gives way first: it gets the room the rest
- * leaves, is cut on a line and says so. Only when the rest alone overshoots
+ * leaves, and one that is cut is cut on a line and says so. Only when the rest alone overshoots
  * is the memory cap lowered by that overshoot, so memory gives way by the
  * usual trim; text no cap can shrink is cut on a line.
  */
@@ -189,8 +189,8 @@ export function sessionStartBlockWithin(ctx: LearnContext, maxChars: number): st
   const whole = sessionStartBlock(ctx);
   if (whole.length <= maxChars) return whole;
   const root = sessionRoot(ctx.cwd);
-  const roster = `${rosterSection(ctx, root).trim()}\n`;
-  const room = maxChars - ROSTER_SHORTENED.length - 1;
+  const roster = rosterSection(ctx, root).trim();
+  const room = roster === "" ? maxChars : maxChars - ROSTER_SHORTENED.length - 1;
   let cap = ctx.config.memoryTokens;
   let body = "";
   if (root !== null) {
@@ -201,8 +201,10 @@ export function sessionStartBlockWithin(ctx: LearnContext, maxChars: number): st
     }
   }
   body = hardCut(body, Math.floor(room / 4) - 1);
-  const head = roster.slice(0, Math.max(0, room - body.length));
+  if (roster === "") return body;
+  const section = `${roster}\n`;
+  const head = section.slice(0, Math.max(0, room - body.length));
   const lines = head.slice(0, head.lastIndexOf("\n") + 1);
-  const kept = lines.includes("\n- ") ? lines : "";
-  return `${body}${body === "" ? "" : "\n"}${kept}${ROSTER_SHORTENED}`;
+  const kept = lines === section || lines.includes("\n- ") ? lines : "";
+  return `${body}${body === "" ? "" : "\n"}${kept}${kept === section ? "" : ROSTER_SHORTENED}`;
 }

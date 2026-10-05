@@ -216,6 +216,21 @@ describe("session-start --host grok", () => {
     expect(fitted).toContain("memory: reflected");
   });
 
+  test("a roster that fits whole once memory gave way is not called shortened", () => {
+    const { ctx, root } = seeded(3, { AK_LEARN_MEMORY_TOKENS: "6000" });
+    const ledger = ensureMemoryLedger(memoryDir(ctx.config, root));
+    writeFileSync(
+      ledger.path("memory.md"),
+      [SECTIONS[0], "- the api moved to v2 [obs:11]", SECTIONS[5], `- ${"long ".repeat(2000)}[obs:100]`, ""].join("\n"),
+    );
+    expect(sessionStartBlock(ctx).length).toBeGreaterThan(GROK_CONTEXT_CHARS);
+    const fitted = carried(hook(ctx, GROK, payload("grok/post-tool-use.stdin.json", root)));
+    expect(fitted).toContain("- the api moved to v2 [obs:11]");
+    expect(fitted).not.toContain("long long");
+    expect(fitted).toEndWith(rosterSection(ctx, root).trim());
+    expect(fitted).not.toContain("roster shortened");
+  });
+
   test("text no cap can shrink is cut on a line under the clip", () => {
     const { ctx, root } = seeded();
     writeFileSync(
