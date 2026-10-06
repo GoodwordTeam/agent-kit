@@ -15,13 +15,18 @@ import { join } from "node:path";
 import type { LearnArgs, LearnContext } from "../core/context.ts";
 import { flag } from "../core/context.ts";
 import { mainRepoRoot } from "../core/paths.ts";
-import { PACKAGE_ROOT } from "../core/roles.ts";
+import { AK_ENTRY } from "../core/roles.ts";
 import { nowIso } from "../core/store.ts";
 import { appendCapped, carrierOf } from "../core/trace.ts";
 import type { HookPayload } from "../hooks.ts";
 import { appendEvents } from "./events.ts";
 import { correctionEvent, memProject } from "./ingest.ts";
 import { reviewLedger, reviewLedgerDir } from "./ledger.ts";
+
+/** The session's working directory: the payload's when it names one, else the process's. */
+export function payloadCwd(payload: HookPayload, fallback: string): string {
+  return typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : fallback;
+}
 
 export const DEBOUNCE_MS = 10 * 60 * 1000;
 export const LAST_RUN_FILE = "raw/.last_run";
@@ -64,7 +69,7 @@ export function pipelineCommand(
   cwd: string,
   source: string,
   logFile: string,
-  ak: readonly string[] = [process.execPath, join(PACKAGE_ROOT, "src", "cli.ts")],
+  ak: readonly string[] = [process.execPath, AK_ENTRY],
 ): string[] {
   const cli = ak.map(shellQuote).join(" ");
   const review = `${cli} 'learn' 'review' 'run' '--repo' "$1" '--cwd' "$4" '--source' "$2" >> "$3" 2>&1`;
@@ -86,7 +91,7 @@ export function stopHook(
   args: LearnArgs,
   spawner: Spawner = detachSpawner,
 ): void {
-  const cwd = typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : ctx.cwd;
+  const cwd = payloadCwd(payload, ctx.cwd);
   ctx.span?.status("skipped");
   if (cwd.includes("/plugins/cache/") || payload.stop_hook_active === true) return;
   const root = mainRepoRoot(cwd);
@@ -299,7 +304,10 @@ export function detectPatterns(text: string): Detection {
   return { type: "auto", patterns: names.join(" "), confidence, sentiment: "correction", decayDays };
 }
 
-/** Prompt hook. Detection runs first, so a prompt that is not a correction costs no git call and no write. */
+/**
+ * Prompt hook. Detection runs first, so a prompt that is not a correction costs no git call and no
+ * write. Under a repo scope the hook entry resolves the root before this runs, one git call a prompt.
+ */
 export function promptHook(ctx: LearnContext, payload: HookPayload, args: LearnArgs): void {
   const raw =
     typeof payload.prompt === "string"
@@ -315,7 +323,7 @@ export function promptHook(ctx: LearnContext, payload: HookPayload, args: LearnA
   const detection = detectPatterns(prompt);
   ctx.span?.attr("detection", detection.type ?? "none");
   if (detection.type === null || detection.sentiment !== "correction") return;
-  const cwd = typeof payload.cwd === "string" && payload.cwd !== "" ? payload.cwd : ctx.cwd;
+  const cwd = payloadCwd(payload, ctx.cwd);
   if (cwd.includes("/plugins/cache/")) return;
   const root = mainRepoRoot(cwd);
   if (root === null) return;
