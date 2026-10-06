@@ -22,6 +22,7 @@ import {
   memDir,
   memPreviousPath,
   openHookFile,
+  ourHookVerb,
   readJsonObject,
   type SetupDeps,
   writeJsonWithBackup,
@@ -107,7 +108,11 @@ export function uninstall(ctx: LearnContext, deps: SetupDeps, options: { purge?:
     if (!existsSync(file.path)) continue;
     const opened = openHookFile(file);
     if ("refuse" in opened) {
-      ctx.io.err(opened.refuse);
+      const ours = readFileSync(file.path, "utf8")
+        .split("\n")
+        .some((line) => ourHookVerb(line) !== null);
+      if (ours) ctx.io.err(opened.refuse);
+      else ctx.io.out(`${file.path}: cannot be read and names no agent-kit hook; left as it is`);
       continue;
     }
     const removed = dropHooks(opened.doc);

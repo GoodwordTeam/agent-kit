@@ -444,7 +444,7 @@ export function openHookFile(file: HookFile): OpenHookFile | { refuse: string } 
   return { doc, unreadable, contents: () => (file.bare ? merged() : { ...raw, hooks: merged() }) };
 }
 
-/** One part of a wire: the reason it cannot be done, or the write to make once every part is clear. */
+/** One part of a wire: the reason it cannot be done, or the write to make. */
 type Plan = { refuse: string } | { apply: () => void };
 
 function hookFilePlan(ctx: LearnContext, file: HookFile, specs: readonly HookSpec[]): Plan {
@@ -514,7 +514,12 @@ function kimiPlan(ctx: LearnContext, path: string, specs: readonly HookSpec[]): 
   const after = withHookBlock(before, block);
   const carried =
     after !== null && specs.every((spec) => countTomlHook(after, spec.event, ourHookVerb(spec.command) ?? "") >= 1);
-  if (after === null || !carried || assignsHooksKey(before)) {
+  if (assignsHooksKey(before)) {
+    return {
+      refuse: `${path} assigns \`hooks\` as a key, which no [[hooks]] table can follow; declare its hooks as [[hooks]] tables, nothing written`,
+    };
+  }
+  if (after === null || !carried) {
     return { refuse: `${path} cannot take the agent-kit [[hooks]] block as it stands; nothing written` };
   }
   return {
@@ -523,6 +528,19 @@ function kimiPlan(ctx: LearnContext, path: string, specs: readonly HookSpec[]): 
       ctx.io.out(after === before ? `${path}: already wired` : `${path}: hook block written`);
     },
   };
+}
+
+function hostPlan(ctx: LearnContext, deps: SetupDeps, host: WireHost): Plan {
+  const specs = hostHooks(hookCommands(deps))[host];
+  return host === "kimi"
+    ? kimiPlan(ctx, kimiConfigPath(ctx, deps), specs)
+    : hookFilePlan(ctx, hookFile(ctx, deps, host), specs);
+}
+
+/** Why `wire` leaves a host's configuration alone as it stands, or null when it can be wired. */
+export function wireRefusal(ctx: LearnContext, deps: SetupDeps, host: WireHost): string | null {
+  const plan = hostPlan(ctx, deps, host);
+  return "refuse" in plan ? plan.refuse : null;
 }
 
 /** Install the mode file and set the observation budget. Returns true when claude-mem's settings changed. */
@@ -610,33 +628,25 @@ export function wire(ctx: LearnContext, deps: SetupDeps, options: WireOptions = 
     );
     return 1;
   }
-  const hooks = hostHooks(hookCommands(deps));
-  const plans: Plan[] = [];
+  const plans: Array<[WireHost, Plan]> = [];
   for (const host of WIRE_HOSTS) {
     if (options.host !== undefined && options.host !== host) continue;
     const home = hostHome(ctx, deps, host);
     if (host !== "claude" && options.host !== host && !existsSync(home)) {
       const skipped = `${home} not present; skipping ${HOST_LABEL[host]} hooks (pass --host ${host} to create it)`;
-      plans.push({ apply: () => ctx.io.out(skipped) });
+      plans.push([host, { apply: () => ctx.io.out(skipped) }]);
       continue;
     }
-    plans.push(
-      host === "kimi"
-        ? kimiPlan(ctx, kimiConfigPath(ctx, deps), hooks.kimi)
-        : hookFilePlan(ctx, hookFile(ctx, deps, host), hooks[host]),
-    );
+    plans.push([host, hostPlan(ctx, deps, host)]);
   }
   if (options.noMem !== true && (options.host === undefined || options.host === "claude")) {
-    plans.push(memPlan(ctx, deps, options));
+    plans.push(["claude", memPlan(ctx, deps, options)]);
   }
-  // Every file is checked before any is written, so a refusal leaves the whole setup as it was.
-  const refusals = plans.flatMap((plan) => ("refuse" in plan ? [plan.refuse] : []));
-  if (refusals.length > 0) {
-    for (const refusal of refusals) ctx.io.err(refusal);
-    return 1;
+  // Every file is checked before any is written. A host with a refused file is skipped whole, and the others are wired.
+  const refused = new Set(plans.flatMap(([host, plan]) => ("refuse" in plan ? [host] : [])));
+  for (const [host, plan] of plans) {
+    if ("refuse" in plan) ctx.io.err(plan.refuse);
+    else if (!refused.has(host)) plan.apply();
   }
-  for (const plan of plans) {
-    if ("apply" in plan) plan.apply();
-  }
-  return 0;
+  return refused.size > 0 ? 1 : 0;
 }

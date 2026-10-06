@@ -14,12 +14,11 @@ export const BLOCK_BEGIN = "# >>> agent-kit learn hooks >>>";
 export const BLOCK_END = "# <<< agent-kit learn hooks <<<";
 const BLOCK_NOTE = "# Written by `ak learn setup wire`; `ak learn setup uninstall` removes this block.";
 
-/** One `[[hooks]]` table. These four keys are the whole schema: Kimi fails to load a file with any other. */
+/** One `[[hooks]]` table. Kimi fails to load a file whose table carries a key outside its schema. */
 export interface TomlHook {
   event: string;
   command: string;
   timeout: number;
-  matcher?: string;
 }
 
 /** A TOML basic string. JSON's escapes are a subset of TOML's. */
@@ -32,7 +31,6 @@ export function hookBlock(hooks: readonly TomlHook[]): string {
     [
       "[[hooks]]",
       `event = ${quoted(hook.event)}`,
-      ...(hook.matcher === undefined ? [] : [`matcher = ${quoted(hook.matcher)}`]),
       `command = ${quoted(hook.command)}`,
       `timeout = ${hook.timeout}`,
     ].join("\n"),

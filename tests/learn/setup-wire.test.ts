@@ -415,6 +415,13 @@ describe("claude-mem settings round trip", () => {
     writeFileSync(settings, "{ nope");
     expect(uninstall(ctx, deps)).toBe(0);
     expect(readFileSync(settings, "utf8")).toBe("{ nope");
+    expect(ctx.err).toEqual([]);
+    expect(ctx.out).toContain(`${settings}: cannot be read and names no agent-kit hook; left as it is`);
+
+    const wired = `{ "hooks": { "Stop": [{ "hooks": [{ "command": "/opt/bun /pkg/src/cli.ts learn hook stop" }] }] }, }`;
+    writeFileSync(settings, wired);
+    expect(uninstall(ctx, deps)).toBe(0);
+    expect(readFileSync(settings, "utf8")).toBe(wired);
     expect(ctx.err).toEqual([`${settings} is not valid JSON; fix it or remove it, nothing written`]);
   });
 });

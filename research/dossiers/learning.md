@@ -107,7 +107,7 @@ level and `settings.json` holds them under `hooks`, and where both declare an ev
 file's list replaces the other: the 0.233.0 binary merges the two as an object spread, standalone
 last. `droidHookFile` therefore writes to the file whose `SessionStart` Droid reads. Droid parses
 both as JSON with comments; this runtime reads strict JSON, so a file carrying a comment is refused
-with nothing written, since a merge that cannot see every hook cannot be trusted to keep them. Droid
+with nothing written to it, since a merge that cannot see every hook cannot be trusted to keep them. Droid
 also keeps bookkeeping keys of its own beside the events in `hooks`; `openHookFile` hands the merge
 event lists only and puts every other key back where it was.
 
@@ -118,7 +118,15 @@ receives a current block on its next prompt. The mark is a file under the runtim
 by a digest of the session id (`src/learn/memory/delivery.ts`). Kimi rejects a `[[hooks]]` table
 carrying any key beyond `event`, `matcher`, `command` and `timeout`, so the tables carry no marker
 of their own: the block is delimited by two comment lines, and `withHookBlock` replaces or removes
-exactly the lines between them. A file whose markers are not one ordered pair is refused.
+exactly the lines between them. A file whose markers are not one ordered pair is refused. So is one
+this runtime's TOML parser cannot read, which includes a valid file holding a date value, and one
+whose root table assigns `hooks` as a key, since TOML allows no `[[hooks]]` table after that.
+
+**A refused file stops its own host only.** `wire` checks every file before it writes any, prints
+each refusal with what to change, skips that host, wires the others and exits nonzero. `setup
+verify` reports the skipped host as `not wired:` with the same reason, and `setup uninstall` passes
+over a JSON file it cannot read unless a line of it names a hook of this runtime. Claude's hooks and
+the claude-mem settings count as one host.
 
 **Grok** gives a hook no way to speak before the model's first turn. The block arrives as
 `additionalContext` with the first tool result of a session, under the same once-per-session mark.

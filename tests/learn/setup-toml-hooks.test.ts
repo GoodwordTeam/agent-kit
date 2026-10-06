@@ -2,14 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { BLOCK_BEGIN, BLOCK_END, hookBlock, tomlHooks, withHookBlock } from "../../src/learn/setup/toml-hooks.ts";
 
 const HOOK = { event: "UserPromptSubmit", command: `"/opt/my bun" '/pkg/src/cli.ts' learn hook x`, timeout: 10 };
-const BLOCK = hookBlock([HOOK, { event: "PostCompact", command: "ak learn hook y", timeout: 5, matcher: "auto" }]);
+const BLOCK = hookBlock([HOOK, { event: "PostCompact", command: "ak learn hook y", timeout: 5 }]);
 
 describe("managed TOML hook block", () => {
   test("renders tables TOML reads back to the same values, quotes and all", () => {
     expect(BLOCK.startsWith(`${BLOCK_BEGIN}\n`)).toBe(true);
     expect(BLOCK.endsWith(`\n${BLOCK_END}`)).toBe(true);
     expect(Bun.TOML.parse(BLOCK)).toEqual({
-      hooks: [HOOK, { event: "PostCompact", matcher: "auto", command: "ak learn hook y", timeout: 5 }],
+      hooks: [HOOK, { event: "PostCompact", command: "ak learn hook y", timeout: 5 }],
     });
     expect(tomlHooks(BLOCK)?.map((hook) => hook.event)).toEqual(["UserPromptSubmit", "PostCompact"]);
   });

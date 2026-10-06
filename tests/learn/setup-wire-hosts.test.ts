@@ -62,6 +62,19 @@ function text(path: string): string {
   return readFileSync(path, "utf8");
 }
 
+/** Claude and Grok, the hosts beside the one whose file was refused, came out of the same `wire` wired. */
+function othersWired(ctx: TestContext, deps: SetupDeps): boolean {
+  const checks = verifyChecks(ctx, deps).filter((check) => /^(claude|grok) .* hook$/.test(check.label));
+  return checks.length === 5 && checks.every((check) => check.ok);
+}
+
+/** Verify's Droid, Grok and Kimi checks, one line each. */
+function hostChecks(ctx: TestContext, deps: SetupDeps): string[] {
+  return verifyChecks(ctx, deps)
+    .filter((check) => /^(droid|grok|kimi) /.test(check.label))
+    .map((check) => `${check.label}: ${check.ok ? "ok" : check.detail}`);
+}
+
 type Doc = { [key: string]: Json };
 const isDoc = new Ajv({ strict: false }).compile<Doc>({ type: "object" });
 
@@ -180,17 +193,24 @@ describe("setup wire: Droid", () => {
     expect(existsSync(join(deps.home, ".factory"))).toBe(false);
   });
 
-  test("a settings file with a comment in it may hold hooks this cannot see: refused, and nothing anywhere is written", () => {
+  test("a settings file with a comment in it may hold hooks this cannot see: Droid alone is skipped, and uninstall leaves the file in peace", () => {
     const deps = fakeDeps();
     const ctx = context(deps);
     const commented = '{\n  // my hooks\n  "hooks": {}\n}\n';
     const settings = put(join(deps.home, ".factory", "settings.json"), commented);
+    mkdirSync(join(deps.home, ".grok"));
+    const reason = `${settings} is not valid JSON; fix it or remove it, nothing written`;
     expect(wire(ctx, deps, {})).toBe(1);
-    expect(ctx.err).toEqual([`${settings} is not valid JSON; fix it or remove it, nothing written`]);
+    expect(ctx.err).toEqual([reason]);
     expect(text(settings)).toBe(commented);
     expect(readdirSync(join(deps.home, ".factory"))).toEqual(["settings.json"]);
-    expect(existsSync(ctx.config.configDir)).toBe(false);
-    expect(existsSync(join(deps.home, ".claude-mem"))).toBe(false);
+    expect(othersWired(ctx, deps)).toBe(true);
+    expect(hostChecks(ctx, deps)).toContain(`droid hooks: not wired: ${reason}`);
+
+    ctx.err.length = 0;
+    expect(uninstall(ctx, deps)).toBe(0);
+    expect(ctx.err).toEqual([]);
+    expect(text(settings)).toBe(commented);
   });
 
   test("a hooks key that is not an object is refused by name", () => {
@@ -360,18 +380,25 @@ describe("setup wire: Kimi", () => {
     expect(existsSync(join(deps.home, ".kimi-code"))).toBe(false);
   });
 
-  test("a config that is not valid TOML, or whose block lost a marker, is refused and nothing anywhere is written", () => {
-    for (const broken of ['name = = "x"\n', `a = 1\n${BLOCK_BEGIN}\n`, `${BLOCK_END}\n${BLOCK_BEGIN}\n`]) {
+  test("a config this runtime cannot read as TOML, or whose block lost a marker, is refused, and Kimi alone is skipped", () => {
+    for (const broken of [
+      'name = = "x"\n',
+      "released = 2024-01-01\n",
+      `a = 1\n${BLOCK_BEGIN}\n`,
+      `${BLOCK_END}\n${BLOCK_BEGIN}\n`,
+    ]) {
       const deps = fakeDeps();
       const ctx = context(deps);
       const config = put(join(deps.home, ".kimi-code", "config.toml"), broken);
+      mkdirSync(join(deps.home, ".grok"));
       expect(wire(ctx, deps, {})).toBe(1);
       expect(ctx.err).toHaveLength(1);
       expect(ctx.err[0]).toStartWith(`${config} `);
       expect(ctx.err[0]).toEndWith("nothing written");
       expect(text(config)).toBe(broken);
       expect(readdirSync(join(deps.home, ".kimi-code"))).toEqual(["config.toml"]);
-      expect(existsSync(ctx.config.configDir)).toBe(false);
+      expect(othersWired(ctx, deps)).toBe(true);
+      expect(hostChecks(ctx, deps)).toContain(`kimi hooks: not wired: ${ctx.err[0]}`);
     }
   });
 
@@ -384,10 +411,14 @@ describe("setup wire: Kimi", () => {
       const deps = fakeDeps();
       const ctx = context(deps);
       const config = put(join(deps.home, ".kimi-code", "config.toml"), closed);
-      expect(wire(ctx, deps, { host: "kimi" })).toBe(1);
-      expect(ctx.err).toEqual([`${config} cannot take the agent-kit [[hooks]] block as it stands; nothing written`]);
+      mkdirSync(join(deps.home, ".grok"));
+      const reason = `${config} assigns \`hooks\` as a key, which no [[hooks]] table can follow; declare its hooks as [[hooks]] tables, nothing written`;
+      expect(wire(ctx, deps, {})).toBe(1);
+      expect(ctx.err).toEqual([reason]);
       expect(text(config)).toBe(closed);
       expect(readdirSync(join(deps.home, ".kimi-code"))).toEqual(["config.toml"]);
+      expect(othersWired(ctx, deps)).toBe(true);
+      expect(hostChecks(ctx, deps)).toContain(`kimi hooks: not wired: ${reason}`);
     }
   });
 

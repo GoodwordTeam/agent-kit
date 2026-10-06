@@ -27,6 +27,7 @@ import {
   type SetupDeps,
   wiredCommands,
   wiredCount,
+  wireRefusal,
 } from "./wire.ts";
 
 export interface VerifyResult {
@@ -87,6 +88,11 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
   const hooks = hostHooks(hookCommands(deps));
   for (const host of ["droid", "grok", "kimi"] as const) {
     if (!existsSync(hostHome(ctx, deps, host))) continue;
+    const refusal = wireRefusal(ctx, deps, host);
+    if (refusal !== null) {
+      check(`${host} hooks`, false, `not wired: ${refusal}`);
+      continue;
+    }
     hookLines.push(...wiredCommands(ctx, deps, host));
     for (const spec of hooks[host]) {
       const n = wiredCount(ctx, deps, host, spec);
