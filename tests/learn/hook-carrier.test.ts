@@ -167,12 +167,12 @@ describe("session-start --host kimi", () => {
     expect(ctx.err).toEqual([]);
   });
 
-  test("outside any repository there is nothing to say, and the session is still settled", () => {
-    const ctx = testContext({ env: { AK_LEARN_ROSTER: "0" } });
+  test("outside any repository the skill roster alone is printed once, and the session is still settled", () => {
+    const ctx = testContext();
     const stdin = payload("kimi/user-prompt-submit.stdin.json", scratch());
     const block = sessionStartBlock({ ...ctx, cwd: scratch() });
-    const printed = hook(ctx, KIMI, stdin);
-    expect(printed).toEqual(block.trim() === "" ? [] : [block.trimEnd()]);
+    expect(block).toStartWith("## Skill roster");
+    expect(hook(ctx, KIMI, stdin)).toEqual([block.trimEnd()]);
     expect(hook(ctx, KIMI, stdin)).toEqual([]);
   });
 

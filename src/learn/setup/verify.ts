@@ -25,6 +25,7 @@ import {
   memDir,
   ourHookCommands,
   type SetupDeps,
+  wiredCommands,
   wiredCount,
 } from "./wire.ts";
 
@@ -44,8 +45,8 @@ function wiredAkPath(argv: readonly string[]): string[] {
 }
 
 /** Every `ak` path the wiring names, in its hooks and its unit. A plugin update moves the bundle and leaves them behind. */
-function wiredAkPaths(docs: readonly HookDoc[], unit: string | null): string[] {
-  const commands = docs.flatMap((doc) => ourHookCommands(doc)).map((command) => splitCommand(command));
+function wiredAkPaths(hookLines: readonly string[], unit: string | null): string[] {
+  const commands = hookLines.map((command) => splitCommand(command));
   if (unit !== null && existsSync(unit)) {
     try {
       commands.push(unitArgv(readFileSync(unit, "utf8")));
@@ -68,9 +69,11 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
     const n = countHook(claude, event, verb);
     check(`claude ${event} hook`, n === 1, `${n} entries`);
   }
+  const hookLines = ourHookCommands(claude);
   const codexHooks = join(codexHome(ctx, deps), "hooks.json");
   if (existsSync(codexHooks)) {
     const codex = readJson<HookDoc>(codexHooks, {});
+    hookLines.push(...ourHookCommands(codex));
     for (const [event, verb] of [
       ["SessionStart", "session-start"],
       ["UserPromptSubmit", "prompt"],
@@ -84,6 +87,7 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
   const hooks = hostHooks(hookCommands(deps));
   for (const host of ["droid", "grok", "kimi"] as const) {
     if (!existsSync(hostHome(ctx, deps, host))) continue;
+    hookLines.push(...wiredCommands(ctx, deps, host));
     for (const spec of hooks[host]) {
       const n = wiredCount(ctx, deps, host, spec);
       check(`${host} ${spec.event} hook`, n === 1, `${n} entries`);
@@ -103,7 +107,7 @@ export function verifyChecks(ctx: LearnContext, deps: SetupDeps, repo?: string):
 
   const kind = schedulerKind(deps);
   const paths = unitPaths(deps, kind);
-  const entries = wiredAkPaths([claude, readJson<HookDoc>(codexHooks, {})], paths?.unit ?? null);
+  const entries = wiredAkPaths(hookLines, paths?.unit ?? null);
   if (entries.length > 0) {
     const missing = entries.filter((entry) => !existsSync(entry));
     check(

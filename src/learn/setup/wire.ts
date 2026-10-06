@@ -484,6 +484,19 @@ export function wiredCount(ctx: LearnContext, deps: SetupDeps, host: WireHost, s
   return "refuse" in opened ? 0 : countHook(opened.doc, spec.event, verb);
 }
 
+/** The command lines of every hook of ours in a host's configuration; none when the file cannot be read. */
+export function wiredCommands(ctx: LearnContext, deps: SetupDeps, host: WireHost): string[] {
+  if (host === "kimi") {
+    const path = kimiConfigPath(ctx, deps);
+    const tables = existsSync(path) ? (tomlHooks(readFileSync(path, "utf8")) ?? []) : [];
+    return tables.flatMap((hook) =>
+      hook.command !== undefined && ourHookVerb(hook.command) !== null ? [hook.command] : [],
+    );
+  }
+  const opened = openHookFile(hookFile(ctx, deps, host));
+  return "refuse" in opened ? [] : ourHookCommands(opened.doc);
+}
+
 /** Write text, first copying the previous file to `<path>.bak` when no backup exists yet, as `writeJsonWithBackup` does. */
 export function writeTextWithBackup(path: string, text: string): void {
   if (existsSync(path) && !existsSync(`${path}.bak`)) copyFileSync(path, `${path}.bak`);
