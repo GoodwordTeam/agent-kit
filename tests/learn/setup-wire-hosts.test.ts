@@ -374,6 +374,35 @@ describe("setup wire: Kimi", () => {
       expect(existsSync(ctx.config.configDir)).toBe(false);
     }
   });
+
+  test("a config that assigns `hooks` as a key cannot take a [[hooks]] table after it, and is refused", () => {
+    for (const closed of [
+      "hooks = []\n",
+      'model = "m"\nhooks = [{ event = "Stop", command = "echo hi" }]\n\n[ui]\ntheme = "dark"\n',
+      'paths = [\n  ["a", "b"],\n]\nhooks = []\n',
+    ]) {
+      const deps = fakeDeps();
+      const ctx = context(deps);
+      const config = put(join(deps.home, ".kimi-code", "config.toml"), closed);
+      expect(wire(ctx, deps, { host: "kimi" })).toBe(1);
+      expect(ctx.err).toEqual([`${config} cannot take the agent-kit [[hooks]] block as it stands; nothing written`]);
+      expect(text(config)).toBe(closed);
+      expect(readdirSync(join(deps.home, ".kimi-code"))).toEqual(["config.toml"]);
+    }
+  });
+
+  test("a `hooks` key inside another table, or a `[` line inside a root value, does not stop the block", () => {
+    for (const open of [
+      '[ui]\nhooks = "on"\n',
+      'paths = [\n  ["a", "b"],\n]\n\n[[hooks]]\nevent = "Stop"\ncommand = "echo hi"\n',
+    ]) {
+      const deps = fakeDeps();
+      const config = put(join(deps.home, ".kimi-code", "config.toml"), open);
+      expect(wire(context(deps), deps, { host: "kimi" })).toBe(0);
+      expect(text(config)).toStartWith(open);
+      expect(tomlHooks(text(config))?.filter((hook) => hook.command?.startsWith(AK))).toHaveLength(3);
+    }
+  });
 });
 
 describe("setup wire: every host", () => {

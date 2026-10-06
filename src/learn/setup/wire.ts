@@ -15,7 +15,7 @@ import type { LearnContext } from "../core/context.ts";
 import { run, type RunResult } from "../core/proc.ts";
 import { AK_ENTRY, PACKAGE_ROOT } from "../core/roles.ts";
 import { writeJson } from "../core/store.ts";
-import { hookBlock, tomlHooks, withHookBlock } from "./toml-hooks.ts";
+import { assignsHooksKey, hookBlock, tomlHooks, withHookBlock } from "./toml-hooks.ts";
 import { unitScopeDiffers } from "./scope.ts";
 
 /** Everything setup touches outside the config dir, injectable so tests never reach the real machine. */
@@ -514,7 +514,7 @@ function kimiPlan(ctx: LearnContext, path: string, specs: readonly HookSpec[]): 
   const after = withHookBlock(before, block);
   const carried =
     after !== null && specs.every((spec) => countTomlHook(after, spec.event, ourHookVerb(spec.command) ?? "") >= 1);
-  if (after === null || !carried) {
+  if (after === null || !carried || assignsHooksKey(before)) {
     return { refuse: `${path} cannot take the agent-kit [[hooks]] block as it stands; nothing written` };
   }
   return {

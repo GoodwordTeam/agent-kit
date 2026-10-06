@@ -92,3 +92,22 @@ export function tomlHooks(text: string): TomlHookTable[] | null {
   }
   return hooksConfig(parsed) ? (parsed.hooks ?? []) : null;
 }
+
+/**
+ * Whether the root table assigns `hooks` as a key (`hooks = [...]`). Such an
+ * array is closed: TOML forbids a `[[hooks]]` table after it, though this
+ * runtime's parser lets one through. The root table ends at the first table
+ * header, which is the first `[` line whose preceding text parses on its own.
+ */
+export function assignsHooksKey(text: string): boolean {
+  const lines = text.split("\n");
+  const cuts = lines.flatMap((line, index) => (line.trimStart().startsWith("[") ? [index] : []));
+  for (const cut of [...cuts, lines.length]) {
+    try {
+      return Object.hasOwn(Bun.TOML.parse(lines.slice(0, cut).join("\n")), "hooks");
+    } catch {
+      // The cut fell inside a multi-line value; the root table runs on to a later one.
+    }
+  }
+  return false;
+}
