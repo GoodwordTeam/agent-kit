@@ -128,6 +128,7 @@ as authoritative. Every row below is a claim about the tree, checkable against i
 | Path | Contents | Committed? |
 |---|---|---|
 | `catalog.yaml` | Single source of truth. Every skill, pack, protocol, role, reference | yes |
+| `catalog.d/*.yaml` | Fragments that add entries to `catalog.yaml` and never override one; the loader merges them (`docs/decisions/0010-catalog-fragments.md`). Upstream carries none: it is a downstream fork's surface for its own entries | yes |
 | `skills/<id>/SKILL.md` | Canonical skill bodies. Agent Skills spec frontmatter only | yes |
 | `packs/`, `protocols/`, `roles/`, `references/` | Attachable constraints, shared phase logic, role prompts, reference packs | yes |
 | `schemas/` | JSON Schemas; `common` holds the shared `$defs` | yes |
