@@ -381,20 +381,23 @@ describe("setup wire: Kimi", () => {
   });
 
   test("a config this runtime cannot read as TOML, or whose block lost a marker, is refused, and Kimi alone is skipped", () => {
-    for (const broken of [
-      'name = = "x"\n',
-      "released = 2024-01-01\n",
-      `a = 1\n${BLOCK_BEGIN}\n`,
-      `${BLOCK_END}\n${BLOCK_BEGIN}\n`,
-    ]) {
+    const unread =
+      "cannot be read as TOML by this runtime, whose parser also rejects some valid files, date and time values among them; fix the file or quote that value, nothing written";
+    const unpaired =
+      "cannot take the agent-kit [[hooks]] block between its two marker lines as they stand; restore the pair or remove both lines, nothing written";
+    for (const [broken, reason] of [
+      ['name = = "x"\n', unread],
+      ["released = 2024-01-01\n", unread],
+      ["at = 07:32:00\n", unread],
+      [`a = 1\n${BLOCK_BEGIN}\n`, unpaired],
+      [`${BLOCK_END}\n${BLOCK_BEGIN}\n`, unpaired],
+    ] as const) {
       const deps = fakeDeps();
       const ctx = context(deps);
       const config = put(join(deps.home, ".kimi-code", "config.toml"), broken);
       mkdirSync(join(deps.home, ".grok"));
       expect(wire(ctx, deps, {})).toBe(1);
-      expect(ctx.err).toHaveLength(1);
-      expect(ctx.err[0]).toStartWith(`${config} `);
-      expect(ctx.err[0]).toEndWith("nothing written");
+      expect(ctx.err).toEqual([`${config} ${reason}`]);
       expect(text(config)).toBe(broken);
       expect(readdirSync(join(deps.home, ".kimi-code"))).toEqual(["config.toml"]);
       expect(othersWired(ctx, deps)).toBe(true);

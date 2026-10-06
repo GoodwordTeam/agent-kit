@@ -89,6 +89,17 @@ function hookFiles(ctx: LearnContext, deps: SetupDeps): HookFile[] {
   ];
 }
 
+/** Whether a line of a file this runtime cannot parse runs a hook of ours; false when the file cannot be read at all. */
+function namesOurHook(path: string): boolean {
+  try {
+    return readFileSync(path, "utf8")
+      .split("\n")
+      .some((line) => ourHookVerb(line) !== null);
+  } catch {
+    return false;
+  }
+}
+
 /** Take the managed block out of Kimi's `config.toml`; the rest of the file is left byte for byte. */
 function unwireKimi(ctx: LearnContext, deps: SetupDeps): void {
   const path = kimiConfigPath(ctx, deps);
@@ -108,10 +119,7 @@ export function uninstall(ctx: LearnContext, deps: SetupDeps, options: { purge?:
     if (!existsSync(file.path)) continue;
     const opened = openHookFile(file);
     if ("refuse" in opened) {
-      const ours = readFileSync(file.path, "utf8")
-        .split("\n")
-        .some((line) => ourHookVerb(line) !== null);
-      if (ours) ctx.io.err(opened.refuse);
+      if (namesOurHook(file.path)) ctx.io.err(opened.refuse);
       else ctx.io.out(`${file.path}: cannot be read and names no agent-kit hook; left as it is`);
       continue;
     }

@@ -424,4 +424,15 @@ describe("claude-mem settings round trip", () => {
     expect(readFileSync(settings, "utf8")).toBe(wired);
     expect(ctx.err).toEqual([`${settings} is not valid JSON; fix it or remove it, nothing written`]);
   });
+
+  test("uninstall carries on past a hooks file it cannot read at all", () => {
+    const deps = fakeDeps();
+    const ctx = testContext({ env: { CLAUDE_MEM_DATA_DIR: join(deps.home, ".claude-mem"), CODEX_HOME: "" } });
+    const settings = join(ctx.config.configDir, "settings.json");
+    mkdirSync(settings, { recursive: true });
+    expect(uninstall(ctx, deps)).toBe(0);
+    expect(ctx.err).toEqual([]);
+    expect(ctx.out).toContain(`${settings}: cannot be read and names no agent-kit hook; left as it is`);
+    expect(ctx.out.at(-1)).toContain("ledgers under");
+  });
 });

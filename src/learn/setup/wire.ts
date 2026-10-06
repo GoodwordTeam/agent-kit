@@ -507,7 +507,11 @@ export function writeTextWithBackup(path: string, text: string): void {
 /** Kimi's hooks are `[[hooks]]` tables in `config.toml`: this runtime's sit in one marked block, and the rest of the file is never rewritten. */
 function kimiPlan(ctx: LearnContext, path: string, specs: readonly HookSpec[]): Plan {
   const before = existsSync(path) ? readFileSync(path, "utf8") : "";
-  if (tomlHooks(before) === null) return { refuse: `${path} is not valid TOML; fix it or remove it, nothing written` };
+  if (tomlHooks(before) === null) {
+    return {
+      refuse: `${path} cannot be read as TOML by this runtime, whose parser also rejects some valid files, date and time values among them; fix the file or quote that value, nothing written`,
+    };
+  }
   const block = hookBlock(
     specs.map((spec) => ({ event: spec.event, command: spec.command, timeout: spec.timeout ?? 10 })),
   );
@@ -520,7 +524,9 @@ function kimiPlan(ctx: LearnContext, path: string, specs: readonly HookSpec[]): 
     };
   }
   if (after === null || !carried) {
-    return { refuse: `${path} cannot take the agent-kit [[hooks]] block as it stands; nothing written` };
+    return {
+      refuse: `${path} cannot take the agent-kit [[hooks]] block between its two marker lines as they stand; restore the pair or remove both lines, nothing written`,
+    };
   }
   return {
     apply: () => {
