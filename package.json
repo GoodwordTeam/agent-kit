@@ -17,6 +17,8 @@
     "lint": "bun tools/oxlint/ratchet.ts src tests tools",
     "lint:baseline": "bun tools/oxlint/ratchet.ts --update src tests tools",
     "lint:growth": "bun tools/oxlint/growth.ts origin/main",
+    "budget": "bun tools/budget/ratchet.ts",
+    "budget:baseline": "bun tools/budget/ratchet.ts --update",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check ."
   },
