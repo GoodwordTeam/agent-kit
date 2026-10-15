@@ -43,7 +43,7 @@ skills:
 
 protocols:
   baseline: 7
-  catalog: 8
+  catalog: 9
   expansions:
     - ids: [evidence-gate]
       reason: >-
@@ -51,10 +51,16 @@ protocols:
         must be in the input and thresholds are counted by the runtime, never by the judge. The
         learn roles share that rule, so it is a protocol.
       commits: [8e4a0de]
+    - ids: [work-trail]
+      reason: >-
+        super-build needs one protocol for the implementer's account of its working decisions on
+        each ticket: a stretch per implementer seat and an independent audit after the commit,
+        both carried by reference and never evidence.
+      commits: [e0ea1af1e554d47c16990ddbd2acab9920c8ad23]
 
 roles:
   baseline: 29
-  catalog: 35
+  catalog: 36
   expansions:
     - ids: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
       reason: >-
@@ -66,6 +72,11 @@ roles:
         Runtime verification needs a named non-entrypoint seat outside implementer lineage so
         receipt authorship and unavailable independence are structurally expressible.
       commits: [1c509b9]
+    - ids: [trail-auditor]
+      reason: >-
+        super-build seats an independent auditor once per ticket to read the implementer's work
+        trail after the commit; the seat is never the implementer, so it needs its own role prompt.
+      commits: [42eb864000dfe687ce93107352357845e5832ae7]
 
 references:
   baseline: 4
@@ -97,7 +108,7 @@ references:
 
 schemas:
   baseline: 14
-  catalog: 34
+  catalog: 36
   expansions:
     - ids: [case]
       reason: >-
@@ -161,6 +172,11 @@ schemas:
         path and a secret, so that every checkout of a project binds the same knowledgebase.
       commits: [c4d1f9cd]
       docs: [docs/decisions/0010-file-backed-knowledgebase.md]
+    - ids: [trail, trail-audit]
+      reason: >-
+        A work trail leaves two run records, the implementer's stretch and the independent audit
+        of it, and publishArtifact carries only schema ids, so each needed a declared shape.
+      commits: [ab88a14e474fa309cd906e6bfdc9327c64fb211a]
 
 profiles:
   baseline: 4

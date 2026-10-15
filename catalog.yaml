@@ -25,7 +25,7 @@ schema_version: 1
 package:
   id: ak
   name: agent-kit
-  version: 0.1.40
+  version: 0.1.41
   # Canonical explicit-start namespace. Host adapters render this plus a skill
   # id into the host's native form when packaging (ADR-0011).
   namespace: "/ak:"
@@ -35,7 +35,7 @@ package:
   # different texts about different objects, and adapters/codex/CONTRACT.md §5.2
   # is what keeps them from being forced to agree. Stated verbatim by
   # adapters/claude-code/CONTRACT.md §1.
-  description: "One engineering lifecycle, amalgamated from nine donors: eight MIT, one Apache-2.0."
+  description: "One engineering lifecycle, amalgamated from ten donors: nine MIT, one Apache-2.0."
   # Emitted into both host manifests from here, so the two cannot drift apart or
   # drift from the catalog. Both values are specified verbatim by
   # adapters/claude-code/CONTRACT.md §1 and are not chosen here.
@@ -519,7 +519,7 @@ packs:
     summary: Dependency scope, compatibility, supply-chain evidence, explicit authorization.
 
 # ---------------------------------------------------------------------------
-# Protocols — 8. Shared phase logic, invoked by skills, never by humans.
+# Protocols — 9. Shared phase logic, invoked by skills, never by humans.
 # ---------------------------------------------------------------------------
 protocols:
   - id: phase-operations
@@ -582,12 +582,21 @@ protocols:
       is active and promoted only at counted thresholds from distinct sources, a lesson is
       confirmed only across sessions, and a degenerate rewrite is rejected whole. The runtime
       counts; the judge never does.
+  - id: work-trail
+    batch: 15
+    provenance_origin: donor
+    status: authored
+    summary: >-
+      The implementer's account of its working decisions on a ticket, one stretch per seat written
+      as each decision is made with evidence as pointers, and an independent audit of the trail at
+      the committed revision, both published by reference. Never evidence, never a gate, and never
+      shown to a seat that judges the change.
 
 # ---------------------------------------------------------------------------
-# Roles — 35. Role prompts, not skills. Never individually invocable.
+# Roles — 36. Role prompts, not skills. Never individually invocable.
 # ---------------------------------------------------------------------------
 roles:
-  # Core (5)
+  # Core (6)
   - id: supervisor
     batch: 1
     provenance_origin: conversation
@@ -619,6 +628,13 @@ roles:
     summary: >-
       Checks fixes against the project's own designated rules, cited rule by rule. Absent
       standards return empty; they never become invented preferences.
+  - id: trail-auditor
+    batch: 15
+    provenance_origin: donor
+    status: authored
+    summary: >-
+      Compares an implementer's trail with what the run left behind and returns a trail audit with
+      an attention list. Never evidence, never a verdict, and never the implementer or its lineage.
 
   # Plan review (3)
   - id: plan-review/planner
@@ -899,7 +915,7 @@ references:
       plugin.
 
 # ---------------------------------------------------------------------------
-# Schemas — 33. `common` holds shared $defs and validates no document itself.
+# Schemas — 36. `common` holds shared $defs and validates no document itself.
 # ---------------------------------------------------------------------------
 schemas:
   - id: common
@@ -1018,6 +1034,19 @@ schemas:
     summary: >-
       autopilot's ledger: one entry per checkpoint pointing at its decision record, with the ruling
       or the escalation. At most one escalation is open.
+  - id: trail
+    batch: 15
+    status: authored
+    summary: >-
+      One stretch of an implementer's working decisions on a ticket: entries in the order written,
+      each with what was decided, the alternatives, why, evidence pointers and the result. Empty
+      only with a stated reason.
+  - id: trail-audit
+    batch: 15
+    status: authored
+    summary: >-
+      The auditor's comparison of a ticket's trail with what the run left behind, with no transcript:
+      every stretch by state, the material read, one result and an attention list.
   - id: install
     batch: 5
     status: authored
