@@ -85,8 +85,10 @@ function runLinkedWorktreeFixture() {
 if [ "$2" = marketplace ]; then
   if [ "$AK_TEST_MARKET_SOURCE" = directory ]; then
     printf '%s\n' '[{"name":"agent-kit","source":"directory","path":"/tmp/old-clone"}]'
-  else
+  elif [ "$AK_TEST_MARKET_SOURCE" = upstream ]; then
     printf '%s\n' '[{"name":"agent-kit","source":"github","repo":"Pibomeister/agent-kit"}]'
+  else
+    printf '%s\n' '[{"name":"agent-kit","source":"github","repo":"GoodwordTeam/agent-kit"}]'
   fi
 else
   current="$(pwd -P)"
@@ -134,7 +136,7 @@ fi
   mkdirSync(staleCodexHome);
   writeFileSync(
     join(staleCodexHome, "config.toml"),
-    '[marketplaces.agent-kit]\nsource = "Pibomeister/agent-kit"\nref = "published"\n',
+    '[marketplaces.agent-kit]\nsource = "GoodwordTeam/agent-kit"\nref = "published"\n',
   );
   const staleUpdate = spawnSync(process.execPath, [maintenanceCli, "update"], {
     cwd: linked,
@@ -149,6 +151,11 @@ fi
   const update = spawnSync(process.execPath, [maintenanceCli, "update"], {
     cwd: linked,
     env: { ...env, AK_TEST_MARKET_SOURCE: "directory" },
+    encoding: "utf8",
+  });
+  const upstreamUpdate = spawnSync(process.execPath, [maintenanceCli, "update"], {
+    cwd: linked,
+    env: { ...env, AK_TEST_MARKET_SOURCE: "upstream" },
     encoding: "utf8",
   });
   const bundle = join(root, "ak-standalone.mjs");
@@ -173,10 +180,21 @@ fi
     "backend: jira-nope\ntoken_file: .linear-token\ndefaults:\n  team: ENG\n",
   );
   const unknown = spawnSync(process.execPath, [bundle, "doctor"], { cwd: linked, env, encoding: "utf8" });
-  return { added, projectRuns, staleUpdate, oldSource, update, built, standalone, blank, missingTeam, unknown };
+  return {
+    added,
+    projectRuns,
+    staleUpdate,
+    oldSource,
+    update,
+    upstreamUpdate,
+    built,
+    standalone,
+    blank,
+    missingTeam,
+    unknown,
+  };
 }
 
-// Nine nested Bun invocations took 17s normally and 25s beside another full suite on this host.
 // Running the fixture here keeps scheduler delay outside the timed assertion body.
 const linkedWorktreeFixture = runLinkedWorktreeFixture();
 
@@ -232,18 +250,21 @@ describe("ak doctor checks", () => {
     expect(checkSource("Claude Code", { name: "ak", version: "1.2.0" }).level).toBe("PASS");
     expect(checkSource("Claude Code", { name: "ak", version: "1.2.0" }, false).level).toBe("FAIL");
     expect(isClaudeSource({ name: "agent-kit", source: "directory" })).toBe(false);
-    expect(isClaudeSource({ name: "agent-kit", source: "github", repo: "Pibomeister/agent-kit" })).toBe(true);
-    expect(isClaudeSource({ name: "agent-kit", source: "github", repo: "pibomeister/AGENT-KIT" })).toBe(true);
+    expect(isClaudeSource({ name: "agent-kit", source: "github", repo: "GoodwordTeam/agent-kit" })).toBe(true);
+    expect(isClaudeSource({ name: "agent-kit", source: "github", repo: "goodwordteam/AGENT-KIT" })).toBe(true);
+    expect(isClaudeSource({ name: "agent-kit", source: "github", repo: "Pibomeister/agent-kit" })).toBe(false);
     for (const url of [
-      "git@github.com:Pibomeister/agent-kit.git",
-      "ssh://git@github.com/PIBOMEISTER/AGENT-KIT",
-      "https://github.com/pibomeister/agent-kit.git",
+      "git@github.com:GoodwordTeam/agent-kit.git",
+      "ssh://git@github.com/GOODWORDTEAM/AGENT-KIT",
+      "https://github.com/goodwordteam/agent-kit.git",
     ])
       expect(isClaudeSource({ name: "agent-kit", source: "git", url })).toBe(true);
+    expect(isClaudeSource({ name: "agent-kit", source: "git", url: "GoodwordTeam/agent-kit" })).toBe(false);
     expect(isClaudeSource({ name: "agent-kit", source: "git", url: "git@github.com:other/agent-kit.git" })).toBe(false);
     expect(isCodexSource("/tmp/agent-kit", "published")).toBe(false);
-    expect(isCodexSource("Pibomeister/agent-kit", "main")).toBe(false);
-    expect(isCodexSource("Pibomeister/agent-kit", "published")).toBe(true);
+    expect(isCodexSource("GoodwordTeam/agent-kit", "main")).toBe(false);
+    expect(isCodexSource("GoodwordTeam/agent-kit", "published")).toBe(true);
+    expect(isCodexSource("Pibomeister/agent-kit", "published")).toBe(false);
   });
 
   test("explains published network failures separately from 404", () => {
@@ -282,6 +303,9 @@ describe("ak doctor checks", () => {
 
   test("warns when the curl-installed maintenance command is stale", () => {
     expect(checkMaintenanceCommand("old", "new").level).toBe("WARN");
+    expect(checkMaintenanceCommand("old", "new").remedy).toContain(
+      "https://raw.githubusercontent.com/GoodwordTeam/agent-kit/published/",
+    );
     expect(checkMaintenanceCommand("current", "current").level).toBe("PASS");
   });
 
@@ -360,6 +384,8 @@ describe("ak doctor checks", () => {
     );
     expect(linkedWorktreeFixture.update.status).toBe(1);
     expect(linkedWorktreeFixture.update.stderr).toContain("FAIL Claude Code update: configured marketplace is local");
+    expect(linkedWorktreeFixture.upstreamUpdate.status).toBe(1);
+    expect(linkedWorktreeFixture.upstreamUpdate.stderr).toContain("Re-add agent-kit from GoodwordTeam/agent-kit");
     expect(linkedWorktreeFixture.built.status).toBe(0);
     expect(linkedWorktreeFixture.standalone.status).toBe(0);
     expect(linkedWorktreeFixture.standalone.stdout).toContain("PASS Claude Code plugin: enabled; installed 0.1.0");

@@ -1,7 +1,7 @@
 {
   "name": "agent-kit",
   "owner": {
-    "name": "Pibomeister"
+    "name": "GoodwordTeam"
   },
   "metadata": {
     "description": "One engineering lifecycle amalgamated from ten donors (nine MIT, one Apache-2.0), installable under /ak:."
@@ -12,16 +12,16 @@
       "description": "Seven super skills plus packs, protocols and roles: align, bound, scout, build, verify, review, ship.",
       "source": {
         "source": "git-subdir",
-        "url": "https://github.com/Pibomeister/agent-kit.git",
+        "url": "https://github.com/GoodwordTeam/agent-kit.git",
         "path": "dist/claude-code",
         "ref": "published"
       },
       "license": "MIT",
       "author": {
-        "name": "Pibomeister"
+        "name": "GoodwordTeam"
       },
-      "homepage": "https://github.com/Pibomeister/agent-kit",
-      "repository": "https://github.com/Pibomeister/agent-kit",
+      "homepage": "https://github.com/GoodwordTeam/agent-kit",
+      "repository": "https://github.com/GoodwordTeam/agent-kit",
       "keywords": ["code-review", "engineering-lifecycle", "planning", "tdd", "verification", "workflow-automation"]
     }
   ]

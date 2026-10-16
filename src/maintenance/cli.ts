@@ -9,6 +9,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import commonSchema from "../../schemas/common.schema.json" with { type: "json" };
 import trackerSchema from "../../schemas/tracker-binding.schema.json" with { type: "json" };
 import linearisSchema from "../../schemas/tracker-backends/linear-linearis.schema.json" with { type: "json" };
+import sourceMarketplace from "../../.claude-plugin/marketplace.json" with { type: "json" };
 import {
   BINDING_FILE,
   checkTrackerSecret,
@@ -136,7 +137,10 @@ const bindingValidators: BindingValidators = {
 };
 
 const ID = "ak@agent-kit";
-const ROOT = process.env.AK_PUBLISHED_ROOT ?? "https://raw.githubusercontent.com/Pibomeister/agent-kit/published";
+const SOURCE_URL = sourceMarketplace.plugins.find((plugin) => plugin.name === "ak")?.source.url ?? "";
+if (!SOURCE_URL) throw new Error("ak marketplace source is missing");
+const SOURCE_REPO = new URL(SOURCE_URL).pathname.slice(1).replace(/\.git$/, "");
+const ROOT = process.env.AK_PUBLISHED_ROOT ?? `https://raw.githubusercontent.com/${SOURCE_REPO}/published`;
 const COMMAND_TIMEOUT_MS = 15_000;
 const MUTATION_TIMEOUT_MS = 300_000;
 const FETCH_TIMEOUT_MS = 5_000;
@@ -195,12 +199,13 @@ function claudeRecords(root: string): HostPlugin[] {
 
 export function isClaudeSource(marketplace: ClaudeMarketplace): boolean {
   if (marketplace.name !== "agent-kit") return false;
-  if (marketplace.source === "github") return marketplace.repo?.toLowerCase() === "pibomeister/agent-kit";
+  if (marketplace.source === "github") return marketplace.repo?.toLowerCase() === SOURCE_REPO.toLowerCase();
+  const url = marketplace.url ?? "";
+  const repo = url.replace(/^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)/i, "");
   return (
     marketplace.source === "git" &&
-    /^(?:https:\/\/github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)pibomeister\/agent-kit(?:\.git)?$/i.test(
-      marketplace.url ?? "",
-    )
+    repo !== url &&
+    repo.replace(/\.git$/i, "").toLowerCase() === SOURCE_REPO.toLowerCase()
   );
 }
 
@@ -212,9 +217,7 @@ function claudeSourceConfigured(root: string): boolean {
 export function isCodexSource(source: string | undefined, ref: string | undefined): boolean {
   return (
     ref === "published" &&
-    (source === "Pibomeister/agent-kit" ||
-      source === "https://github.com/Pibomeister/agent-kit.git" ||
-      source === "https://github.com/Pibomeister/agent-kit")
+    (source === SOURCE_REPO || source === SOURCE_URL || source === SOURCE_URL.replace(/\.git$/, ""))
   );
 }
 
@@ -292,7 +295,7 @@ export function checkSource(
       "FAIL",
       `${host} marketplace source`,
       "configured marketplace is local or points at another source",
-      "Re-add agent-kit from Pibomeister/agent-kit (Codex: --ref published).",
+      `Re-add agent-kit from ${SOURCE_REPO} (Codex: --ref published).`,
     );
   return finding("PASS", `${host} marketplace source`, `resolves to ak ${published.version}`, "No action needed.");
 }
@@ -497,10 +500,10 @@ async function doctor(json = false): Promise<number> {
   const items = [
     hasClaude || claudeConfigured
       ? checkSource("Claude Code", claudeSource.value, claudeConfigured, claudeSource.failure)
-      : finding("WARN", "Claude Code marketplace source", "not configured", "Install ak from Pibomeister/agent-kit."),
+      : finding("WARN", "Claude Code marketplace source", "not configured", `Install ak from ${SOURCE_REPO}.`),
     hasCodex || codexConfigured
       ? checkSource("Codex", codexSource.value, codexConfigured, codexSource.failure)
-      : finding("WARN", "Codex marketplace source", "not configured", "Add Pibomeister/agent-kit --ref published."),
+      : finding("WARN", "Codex marketplace source", "not configured", `Add ${SOURCE_REPO} --ref published.`),
     checkPlugin("Claude Code", claude, claudeSource.value?.version ?? null),
     checkPlugin("Codex", codex, codexSource.value?.version ?? null),
     checkProjectEnablement(process.cwd()),
