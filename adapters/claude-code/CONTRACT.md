@@ -201,7 +201,7 @@ Concretely, on this host alone, with no runner attached:
 
 ```bash
 # Install
-claude plugin marketplace add Pibomeister/agent-kit
+claude plugin marketplace add GoodwordTeam/agent-kit
 claude plugin install ak@agent-kit --scope project # restart required; skills appear under /ak:
 
 # Validate the built bundle — CI gate

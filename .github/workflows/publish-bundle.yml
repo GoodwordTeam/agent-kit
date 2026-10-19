@@ -28,6 +28,10 @@ jobs:
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
+      - name: Fetch catalog history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/publish/fetch-catalog-history.sh
       - run: bun run test
       - run: bun run ak validate
       - run: bun run ak build

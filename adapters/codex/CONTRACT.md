@@ -183,7 +183,7 @@ The command forms are verified against the installed Codex CLI; the isolated `CO
 used a local publication candidate. The GitHub ref needs a post-publication smoke:
 
 ```bash
-codex plugin marketplace add Pibomeister/agent-kit --ref published
+codex plugin marketplace add GoodwordTeam/agent-kit --ref published
 codex plugin add ak@agent-kit
 codex plugin list
 codex plugin remove <plugin>
@@ -238,7 +238,7 @@ the published branch, so `bun test` does not run it:
    set is a failure.
 4. **Non-trigger corpus completeness** — every U skill in the codex bundle has a non-trigger eval
    case, and every such case's prompt is drawn from that skill's `## Not for` section.
-5. **Install smoke test** — `codex plugin marketplace add Pibomeister/agent-kit --ref published`
+5. **Install smoke test** — `codex plugin marketplace add GoodwordTeam/agent-kit --ref published`
    followed by `codex plugin add ak@agent-kit`, then confirming the plugin is enabled. Run against
    an isolated `CODEX_HOME` after the publication workflow has populated the branch.
    The local form, `codex plugin marketplace add <dist/codex>`, relies on the marketplace manifest

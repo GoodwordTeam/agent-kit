@@ -36,6 +36,10 @@ jobs:
       # The donor snapshot byte comparison needs the clones, which are gitignored; without
       # this step it was skipped on every CI run. AK_REQUIRE_DONORS turns that skip into a failure.
       - run: tools/donors/clone.sh
+      - name: Fetch catalog history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash tools/publish/fetch-catalog-history.sh
       - run: bun run test
         env:
           AK_REQUIRE_DONORS: "1"

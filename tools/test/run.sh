@@ -2,6 +2,8 @@
 # Keep each heavy file in its own process, after the ordinary lane has exited.
 set -u
 
+bash tools/publish/fetch-catalog-history.sh || exit 1
+
 while IFS= read -r file; do
   if [ ! -f "$file" ]; then
     echo "missing integration test: $file" >&2

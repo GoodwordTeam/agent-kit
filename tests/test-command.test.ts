@@ -36,7 +36,7 @@ describe("configured test lanes", () => {
         // Capture the executable interface, without recursively running the suite.
         writeFileSync(
           join(bin, "bun"),
-          '#!/bin/sh\nprintf "%s\\n" CALL "$@" >> "$TEST_LANE_LOG"\nexit "$TEST_LANE_EXIT"\n',
+          '#!/bin/sh\nif [ "$1" = -e ]; then exit 0; fi\nprintf "%s\\n" CALL "$@" >> "$TEST_LANE_LOG"\nexit "$TEST_LANE_EXIT"\n',
           { mode: 0o755 },
         );
         const run = spawnSync(process.execPath, ["run", "test"], {
