@@ -1,0 +1,37 @@
+{
+  "name": "ak",
+  "version": "0.1.47-goodword.1",
+  "description": "One engineering lifecycle, amalgamated from ten donors: nine MIT, one Apache-2.0.",
+  "author": {
+    "name": "agent-kit maintainers"
+  },
+  "license": "MIT",
+  "skills": [
+    "./skills/super-align",
+    "./skills/super-bound",
+    "./skills/super-scout",
+    "./skills/super-build",
+    "./skills/super-verify",
+    "./skills/super-review",
+    "./skills/super-ship",
+    "./skills/codebase-design",
+    "./skills/verify",
+    "./skills/visual-edit",
+    "./skills/compound",
+    "./skills/doc-review",
+    "./skills/receiving-review",
+    "./skills/diagnose",
+    "./skills/doubt-driven",
+    "./skills/simplify",
+    "./skills/research",
+    "./skills/source-driven",
+    "./skills/explain",
+    "./skills/prototype",
+    "./skills/handoff",
+    "./skills/wait-what",
+    "./skills/wayfind"
+  ],
+  "experimental": {
+    "evals": "evals"
+  }
+}

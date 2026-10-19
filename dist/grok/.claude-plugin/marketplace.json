@@ -1,0 +1,20 @@
+{
+  "name": "agent-kit",
+  "owner": {
+    "name": "agent-kit maintainers"
+  },
+  "metadata": {
+    "version": "0.1.47-goodword.1",
+    "description": "One engineering lifecycle, amalgamated from ten donors: nine MIT, one Apache-2.0."
+  },
+  "plugins": [
+    {
+      "name": "ak",
+      "description": "agent-kit",
+      "author": {
+        "name": "agent-kit maintainers"
+      },
+      "source": "./"
+    }
+  ]
+}
