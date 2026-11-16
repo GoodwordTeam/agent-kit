@@ -3,12 +3,12 @@
   "surfaces": {
     "bundle/claude-code:references/shared/adapters/claude-code/CONTRACT.md": {
       "file": "adapters/claude-code/CONTRACT.md",
-      "bytes": 21388,
+      "bytes": 21389,
       "tokens": 5319
     },
     "bundle/claude-code:references/shared/adapters/codex/CONTRACT.md": {
       "file": "adapters/codex/CONTRACT.md",
-      "bytes": 22568,
+      "bytes": 22570,
       "tokens": 5618
     },
     "bundle/claude-code:references/shared/adapters/firstmate/CONTRACT.md": {
@@ -188,8 +188,8 @@
     },
     "bundle/claude-code:references/shared/references/unattended-lifecycle/REFERENCE.md": {
       "file": "references/unattended-lifecycle/REFERENCE.md",
-      "bytes": 11058,
-      "tokens": 2765
+      "bytes": 12161,
+      "tokens": 3040
     },
     "bundle/claude-code:references/shared/references/verification-evidence/REFERENCE.md": {
       "file": "references/verification-evidence/REFERENCE.md",
@@ -878,12 +878,12 @@
     },
     "bundle/codex:references/shared/adapters/claude-code/CONTRACT.md": {
       "file": "adapters/claude-code/CONTRACT.md",
-      "bytes": 21388,
+      "bytes": 21389,
       "tokens": 5319
     },
     "bundle/codex:references/shared/adapters/codex/CONTRACT.md": {
       "file": "adapters/codex/CONTRACT.md",
-      "bytes": 22568,
+      "bytes": 22570,
       "tokens": 5618
     },
     "bundle/codex:references/shared/adapters/firstmate/CONTRACT.md": {
@@ -1063,8 +1063,8 @@
     },
     "bundle/codex:references/shared/references/unattended-lifecycle/REFERENCE.md": {
       "file": "references/unattended-lifecycle/REFERENCE.md",
-      "bytes": 11058,
-      "tokens": 2765
+      "bytes": 12161,
+      "tokens": 3040
     },
     "bundle/codex:references/shared/references/verification-evidence/REFERENCE.md": {
       "file": "references/verification-evidence/REFERENCE.md",
@@ -1753,12 +1753,12 @@
     },
     "bundle/cursor:.cursor/references/shared/adapters/claude-code/CONTRACT.md": {
       "file": "adapters/claude-code/CONTRACT.md",
-      "bytes": 21388,
+      "bytes": 21389,
       "tokens": 5319
     },
     "bundle/cursor:.cursor/references/shared/adapters/codex/CONTRACT.md": {
       "file": "adapters/codex/CONTRACT.md",
-      "bytes": 22568,
+      "bytes": 22570,
       "tokens": 5618
     },
     "bundle/cursor:.cursor/references/shared/adapters/firstmate/CONTRACT.md": {
@@ -1938,8 +1938,8 @@
     },
     "bundle/cursor:.cursor/references/shared/references/unattended-lifecycle/REFERENCE.md": {
       "file": "references/unattended-lifecycle/REFERENCE.md",
-      "bytes": 11130,
-      "tokens": 2783
+      "bytes": 12233,
+      "tokens": 3058
     },
     "bundle/cursor:.cursor/references/shared/references/verification-evidence/REFERENCE.md": {
       "file": "references/verification-evidence/REFERENCE.md",
@@ -2628,12 +2628,12 @@
     },
     "bundle/droid:references/shared/adapters/claude-code/CONTRACT.md": {
       "file": "adapters/claude-code/CONTRACT.md",
-      "bytes": 21388,
+      "bytes": 21389,
       "tokens": 5319
     },
     "bundle/droid:references/shared/adapters/codex/CONTRACT.md": {
       "file": "adapters/codex/CONTRACT.md",
-      "bytes": 22568,
+      "bytes": 22570,
       "tokens": 5618
     },
     "bundle/droid:references/shared/adapters/firstmate/CONTRACT.md": {
@@ -2813,8 +2813,8 @@
     },
     "bundle/droid:references/shared/references/unattended-lifecycle/REFERENCE.md": {
       "file": "references/unattended-lifecycle/REFERENCE.md",
-      "bytes": 11058,
-      "tokens": 2765
+      "bytes": 12161,
+      "tokens": 3040
     },
     "bundle/droid:references/shared/references/verification-evidence/REFERENCE.md": {
       "file": "references/verification-evidence/REFERENCE.md",
@@ -3503,12 +3503,12 @@
     },
     "bundle/grok:references/shared/adapters/claude-code/CONTRACT.md": {
       "file": "adapters/claude-code/CONTRACT.md",
-      "bytes": 21388,
+      "bytes": 21389,
       "tokens": 5319
     },
     "bundle/grok:references/shared/adapters/codex/CONTRACT.md": {
       "file": "adapters/codex/CONTRACT.md",
-      "bytes": 22568,
+      "bytes": 22570,
       "tokens": 5618
     },
     "bundle/grok:references/shared/adapters/firstmate/CONTRACT.md": {
@@ -3688,8 +3688,8 @@
     },
     "bundle/grok:references/shared/references/unattended-lifecycle/REFERENCE.md": {
       "file": "references/unattended-lifecycle/REFERENCE.md",
-      "bytes": 11058,
-      "tokens": 2765
+      "bytes": 12161,
+      "tokens": 3040
     },
     "bundle/grok:references/shared/references/verification-evidence/REFERENCE.md": {
       "file": "references/verification-evidence/REFERENCE.md",
@@ -4378,12 +4378,12 @@
     },
     "bundle/kimi:references/shared/adapters/claude-code/CONTRACT.md": {
       "file": "adapters/claude-code/CONTRACT.md",
-      "bytes": 21388,
+      "bytes": 21389,
       "tokens": 5319
     },
     "bundle/kimi:references/shared/adapters/codex/CONTRACT.md": {
       "file": "adapters/codex/CONTRACT.md",
-      "bytes": 22568,
+      "bytes": 22570,
       "tokens": 5618
     },
     "bundle/kimi:references/shared/adapters/firstmate/CONTRACT.md": {
@@ -4563,8 +4563,8 @@
     },
     "bundle/kimi:references/shared/references/unattended-lifecycle/REFERENCE.md": {
       "file": "references/unattended-lifecycle/REFERENCE.md",
-      "bytes": 11058,
-      "tokens": 2765
+      "bytes": 12161,
+      "tokens": 3040
     },
     "bundle/kimi:references/shared/references/verification-evidence/REFERENCE.md": {
       "file": "references/verification-evidence/REFERENCE.md",

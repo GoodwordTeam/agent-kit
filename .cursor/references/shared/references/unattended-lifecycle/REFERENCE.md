@@ -151,6 +151,22 @@ Nothing here is done by an agent or by agent-kit.
    Environments read. A runner that shares the operator's account or credentials does not meet
    the assumptions below; an app-token CI job needs a machine-user account.
 
+## Human-only steps: the stall class
+
+`node <bundle>/bin/ak-gate.mjs human-step` is the supervisor check (`src/lifecycle/human-step-stall.ts`). It
+classifies a held human-only step, and it exits 1 when the step sits at or over 10 minutes
+without a satisfying escalation, when a pull request or deploy is blocked on it, or when an
+interactive auth prompt is held open.
+
+The definition: a held human-only step — sign-in, an auth prompt, a verification code, an OTP,
+an approval or a captcha — is a stall class distinct from normal work. Approval is an interactive
+approval challenge the worker hits, for example a device or consent approval prompt. It is never
+pull-request review or merge approval, which stays the owner gate. At or over 10 minutes
+(`HUMAN_STEP_STALL_THRESHOLD_MS`) the definition requires escalation through the human-needed or
+page channel during the day, and into the morning handoff overnight. Overnight, only the morning
+handoff satisfies escalation, and a page is a violation. A PR or deploy is never blocked on such
+a step, and an interactive auth prompt is never held open.
+
 ## Limits
 
 The forge does not show that a designated account is operated by a person, that the review
