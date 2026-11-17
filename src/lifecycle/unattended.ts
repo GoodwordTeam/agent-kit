@@ -19,6 +19,8 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 export const POLICY_ENV = "AK_LIFECYCLE_POLICY";
+export const SUPERVISOR_ENV = "AK_LIFECYCLE_SUPERVISOR";
+export const SUPERVISOR_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 export const READ_TOKEN_ENV = "AK_UNATTENDED_READ_TOKEN";
 export const CONFIG_FILE = "ak.lifecycle.json";
 export const UNATTENDED = "unattended";
@@ -36,6 +38,8 @@ export interface Policy {
   name: typeof UNATTENDED;
   /** `environment`, or `default-branch:<revision>` the configuration was read at. */
   source: string;
+  /** Optional supervisor name used by the human-step phase check. */
+  supervisor?: string;
 }
 
 /** A parsed JSON value: what the forge and the configuration file return. */
@@ -83,18 +87,23 @@ export function resolvePolicy(
   project: string,
   env: NodeJS.ProcessEnv = process.env,
 ): { ok: true; policy?: Policy } | { ok: false; reason: string } {
+  const supervisor = env[SUPERVISOR_ENV];
+  if (supervisor !== undefined && !SUPERVISOR_PATTERN.test(supervisor))
+    return { ok: false, reason: `${SUPERVISOR_ENV} must match ${SUPERVISOR_PATTERN.source}` };
+  const stamp = (source: string): Policy =>
+    supervisor === undefined ? { name: UNATTENDED, source } : { name: UNATTENDED, source, supervisor };
   const value = env[POLICY_ENV];
   if (value !== undefined && value !== "") {
     if (value !== UNATTENDED)
       return { ok: false, reason: `${POLICY_ENV} accepts only '${UNATTENDED}', not '${value}'` };
-    return { ok: true, policy: { name: UNATTENDED, source: "environment" } };
+    return { ok: true, policy: stamp("environment") };
   }
   const rev = exec("git", ["rev-parse", "--verify", "--quiet", "refs/remotes/origin/HEAD^{commit}"], project);
   const revision = rev.out.trim();
   if (rev.code !== 0 || revision === "") return { ok: true };
   const file = exec("git", ["show", `${revision}:${CONFIG_FILE}`], project);
   if (file.code !== 0 || field(parse(file.out), "policy") !== UNATTENDED) return { ok: true };
-  return { ok: true, policy: { name: UNATTENDED, source: `default-branch:${revision}` } };
+  return { ok: true, policy: stamp(`default-branch:${revision}`) };
 }
 
 // ── the forge ────────────────────────────────────────────────────────────────
