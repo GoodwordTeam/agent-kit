@@ -46161,7 +46161,7 @@ var review_ledger_schema_default = {
       }
     },
     verdict: {
-      description: "A seat delivered its review in the open round. `word` is the seat's own verdict word. It is recorded and has no force: only the seat's rows can block.",
+      description: "A seat delivered its review in the open round. `word` is the seat's own verdict word. It alone never makes the verdict `blocked`: only ledger rows block. Approval needs at least one seat whose latest verdict in the scope is `approve`.",
       type: "object",
       additionalProperties: false,
       required: ["v", "seq", "kind", "seat", "word"],
