@@ -12,8 +12,9 @@
  *   and skipped, and a ledger with a problem is never approved.
  * - `decide` returns one of three verdict words and the one next action.
  *
- * A seat's verdict word has no force here. Only ledger rows block, and the
- * rules below say which rows do.
+ * Only ledger rows block, and the rules below say which rows do. A seat's
+ * BLOCK word alone never blocks. Approval needs at least one seat whose latest
+ * verdict in the current scope approves.
  */
 
 import {
@@ -48,6 +49,7 @@ export function initialState(policy: ConvergencePolicy): LedgerState {
     imported: false,
     covered_head: null,
     full_seats: [],
+    approving: [],
     capped: false,
     extensions: 0,
     council: null,
@@ -382,7 +384,8 @@ function applyEvidence(state: LedgerState, event: EvidenceEvent, open: OpenRound
     row.escalate = null;
     return;
   }
-  if (item.base_exit !== undefined && item.base_exit !== 0) {
+  if (item.base_exit === undefined) return;
+  if (item.base_exit !== 0) {
     // Red at the head and at the merge base: the defect was there before this change.
     // A reproduction that is red only at the head already showed otherwise.
     if (row.red.length > 0) return;
@@ -393,7 +396,7 @@ function applyEvidence(state: LedgerState, event: EvidenceEvent, open: OpenRound
     row.escalate = null;
     return;
   }
-  if (item.base_exit === 0) row.origin = "introduced";
+  row.origin = "introduced";
   // A note stays filed. An observation is promoted by a seat's report, never by evidence alone:
   // it is a pipeline finding no seat holds, or a finding its round could not take.
   if (!row.always_block && (isNote(row, policy) || row.status === "observation")) return;
@@ -509,6 +512,8 @@ function applyInRound(state: LedgerState, event: LedgerEvent, open: OpenRound, p
     case "verdict":
       open.seats.push(event.seat);
       if (open.mode === "full") state.full_seats.push(event.seat);
+      state.approving = state.approving.filter((seat) => seat !== event.seat);
+      if (event.word === "approve") state.approving.push(event.seat);
       return;
     case "round-close":
       applyRoundClose(state, open);
@@ -570,6 +575,7 @@ function applyBetweenRounds(state: LedgerState, event: LedgerEvent, policy: Conv
       state.max_rounds = policy.max_rounds;
       state.covered_head = null;
       state.full_seats = [];
+      state.approving = [];
       state.capped = false;
       state.extensions = 0;
       state.theme_rounds = [];
@@ -702,8 +708,9 @@ function blockedAction(state: LedgerState, blocking: readonly Row[], cap: number
  * `blocked` when a row blocks. `approved` when no row blocks, the ledger and
  * the caller's integrity checks are clean, no round is open, round 1 of the
  * current scope sat the required seats, the review carries to the exact head,
- * every deferred row has a follow-up reference and no required evidence is
- * missing. `incomplete` otherwise. The action names the one next step.
+ * at least one seat's latest verdict in the scope approves, every deferred
+ * row has a follow-up reference and no required evidence is missing.
+ * `incomplete` otherwise. The action names the one next step.
  */
 export function decide(events: readonly LedgerEvent[], policy: ConvergencePolicy, context: DecideContext): Decision {
   const state = fold(events, policy);
@@ -755,6 +762,10 @@ export function decide(events: readonly LedgerEvent[], policy: ConvergencePolicy
   if (state.full_seats.length < required)
     return result("incomplete", "repair", [
       `round 1 of scope ${state.scope} sat ${state.full_seats.length} of ${required} required seats`,
+    ]);
+  if (state.approving.length === 0)
+    return result("incomplete", state.round < cap ? "closure-round" : "owner-hold", [
+      `no seat's latest verdict in scope ${state.scope} approves`,
     ]);
   if (unfiled.length > 0)
     return result("incomplete", "file-follow-ups", [

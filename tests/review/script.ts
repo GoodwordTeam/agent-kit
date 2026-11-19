@@ -168,9 +168,8 @@ export class Script {
   }
 
   /** A reproduction run at the open round's head. `exit` 1 is red. `base` is the exit status at the merge base. */
-  repro(id: string, exit: number, base?: number, ref = "tests/repro.test.ts"): this {
-    const evidence: EvidenceItem = { kind: "repro", ref, head: this.at, exit, sha256: digest(3000) };
-    if (base !== undefined) evidence.base_exit = base;
+  repro(id: string, exit: number, base = 0, ref = "tests/repro.test.ts"): this {
+    const evidence: EvidenceItem = { kind: "repro", ref, head: this.at, exit, base_exit: base, sha256: digest(3000) };
     return this.line({ kind: "evidence", id, evidence });
   }
 

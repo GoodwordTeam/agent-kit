@@ -32,7 +32,10 @@ ledger. `ak review decide` prints the verdict for one exact head.
 1. **The engine owns the verdict.** `decide(ledger, policy, context)` in `src/review/converge.ts`
    reads no file, no clock and no environment, and calls no model. The same lines and the same
    context give the same record. The verdict is `approved`, `blocked` or `incomplete`, with one
-   next action. A seat's `BLOCK` word is recorded and has no force. Only the seat's ledger rows do.
+   next action. A seat's `BLOCK` word alone never makes the verdict `blocked`. Only ledger rows
+   block. `approved` needs at least one seat whose latest verdict in the scope approves at the
+   head or carries to it. The pipeline seat delivers no verdict. With no approving seat the verdict
+   is `incomplete`.
 2. **The ledger is a fold.** `schemas/review-ledger.schema.json` is the form of a line. A line is
    never edited. A status change is a new line for the same finding id, and the state is a fold
    over the lines. `seq` counts lines from 1 with no gap. A reader skips a line that is not JSON,
@@ -44,7 +47,9 @@ ledger. `ak review decide` prints the verdict for one exact head.
 4. **Round 1 is the one open-ended pass.** A finding of round 1 blocks when it is P0 or P1 and
    introduced. Reading evidence is enough there.
 5. **After round 1 the bar is evidence.** A new finding blocks only inside the delta scope and
-   with a reproduction that is red at the head and green at the merge base. A finding outside the
+   with a reproduction that is red at the head and green at the merge base. A reproduction line
+   records both exit statuses. A run that is red at the head and records no merge-base result is
+   not red: it neither keeps a row open nor reopens one. A finding outside the
    scope is an observation. P2, P3, pre-existing findings and a convention finding with no cited
    project rule never block. They are filed, and each filed row needs a follow-up reference
    before the verdict is `approved`.
@@ -96,7 +101,8 @@ The plan leaves these points open. Each is a choice of this record, held by a te
 - **A hold is an action, not a verdict.** The verdict is `blocked` only while a row blocks. A hold
   with no blocking row is `incomplete` with the action `owner-hold` or `captain-hold`.
 - **Approval coverage.** `approved` needs round 1 of the scope to have sat the seats the tier
-  requires, and the head to be the one the last closed round or carry covers. A head that moves
+  requires, at least one seat whose latest verdict approves, and the head to be the one the last
+  closed round or carry covers. A head that moves
   after the cap is the owner's call.
 - **A filed row is `deferred` at once**, with the disposition `note`, `unreproduced`, `split` or
   `cap`.

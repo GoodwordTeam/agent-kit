@@ -45342,6 +45342,7 @@ function initialState(policy) {
     imported: false,
     covered_head: null,
     full_seats: [],
+    approving: [],
     capped: false,
     extensions: 0,
     council: null,
@@ -45641,7 +45642,9 @@ function applyEvidence(state, event, open, policy) {
     row.escalate = null;
     return;
   }
-  if (item.base_exit !== undefined && item.base_exit !== 0) {
+  if (item.base_exit === undefined)
+    return;
+  if (item.base_exit !== 0) {
     if (row.red.length > 0)
       return;
     row.origin = "pre-existing";
@@ -45652,8 +45655,7 @@ function applyEvidence(state, event, open, policy) {
     row.escalate = null;
     return;
   }
-  if (item.base_exit === 0)
-    row.origin = "introduced";
+  row.origin = "introduced";
   if (!row.always_block && (isNote(row, policy) || row.status === "observation"))
     return;
   if (!row.red.includes(item.ref))
@@ -45769,6 +45771,9 @@ function applyInRound(state, event, open, policy) {
       open.seats.push(event.seat);
       if (open.mode === "full")
         state.full_seats.push(event.seat);
+      state.approving = state.approving.filter((seat2) => seat2 !== event.seat);
+      if (event.word === "approve")
+        state.approving.push(event.seat);
       return;
     case "round-close":
       applyRoundClose(state, open);
@@ -45839,6 +45844,7 @@ function applyBetweenRounds(state, event, policy) {
       state.max_rounds = policy.max_rounds;
       state.covered_head = null;
       state.full_seats = [];
+      state.approving = [];
       state.capped = false;
       state.extensions = 0;
       state.theme_rounds = [];
@@ -46003,6 +46009,10 @@ function decide3(events, policy, context) {
     return result2("incomplete", "repair", [
       `round 1 of scope ${state.scope} sat ${state.full_seats.length} of ${required} required seats`
     ]);
+  if (state.approving.length === 0)
+    return result2("incomplete", state.round < cap ? "closure-round" : "owner-hold", [
+      `no seat's latest verdict in scope ${state.scope} approves`
+    ]);
   if (unfiled.length > 0)
     return result2("incomplete", "file-follow-ups", [
       `${unfiled.map((row) => row.id).join(", ")} are deferred with no follow-up reference`
@@ -46113,7 +46123,7 @@ var review_ledger_schema_default = {
         sha256: { $ref: "common.schema.json#/$defs/hash" }
       },
       if: { properties: { kind: { const: "repro" } } },
-      then: { required: ["exit"] }
+      then: { required: ["exit", "base_exit"] }
     },
     "scope-open": {
       description: "A full re-review trigger fired: a new review scope starts at round 1. Rows stay and earlier approvals no longer count. A pull request may open one new scope; a further one holds it for a split-or-replan decision.",
@@ -46325,7 +46335,7 @@ var review_ledger_schema_default = {
       then: { required: ["claim", "reason"] }
     },
     evidence: {
-      description: "Evidence attached to a row inside a round. A `repro` that is red at the head keeps or makes the row open. A row with a red `repro` closes when a later `repro` line is green.",
+      description: "Evidence attached to a row inside a round. A `repro` that is red at the head and green at the merge base keeps or makes the row open. A row with a red `repro` closes when a later `repro` line is green.",
       type: "object",
       additionalProperties: false,
       required: ["v", "seq", "kind", "id", "evidence"],

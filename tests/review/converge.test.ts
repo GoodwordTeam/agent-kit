@@ -12,6 +12,15 @@ import { describe, expect, test } from "bun:test";
 import { DEFAULT_POLICY } from "../../src/review/types.ts";
 import { RISK, Script, digest, head } from "./script.ts";
 
+/** A reproduction red at head `n` with no merge-base result, which the schema refuses and the engine must not count. */
+function headOnlyRed(script: Script, id: string, n: number): Script {
+  return script.line({
+    kind: "evidence",
+    id,
+    evidence: { kind: "repro", ref: "tests/repro.test.ts", head: head(n), exit: 1, sha256: digest(3000) },
+  });
+}
+
 /** Round 1 at head 1 with one finding by seat `a`, closed. */
 function oneFinding(options: Parameters<Script["finding"]>[0] = {}, seats: string[] = ["a"]) {
   const script = new Script();
@@ -171,6 +180,15 @@ describe("what blocks", () => {
     expect(script.decide(2)).toMatchObject({ verdict: "blocked", blocking: [id] });
   });
 
+  test("round 2: a reproduction red at the head with no merge-base result does not block: the row is deferred as unreproduced", () => {
+    const script = new Script().pass(1);
+    script.open(2).verdict();
+    const id = script.finding();
+    headOnlyRed(script, id, 2).close();
+    expect(script.row(id)).toMatchObject({ status: "deferred", disposition: "unreproduced", red: [] });
+    expect(script.decide(2)).toMatchObject({ verdict: "incomplete", blocking: [] });
+  });
+
   test("round 2: a new finding inside the delta scope with no reproduction is filed and does not block", () => {
     const script = new Script().pass(1);
     script.open(2).verdict();
@@ -254,10 +272,30 @@ describe("the verdict rule", () => {
     expect(script.decide(1, 2)).toMatchObject({ verdict: "approved", action: "none", seats: ["a", "b"], cap: 3 });
   });
 
-  test("a seat's BLOCK word has no force by itself: only its rows block", () => {
+  test("a seat's BLOCK word alone never blocks: one approving seat and no blocking row is approved", () => {
     const script = new Script();
     script.open(1).verdict("a", "block").verdict("b").close();
     expect(script.decide(1, 2).verdict).toBe("approved");
+  });
+
+  test("every seat blocks with no finding: incomplete, never approved and never blocked", () => {
+    const script = new Script();
+    script.open(1).verdict("a", "block").verdict("b", "block").close();
+    expect(script.decide(1, 2)).toMatchObject({ verdict: "incomplete", action: "closure-round", blocking: [] });
+  });
+
+  test("a seat's latest verdict counts: an approval withdrawn in a later round no longer approves", () => {
+    const script = new Script().pass(1);
+    script.open(2).verdict("a", "block").close();
+    expect(script.decide(2)).toMatchObject({ verdict: "incomplete", action: "closure-round" });
+    script.open(3).verdict("a", "block").close();
+    expect(script.decide(3)).toMatchObject({ verdict: "incomplete", action: "owner-hold" });
+  });
+
+  test("an approval from round 1 carries through a later round its seat did not block", () => {
+    const script = new Script().pass(1, "a", "b");
+    script.open(2).verdict("b").close();
+    expect(script.decide(2, 2).verdict).toBe("approved");
   });
 
   test("incomplete with no ledger line at all", () => {
@@ -566,6 +604,12 @@ describe("review scopes", () => {
     expect(script.decide(2).verdict).toBe("approved");
   });
 
+  test("an approval of an earlier scope does not count in the new one", () => {
+    const script = new Script().pass(1).newScope(2);
+    script.open(2).verdict("b", "block").close();
+    expect(script.decide(2)).toMatchObject({ verdict: "incomplete", action: "closure-round", scope: 2 });
+  });
+
   test("a pull request opens a new scope once: the next trigger is a split-or-replan hold", () => {
     const script = new Script().pass(1).newScope(2).pass(2).newScope(3, "requirement-change");
     expect(script.decide(3)).toMatchObject({ verdict: "incomplete", action: "captain-hold", scope: 3 });
@@ -621,6 +665,13 @@ describe("reopening a terminal row", () => {
     script.repro(id, 1, 0).close();
     expect(script.row(id)).toMatchObject({ status: "open", reopened: 1 });
     expect(script.decide(3)).toMatchObject({ verdict: "blocked", action: "council" });
+  });
+
+  test("a reproduction red at the head with no merge-base result does not reopen the row", () => {
+    const { script, id } = closedRow();
+    headOnlyRed(script, id, 3).close();
+    expect(script.row(id)).toMatchObject({ status: "closed", reopened: 0 });
+    expect(script.decide(3).verdict).toBe("approved");
   });
 
   test("a red reproduction does not reopen a filed note", () => {

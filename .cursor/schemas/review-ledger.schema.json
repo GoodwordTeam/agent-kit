@@ -91,7 +91,7 @@
         "sha256": { "$ref": "common.schema.json#/$defs/hash" }
       },
       "if": { "properties": { "kind": { "const": "repro" } } },
-      "then": { "required": ["exit"] }
+      "then": { "required": ["exit", "base_exit"] }
     },
     "scope-open": {
       "description": "A full re-review trigger fired: a new review scope starts at round 1. Rows stay and earlier approvals no longer count. A pull request may open one new scope; a further one holds it for a split-or-replan decision.",
@@ -303,7 +303,7 @@
       "then": { "required": ["claim", "reason"] }
     },
     "evidence": {
-      "description": "Evidence attached to a row inside a round. A `repro` that is red at the head keeps or makes the row open. A row with a red `repro` closes when a later `repro` line is green.",
+      "description": "Evidence attached to a row inside a round. A `repro` that is red at the head and green at the merge base keeps or makes the row open. A row with a red `repro` closes when a later `repro` line is green.",
       "type": "object",
       "additionalProperties": false,
       "required": ["v", "seq", "kind", "id", "evidence"],

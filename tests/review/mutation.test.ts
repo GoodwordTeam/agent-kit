@@ -94,8 +94,13 @@ const TABLE: Mutant[] = [
   },
   {
     rule: "a reproduction red at the merge base makes the row pre-existing",
-    from: `if (item.base_exit !== undefined && item.base_exit !== 0) {`,
+    from: `if (item.base_exit !== 0) {`,
     to: `if (false) {`,
+  },
+  {
+    rule: "a reproduction with no merge-base result is not red",
+    from: `  if (item.base_exit === undefined) return;\n`,
+    to: ``,
   },
   {
     rule: "an always-block row is not filed as pre-existing",
@@ -317,6 +322,21 @@ const TABLE: Mutant[] = [
     rule: "round 1 sits the seats the tier requires",
     from: `if (state.full_seats.length < required)`,
     to: `if (false)`,
+  },
+  {
+    rule: "approval needs an approving seat",
+    from: `if (state.approving.length === 0)`,
+    to: `if (false)`,
+  },
+  {
+    rule: "a seat's latest verdict replaces its earlier one",
+    from: `      state.approving = state.approving.filter((seat) => seat !== event.seat);\n`,
+    to: ``,
+  },
+  {
+    rule: "a new scope invalidates the approvals",
+    from: `      state.approving = [];\n      state.capped = false;`,
+    to: `      state.capped = false;`,
   },
   {
     rule: "a deferred row needs a follow-up reference",

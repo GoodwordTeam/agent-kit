@@ -319,6 +319,8 @@ export interface LedgerState {
   covered_head: string | null;
   /** Seats that delivered a verdict in round 1 of the current scope. */
   full_seats: string[];
+  /** Seats whose latest verdict in the current scope is approve. */
+  approving: string[];
   /** Whether the current scope's cap rules ran: its last allowed round closed. */
   capped: boolean;
   extensions: number;

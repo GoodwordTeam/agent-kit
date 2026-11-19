@@ -101,9 +101,12 @@ function emit(driving: Driving, line: Line): boolean {
   return true;
 }
 
-function reproLine(driving: Driving, id: string, exit: number, base: number | undefined, ref: string): Line {
-  const evidence = { kind: "repro" as const, ref, head: head(driving.head), exit, sha256: digest(3000) };
-  return { kind: "evidence", id, evidence: base === undefined ? evidence : { ...evidence, base_exit: base } };
+function reproLine(driving: Driving, id: string, exit: number, base: number, ref: string): Line {
+  return {
+    kind: "evidence",
+    id,
+    evidence: { kind: "repro", ref, head: head(driving.head), exit, base_exit: base, sha256: digest(3000) },
+  };
 }
 
 function newFinding(driving: Driving, sitting: readonly string[], imported: boolean): void {
@@ -140,7 +143,7 @@ function newFinding(driving: Driving, sitting: readonly string[], imported: bool
   if (picker.rare(4)) emit(driving, { kind: "seat", id, seat: SEATS[picker.next(SEATS.length)] ?? "b" });
   const repro = picker.next(4);
   if (repro === 1) emit(driving, reproLine(driving, id, 1, 0, "tests/repro.test.ts"));
-  if (repro === 2) emit(driving, reproLine(driving, id, 0, undefined, "tests/repro.test.ts"));
+  if (repro === 2) emit(driving, reproLine(driving, id, 0, 0, "tests/repro.test.ts"));
   if (repro === 3) emit(driving, reproLine(driving, id, 1, 1, "tests/repro.test.ts"));
   if (picker.rare(6)) {
     const earlier = state.rows.find((row) => row.theme === line.theme && row.id !== id);
@@ -160,8 +163,8 @@ function rowActivity(driving: Driving, row: Row, sitting: readonly string[]): vo
     const repro = picker.next(6);
     const ref = picker.rare(5) ? "tests/other.test.ts" : "tests/repro.test.ts";
     if (repro === 1 || repro === 5) emit(driving, reproLine(driving, row.id, 1, 0, ref));
-    if (repro === 2) emit(driving, reproLine(driving, row.id, 0, undefined, ref));
-    if (repro === 3) emit(driving, reproLine(driving, row.id, 1, undefined, ref));
+    if (repro === 2) emit(driving, reproLine(driving, row.id, 0, 0, ref));
+    if (repro === 3) emit(driving, reproLine(driving, row.id, 0, 1, ref));
     if (repro === 4) emit(driving, reproLine(driving, row.id, 1, 1, ref));
     return;
   }
@@ -384,8 +387,8 @@ export function mustBlock(events: readonly LedgerEvent[], policy: ConvergencePol
           row.red.delete(item.ref);
           row.always = false;
         } else if (item.base_exit === 0) row.red.add(item.ref);
-        // A run that is red at the merge base, or names no merge base, may refile the row: stop watching it.
-        else row.eligible = false;
+        // A run that is red at the merge base may refile the row: stop watching it.
+        else if (item.base_exit !== undefined) row.eligible = false;
         break;
       }
       case "repeat": {
