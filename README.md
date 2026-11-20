@@ -280,6 +280,14 @@ owner-only roster and a launcher's answer. The record grants no authority.
 [ADR-0015](docs/decisions/0015-council-blind-veto.md) owns the rule and the outbound gate;
 [`adapters/runner-contract/CLI.md`](adapters/runner-contract/CLI.md) owns the runner's `--council-config`.
 
+**The convergence ledger is optional.** `ak review ledger add --ledger <ledger.jsonl> --event <file|->` appends what
+seats, the author and a gate reported for one pull request, `ak review ledger show --ledger <ledger.jsonl>` prints the
+state the lines fold to, and `ak review decide --ledger <ledger.jsonl> --head <sha> --seats <n>` prints the verdict for
+one exact head: `approved`, `blocked` or `incomplete`, with one next action. `runReview` in `src/review/cli.ts` defines
+the flags, the records and the exit status; `decide` in `src/review/converge.ts` is the rule, and it reads no file,
+clock or model. The record grants no authority. [ADR-0018](docs/decisions/0018-review-convergence.md) owns the
+evidence bar, the round cap and the stop rule.
+
 **Bypass, for one task.** A supervisor who wants a task to run without typing each phase command writes
 a grant from its own home with `node <bundle>/bin/ak-gate.mjs bypass grant`, and the worker checks it before
 each human-started phase. A grant holds in each lifecycle run of its task while that run is its
