@@ -618,7 +618,9 @@ afterEach(() => {
   }
   saved.clear();
 });
-beforeEach(() => setEnv({ AK_LIFECYCLE_POLICY: undefined, AK_UNATTENDED_READ_TOKEN: undefined }));
+beforeEach(() =>
+  setEnv({ AK_LIFECYCLE_POLICY: undefined, AK_LIFECYCLE_SUPERVISOR: undefined, AK_UNATTENDED_READ_TOKEN: undefined }),
+);
 
 const STUB = `#!/usr/bin/env node
 const fs = require("node:fs");

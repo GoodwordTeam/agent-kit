@@ -32,7 +32,13 @@ describe("configured test lanes", () => {
       try {
         // A separate package keeps the checkout's dependency binaries from shadowing the recorder.
         const project = join(scratch, "project");
-        for (const file of ["package.json", "tools/test/run.sh", "tools/test/integration-files.txt", ...heavy]) {
+        for (const file of [
+          "package.json",
+          "tools/test/run.sh",
+          "tools/test/integration-files.txt",
+          "tools/publish/fetch-catalog-history.sh",
+          ...heavy,
+        ]) {
           const target = join(project, file);
           mkdirSync(dirname(target), { recursive: true });
           copyFileSync(join(root, file), target);
@@ -89,7 +95,13 @@ describe("configured test lanes", () => {
       const scratch = processScratch("ak-test-awk-");
       try {
         const project = join(scratch, "project");
-        for (const file of ["package.json", "tools/test/run.sh", "tools/test/integration-files.txt", ...heavy]) {
+        for (const file of [
+          "package.json",
+          "tools/test/run.sh",
+          "tools/test/integration-files.txt",
+          "tools/publish/fetch-catalog-history.sh",
+          ...heavy,
+        ]) {
           const target = join(project, file);
           mkdirSync(dirname(target), { recursive: true });
           copyFileSync(join(root, file), target);
@@ -97,9 +109,13 @@ describe("configured test lanes", () => {
         const bin = join(project, "node_modules", ".bin");
         const log = join(scratch, "calls");
         mkdirSync(bin, { recursive: true });
-        writeFileSync(join(bin, "bun"), '#!/bin/sh\nprintf "%s\\n" "$@" >> "$TEST_LANE_LOG"\nexit 0\n', {
-          mode: 0o755,
-        });
+        writeFileSync(
+          join(bin, "bun"),
+          '#!/bin/sh\nif [ "$1" = -e ]; then exit 0; fi\nprintf "%s\\n" "$@" >> "$TEST_LANE_LOG"\nexit 0\n',
+          {
+            mode: 0o755,
+          },
+        );
         symlinkSync(awk, join(bin, "awk"));
         const { AK_TEST_PARALLEL: _unset, ...inherited } = process.env;
         const env = { ...inherited, TEST_LANE_LOG: log, PATH: `${bin}:${process.env.PATH ?? ""}` };
