@@ -25,6 +25,9 @@ ENG. Check its shape with the merged loader; do not read the token or contact
 Linear. Live authentication and writes require a separate pilot check. Keep the
 project-local, exactly pinned linearis dependency and gitignored token.
 
+Both the tracker and knowledge-base configuration loaders accept the inspected
+root bindings without issues. This is a local shape check, not a live-service test.
+
 Root, web, MCP and knowledge-base plugin settings name upstream; API names the
 Goodword fork. All inspected settings disable `ak@agent-kit`. Therefore merging
 this PR changes no active monorepo plugin configuration. Before a pilot, choose
@@ -72,8 +75,37 @@ PRs made from clean upstream-based branches, excluding Goodword URLs and policy.
 Record accepted upstream revisions and bring them back through the same inbound
 sync path. No goodword-platform files are changed by this task.
 
-## Verification and handoff
+## Technical appendix: verification and handoff
 
-Results and the reviewed revision will be recorded here before the draft PR is
-handed back. Ellie must review independently before readiness; only Chris can
-authorize merge. No install or global configuration change is part of validation.
+The integration commit is `548b953c9bf9e4dd2050c6e91c8c4b7306e0e826`.
+`research/probes/validate-figure.sh` measured that revision with donors copied
+into a clean archive and dependencies linked from the working tree: no validation
+errors and no skipped or unavailable checks. Existing style warnings remain.
+A separate clean archive with copied donors also passed `bun run ak build`,
+producing both Claude Code and Codex output. Working-tree format, lint, lint
+growth, build consistency, Cursor overlay consistency and publication-version
+checks passed. The URL changes raise twelve byte-size pins by one or two bytes
+each, with no estimated-token increase.
+
+The fork's history-fetch step initially broke the isolated lane-test fixtures
+because they did not copy that helper. Both fixtures now include it and their
+recorders ignore its metadata query; all three lane checks pass. An early donor
+receipt test measured the pre-merge HEAD with the new dependencies; final checks
+use the committed integration instead. The exploratory run was stopped after
+the complete donor-backed run replaced it.
+
+The ordinary test lane passed all 5,169 tests. Three integration suites needed
+local environment fixes: the operator's global Git ignore hides fixture `dist/`
+directories, and system Python lacks PyYAML. Run those suites with
+`GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1` and a scratch virtual
+environment containing PyYAML 6.0.3 first on PATH: packaging, version gate and
+catalog progress then pass all 252 tests. These are process-local settings;
+no global configuration changed. The complete donor-backed `bun run test` run
+reported 6,041 passes and 18 failures across all lanes, exiting 1 because of
+those environment issues. All 18 failures are in the three suites rerun above;
+all other integration lanes passed, including 131 lifecycle and 169 runner
+tests. Together the full run and corrected rerun cover 6,059 passing tests with
+no unresolved failures; this is not a claim that the original command exited 0.
+
+Ellie must review independently before readiness; only Chris can authorize
+merge. No install or global configuration change is part of validation.
