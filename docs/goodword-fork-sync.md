@@ -87,8 +87,29 @@ history before the monorepo PR, then export the approved split to the fork mirro
 ## Technical appendix: evidence and decisions
 
 The machine-readable companion is [goodword-fork-sync-prs.json](goodword-fork-sync-prs.json).
-It records upstream and cherry-picked commits in application order. Verification
-results will be added before this draft is handed back for re-review.
+It records upstream and cherry-picked commits in application order. The curated
+code and selection were verified at `7bed9b811012cae7f617fb2beccda00c75efb2bd`.
+
+- Full `bun run test`: 6,073 passed, zero failed and zero skipped across all
+  15 lanes, including 131 lifecycle and 169 runner tests; command exit 0.
+  The test process used `AK_REQUIRE_DONORS=1`, `GIT_CONFIG_GLOBAL=/dev/null`,
+  `GIT_CONFIG_NOSYSTEM=1` and the ignored scratch Python environment with
+  PyYAML 6.0.3 first on PATH. These process-local settings avoid the operator
+  Git ignore hiding fixture bundles and supply the catalog probe dependency.
+- Format, lint, lint growth, token budget, build, build consistency, Cursor
+  overlay consistency and publication-version checks all exited 0.
+- `research/probes/validate-figure.sh` measured that revision in a clean archive
+  with donors copied and dependencies linked from the working tree: zero errors,
+  40 warnings, 170 notes, 139 skill-style warnings, zero skipped and zero
+  unavailable; install: no install file, default fail-closed adapters attached,
+  no tracker backend, knowledge-base write fallback. Existing style warnings remain.
+- A separate clean archive of the same revision with copied donors passed
+  `bun run ak build`. No installer or global agent configuration was changed.
+- The curated tracker and knowledge-base loaders accept the inspected Goodword
+  root bindings without issues; no token was read or live service contacted.
+
+Independent re-review and Chris’s merge decision remain outstanding; this is
+validation evidence from the implementer, not independent review approval.
 
 The following table repeats all audited decisions; Relevant and Neutral rows are
 taken, and the two explicit exclusions remain excluded except for the #269
@@ -169,7 +190,7 @@ overrides that audit's earlier recommendation to merge everything.
 | [#247](https://github.com/Pibomeister/agent-kit/pull/247) | `54e13c57` | Take: Relevant | Improves delegation scoring from actual diff and shared-surface evidence, useful for Polly/Orca planning. |
 | [#248](https://github.com/Pibomeister/agent-kit/pull/248) | `e0232821` | Take: Relevant | Clarifies that lighter review does not bypass the delivery pipeline's independent Review step. |
 | [#263](https://github.com/Pibomeister/agent-kit/pull/263) | `ccdd5d2b` | Take: Neutral | Adds runner question prioritization and stall alarms for autopilot; useful later, not needed for manual Orca dispatch. |
-| [#244](https://github.com/Pibomeister/agent-kit/pull/244) | `64cdfbb5` | Exclude: Risky for Goodword | Commits ak.lifecycle.json with policy=unattended in the fork itself; override it to preserve a manual Agent Kit development/pilot posture. |
+| [#244](https://github.com/Pibomeister/agent-kit/pull/244) | `64cdfbb5` | Exclude; #269 dependency only | Commits ak.lifecycle.json with policy=unattended in the fork itself; override it to preserve a manual Agent Kit development/pilot posture. |
 | [#260](https://github.com/Pibomeister/agent-kit/pull/260) | `d1b2da03` | Take: Relevant | Isolates legacy packaged-gate tests from unattended launch policy; prevents configuration leakage in tests. |
 | [#249](https://github.com/Pibomeister/agent-kit/pull/249) | `e770ab4e` | Take: Neutral | Tunes Eddie's no-mistakes CI gate only; Goodword still needs its own Mergify/draft-PR mapping. |
 | [#250](https://github.com/Pibomeister/agent-kit/pull/250) | `6f947efe` | Take: Neutral | Excludes generated bundles from no-mistakes review coverage; repository maintenance only. |

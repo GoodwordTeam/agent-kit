@@ -807,7 +807,9 @@
       "order": 73,
       "upstream_commit": "64cdfbb5fd7caa0435fb05d9eb2899630a01557c",
       "merge": false,
-      "decision": "exclude"
+      "decision": "exclude",
+      "dependency_used_by": [269],
+      "dependency_parts": "Optional supervisor name, allowlist and validation/stamping for explicitly selected policies; environment isolation. No repository policy file, opt-in test, supervisor-specific ship disclosure or gate-record precedence logic."
     },
     {
       "pr": 260,
