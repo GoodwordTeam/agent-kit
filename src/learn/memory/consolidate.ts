@@ -31,6 +31,7 @@ import { type Candidate, type Comparable, contentKey, similarLine, similarTo } f
 import { buildPrompt } from "../core/roles.ts";
 import { appendJsonl, nowIso, nowMs, readJsonl, todayLocal, tokens, writeGated } from "../core/store.ts";
 import { runOf } from "../core/trace.ts";
+import { LIVE_LESSON_STATUSES } from "../lessons.ts";
 import { appendEvents, makeEvent, type ReviewEvent } from "../review/events.ts";
 import { ClaudeMemSource, type MemoryObservationSource, type ObservationRow } from "../sources/claude-mem.ts";
 import { isCapturedObservation, WorkerSessionSource } from "../sources/worker-sessions.ts";
@@ -228,9 +229,6 @@ export function renderLesson(meta: PageMeta, evidence: readonly string[]): strin
   return renderPage(meta, lessonBody(str(meta.statement), evidence));
 }
 
-/** Statuses a repeat is counted on. A superseded or conflicting lesson is history; restating it makes a new lesson. */
-const LIVE: ReadonlySet<string> = new Set(["hypothesis", "confirmed", "stale"]);
-
 /** Lessons a new one is compared with: every one not superseded, conflicts included. */
 function comparable(lessons: ReadonlyMap<string, LessonPage>): Comparable[] {
   return lessons
@@ -327,7 +325,7 @@ export function applyConsolidation(
   valid: ReadonlySet<string>,
   obsSession: ReadonlyMap<string, string>,
   options: {
-    review?: { ledger: Ledger; project: string };
+    review?: { ledger: Ledger; project: string; sessions: ReadonlyMap<string, string> };
     runId?: string;
     today?: string;
     sessionOf?: ReadonlyMap<string, string>;
@@ -367,7 +365,9 @@ export function applyConsolidation(
     const scope = typeof lesson.scope === "string" && SCOPES.has(lesson.scope) ? lesson.scope : "repo";
     const key = contentKey(statement, scope);
     const repeat = [...existing.values()].find(
-      (page) => LIVE.has(str(page.meta.status)) && contentKey(str(page.meta.statement), str(page.meta.scope)) === key,
+      (page) =>
+        LIVE_LESSON_STATUSES.has(str(page.meta.status)) &&
+        contentKey(str(page.meta.statement), str(page.meta.scope)) === key,
     );
     if (repeat !== undefined) {
       if (countRepeat(repeat, evidence, cleanTags(lesson.tags), sessionOf, today))
@@ -429,6 +429,7 @@ export function applyConsolidation(
       events,
       valid,
       options.runId ?? null,
+      options.review.sessions,
     );
     summary.review_events = delivered.forwarded;
     summary.review_events_parked = delivered.parked;
@@ -440,12 +441,12 @@ export function applyConsolidation(
 /** Review events built while the review ledger was locked, waiting for a run that gets the lock. */
 export const PENDING_REVIEW_FILE = "raw/pending-review-events.jsonl";
 
-/** Evidence-backed findings and corrections from a judge reply, as review events. Deduplicated later by the hash of the text. */
 export function buildReviewEvents(
   project: string,
   events: readonly JudgedEvent[],
   valid: ReadonlySet<string>,
   runId: string | null,
+  sessions: ReadonlyMap<string, string>,
 ): ReviewEvent[] {
   const out: ReviewEvent[] = [];
   for (const event of events) {
@@ -453,30 +454,43 @@ export function buildReviewEvents(
     const text = oneLine(event.text);
     const evidence = strings(event.evidence).filter((id) => valid.has(id));
     if (text === "" || evidence.length === 0) continue;
-    const obsIds = evidence.filter((id) => id.startsWith("obs:")).map((id) => Number(id.slice(4)));
+    const witnesses = new Map<string | null, string[]>();
+    for (const id of evidence) {
+      const session = sessions.get(id) || null;
+      const ids = witnesses.get(session) ?? [];
+      ids.push(id);
+      witnesses.set(session, ids);
+    }
     const files = strings(event.files)
       .map((file) => oneLine(file, 500))
       .filter((file) => file !== "");
-    const forwarded = makeEvent(
-      {
-        source: MEMORY_SOURCE,
-        kind: event.kind === "correction" ? "correction" : "finding",
-        project,
-        pr: null,
-        sha: null,
-        author: MEMORY_SOURCE,
-        severity: null,
-        path: files[0] ?? null,
-        line: null,
-        text: `${text}\n(evidence: ${evidence.join(", ")})`,
-        // The run id rides in url, not author: maintain adds every author to a pattern's reviewers list.
-        url: runId === null ? null : `${MEMORY_SOURCE}:run/${runId}`,
-        ts: nowIso(),
-      },
-      createHash("sha1").update(text).digest("hex"),
-    );
-    if (obsIds[0] !== undefined) forwarded.obs_id = obsIds[0];
-    out.push(forwarded);
+    for (const [session, ids] of witnesses) {
+      const kind = event.kind === "correction" ? "correction" : "finding";
+      const forwarded = makeEvent(
+        {
+          source: MEMORY_SOURCE,
+          kind,
+          project,
+          pr: null,
+          sha: null,
+          author: MEMORY_SOURCE,
+          severity: null,
+          path: files[0] ?? null,
+          line: null,
+          text: `${text}\n(evidence: ${ids.join(", ")})`,
+          // The run id rides in url, not author: maintain adds every author to a pattern's reviewers list.
+          url: runId === null ? null : `${MEMORY_SOURCE}:run/${runId}`,
+          ts: nowIso(),
+        },
+        createHash("sha1")
+          .update(JSON.stringify([project, kind, text, session ?? ids.toSorted()]))
+          .digest("hex"),
+      );
+      const obs = ids.find((id) => id.startsWith("obs:"));
+      if (obs !== undefined) forwarded.obs_id = Number(obs.slice(4));
+      if (session) forwarded.session = session;
+      out.push(forwarded);
+    }
   }
   return out;
 }
@@ -520,8 +534,9 @@ export function forwardReviewEvents(
   events: readonly JudgedEvent[],
   valid: ReadonlySet<string>,
   runId: string | null,
+  sessions: ReadonlyMap<string, string>,
 ): { forwarded: number; parked: number } {
-  return deliverReviewEvents(review, memory, buildReviewEvents(project, events, valid, runId));
+  return deliverReviewEvents(review, memory, buildReviewEvents(project, events, valid, runId, sessions));
 }
 
 /** The lesson's origin as a knowledgebase trigger: a stated preference or a corrected session is a correction. */
@@ -642,8 +657,14 @@ export function consolidate(
   const shown = new Set(included.map((episode) => sid8(episode.sid).slice(1)));
   const obsSession = new Map([...obsSessionAll].filter(([, sid]) => shown.has(sid)));
   const valid = new Set([...obsSession.keys(), ...included.map((episode) => sid8(episode.sid))]);
+  const reviewSessions = new Map<string, string>();
+  for (const episode of included) {
+    if (included.filter((other) => sid8(other.sid) === sid8(episode.sid)).length === 1)
+      reviewSessions.set(sid8(episode.sid), episode.sid);
+    for (const row of obsBySid.get(episode.sid) ?? []) reviewSessions.set(`obs:${row.id}`, row.memory_session_id);
+  }
   const summary = applyConsolidation(ledger, reply, valid, obsSession, {
-    review: review === null ? undefined : { ledger: review, project: basename(root) },
+    review: review === null ? undefined : { ledger: review, project: basename(root), sessions: reviewSessions },
     runId,
     sessionOf: citedObsSessions(source, ledger),
   });

@@ -2,7 +2,7 @@
 # Prose mirror: skills/super-build/SKILL.md (AUTHORING.md §4.1).
 
 id: super-build
-version: 0.1.0
+version: 0.5.0
 kind: lifecycle
 invocation: M
 summary: >-
@@ -151,6 +151,8 @@ references:
   - engineering-principles
   - verification-evidence
   - knowledgebase-binding
+  - read-economy
+  - unattended-lifecycle
 
 limits:
   fix-rounds: 5
@@ -192,6 +194,9 @@ stop_conditions:
   - complete when the ticket is committed, every acceptance criterion has a receipt bound to the
     committed revision, and every finding is closed on that evidence or parked with a written ruling.
   - The two axes return no findings this lane is obliged to act on, and the receipts bind.
+  - A knowledgebase coverage limit, ak kb check exit 3 (kb.unbound, kb.unregistered), a publish exit 3 (kb.read-only), kb.in-repo-missing, or a missing or
+    unknown ak kb command, never stops this phase under any policy. Reads are unavailable, each
+    skipped publish is named in the result as not published, and of these results only exit 1 stops.
 
 failure_outcomes:
   - status: cap-reached
@@ -210,8 +215,10 @@ failure_outcomes:
       finding sharpened or the seat available.
   - status: failed
     meaning: >-
-      No writable worktree, the branch is already checked out elsewhere, or the knowledgebase refused
-      the write. The worktree and the ledger are left intact for the resume.
+      No writable worktree, the branch is already checked out elsewhere, or a configured
+      knowledgebase refused a receipt, the ticket result or the check result; a refused trail
+      record fails nothing (ruling `work-trail-is-account-not-evidence`). The worktree and the
+      ledger are left intact for the resume.
     next_permitted_action: Re-invoke once the worktree is available or the knowledgebase accepts writes.
   - status: cancelled
     meaning: >-
@@ -359,6 +366,7 @@ provenance:
     - safe-auto-restricted-per-seat
     - fail-closed-adapter-lifts-ceiling
     - work-trail-is-account-not-evidence
+    - delegation-class-is-authority-not-finding
 
 tests:
   - id: approved-ticket-executes-and-reports-receipts
@@ -431,9 +439,9 @@ tests:
       A run is interrupted after two tickets committed and a third was mid-fix-loop, and is started
       again against the same ready set.
     expect: >-
-      The skill reads the recorded base commits, commits and rulings rather than its own recollection,
-      resumes the third ticket at its next round, and does not re-dispatch implementers for work
-      already committed.
+      The skill reads the recorded base commits, commits and rulings, and each ticket's work-trail
+      stretch index, rather than its own recollection, resumes the third ticket at its next round,
+      and does not re-dispatch implementers for work already committed.
   - id: task-local-child-does-not-ship
     kind: adversarial
     given: >-

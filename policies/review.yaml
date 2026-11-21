@@ -140,12 +140,61 @@ pass_1:
     rule: >-
       Seat count follows artifact evidence, not ceremony. A documentation typo runs the
       always-on seat and the standards gate if standards exist, and nothing else.
+    lean_panel:
+      applies_to: a pass-1 change within the project's configured size guidance
+      seats: >-
+        Correctness, the standards gate, testing when the change adds or alters behavior, and
+        the conditional seats the change's own risk evidence or attached packs activate.
+        Maintainability, agent-native and learnings sit only when the change exceeds the size
+        guidance; below it, correctness covers their axes.
+      rule: >-
+        Seat count scales with the diff and the mode. A delta never convenes the pass-1 panel or
+        the lean panel: it runs its two core lanes, plus a specialist seat only when an unresolved
+        prior finding of that seat's type exists or the delta diff itself triggers that seat's
+        risk evidence. Leaner never drops a risk seat the evidence activated.
     forbidden:
       - spawning the full catalog on a small low-risk change
       - hardcoding a fixed six seats regardless of the artifact
       - dropping the security or adversarial seat because a classifier was uncertain
     ruling: panel-composition-by-declared-risk
     scenario: 1
+
+  depth:
+    applies_when: >-
+      The project record sets `review.routing` to `on`. With `shadow`, the depth is computed and
+      recorded and the panel does not change. With `off` or no key, this block has no effect.
+    by_class:
+      green: single
+      yellow-agent: reduced
+      yellow-owner: reduced
+      red: full
+    baseline:
+      single: >-
+        One reviewer seat that holds the five review points of the owner's ask: the patterns and
+        conventions of the surrounding code, the project's rules cited rule by rule, likely bugs,
+        reuse of an existing helper where the change adds a new one, and correctness against the
+        acceptance criteria.
+      reduced: >-
+        The lean panel as `pass_1.proportionality.lean_panel.seats` defines it. The class selects
+        it. The size guidance does not.
+      full: >-
+        The pass-1 selection as `pass_1.seats` and `pass_1.proportionality` define it, unchanged.
+    activated_seats: >-
+      Every conditional and stack seat that the evidence activates sits at every depth. A seat
+      with `required_when_activated` stays required.
+    absent_class_evidence: >-
+      The depth is `full` when there is no ticket delegation block, no project
+      `guidance.delegation`, no successful scorer run, a failed depth command, or no class in
+      the run's build record. The review records the reason.
+    direction: >-
+      A run may move to a deeper depth and never moves to a shallower one after it starts. A
+      named human may lower the merge-stage class below the ticket-stage class, and that
+      lowering never crosses a floor.
+    forbidden:
+      - selecting a shallower depth to save tokens
+      - dropping an activated seat at any depth
+      - treating the class as a finding
+    ruling: review-depth-follows-delegation-class
 
   not_a_seat:
     - id: deployment-verification
@@ -405,11 +454,25 @@ delta:
     third_cycle: >-
       Stops with an explicit blocked-or-replan decision. Anything still open is reported, not
       looped.
+    after_the_first_pass: >-
+      Every later review in the run is a delta over the commits since the last reviewed head,
+      including a review that follows the cap or a replan. Reaching the cap never opens a new
+      full scope.
+    only_p3_open_at_cap: >-
+      The decision recommends merge, with each open P3 listed as a follow-up rather than
+      blocking.
+    same_theme_reopened: >-
+      When two consecutive cycles reopen the same finding theme, the decision is a design
+      decision naming the theme, not another fix cycle.
     ruling: two-fix-cycles-then-stop
     scenario: 18
   baseline_reset:
     trigger: >-
       Architecture, requirements, comparison base or the affected surface changes materially.
+    not_a_trigger: >-
+      The fix commits themselves, a reached cap, a replan or rebase that leaves the accepted
+      requirements, the relevant architecture and the patch all unchanged, or a same-finding replan
+      that changes only the patch while no trigger applies. Those continue as a delta.
     effect:
       - affected approvals are invalidated
       - a new baseline is deliberately established
@@ -480,6 +543,21 @@ doc_review:
       tier: always-on
     - role: doc-review/feasibility
       tier: always-on
+    - role: doc-review/comprehension
+      tier: always-on
+      activation: >-
+        The project's review.comprehension is shadow or on. Off, a missing review object, and a
+        missing key skip the seat. When seated it reaches every document. (phase 1b, GS-004h)
+      receives:
+        - the pinned snapshot
+        - the files and knowledgebase pages the document links to or names by path
+        - governing constraints the host loads for every session
+      never_receives:
+        - the glossary or concept pages the document does not link
+        - a prior-finding packet or an earlier paraphrase
+        - the author's narrative, rationale or self-assessment
+        - another reviewer's findings, judgments or dispositions
+      rulings: [comprehension-seat-stays-naive, comprehension-gap-not-contestable]
     - role: doc-review/product-lens
       tier: conditional
       activation: the document takes or implies an unsettled product position

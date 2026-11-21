@@ -8,7 +8,9 @@ and retains the deprecated patched binding interface for existing users (ruling
 Firstmate is the only outer supervisor. Nothing here makes agent-kit a second one: it adds no
 dispatcher, no watcher and no merge path, and it never writes Firstmate's state files. The runner
 and run ledger live in `src/runner/`; this binding adapter does not start that service or dispatch
-its supervisor seats. Firstmate may operate it separately through `ak runner` as described in
+its supervisor seats. Firstmate immediately assigns P0 and prioritized orders dedicated end-to-end
+owners, watches each every cycle, keeps other lanes running, and displays runner blocker output.
+Firstmate may operate it separately through `ak runner` as described in
 `adapters/runner-contract/CONTRACT.md` §9.
 
 ## Stock Firstmate path
@@ -118,7 +120,7 @@ worker started is not independent of the worker (ruling `missing-supervisor-neve
 | Firstmate | What works |
 |---|---|
 | **Unmodified Firstmate** | The stock path above: normal brief, spawn, status, inbox and delivery mode, with runner-validated standing start. `ak firstmate preflight` passes compatibility checks without a patch; no runner means guided checkpoints |
-| **Upstream `a5d78f8` with patches 0001 then 0002** | Delivery mode `agent-kit` for Claude Code workers with the child guard enforced; other harnesses with the guard declared but not enforced (§5). Everything in §2 and §4. With 0002, a `dry-run` binding's worker publishes nothing, and Firstmate itself runs `ak firstmate status <binding> --verify` on every agent-kit `done:` and keeps it only on exit 0 |
+| **Upstream `a5d78f8` with patches 0001 then 0002** | Delivery mode `agent-kit` for Claude Code workers with the child guard enforced; other harnesses with the guard declared but not enforced (§5). Everything in §2 and §4. With 0002, a `dry-run` binding's worker publishes nothing, and Firstmate itself runs `firstmate status <binding> --verify` from its own `ak` on every agent-kit `done:` and keeps it only on exit 0 |
 | **Upstream `a5d78f8` with patch 0001 only** | Legacy patched mode is unavailable: `ak firstmate preflight --legacy-patched` refuses it and names 0002; the stock path above still works |
 | **Not wired by these patches** | Evidence published to a knowledgebase (this adapter publishes to none); automatic startup of the separate runner service and seat launchers; any Firstmate commit the patches do not apply to cleanly. A Firstmate supervisor can start the runner and pass its worker token and socket without changing this binding adapter |
 
@@ -134,8 +136,10 @@ built from the home's working tree, so the home's own index and files are never 
 the three keys 0001 requires (`AK_FIRSTMATE_BIN`, `AK_FIRSTMATE_PATCH`,
 `AK_FIRSTMATE_WORKER_SETTINGS`), which the patched parser refuses if it holds any other key but
 0002's optional `AK_FIRSTMATE_WORKER_BUDGET_USD` (install never writes that one; a maintainer adds it);
-`agent-kit/worker-settings.json`, whose hook command carries `'__AK_FIRSTMATE_BINDING__'`, in
-single quotes, for the patch to replace with the task's bare binding path; and, when an evidence store is given,
+`agent-kit/worker-settings.json`, whose `PreToolUse` hook command carries `'__AK_FIRSTMATE_BINDING__'`, in
+single quotes, for the patch to replace with the task's bare binding path, and whose `Stop` hook runs
+`bun '<ak root>/tools/hooks/semantic-lint.ts' hook` with a 30-second timeout, the advisory semantic
+lint of `docs/semantic-lint.md`, off unless `AK_JEV_ENABLED=1` in the hook process, holding no key and setting no switch; and, when an evidence store is given,
 `agent-kit/evidence.env`, which only `ak` reads. It is idempotent and `ak firstmate remove` deletes
 exactly those.
 
@@ -171,7 +175,8 @@ record in the binding's evidence store, for the lifecycle run the worker opened 
 (`open --ticket <ticket-file> --binding <binding file> --dir <evidence store>`; the latest one when it
 opened more than one, and the binding's own run id when it opened none), current for the head the latest `ship-preflight`
 record names. `build-checks` and `review-full` may sit on an earlier head in that head's history; a
-`review-full` on an earlier head also needs a `review-delta` at this one. That history is bounded
+`review-full` on an earlier head, or one that requested changes, also needs a `review-delta` at this
+one recorded after it. That history is bounded
 by ancestry alone. The fork-point bound applies only to a standalone run named after its branch (no
 `--run` and no opened run): there, a record whose snapshot is already on the default branch
 (`origin/HEAD`, else `main`, else `master`) does not count unless it is at the head's own revision,
@@ -221,7 +226,8 @@ input shape.
 
 ## 6. Deprecated legacy binding delegated authority
 
-super-review `full` and `readiness` and super-ship are `explicit-or-delegated`: a human starts them,
+For review-start authority, see [ADR-0013](../../docs/decisions/0013-model-starts-super-review.md).
+super-ship stays `explicit-or-delegated`: a human starts it,
 or a delegated controller does under a validated grant. Under Firstmate, Firstmate is that controller
 and the binding it wrote is the grant (ADR-0004). `ak firstmate grant --binding <path> --operation
 <op>` validates it and prints a grant record, or refuses with a reason and a `needs-decision` hint.
@@ -240,7 +246,7 @@ Every grant also requires that the binding validates against its schema; that it
 the worktree the grant is asked from and outside the bound project; and that the pinned bundle still
 hashes to the bound hash. A same-user worker can still run bind itself or edit the ledger, which
 the brief forbids; the child guard's denial of both is a tripwire for subagents, not a boundary, and
-does not cover the main thread. `ak firstmate status complete` and `status --verify` detect it by
+does not cover the main thread. `ak firstmate status complete` and the supervisor's `ak firstmate status --verify` detect it by
 comparing each kept grant record's `binding_sha256` and `binding` path with the ledger entry (§4); a
 worker that rewrites the ledger and the grant records consistently still passes. Preventing it needs the
 runner's validated grants (ADR-0004). Any other operation, merge and scope changes included, is
@@ -256,7 +262,8 @@ section it prints
 into the brief. Never run it through `bun` or from a project directory: `bun` loads the working
 directory's `bunfig.toml` and `.env` first, which a worker can write (SUPERVISOR.md). The worker runs
 `node <agent-kit bundle>/bin/ak-gate.mjs bypass check --grant <path> --task <id> --phase <phase>` before
-super-align, super-bound, super-review `full` or `readiness`, and super-ship; exit 0 is the start.
+the human-started phases covered by ADR-0008; exit 0 is the start. Review may also use that route,
+but does not require it (ADR-0013).
 The grant is start-only: every approval inside those phases still reaches Firstmate as
 `needs-decision`, and merge and deploy are never on it. The task id must equal the grant's, and the
 check must run from inside the task's worktree the grant names (`--project` cannot stand in for it);

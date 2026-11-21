@@ -8,6 +8,12 @@ adaptations:
   - path: adapters/codex/CONTRACT.md
     source: local:verifier-seat-design-report@sha256:19f676e5ce53035aaa7c25653d743119aacfa5c15879421021b63100e9110dea#L147-182
     rationale: Native child sessions inherit the same host-unattested independence limit as the other shipped host.
+  - path: adapters/cursor/CONTRACT.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:.cursor-plugin/plugin.json
+    rationale: The donor's parallel per-host manifest directory for Cursor is the pattern this adapter copies for `.cursor-plugin/plugin.json` identity. Discovery paths, Cloud Agent vendoring, reviewer subagents and the `/<id>` gate are verified against Cursor's published docs in the contract rather than guessed from the donor tree.
+  - path: adapters/cursor/README.md
+    source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:.cursor-plugin/plugin.json
+    rationale: Downstream install surface for the same Cursor plugin identity the donor ships. The rsync overlay into `.cursor/skills` and `.cursor/agents` is this package's Cloud Agent path, not a donor command.
   - path: adapters/grok/CONTRACT.md
     source: local:grok-host-packaging-decision@sha256:43a98fce39b02a79d26bf61e6f05cdb958446ad764b4e21af12ab1cd606f5e4d#L4-4
     rationale: The generated host variant, unchanged authored sources and eval selection, native authority rendering, offline probes and deferred expansion acceptance become the Grok contract.
@@ -164,6 +170,9 @@ adaptations:
   - path: policies/resolved-conflicts.yaml
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L23-45
     rationale: Diff-scoped complexity, duplication, dead-code and boundary evidence became project checks that block only when declared mandatory.
+  - path: policies/review.yaml
+    source: local:review-routing-owner-ask-2026-11-10@sha256:468cbcc7b448e36805874c3ca8e5c36784d0f1680f37e5f965e1e765d7695ad6#L19-22
+    rationale: The owner's semaphore bullets, green a simple code review, yellow a multi-agent review that may enlist fewer agents and red the current review pipeline, became the pass_1.depth map of green to single, both yellow classes to reduced and red to full.
   - path: protocols/apply-findings/PROTOCOL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-code-review/references/action-class-rubric.md
     rationale: "Severity and owner routing. Recorded conflict: plan §5.5's four-value autofix_class (including safe_auto) stands and matches schemas/finding.schema.json, while this donor has evolved to a three-value enum that rejects safe_auto. Adopted the plan's, recorded the tension rather than silently taking either."
@@ -264,6 +273,12 @@ adaptations:
     source: pocock@c55ee46073ed923f86ce59a5eb3b6d895095d1b7:skills/engineering/codebase-design/SKILL.md
     rationale: The glossary with its exact avoided synonyms, the deletion test, the one-adapter versus two-adapters rule, and the rejected-framings section defending the vocabulary choices. The donor's Seam entry credits Michael Feathers and that attribution is kept. The donor's framing as a skill becomes a reference pack loaded by the skills that need the vocabulary.
   - path: references/delegation/REFERENCE.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:agents/codebase_details.md
+    rationale: Proposed files are not findings. exists versus proposed labelling, and the rule that proposed-absent is not a defect, are stated here for the cold reader (phase 1b, GS-004i).
+  - path: references/delegation/REFERENCE.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:resources/document_standards/implementation-readiness-standard.md
+    rationale: The zero-decision rule and rewrite cap for listed decisions live here so super-bound step 13 can stay a pointer. Off and shadow do not change class or scorer inputs (phase 1b, GS-004i).
+  - path: references/delegation/REFERENCE.md
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L177-219
     rationale: The evidenced factors, four classes and authorship meanings became the shared class vocabulary while project weights and cut points remain advisory.
   - path: references/delegation/REFERENCE.md
@@ -272,6 +287,9 @@ adaptations:
   - path: references/delegation/REFERENCE.md
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L256-265
     rationale: Ticket-time and merge-time assessment, raise-only recomputation and named-human lowering became the two-snapshot lifecycle.
+  - path: references/delegation/REFERENCE.md
+    source: local:review-routing-owner-ask-2026-11-10@sha256:468cbcc7b448e36805874c3ca8e5c36784d0f1680f37e5f965e1e765d7695ad6#L16-18
+    rationale: The owner's third semaphore factor, touching files that impact functionality across a bunch of different features, became the shared-surface floor source the delegation reference names beside the never-dropped packs and the required sensitive actions.
   - path: references/delegation/REFERENCE.md
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-136
     rationale: The six readiness criteria, vague-term pass and assumption resolution became per-ticket evidence and frontier questions.
@@ -395,6 +413,12 @@ adaptations:
   - path: roles/doc-review/coherence/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/coherence-reviewer.md
     rationale: "Internal consistency only: contradictions between passages, terminology drift, and ambiguity where two careful readers diverge. The donor's own document identifier scheme and unified-requirements artifacts are excluded, per that dossier's conflicts section."
+  - path: roles/doc-review/comprehension/ROLE.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:agents/comprehension.md
+    rationale: The naive-reader question, the paraphrase-first order under the two headings, the rule that an unparaphrasable section is a finding, the scan of the rest of the document before flagging a term, and the bar that general engineering terms are never flagged. Donor severity vocabulary and Goldfish framing are replaced by the finding schema, catalog id, and the two mandated Never rows. Shadow, off and on are the calling skill's, not this seat's.
+  - path: roles/doc-review/comprehension/ROLE.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:skills/egm-resolve/SKILL.md
+    rationale: The four resolutions of a comprehension gap, including "do not contest a comprehension gap" and "do not add context only to satisfy a reviewer." Author contest is dropped. Rejection is reserved to the human. ESCALATE becomes the existing adjudication outcome escalated.
   - path: roles/doc-review/design-lens/ROLE.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/personas/design-lens-reviewer.md
     rationale: Missing design decisions — information architecture, interaction and error states, user flows — found by dimensional rating rather than by taste, and the generic-output risk the donor names.
@@ -419,6 +443,21 @@ adaptations:
   - path: roles/implementer/ROLE.md
     source: superpowers@b36e0829c6d0140e93cfef2ca599b1b07d4a7797:skills/subagent-driven-development/SKILL.md
     rationale: "The surrounding task loop: a fresh implementer per ticket, TDD mandatory within it."
+  - path: roles/learn/session-scorer/ROLE.md
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scorers/code-quality.md
+    rationale: The code-quality rubric, its approve or block verdict and the insufficient-evidence label are condensed into the seat's second rubric.
+  - path: roles/learn/session-scorer/ROLE.md
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scorers/efficiency.md
+    rationale: The efficiency rubric and its four labels are condensed into the seat's first rubric.
+  - path: roles/learn/session-scorer/ROLE.md
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scorers/procedure-compliance.md
+    rationale: The procedure-compliance rubric, with its applicability rule and the weight on protective rules, is condensed into the seat's third rubric.
+  - path: roles/learn/session-scorer/ROLE.md
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scorers/verbosity.md
+    rationale: The verbosity rubric and its proportionate, verbose and terse labels are condensed into the seat's fourth rubric.
+  - path: roles/learn/skill-doctor/ROLE.md
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/references/skill-improvements.md
+    rationale: "The method (cluster, rank, verify, smallest edit, replace rather than append) and the file-only-when and do-not-file lists become the seat's judgement and its Never rows. Changed: the seat returns proposals to the runtime instead of opening a change."
   - path: roles/learn/skill-scout/ROLE.md
     source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:commands/reflect-skills.md
     rationale: "Finding repeated user requests across sessions and proposing them as candidate skills is adapted as a judge prompt. The donor's in-command skill-file writing is dropped: the role returns candidates to the runtime, which records them as drafts and installs nothing (ruling learning-drafts-not-publishes). The session threshold is the runtime's, not the judge's."
@@ -452,6 +491,9 @@ adaptations:
   - path: roles/verifier/ROLE.md
     source: local:verifier-seat-design-report@sha256:19f676e5ce53035aaa7c25653d743119aacfa5c15879421021b63100e9110dea#L95-182
     rationale: The independent runtime evidence question, frozen packet, excluded lineage and artifact-only return become one non-entrypoint seat.
+  - path: schemas/behavior-contract.schema.json
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L234-248
+    rationale: The contract artifact carries classified intent, properties, assumptions and correspondence.
   - path: schemas/common.schema.json
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L21-34
     rationale: Money calculation, movement and reconciliation changes became one explicit sensitive action in the shared authorization vocabulary.
@@ -461,6 +503,9 @@ adaptations:
   - path: schemas/project.schema.json
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L177-199
     rationale: The sample weights and cut points became explicitly advisory, project-calibrated delegation guidance.
+  - path: schemas/project.schema.json
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L345-351
+    rationale: review.behavior is the project policy Runner.start freezes onto an enabled run.
   - path: schemas/project.schema.json
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L152-172
     rationale: Changed-line mutation and protected acceptance-test concepts became mutation commands and protected test paths in the project record.
@@ -476,6 +521,9 @@ adaptations:
   - path: schemas/ticket.schema.json
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L177-199
     rationale: The report's evidenced factors and four-class rubric became the strict delegation record shape without adopting its sample cut points as catalog-wide gates.
+  - path: schemas/ticket.schema.json
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L345-351
+    rationale: Ticket verification.behavior names the frozen checks, property ids and property types.
   - path: schemas/ticket.schema.json
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-136
     rationale: The report's six readiness criteria and resolved-assumption procedure became per-criterion evidence and assumption records on tickets.
@@ -650,6 +698,12 @@ adaptations:
   - path: skills/doc-review/SKILL.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md
     rationale: The phase structure from intake through panel dispatch to synthesis and presentation, the classify-by-content rule for requirements versus plan, and the completion condition. The donor's configured artifact root is dropped because the knowledgebase resolves location, and the donor's cross-provider pass is dropped as a multi-vendor feature this package does not carry.
+  - path: skills/doc-review/SKILL.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:agents/comprehension.md
+    rationale: The naive-reader seating, paraphrase-first order, and the rule that an unparaphrasable section is a finding. Off, shadow and on, raw_output.hash on every lane when review.comprehension is shadow or on, and FYI-only shadow printing are this package's routing, not the donor's. (phase 1b, GS-004h)
+  - path: skills/doc-review/SKILL.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:skills/egm-resolve/SKILL.md
+    rationale: The four resolutions of a comprehension gap, including the ban on contesting a comprehension finding on the author's word. (phase 1b, GS-004h)
   - path: skills/doc-review/skill.yaml
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/references/decision-primer.md
     rationale: The prior-round input and the disposition record output, declared as the two layers the primer and the durable record occupy.
@@ -668,6 +722,12 @@ adaptations:
   - path: skills/doc-review/skill.yaml
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-doc-review/SKILL.md
     rationale: The triggers and the classify-by-content input, and the completion condition restated as this skill's complete stop condition.
+  - path: skills/doc-review/skill.yaml
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:agents/comprehension.md
+    rationale: The comprehension hard gates and the off/shadow/on seating declared as this skill's own gates. (phase 1b, GS-004h)
+  - path: skills/doc-review/skill.yaml
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:skills/egm-resolve/SKILL.md
+    rationale: The four-resolution gate declared on the execution contract. (phase 1b, GS-004h)
   - path: skills/doubt-driven/SKILL.md
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/doubt-driven-development/SKILL.md
     rationale: The non-triviality test, the claim, extract, doubt, reconcile and stop cycle, the adversarial prompt, the artifact-and-contract-only rule, the classification precedence, the three-cycle bound, the doubt-theater signal and the rationalizations. The cross- model escalation becomes an offered second independent reviewer context, with every named product and shell invocation removed. The in-place fix becomes a finding returned to the artifact's owner, and a durable result goes through recordDecision.
@@ -1014,6 +1074,12 @@ adaptations:
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-plan/SKILL.md
     rationale: The specify-then-plan split, the mandatory document review before tickets are cut, and the stop on evidence that invalidates a decision settled earlier in the session. The donor's artifact-root resolution and rendering options are dropped.
   - path: skills/super-bound/SKILL.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:agents/codebase_details.md
+    rationale: Proposed files are not findings. A path the ticket produces, or a path in allowed_changes that is absent at the stated revision, is labelled proposed (phase 1b, GS-004i).
+  - path: skills/super-bound/SKILL.md
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:resources/document_standards/implementation-readiness-standard.md
+    rationale: The zero-decision rule becomes an independent cold read of each implementation ticket at step 13. Off keeps the author type-check. Shadow stores the read without changing outcome or score. On reclassifies listed decisions (phase 1b, GS-004i).
+  - path: skills/super-bound/SKILL.md
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-136
     rationale: The readiness and assumption procedures became a per-ticket workflow hook, with shared criteria deferred to the delegation reference.
   - path: skills/super-bound/SKILL.md
@@ -1040,6 +1106,12 @@ adaptations:
   - path: skills/super-bound/skill.yaml
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-plan/SKILL.md
     rationale: The child_skills declaration of the document review, and the stop condition for evidence that invalidates a decision settled earlier in the session.
+  - path: skills/super-bound/skill.yaml
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:agents/codebase_details.md
+    rationale: The cold-read output records exists-or-proposed claims and does not treat proposed-absent as a defect (phase 1b, GS-004i).
+  - path: skills/super-bound/skill.yaml
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:resources/document_standards/implementation-readiness-standard.md
+    rationale: The zero-context gate names the independent cold read when review.cold_read is on, and keeps the author type-check as the outcome gate in off and shadow (phase 1b, GS-004i).
   - path: skills/super-bound/skill.yaml
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L102-150
     rationale: The execution contract mirrors the body's readiness, assumption and ordered-stack obligations without reproducing their shared rubric.
@@ -1157,6 +1229,9 @@ adaptations:
   - path: skills/super-ship/references/transport-direct.md
     source: compound-engineering@05c42da94fd318fa081f29d17bf947762aa477b1:skills/ce-commit-push-pr/references/context.md
     rationale: "The open-pull-request lookup is adapted: the branch name only, because `--head <owner>:<branch>` silently returns an empty list; the base repository targeted on a fork; a detached head never looked up, because an empty `--head` drops the filter; rows matched on head owner and branch, with an ambiguous match stopping rather than taking the first. The donor's fallback to a guessed default branch is not carried: an unresolved base stops the run."
+  - path: skills/super-ship/references/transport-no-mistakes.md
+    source: local:review-routing-owner-ask-2026-11-10@sha256:468cbcc7b448e36805874c3ca8e5c36784d0f1680f37e5f965e1e765d7695ad6#L19-22
+    rationale: "The owner's semaphore bullets set the lifecycle review's depth. The transport reference states that the delivery pipeline's Review is not routed with it: it runs the same for every class and is never skipped because the lifecycle review was light."
   - path: skills/super-ship/SKILL.md
     source: addy@c004a74784a08295d52749b04cda634125b9a581:skills/security-and-hardening/SKILL.md
     rationale: "The donor's pre-commit secret scan is the gate that stops the run, and its rotation rule is kept: a secret already in history is reported for rotation rather than only removed from the payload."
@@ -1310,21 +1385,63 @@ adaptations:
   - path: src/delegation.ts
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L256-265
     rationale: Ticket and merge recomputation became raise-only scoring with named-human lowering that cannot cross a sensitive floor.
+  - path: src/learn/doctor/collect.ts
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scripts/collect_sessions.py
+    rationale: "The collector is ported: per-entry truncation (1500 characters for a message, 500 for a tool call or its output), the 160-entry head-and-tail cut, injected-context filtering, skill detection intersected with installed skill names, the 45-day window and the newest-first sample of 12 sessions with 3 per skill and 4 with no skill. Changed: Grok sessions are read as well as Claude Code and Codex, Warp's own store is not read, a session matches a repository by its working directory as text so no git process starts on a session's directory, user corrections are counted with claude-reflect's detectPatterns, and every condensed transcript passes the runtime's secret scrub before it is written."
+  - path: src/learn/doctor/render.ts
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scripts/render_report.py
+    rationale: "The report's sections are adapted: the overall grade, the five sub-scores, top findings, proposed edits with their diffs and the per-session table. Changed: the page is one self-contained file with no script, no remote font and a content security policy that blocks every fetch, styled with this package's palette instead of the donor's assets."
+  - path: src/learn/doctor/score.ts
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/scripts/render_report.py
+    rationale: The grade bands from A+ at 0.97 down to F below 0.6 are ported unchanged.
+  - path: src/learn/doctor/score.ts
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/SKILL.md
+    rationale: "Step 3's aggregation is ported: label scores, the 0.5 + 0.5 x score curve, the rubric weights, skill coverage as the share of sessions that used an installed skill, a session failing below 0.5 on any rubric, and code quality's insufficient-evidence sessions left out of its mean. Changed: the judge returns labels only and the runtime maps them to scores; a reply missing a valid label leaves the session unscored rather than scored zero."
+  - path: src/learn/doctor/suggest.ts
+    source: common-skills@8792394ff1b655e0af451b8fabb68ef0cfcbd208:.agents/skills/skill-doctor/references/skill-improvements.md
+    rationale: "The filing bar for a skill edit becomes deterministic gates on the judge's reply: evidence must cite a failed session, an edit must name an installed skill and replace text that occurs in it exactly once, and a rule a human rejected is not proposed again. Changed: proposals are drafts recorded with their accept or reject outcome in the skills ledger; no skill file is written (ruling learning-drafts-not-publishes)."
   - path: src/learn/review/hooks.ts
     source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
     rationale: "detectPatterns is a port of detect_patterns: the same pattern tables, thresholds and order of checks, translated to TypeScript. A detected correction becomes a review event of kind correction in the runtime's own ledger rather than an entry in the donor's learnings queue."
   - path: src/learn/skills/learn.ts
     source: claude-reflect@2c892cab8fe1285d8116216ec18b6b7b44bcd394:scripts/lib/reflect_utils.py
     rationale: "extractUserMessages ports extract_user_messages, with should_include_message's filter: user turns of a JSONL transcript, meta turns and non-text parts dropped. The messages feed the skill scout's repetition count; the donor's in-command skill writing is not ported."
+  - path: src/lifecycle/behavior-policy.ts
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L345-351
+    rationale: Off/shadow/on. Runner.start freezes; missing project cannot reset a required run to off.
   - path: src/lifecycle/gate.ts
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L298-311
     rationale: The class join key for later outcome calibration became optional revision-bound gate evidence.
+  - path: src/lifecycle/gate.ts
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L345-351
+    rationale: Open binds a snapshot for ordinary tickets and refuses enabled mandatory checks that only Runner.start may freeze.
   - path: src/lifecycle/gate.ts
     source: local:slop-avoidance-agent-prs@sha256:6930d04f3bf49b31f543a9afec9c33feb42961e257d8f9a05c0044f9728a112b#L92-98
     rationale: The report's author-kind observation became model-free implementer authorship plus the host adapter on a gate record.
   - path: src/lifecycle/gate.ts
     source: local:verifier-seat-design-report@sha256:19f676e5ce53035aaa7c25653d743119aacfa5c15879421021b63100e9110dea#L257-308
     rationale: The deterministic predicate copies and re-hashes every artifact, rejects self-verification and enforces recipe and surface-kind coverage.
+  - path: src/lifecycle/protected-start.ts
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L345-351
+    rationale: protected-start.ts is the one complete charter predicate Runner.start and the gate both call.
+  - path: src/review-isolation-probe/children.ts
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:tests/integration/test_claude.py
+    rationale: Adapt native child-session discovery under the parent session's subagents directory and Agent-tool launch arguments (resume must be absent or false). Do not fall back to the parent session jsonl. Host spawn arguments are evidence; self-authored resume and fork fields are not.
+  - path: src/review-isolation-probe/children.ts
+    source: egm@403d8881d62022490637d740657b33f01e321ea8:tests/integration/test_codex.py
+    rationale: Adapt child-thread joining from SubAgentActivity started agent_thread_id and spawn_agent fork_context/fork_turns inspection. Exclude the parent thread.started id. File reads remain CommandExecution, not a Read tool.
+  - path: src/runner/core.ts
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L345-351
+    rationale: Runner.start freezes mandatory behavior checks from the committed binding at the charter base merge-base; lifecycle open refuses.
+  - path: src/semantic-lint/client.ts
+    source: jev-lint@af58a3bd20693f828ff6353e3543c0ab5bb7bad4:src/jev.ts
+    rationale: Adapt the batched systemone wire contract and injectable transport. Replace environment credentials, aliases, pacing and broad retry loops with a pinned optional command child, private attempt receipts, cancellation, short deadlines and one retry.
+  - path: src/semantic-lint/client.ts
+    source: jev-lint@af58a3bd20693f828ff6353e3543c0ab5bb7bad4:src/questions.ts
+    rationale: Adapt score question and answer shapes. Adopt only score answers and refuse Noul and every other answer type; probability is never reported and confidence only as the service returns it. All findings remain advisory; no thresholds or independent-verification claims.
+  - path: src/validation/behavior-contract-intent.ts
+    source: local:gs017-behavior-verification-prd@sha256:9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3#L132-138
+    rationale: Accepted intent needs a resolved accepted source; proposed intent cannot discharge it.
   - path: templates/charter.amendment.example.json
     source: local:delegation-rubric-red-yellow-green@sha256:8769b1c8f43ecc08c64ddec8a9a426fcc1b7536d138571a3705e7b02928fbca1#L21-34
     rationale: The amended charter fixture retains the protected money-movement action in its denied set.
@@ -1391,3 +1508,6 @@ adaptations:
   - path: tests/verification-schemas.test.ts
     source: local:verifier-seat-design-report@sha256:19f676e5ce53035aaa7c25653d743119aacfa5c15879421021b63100e9110dea#L371-427
     rationale: Schema tests exercise the new project, ticket, recipe and receipt records plus invalid evidence and response shapes.
+  - path: tools/hooks/semantic-lint.ts
+    source: jev-lint@af58a3bd20693f828ff6353e3543c0ab5bb7bad4:.jev-lint/hooks/pre-commit
+    rationale: Adapt explicit missing-key skip to a sibling Stop command that stays off unless AK_JEV_ENABLED=1. Unset, empty, or any other value is a quiet skip. Do not adopt the donor's sequential review commands, live environment key, skill entrypoint or global installation. Merge preserves deterministic and foreign hooks.

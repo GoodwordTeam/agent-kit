@@ -27,19 +27,19 @@ skills:
       reason: >-
         Running-application verification needs a human-started, host-neutral command that records
         runtime receipts and a reusable recipe without changing the existing super-verify phase.
-      commits: [3a6b18c]
+      commits: [820a2338]
     - ids: [visual-edit]
       reason: >-
         Visual edits made on a canvas of a running local app's routes need a human-started command
         that applies the pending revision through source and receipts it, which no existing skill
         covers: prototype answers unbuilt questions and super-build needs an approved ticket.
-      commits: [f13b193]
+      commits: [e777ab6e]
     - ids: [codebase-design]
       reason: >-
         The adopted deep-module vocabulary needs a read-only reference skill with an explicit
         no-question stopping rule, while repository surveys, alignment, review and implementation
         remain with their existing lifecycle owners.
-      commits: [5021380]
+      commits: [be033471]
 
 protocols:
   baseline: 7
@@ -56,11 +56,11 @@ protocols:
         super-build needs one protocol for the implementer's account of its working decisions on
         each ticket: a stretch per implementer seat and an independent audit after the commit,
         both carried by reference and never evidence.
-      commits: [e0ea1af1e554d47c16990ddbd2acab9920c8ad23]
+      commits: [f92da557]
 
 roles:
   baseline: 29
-  catalog: 36
+  catalog: 39
   expansions:
     - ids: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
       reason: >-
@@ -71,16 +71,27 @@ roles:
       reason: >-
         Runtime verification needs a named non-entrypoint seat outside implementer lineage so
         receipt authorship and unavailable independence are structurally expressible.
-      commits: [1c509b9]
+      commits: [6e5decb0]
     - ids: [trail-auditor]
       reason: >-
         super-build seats an independent auditor once per ticket to read the implementer's work
         trail after the commit; the seat is never the implementer, so it needs its own role prompt.
-      commits: [42eb864000dfe687ce93107352357845e5832ae7]
+      commits: [f92da557]
+    - ids: [learn/session-scorer, learn/skill-doctor]
+      reason: >-
+        The learning runtime's skill doctor makes two judge calls of different kinds: one labels a
+        single condensed session against the rubrics, and one traces the failed sessions of a run to
+        skill edits. Each runs under a role prompt of its own.
+      commits: [03dfee76]
+    - ids: [doc-review/comprehension]
+      reason: >-
+        Doc-review needs a naive-reader seat that restates the document and flags unparaphrasable
+        sections and undefined project terms. Off by default, shadow-capable (phase 1b, GS-004h).
+      commits: [f53aaad1]
 
 references:
   baseline: 4
-  catalog: 9
+  catalog: 11
   expansions:
     - ids: [tracker-of-record]
       reason: >-
@@ -97,18 +108,30 @@ references:
       reason: >-
         Surface evidence kinds, recipe semantics and verifier-seat lineage need one host-neutral
         vocabulary shared by the lifecycle phases that produce or consume them.
-      commits: [1c509b9]
+      commits: [6e5decb0]
     - ids: [knowledgebase-binding]
       reason: >-
         A lifecycle run in a task copy could reach no knowledgebase, and the contract that says how
         to bind one does not ship with the plugin; the skills that read or publish need the check,
         the commands and what unconfigured means inside the bundle.
-      commits: [c4d1f9cd]
+      commits: [89b0290f]
       docs: [docs/decisions/0010-file-backed-knowledgebase.md]
+    - ids: [read-economy]
+      reason: >-
+        The scout and build lanes need one shared statement of how the loading agent spends its own
+        reads, batched, excerpted and bounded without re-reading, that keeps a required full read
+        full and changes no gate.
+      commits: [2cb4e3a8]
+    - ids: [unattended-lifecycle]
+      reason: >-
+        The opt-in unattended policy is shared by all seven lifecycle phases: how each one starts
+        and records its evidence commands, the advances that replace waits, and the operator setup
+        the live merge-gate read rests on, loaded on demand rather than copied into each skill.
+      commits: [ea051ee7]
 
 schemas:
   baseline: 14
-  catalog: 36
+  catalog: 40
   expansions:
     - ids: [case]
       reason: >-
@@ -165,18 +188,41 @@ schemas:
       reason: >-
         A successful host-neutral setup-through-cleanup path needs a content-addressed artifact
         shape that projects can declare and later verifier seats can replay.
-      commits: [1c509b9]
+      commits: [6e5decb0]
+    - ids: [constitution-article]
+      reason: >-
+        Constitution support keeps each article of a project's constitution in a registry held in
+        an overlay; agent-kit owns the article's shape and checks it, and the overlay owns the text.
+      commits: [e5fde22c]
+      docs: [docs/decisions/0009-constitution-support.md]
     - ids: [kb-binding]
       reason: >-
         The committed knowledgebase locator, ak.kb.yaml, needed a shape that refuses a machine
         path and a secret, so that every checkout of a project binds the same knowledgebase.
-      commits: [c4d1f9cd]
+      commits: [89b0290f]
       docs: [docs/decisions/0010-file-backed-knowledgebase.md]
     - ids: [trail, trail-audit]
       reason: >-
         A work trail leaves two run records, the implementer's stretch and the independent audit
         of it, and publishArtifact carries only schema ids, so each needed a declared shape.
-      commits: [ab88a14e474fa309cd906e6bfdc9327c64fb211a]
+      commits: [f92da557]
+    - ids: [cold-read]
+      reason: >-
+        An independent ticket cold read needs a declared run-artifact shape so a project that
+        turns review.cold_read on can cite the record from the implementation ticket.
+      commits: [82646648]
+    - ids: [review-ledger]
+      reason: >-
+        The review convergence ledger is an append-only file a gate holds as evidence, so each
+        line needs a closed shape that the tool writes and the verdict engine reads.
+      commits: [1fec0cb8]
+      docs: [docs/decisions/0018-review-convergence.md]
+    - ids: [behavior-contract]
+      reason: >-
+        Behavior verification needs a declared run-artifact shape so accepted intent stays
+        distinct from proposed, unresolved and observed notes, and so Runner.start can
+        freeze complete required-check definitions.
+      commits: [ad45a95f1109b40e1fb8321a798fab3031c1ef16]
 
 profiles:
   baseline: 4
@@ -189,8 +235,15 @@ profiles:
 
 adapters:
   baseline: 4
-  catalog: 11
+  catalog: 12
   expansions:
+    - ids: [cursor]
+      reason: >-
+        Cursor IDE and Cloud Agents load project skills from .cursor/skills and custom
+        subagents from .cursor/agents, so the packager needs a native host contract
+        rather than a Claude-compatible layout.
+      commits: [39f533f6]
+      docs: [adapters/cursor/CONTRACT.md, adapters/cursor/README.md]
     - ids: [grok]
       reason: >-
         Grok uses the existing Claude-compatible packager with native explicit-start rendering

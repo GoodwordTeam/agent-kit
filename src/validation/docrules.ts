@@ -9,13 +9,15 @@
  * cross-document or recomputed half is what actually bites.
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import type { CheckContext } from "./context.ts";
 import { error, type Issue } from "./types.ts";
 import { artifactHash, canonicalJson, sha256Hex } from "../util/hash.ts";
+import { asJsonObject } from "../lifecycle/behavior-policy.ts";
 import { loadArtifacts } from "./artifacts.ts";
+import { behaviorContractIntentProblems, RULE_PROPOSED_INTENT, type IntentLookup } from "./behavior-contract-intent.ts";
 
 const REMOTE_SIDE_EFFECTS = new Set([
   "remote-push",
@@ -477,8 +479,14 @@ function decisionRules(rc: RuleContext): void {
     const independent =
       seats.length === 2 &&
       seats.every((s) => s !== null && s["independent"] === true) &&
-      new Set(holders).size === holders.length;
-    if (check["seats_independent"] !== undefined && check["seats_independent"] !== independent) {
+      new Set(holders).size === holders.length &&
+      judgments.length === 2 &&
+      judgments.every((j) => j !== null && str(j["by"]) !== null && seatIds.has(str(j["seat"]) ?? "")) &&
+      new Set(judgments.map((j) => j?.["seat"])).size === 2 &&
+      new Set(judgments.map((j) => j?.["by"])).size === 2 &&
+      str(at(doc, "result.escalation.charter_rule")) !== "runner:seat-independence" &&
+      str(at(doc, "escalation.charter_rule")) !== "runner:seat-independence";
+    if (check["seats_independent"] === true && !independent) {
       fail(
         rc,
         RULE_AUTH,
@@ -1063,8 +1071,139 @@ function reviewRules(rc: RuleContext): void {
     }
   }
 
+  const RULE_PARAPHRASE = "review.comprehension-paraphrase-stored-by-hash";
+  for (const [i, lane] of lanes.entries()) {
+    if (lane === null) continue;
+    if (str(lane["role"]) !== "doc-review/comprehension") continue;
+    if (str(lane["state"]) !== "covered") continue;
+    const paraphrase = obj(lane["paraphrase"]);
+    const proposes = paraphrase === null ? null : str(paraphrase["proposes"]);
+    const existing = paraphrase === null ? null : str(paraphrase["existing_system"]);
+    const hash = str(obj(lane["raw_output"])?.["hash"]);
+    if (proposes === null || existing === null || hash === null) {
+      fail(
+        rc,
+        RULE_PARAPHRASE,
+        `lane ${str(lane["role"]) ?? `#${i}`} is covered without paraphrase.proposes, paraphrase.existing_system and raw_output.hash; the restatement is stored by that hash, not by synthesis`,
+      );
+    }
+  }
+
+  const RULE_SHADOW = "review.comprehension-shadow-findings-stay-fyi";
+  const COMPREHENSION_MODES = new Set(["off", "shadow", "on"]);
+  const projectField = doc["project"];
+  const projectRecord = obj(projectField);
+  const wanted = projectRecord === null ? str(projectField) : str(projectRecord["id"]);
+  const projects: IndexedDoc[] = [];
+  if (wanted !== null) {
+    for (const entry of rc.index.all) {
+      if (entry.schema !== "project") continue;
+      if (str(obj(entry.doc["identity"])?.["id"]) === wanted) projects.push(entry);
+    }
+  }
+  if (projects.length > 0) {
+    const modes = projects.map((p) => {
+      const raw = obj(p.doc["review"])?.["comprehension"];
+      if (raw === undefined || raw === null) return "off";
+      return str(raw) ?? JSON.stringify(raw);
+    });
+    for (const mode of modes) {
+      if (!COMPREHENSION_MODES.has(mode)) {
+        fail(rc, RULE_SHADOW, `review.comprehension value ${mode} is not off, shadow or on`);
+      }
+    }
+    const anyNonOff = modes.some((m) => m !== "off");
+    if (projects.length > 1 && anyNonOff) {
+      fail(
+        rc,
+        RULE_SHADOW,
+        `review project ${wanted} matches ${projects.length} project records; identity.id must be unique when review.comprehension is not off`,
+      );
+    } else if (projects.length === 1 && modes[0] === "shadow") {
+      const cited = new Set<string>();
+      const blockers = new Set<string>();
+      const fromLane = new Set<string>();
+      for (const item of arr(doc["findings"])) {
+        const id = str(obj(item)?.["id"]);
+        if (id !== null) cited.add(id);
+      }
+      for (const item of arr(doc["unresolved_blockers"])) {
+        const id = str(obj(item)?.["id"]);
+        if (id !== null) {
+          cited.add(id);
+          blockers.add(id);
+        }
+      }
+      for (const [i, lane] of lanes.entries()) {
+        if (lane === null) continue;
+        const comprehensionLane = str(lane["role"]) === "doc-review/comprehension";
+        for (const item of arr(lane["findings"])) {
+          const id = str(obj(item)?.["id"]);
+          if (id === null) continue;
+          cited.add(id);
+          if (comprehensionLane) fromLane.add(id);
+        }
+        if (!comprehensionLane) continue;
+        if (lane["required"] === true) {
+          fail(
+            rc,
+            RULE_SHADOW,
+            `lane ${str(lane["role"]) ?? `#${i}`} is required while review.comprehension is shadow; a required unavailable lane would change the verdict`,
+          );
+        }
+        if (str(lane["state"]) !== "covered") continue;
+        const laneVerdict = str(lane["verdict"]);
+        if (laneVerdict !== null && laneVerdict !== "approve" && laneVerdict !== "no-opinion") {
+          fail(
+            rc,
+            RULE_SHADOW,
+            `lane ${str(lane["role"]) ?? `#${i}`} verdict is ${laneVerdict} while review.comprehension is shadow; shadow findings do not change the verdict`,
+          );
+        }
+      }
+      const owned = new Set(fromLane);
+      for (const entry of rc.index.all) {
+        if (entry.schema !== "finding") continue;
+        const id = str(entry.doc["id"]);
+        if (id === null || !cited.has(id)) continue;
+        if (str(entry.doc["lane"]) === "doc-review/comprehension") owned.add(id);
+      }
+      for (const id of owned) {
+        if (blockers.has(id)) {
+          fail(
+            rc,
+            RULE_SHADOW,
+            `finding ${id} from doc-review/comprehension is in unresolved_blockers while review.comprehension is shadow; shadow findings do not block`,
+          );
+        }
+      }
+      for (const entry of rc.index.all) {
+        if (entry.schema !== "finding") continue;
+        const id = str(entry.doc["id"]);
+        if (id === null || !owned.has(id)) continue;
+        const cls = str(entry.doc["autofix_class"]);
+        if (cls !== "advisory") {
+          fail(
+            rc,
+            RULE_SHADOW,
+            `finding ${id} from doc-review/comprehension has autofix_class ${cls ?? "missing"} while review.comprehension is shadow; shadow findings stay advisory`,
+          );
+        }
+      }
+    }
+  }
+
   const RULE_UNAVAILABLE = "review.unavailable-required-lane-blocks-approval";
-  const blocked = lanes.filter((l) => l !== null && l["required"] === true && str(l["state"]) === "unavailable");
+  const TIMEOUT_REASON = /\b(timeout|timed\s*out)\b/i;
+  const blocked = lanes.filter((l) => {
+    if (l === null || l["required"] !== true) return false;
+    const state = str(l["state"]);
+    if (state === "unavailable") return true;
+    if (state !== "covered" && state !== "skipped") return false;
+    const raw = obj(l["raw_output"]);
+    if (raw !== null && (str(raw["id"]) !== null || str(raw["hash"]) !== null)) return false;
+    return TIMEOUT_REASON.test(str(l["reason"]) ?? "");
+  });
   if (blocked.length > 0 && verdict === "approved") {
     fail(
       rc,
@@ -1078,17 +1217,53 @@ function reviewRules(rc: RuleContext): void {
   if (cycles !== null) {
     const allowed = num(cycles["allowed"]);
     const used = num(cycles["used"]);
-    if (allowed !== null && allowed > 2)
-      fail(rc, RULE_CYCLES, `fix_cycles.allowed is ${allowed}; plan 6.3 caps it at two`);
-    if (allowed !== null && used !== null && used > allowed) {
-      fail(rc, RULE_CYCLES, `fix_cycles.used ${used} exceeds allowed ${allowed}; the third cycle stops`);
-    }
-    if (allowed !== null && used !== null && used >= allowed) {
-      if (verdict === "approved") {
+    let extensions = 0;
+    for (const ext of arr(cycles["extensions"]).map(obj)) {
+      const by = ext === null ? null : str(ext["authorized_by"]);
+      if (by === null || str(ext?.["authorized_at"]) === null) {
+        fail(rc, RULE_CYCLES, "a fix_cycles extension names no authorized_by or no authorized_at");
+      } else if (by !== "human") {
         fail(
           rc,
           RULE_CYCLES,
-          `the fix cycle budget is exhausted (${used}/${allowed}) and the run still approves rather than returning blocked or replan`,
+          `a fix_cycles extension is authorized by ${by}; only a human authorizes a cycle past the cap`,
+        );
+      } else {
+        extensions += 1;
+      }
+    }
+    if (allowed !== null && allowed > 2)
+      fail(rc, RULE_CYCLES, `fix_cycles.allowed is ${allowed}; plan 6.3 caps it at two`);
+    if (allowed !== null && used !== null && used > allowed + extensions) {
+      fail(
+        rc,
+        RULE_CYCLES,
+        `fix_cycles.used ${used} exceeds allowed ${allowed} with ${extensions} authorized extension(s); the third cycle stops`,
+      );
+    }
+    const extended = allowed !== null && used !== null && used > allowed && used <= allowed + extensions;
+    if (extended && str(doc["mode"]) !== "delta") {
+      fail(rc, RULE_CYCLES, "a cycle authorized past the cap is reviewed as a delta, never as a new full scope");
+    }
+    const mergesPastP3 = str(cycles["exhausted_action"]) === "merge-with-follow-ups";
+    const followUps = new Set(arr(cycles["follow_ups"]).map((f) => str(obj(f)?.["id"])));
+    const checked = [
+      ...arr(doc["findings"]),
+      ...arr(obj(doc["packet"])?.["original_findings"]),
+      ...arr(doc["new_findings"]).map((n) => obj(n)?.["finding"]),
+    ].map((f) => str(obj(f)?.["id"]) ?? "?");
+    const notFollowUps = [...new Set(checked)].filter((id) => {
+      const found = rc.index.byId.get(id);
+      const status = found?.schema === "finding" ? str(found.doc["status"]) : null;
+      if (status === "resolved" || status === "rejected") return false;
+      return status === null || str(found?.doc["severity"]) !== "P3" || !followUps.has(id);
+    });
+    if (allowed !== null && used !== null && used >= allowed) {
+      if (verdict === "approved" && !extended && !mergesPastP3) {
+        fail(
+          rc,
+          RULE_CYCLES,
+          `the fix cycle budget is exhausted (${used}/${allowed}) and the run still approves without an extension or a merge past P3 follow-ups`,
         );
       }
       if (str(cycles["exhausted_action"]) === null) {
@@ -1098,6 +1273,20 @@ function reviewRules(rc: RuleContext): void {
           `the fix cycle budget is exhausted (${used}/${allowed}) with no exhausted_action recorded`,
         );
       }
+    }
+    if (mergesPastP3 && arr(cycles["follow_ups"]).length === 0) {
+      fail(
+        rc,
+        RULE_CYCLES,
+        "exhausted_action merge-with-follow-ups lists no follow_ups; the open P3 findings it merges past",
+      );
+    }
+    if (mergesPastP3 && notFollowUps.length > 0) {
+      fail(
+        rc,
+        RULE_CYCLES,
+        `exhausted_action merge-with-follow-ups recommends merge past finding(s) ${notFollowUps.join(", ")} that are not P3 findings listed in follow_ups`,
+      );
     }
   }
 
@@ -1263,8 +1452,262 @@ function verificationRules(rc: RuleContext): void {
   }
 }
 
+// --------------------------------------------------------------------- ticket
+
+const LIGHT_ROUTE_FILES = new Set(["README.md", "CHANGELOG.md", "NOTICE", "LICENSE"]);
+const LIGHT_ROUTE_PREFIXES = ["docs/"] as const;
+
+function lastPathSegment(pattern: string): string {
+  const parts = pattern.split("/");
+  return parts[parts.length - 1] ?? "";
+}
+
+function isMarkdownSegment(name: string): boolean {
+  return name === "*.md" || name.endsWith(".md");
+}
+
+/** A glob the light-route detector can treat as documentation-only. Exclusions always win. */
+function isLightRouteGlob(pattern: string): boolean {
+  if (pattern.includes("\\") || pattern.startsWith("/") || pattern.includes("..") || pattern.includes("{"))
+    return false;
+  if (LIGHT_ROUTE_FILES.has(pattern)) return true;
+  if (!LIGHT_ROUTE_PREFIXES.some((prefix) => pattern.startsWith(prefix))) return false;
+  const rest = pattern.slice(pattern.indexOf("/") + 1);
+  if (rest === "" || rest === "**" || rest === "*") return false;
+  return isMarkdownSegment(lastPathSegment(pattern));
+}
+
+/** Literal globs only. A wildcard cannot be observed, so it is not refused here. */
+function globResolvesThroughSymlink(root: string, pattern: string): boolean {
+  if (pattern.includes("*") || pattern.includes("?") || pattern.includes("[")) return false;
+  let cur = root;
+  for (const part of pattern.split("/")) {
+    if (part === "" || part === ".") continue;
+    cur = join(cur, part);
+    const st = lstatSync(cur, { throwIfNoEntry: false });
+    if (st?.isSymbolicLink()) return true;
+    if (st === undefined) return false;
+  }
+  return false;
+}
+
+function workSourceId(doc: IndexedDoc["doc"]): string | null {
+  const ref = obj(obj(doc["work_source"])?.["ref"]);
+  return ref === null ? null : str(ref["id"]);
+}
+
+/** Declared write globs, or null when the ticket does not name a usable write set. */
+function writeGlobs(doc: IndexedDoc["doc"]): string[] | null {
+  const allowed = obj(doc["allowed_changes"]);
+  const files = allowed === null ? [] : arr(allowed["files"]);
+  const out: string[] = [];
+  for (const item of files) {
+    const glob = str(item);
+    if (glob === null) return null;
+    out.push(glob);
+  }
+  if (out.length === 0) return null;
+  const ownership = obj(doc["write_ownership"]);
+  if (ownership !== null) {
+    for (const key of ["paths", "generated_artifacts"] as const) {
+      for (const item of arr(ownership[key])) {
+        const glob = str(item);
+        if (glob === null) return null;
+        out.push(glob);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Text-only single-slice from declared write globs and indexed peers, not from a note or approval.
+ * A missing work_source, a code glob, a symlink glob, or any other ticket on the same work_source
+ * is not the light route.
+ */
+function isLightRouteTicket(doc: IndexedDoc["doc"], index: DocIndex, root?: string): boolean {
+  const globs = writeGlobs(doc);
+  if (globs === null) return false;
+  for (const glob of globs) {
+    if (!isLightRouteGlob(glob)) return false;
+    if (root !== undefined && globResolvesThroughSymlink(root, glob)) return false;
+  }
+  const symbols = obj(doc["allowed_changes"])?.["symbols"];
+  if (Array.isArray(symbols) && symbols.length > 0) return false;
+  const source = workSourceId(doc);
+  if (source === null) return false;
+  const thisId = str(doc["id"]);
+  for (const entry of index.all) {
+    if (entry.schema !== "ticket") continue;
+    if (str(entry.doc["id"]) === thisId) continue;
+    if (workSourceId(entry.doc) === source) return false;
+  }
+  return true;
+}
+
+function ticketBehaviorPropertyTypes(rc: RuleContext): void {
+  const RULE = "ticket.behavior-property-id-has-type";
+  for (const [i, row] of arr(rc.doc["verification"]).entries()) {
+    const check = obj(row);
+    if (check === null) continue;
+    const behavior = obj(check["behavior"]);
+    if (behavior === null) continue;
+    const types = obj(behavior["property_types"]) ?? {};
+    const checkId = str(check["id"]) ?? `verification[${i}]`;
+    for (const value of arr(behavior["property_ids"])) {
+      const id = str(value);
+      if (id === null) continue;
+      const kind = str(types[id]);
+      if (kind !== "safety" && kind !== "liveness")
+        fail(rc, RULE, `${checkId} property ${id} has no property_types entry`);
+    }
+  }
+}
+
+function ticketRules(rc: RuleContext): void {
+  ticketBehaviorPropertyTypes(rc);
+  const RULE = "ticket.cold-read-ref-required-when-on";
+  const { doc } = rc;
+  if (str(doc["type"]) !== "implementation") return;
+
+  const projects: IndexedDoc[] = [];
+  for (const entry of rc.index.all) {
+    if (entry.schema === "project") projects.push(entry);
+  }
+  // Missing review object, missing key, and unknown values are off: the default, and no behaviour change.
+  if (projects.length === 0) return;
+  let anyOn = false;
+  for (const entry of projects) {
+    if (str(obj(entry.doc["review"])?.["cold_read"]) === "on") anyOn = true;
+  }
+  if (!anyOn) return;
+  if (projects.length > 1) {
+    fail(
+      rc,
+      RULE,
+      `the checkout has ${projects.length} indexed project records; review.cold_read on requires exactly one`,
+    );
+    return;
+  }
+
+  if (isLightRouteTicket(doc, rc.index, rc.ctx?.root)) return;
+
+  const ref = obj(doc["cold_read_ref"]);
+  const refId = ref === null ? null : str(ref["id"]);
+  const refHash = ref === null ? null : str(ref["hash"]);
+  if (refId === null || refHash === null) {
+    fail(rc, RULE, "an implementation ticket in a project with review.cold_read on has no cold_read_ref");
+    return;
+  }
+
+  const cited: IndexedDoc[] = [];
+  for (const entry of rc.index.all) {
+    if (str(entry.doc["id"]) !== refId) continue;
+    if (artifactHash(entry.doc) !== refHash) continue;
+    cited.push(entry);
+  }
+  if (cited.length !== 1) {
+    fail(rc, RULE, `cold_read_ref ${refId} matches ${cited.length} indexed documents at hash ${refHash}`);
+    return;
+  }
+  const read = cited[0];
+  if (read === undefined || read.schema !== "cold-read") {
+    fail(rc, RULE, `cold_read_ref ${refId} indexes schema ${read?.schema ?? "none"}, not cold-read`);
+    return;
+  }
+  const status = str(read.doc["status"]);
+  if (status !== "complete" && status !== "unavailable") {
+    fail(rc, RULE, `cold_read_ref ${refId} has status ${status ?? "missing"}, not complete or unavailable`);
+    return;
+  }
+  if (str(read.doc["run_id"]) === null) {
+    fail(rc, RULE, `cold_read_ref ${refId} records no producing run`);
+    return;
+  }
+  const ticketRef = obj(read.doc["ticket"]);
+  const readTicketId = ticketRef === null ? null : str(ticketRef["id"]);
+  const thisId = str(doc["id"]);
+  if (readTicketId === null || thisId === null || readTicketId !== thisId) {
+    fail(
+      rc,
+      RULE,
+      `cold_read_ref ${refId} was a read of ticket ${readTicketId ?? "none"}, not ${thisId ?? "this ticket"}`,
+    );
+    return;
+  }
+  const recordedHash = ticketRef === null ? null : str(ticketRef["hash"]);
+  if (recordedHash === null) {
+    fail(rc, RULE, `cold_read_ref ${refId} records no ticket.hash`);
+    return;
+  }
+  const body = { ...doc };
+  delete body["cold_read_ref"];
+  const expected = artifactHash(body);
+  if (recordedHash !== expected) {
+    fail(rc, RULE, `cold_read_ref ${refId} records ticket hash ${recordedHash}, not ${expected}`);
+  }
+}
+
+// ------------------------------------------------------------------ cold-read
+
+function coldReadRules(rc: RuleContext): void {
+  const RULE = "cold-read.proposed-absent-is-not-a-finding";
+  const claims = new Map<string, string>();
+  for (const claim of arr(rc.doc["claims"]).map(obj)) {
+    if (claim === null) continue;
+    const id = str(claim["id"]);
+    const kind = str(claim["kind"]);
+    if (id === null || kind === null) continue;
+    if (claims.has(id)) {
+      fail(rc, RULE, `claim id ${id} is duplicated`);
+      continue;
+    }
+    claims.set(id, kind);
+  }
+  for (const [i, decision] of arr(rc.doc["decisions"]).entries()) {
+    const record = obj(decision);
+    if (record === null) continue;
+    if (str(record["kind"]) !== "absent") continue;
+    const claim = str(record["claim"]);
+    if (claim === null) {
+      fail(rc, RULE, `decisions[${i}] is kind absent with no claim`);
+      continue;
+    }
+    if (!claims.has(claim)) {
+      fail(rc, RULE, `decisions[${i}] cites unknown claim ${claim}`);
+      continue;
+    }
+    if (claims.get(claim) === "proposed") {
+      fail(
+        rc,
+        RULE,
+        `decisions[${i}] treats claim ${claim} as absent, but that claim is proposed; proposed code is not a finding for being missing at the stated revision`,
+      );
+    }
+  }
+}
+
+function indexIntentLookup(index: DocIndex): IntentLookup {
+  return (id) => {
+    const found = index.byId.get(id);
+    if (found === undefined || !asJsonObject(found.doc)) return undefined;
+    return { schema: found.schema, id, doc: found.doc };
+  };
+}
+
+function behaviorContractRules(rc: RuleContext): void {
+  if (!asJsonObject(rc.doc)) return;
+  for (const problem of behaviorContractIntentProblems(rc.doc, indexIntentLookup(rc.index))) {
+    const sep = problem.indexOf(": ");
+    if (sep === -1) fail(rc, RULE_PROPOSED_INTENT, problem);
+    else fail(rc, problem.slice(0, sep), problem.slice(sep + 2));
+  }
+}
+
 const RULES: Record<string, (rc: RuleContext) => void> = {
   charter: charterRules,
+  "behavior-contract": behaviorContractRules,
+  "cold-read": coldReadRules,
   decision: decisionRules,
   dossier: dossierRules,
   event: eventRules,
@@ -1272,6 +1715,7 @@ const RULES: Record<string, (rc: RuleContext) => void> = {
   lesson: lessonRules,
   project: projectRules,
   review: reviewRules,
+  ticket: ticketRules,
   verification: verificationRules,
 };
 

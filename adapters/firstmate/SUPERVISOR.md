@@ -13,8 +13,19 @@ only when the task in front of you needs it; this index is enough to route.
 
 Use `adapters/runner-contract/CLI.md` for the request and private configuration shapes.
 
-The stock preflight reports guided mode without a runner socket. A socket is a candidate, not a
-grant: `start` must validate the standing grant in a captain-approved charter and the worker's
+The stock preflight reports guided mode without a runner socket. Preflight reads no run state, grant,
+seat or receipt. The strengthened autonomous-ship evidence decision (`evaluateEvidence` in
+`src/lifecycle/gate.ts`, reason `unattested-verifier`) runs when evidence is checked explicitly or a
+task-bound run record exists. That decision refuses a verifier receipt whose seat is not
+runner-attested if the run holds a bypass or delegated grant record or its build gate records an
+implementer seat: every such receipt when an implementer seat is recorded, and with only a grant
+record the receipts of checks that declare required evidence or a recipe. A grant recorded later
+applies to receipts already recorded when next evaluated. With neither, only such a receipt of a
+check that declares required evidence or a recipe is noted as worker-attested and counts for guided
+ship only. With a socket, only the file type was checked and nothing connected; that is not
+liveness, identity or qualification, and a socket alone does not establish a configured qualified
+producer or a passed gate. A socket is a candidate, not a grant: `start` must validate the standing
+grant in a captain-approved charter and the worker's
 first autopilot step must read that attestation. The runner's state and evidence are outside the
 worker worktree and Git common directory.
 
@@ -22,7 +33,11 @@ worker worktree and Git common directory.
 
 Use `ak firstmate brief` to render an Agent Kit section into a normal Firstmate brief. Spawn the
 task with its existing `--mode no-mistakes`, `direct-PR` or `local-only`. Firstmate's own status,
-inbox, recovery and merge policy remain authoritative. Dispatch both supervisor seats as separate
+inbox, recovery and merge policy remain authoritative. Immediately assign each P0 or prioritized
+order a dedicated end-to-end worker and watch it every cycle; other lanes continue in parallel.
+Relay the runner's exact priority blocker text from stderr to the visible status surface, including
+while a worker is investigating. These are outer-supervisor duties (ruling
+`firstmate-outer-loop-agent-kit-inner`). Dispatch both supervisor seats as separate
 ordinary crewmates, never as children of the implementing worker, and submit their judgments to
 the runner. A seat launcher may automate that dispatch through stock Firstmate commands.
 
@@ -68,10 +83,9 @@ The commands below document existing patched-home installations. Stock Firstmate
 
 ## What your binding grants
 
-The binding is your grant to the worker for `review.full`, `review.readiness` and `ship.prepare`
-(CONTRACT.md §6). The worker checks it with `ak firstmate grant` before each and cites the record.
-When the check refuses, the worker stops and sends `needs-decision`: decide it yourself or ask the
-captain. Merge is never on the binding and stays yours.
+See [CONTRACT.md §6](CONTRACT.md#6-deprecated-legacy-binding-delegated-authority) for binding grants
+and validation. For review starts and grant refusals, follow
+[super-review authority](../../skills/super-review/SKILL.md#authority).
 
 The binding remains the grant for the three operations in this adapter. For a charter-bound
 autopilot run, start the separate `ak runner` service with the charter, private state, two seat

@@ -4,9 +4,9 @@ import { parse as parseYaml } from "yaml";
 import { readTextIfPresent } from "../util/fs.ts";
 import { error, type Issue } from "../validation/types.ts";
 
-export type HostId = "claude-code" | "codex" | "grok" | "kimi" | "droid";
+export type HostId = "claude-code" | "codex" | "grok" | "kimi" | "droid" | "cursor";
 
-export const HOST_IDS: ReadonlyArray<HostId> = ["claude-code", "codex", "grok", "kimi", "droid"];
+export const HOST_IDS: ReadonlyArray<HostId> = ["claude-code", "codex", "grok", "kimi", "droid", "cursor"];
 
 /**
  * Render the explicit human start a packaged skill recognizes on this host.
@@ -22,9 +22,51 @@ export const HOST_IDS: ReadonlyArray<HostId> = ["claude-code", "codex", "grok", 
  * skill by its bare `/<id>` (adapters/droid/CONTRACT.md §2).
  */
 export function explicitStartForHost(host: HostId, namespace: string, skillId: string): string {
-  if (host === "grok" || host === "droid") return `/${skillId}`;
+  if (host === "grok" || host === "droid" || host === "cursor") return `/${skillId}`;
   if (host === "kimi") return `/skill:${skillId}`;
   return host === "codex" ? `$${namespace.slice(1)}${skillId}` : `${namespace}${skillId}`;
+}
+
+/**
+ * Path of a packaged skill file inside dist/<host>/.
+ *
+ * Cursor project and Cloud Agent discovery reads `.cursor/skills/<id>/SKILL.md`
+ * (https://cursor.com/docs/skills). Other hosts keep the plugin-relative
+ * `skills/<id>/` tree.
+ */
+export function packagedSkillFile(host: HostId, skillId: string, rel = "SKILL.md"): string {
+  return `${host === "cursor" ? ".cursor/skills" : "skills"}/${skillId}/${rel}`;
+}
+
+/** Path of a bundled `bin/` program inside dist/<host>/. */
+export function packagedBinFile(host: HostId, name: string): string {
+  return host === "cursor" ? `.cursor/bin/${name}` : `bin/${name}`;
+}
+
+/** Path of the maintenance CLI script bun runs. Cursor's `ak` is a POSIX launcher over `ak.js`. */
+export function packagedAkScriptFile(host: HostId): string {
+  return host === "cursor" ? packagedBinFile(host, "ak.js") : packagedBinFile(host, "ak");
+}
+
+/**
+ * Relocate a bundle-relative path for this host. Cursor nests the content tree
+ * under `.cursor/` so a vendored overlay is what Cloud Agents clone-discover.
+ * Plugin manifests and AGENTS.md stay at the bundle root. Licence texts live
+ * under `.cursor/licenses/` so a `.cursor/` rsync carries them without writing
+ * the consuming repo's LICENSE, NOTICE or LICENSES/.
+ */
+export function relocateForHost(host: HostId, path: string): string {
+  if (host !== "cursor") return path;
+  if (path.startsWith(".cursor-plugin/") || path === "AGENTS.md") return path;
+  if (
+    path.startsWith("LICENSES/") ||
+    path.startsWith("provenance/licenses/") ||
+    path === "NOTICE" ||
+    path === "LICENSE"
+  ) {
+    return `.cursor/licenses/${path}`;
+  }
+  return `.cursor/${path}`;
 }
 
 function escapeForPattern(text: string): string {
@@ -60,6 +102,35 @@ export function rewriteExplicitStarts(
   }
   if (native.size === 0) return text;
   return text.replace(explicitStartPattern([...native.keys()]), (found) => native.get(found) ?? found);
+}
+
+/**
+ * Cursor Cloud Agent tool shells often have no bun on PATH. Skills that run the
+ * bundled maintenance CLI name `.cursor/bin/ak`, which finds the pin without
+ * that PATH entry. `build`, `validate` and `attach` stay `ak`: those are the
+ * source CLI, not the overlay binary. `doctor` and `update` stay `ak`: they do
+ * not manage Cursor. Supervisor-side Firstmate verbs stay `ak`: Firstmate runs
+ * bind, install, remove, preflight and brief from its own ak, and child-guard.sh
+ * treats install and remove as supervisor-side, like bind. `firstmate status`
+ * with `--verify` stays `ak`: Firstmate audits a done line with it. `runner`
+ * stays `ak` except `runner call`, which workers issue. Worker-side grant,
+ * status and seat-judge still rewrite.
+ */
+const CURSOR_AK_VERBS =
+  "firstmate(?! (?:bind|install|remove|preflight|brief)\\b)(?! status(?: [^\\n`;|&]+)? --verify\\b)|delegation|runner call|learn|kb|guard|lifecycle|tracker|council";
+
+/**
+ * Claude Code and Codex adapter contracts describe those hosts' CLIs, including
+ * hook command strings registered in their settings. Rewriting them to
+ * `.cursor/bin/ak` is false.
+ */
+export function rewriteAkCommands(text: string, host: HostId, source = ""): string {
+  if (host !== "cursor") return text;
+  if (/^adapters\/(claude-code|codex)\//.test(source)) return text;
+  return text.replace(
+    new RegExp(`(^|[^./a-z-])(?:bun run )?ak (${CURSOR_AK_VERBS})(?=[\\s\`])`, "gm"),
+    "$1.cursor/bin/ak $2",
+  );
 }
 
 /**
@@ -126,6 +197,10 @@ export const RESTRICTIONS: ReadonlyArray<string> = [
  * names exactly the same two.
  * Droid emits only descriptive `allowed-tools`; its native skill metadata and
  * conservative capability declaration are in adapters/droid/CONTRACT.md §2.
+ *
+ * Cursor defines `disable-model-invocation` and `paths` in SKILL.md frontmatter
+ * (https://cursor.com/docs/skills). This package emits neither: ADR-0003 keeps
+ * every skill model-loadable, and scoping is the consuming repo's.
  */
 export const HOST_FRONTMATTER_KEYS: Record<HostId, ReadonlyArray<string>> = {
   "claude-code": ["argument-hint", "allowed-tools"],
@@ -133,6 +208,7 @@ export const HOST_FRONTMATTER_KEYS: Record<HostId, ReadonlyArray<string>> = {
   grok: ["argument-hint", "allowed-tools"],
   kimi: [],
   droid: ["allowed-tools"],
+  cursor: [],
 };
 
 export interface HostCapabilities {
@@ -170,6 +246,13 @@ const DEFAULTS: Record<HostId, { enforces: string[]; notes: string[] }> = {
   droid: {
     enforces: [],
     notes: ["No restriction is claimed. allowed-tools is descriptive metadata, not a sandbox."],
+  },
+  cursor: {
+    enforces: [],
+    notes: [
+      "No restriction is claimed. Cursor honors disable-model-invocation, and this package does not emit it (docs/decisions/0003-model-invocation.md).",
+      "Subagent `readonly` is a host permission hint, not attested seat isolation.",
+    ],
   },
 };
 

@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -9,10 +9,9 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { stringify } from "yaml";
 
 import { runCli } from "../../src/cli.ts";
@@ -22,7 +21,8 @@ import { UNJUDGEABLE } from "../../src/guard/evaluate.ts";
 import { decodeClaudeCode, encodeClaudeCode, type LinkResolver } from "../../src/guard/hosts/claude-code.ts";
 import { loadGuardPolicy } from "../../src/guard/policy.ts";
 import { planBundle } from "../../src/packaging/plan.ts";
-import { HOST_IDS } from "../../src/packaging/hosts.ts";
+import { HOST_IDS, packagedAkScriptFile } from "../../src/packaging/hosts.ts";
+import { processScratch } from "../helpers/process-tmp.ts";
 
 /**
  * CS-11's acceptance criteria (research/briefs/constitution-support-plan.md):
@@ -330,7 +330,7 @@ describe("the decoder", () => {
 
 describe("resolveLink", () => {
   test("follows a linked file and a new file under a linked directory, and is null where nothing is linked", () => {
-    const work = mkdtempSync(join(tmpdir(), "ak-guard-link-"));
+    const work = processScratch("ak-guard-link-");
     try {
       mkdirSync(join(work, "tests"));
       mkdirSync(join(work, "src"));
@@ -618,13 +618,25 @@ describe("ak guard hook", () => {
   });
 });
 
+const hookChildren = new Set<ReturnType<typeof spawn>>();
+
+afterAll(() => {
+  for (const child of hookChildren) {
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  }
+  hookChildren.clear();
+});
+
 /** The real entrypoint, stdin and all, as Claude Code runs it. */
 function spawnHook(): ReturnType<typeof spawn> {
-  return spawn(process.execPath, [join(ROOT, "src", "cli.ts"), "guard", ...HOOK], {
+  const child = spawn(process.execPath, [join(ROOT, "src", "cli.ts"), "guard", ...HOOK], {
     cwd: ROOT,
     env: { ...process.env, ...ENV },
     stdio: ["pipe", "pipe", "pipe"],
   });
+  hookChildren.add(child);
+  child.once("close", () => hookChildren.delete(child));
+  return child;
 }
 
 function collect(stream: NodeJS.ReadableStream | null): () => string {
@@ -638,12 +650,16 @@ function collect(stream: NodeJS.ReadableStream | null): () => string {
 describe("the hook process", () => {
   test("reads the payload from stdin and answers a deny on stdout with exit 0", async () => {
     const child = spawnHook();
-    const stdout = collect(child.stdout);
-    const done = new Promise<number | null>((resolve) => child.on("close", (code) => resolve(code)));
-    child.stdin?.end(readFileSync(join(CASES, "bypass-git-dash-C-push-force.stdin")));
-    expect(await done).toBe(0);
-    expect(stdout()).toContain('"permissionDecision":"deny"');
-    expect(stdout()).toContain("destructive.git-push-force");
+    try {
+      const stdout = collect(child.stdout);
+      const done = new Promise<number | null>((resolve) => child.on("close", (code) => resolve(code)));
+      child.stdin?.end(readFileSync(join(CASES, "bypass-git-dash-C-push-force.stdin")));
+      expect(await done).toBe(0);
+      expect(stdout()).toContain('"permissionDecision":"deny"');
+      expect(stdout()).toContain("destructive.git-push-force");
+    } finally {
+      child.kill("SIGKILL");
+    }
   }, 30_000);
 
   test("a hook that has not answered when the host's timeout fires has printed nothing, so the call runs", async () => {
@@ -654,18 +670,24 @@ describe("the hook process", () => {
     expect(timeout?.expected.decision).toBe("fail-open");
     expect(existsSync(join(RECEIPTS, "claude-code-1-hook-failures.md"))).toBe(true);
     const child = spawnHook();
-    const stdout = collect(child.stdout);
-    const done = new Promise<NodeJS.Signals | null>((resolve) => child.on("close", (_code, signal) => resolve(signal)));
-    // Claude Code closes stdin once the payload is written; one that never closes stands for a hook still running.
-    child.stdin?.write(timeout?.stdin ?? "");
-    await new Promise((resolve) => setTimeout(resolve, 1_500));
-    child.kill("SIGTERM");
-    expect(await done).toBe("SIGTERM");
-    expect(stdout()).toBe("");
+    try {
+      const stdout = collect(child.stdout);
+      const done = new Promise<NodeJS.Signals | null>((resolve) =>
+        child.on("close", (_code, signal) => resolve(signal)),
+      );
+      // Claude Code closes stdin once the payload is written; one that never closes stands for a hook still running.
+      child.stdin?.write(timeout?.stdin ?? "");
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+      child.kill("SIGTERM");
+      expect(await done).toBe("SIGTERM");
+      expect(stdout()).toBe("");
+    } finally {
+      child.kill("SIGKILL");
+    }
   }, 30_000);
 });
 
-test("source and packaged entrypoints enforce the guard from an isolated install", () => {
+test("source and packaged entrypoints enforce the guard from an isolated install", async () => {
   const work = mkdtempSync(join(ROOT, ".guard-bundle-"));
   try {
     const { catalog } = loadCatalog(ROOT);
@@ -673,8 +695,9 @@ test("source and packaged entrypoints enforce the guard from an isolated install
     const entries = [join(ROOT, "src", "cli.ts"), join(ROOT, "src", "maintenance", "cli.ts")];
     for (const host of HOST_IDS) {
       const plan = planBundle({ root: ROOT, catalog }, host, {});
-      const script = plan.files.get("bin/ak");
-      if (script === undefined) throw new Error(`no bin/ak for ${host}: ${JSON.stringify(plan.issues)}`);
+      const script = plan.files.get(packagedAkScriptFile(host));
+      if (script === undefined)
+        throw new Error(`no ${packagedAkScriptFile(host)} for ${host}: ${JSON.stringify(plan.issues)}`);
       const entry = join(work, host, "bin", "ak");
       mkdirSync(dirname(entry), { recursive: true });
       writeFileSync(entry, script.contents);
@@ -687,52 +710,68 @@ test("source and packaged entrypoints enforce the guard from an isolated install
     const hook = ["hook", "pre-tool-use", "--policy", "policy.yaml"];
     const payload = (tool: string, toolInput: ToolInput, cwd = project): string =>
       JSON.stringify({ ...BASE, cwd, tool_name: tool, tool_input: toolInput });
-    for (const entry of entries) {
-      const invoke = (stdin: string, argv: string[] = hook): Run => {
-        const result = spawnSync(process.execPath, [entry, "guard", ...argv], {
+    const checkEntry = async (entry: string): Promise<void> => {
+      const invoke = (stdin: string, argv: string[] = hook): Promise<Run> => {
+        const child = spawn(process.execPath, [entry, "guard", ...argv], {
           cwd: project,
           env: { HOME: work, PATH: process.env.PATH, CLAUDE_PROJECT_DIR: project },
-          input: stdin,
-          encoding: "utf8",
+          stdio: ["pipe", "pipe", "pipe"],
           timeout: 30_000,
         });
-        return {
-          code: result.status ?? -1,
-          out: result.stdout.trim() === "" ? [] : [result.stdout.trim()],
-          err: result.stderr.trim() === "" ? [] : [result.stderr.trim()],
-        };
+        const stdout = collect(child.stdout);
+        const stderr = collect(child.stderr);
+        const done = new Promise<Run>((resolve, reject) => {
+          child.once("error", reject);
+          child.once("close", (code) =>
+            resolve({
+              code: code ?? -1,
+              out: stdout().trim() === "" ? [] : [stdout().trim()],
+              err: stderr().trim() === "" ? [] : [stderr().trim()],
+            }),
+          );
+        });
+        child.stdin?.end(stdin);
+        return done;
       };
-      expectDecision(invoke(payload("Write", { file_path: "tests/data.json" })), "deny", "protected.tests");
-      expectDecision(invoke(payload("Read", { file_path: ".env" })), "deny", "secret.dotenv");
+      expectDecision(await invoke(payload("Write", { file_path: "tests/data.json" })), "deny", "protected.tests");
+      expectDecision(await invoke(payload("Read", { file_path: ".env" })), "deny", "secret.dotenv");
       expectDecision(
-        invoke(payload("Bash", { command: "git -C . push --force" })),
+        await invoke(payload("Bash", { command: "git -C . push --force" })),
         "deny",
         "destructive.git-push-force",
       );
-      expectDecision(invoke(payload("Write", { file_path: "src/plain.json" })), "allow", undefined);
-      expectDecision(invoke(payload("Bash", { command: "git status" })), "allow", undefined);
-      expectDecision(invoke("not JSON"), "deny", UNJUDGEABLE);
+      expectDecision(await invoke(payload("Write", { file_path: "src/plain.json" })), "allow", undefined);
+      expectDecision(await invoke(payload("Bash", { command: "git status" })), "allow", undefined);
+      expectDecision(await invoke("not JSON"), "deny", UNJUDGEABLE);
       for (const tool of ["WebFetch", "mcp__files__write", "Grep"]) {
-        expectDecision(invoke(payload(tool, {})), "allow", undefined);
+        expectDecision(await invoke(payload(tool, {})), "allow", undefined);
         for (const argv of [
           ["hook", "pre-tool-use"],
           ["hook", "pre-tool-use", "--policy", "missing.yaml"],
           ["hook", "pre-tool-use", "--policy", "invalid.yaml"],
           [...hook, "--unknown"],
         ]) {
-          expectDecision(invoke(payload(tool, {}), argv), "deny", UNJUDGEABLE);
+          expectDecision(await invoke(payload(tool, {}), argv), "deny", UNJUDGEABLE);
         }
-        expectDecision(invoke(payload(tool, {}, "relative/path")), "deny", UNJUDGEABLE);
+        expectDecision(await invoke(payload(tool, {}, "relative/path")), "deny", UNJUDGEABLE);
         expectDecision(
-          invoke(JSON.stringify({ ...BASE, cwd: undefined, tool_name: tool, tool_input: {} })),
+          await invoke(JSON.stringify({ ...BASE, cwd: undefined, tool_name: tool, tool_input: {} })),
           "deny",
           UNJUDGEABLE,
         );
       }
-      expect(invoke(payload("Bash", { command: "ls" }), [...hook, "--host", "unknown"]).code).toBe(1);
-      expect(invoke(payload("Bash", { command: "ls" }), ["hook", "post-tool-use"]).code).toBe(1);
+      expect((await invoke(payload("Bash", { command: "ls" }), [...hook, "--host", "unknown"])).code).toBe(1);
+      expect((await invoke(payload("Bash", { command: "ls" }), ["hook", "post-tool-use"])).code).toBe(1);
+    };
+    // Each case still starts a fresh hook process. Overlap independent entrypoints so the
+    // 203 process startups do not accumulate against the 120s budget. Drain a failed batch
+    // before removing its install, too, so no child outlives the fixture it is checking.
+    for (let offset = 0; offset < entries.length; offset += 3) {
+      const results = await Promise.allSettled(entries.slice(offset, offset + 3).map(checkEntry));
+      for (const result of results) if (result.status === "rejected") throw result.reason;
     }
   } finally {
     rmSync(work, { recursive: true, force: true });
   }
-}, 120_000);
+  // Packages and installs every host bundle, so its wall clock sits near 120 s even on a quiet host.
+}, 300_000);

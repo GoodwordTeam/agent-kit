@@ -1,8 +1,8 @@
 {
   "name": "agent-kit",
-  "version": "0.1.47-goodword.1",
+  "version": "0.1.131-goodword.1",
   "private": true,
-  "description": "One engineering lifecycle amalgamated from ten donors (nine MIT, one Apache-2.0): seven super skills, packs, protocols and roles, installable as a Claude Code plugin under /ak:.",
+  "description": "One engineering lifecycle amalgamated from eleven donors (ten MIT, one Apache-2.0): seven super skills, packs, protocols and roles, installable as a Claude Code plugin under /ak:.",
   "license": "MIT",
   "bin": {
     "ak": "./src/cli.ts"
@@ -27,6 +27,7 @@
     "@types/bun": "1.4.2",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "fast-check": "4.10.2",
     "oxfmt": "0.71.0",
     "oxlint": "1.86.0",
     "oxlint-tsgolint": "7.0.2003",

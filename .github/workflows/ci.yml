@@ -1,4 +1,5 @@
-# The same gates .no-mistakes.yaml runs as test and lint, on GitHub's runner.
+# The full test suite, which .no-mistakes.yaml deliberately does not run, plus
+# the same lint gates .no-mistakes.yaml runs, on GitHub's runner.
 # Firstmate is never installed here: the adapter tests use temp-dir fixtures,
 # and anything that needs a real Firstmate clone runs outside CI.
 name: ci
@@ -45,6 +46,7 @@ jobs:
           AK_REQUIRE_DONORS: "1"
       - run: bun run validate
       - run: bun run build
+      - run: tools/cursor/self-host.sh --check
       # The publish job refuses the same thing after merge; this refuses it while the PR can still change.
       - name: Refuse a bundle change without a version bump
         run: tools/publish/version-gate.sh dist

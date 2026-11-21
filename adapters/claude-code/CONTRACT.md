@@ -24,6 +24,7 @@ dist/claude-code/
 ├── skills/<id>/SKILL.md       # host frontmatter generated; canonical /ak:<id> start retained
 ├── skills/<id>/references/    # transitive dependencies resolved into the bundle
 ├── evals/<id>/<case>/case.yaml
+├── hooks/hooks.json           # the semantic lint Stop hook (§7)
 ├── LICENSES/                  # licence texts of packages in bin/ak and bin/ak-gate.mjs (NOTICE)
 ├── provenance/licenses/       # claude-mem licence and NOTICE
 └── NOTICE, LICENSE
@@ -36,7 +37,7 @@ discovery:
 {
   "name": "ak",
   "version": "0.1.0",
-  "description": "One engineering lifecycle, amalgamated from ten donors: nine MIT, one Apache-2.0.",
+  "description": "One engineering lifecycle, amalgamated from eleven donors: ten MIT, one Apache-2.0.",
   "author": { "name": "agent-kit maintainers" },
   "license": "MIT",
   "skills": ["./skills/super-align", "./skills/super-bound"],
@@ -259,7 +260,13 @@ They inject the working memory and active guardrails at session start and queue 
 session ends. User corrections reach the runtime on this host from claude-reflect's per-project
 queue, read-only, where that plugin is installed, rather than from a prompt hook. This bundle ships none of them: no skill in it requires
 a hook, every skill behaves the same with them absent, and `ak learn setup uninstall` removes what
-`wire` added. The runtime is a host adapter, not a phase, and its ledgers live under the host's
+`wire` added.
+
+The bundle's one hook is not a learning hook. `hooks/hooks.json` runs
+`"${CLAUDE_PLUGIN_ROOT}/bin/ak" semantic-lint hook` on `Stop` with a 30-second timeout. It is the
+advisory semantic lint: off unless `AK_JEV_ENABLED=1` in the hook process, quiet while off, and
+never a blocking decision. The bundle holds no key and sets no switch. `docs/semantic-lint.md` is its
+contract, and no skill requires it. The runtime is a host adapter, not a phase, and its ledgers live under the host's
 configuration directory, never inside a project repository (ruling
 `learning-runtime-is-host-adapter`).
 
@@ -283,3 +290,28 @@ judge call. The host CLI documents
 `--disable-slash-commands` as disabling skills and `--setting-sources` as selecting settings inputs,
 but documents no login guarantee for either. The runtime therefore adopts neither: login
 preservation is required before a context-reduction flag can enter the scheduled path.
+
+`ak learn doctor` hands the judge whole sessions, so its judge runs subscription-only. Every variable
+that could bill or reroute it (`*_API_KEY`, `*_AUTH_TOKEN`, `*_BEARER_TOKEN`, `*_BASE_URL`,
+`AWS_BEARER_TOKEN*`, `CLAUDE_CODE_USE_*`, `HTTP(S)_PROXY`, `ALL_PROXY`, `NODE_EXTRA_CA_CERTS`) is
+dropped from its environment, and its `--settings` layer blanks each such name and `apiKeyHelper` from
+user `settings.json` and the command's `--settings`, so the call answers on the signed-in
+seat or fails. Both force OTel content logging off. Any command but `claude` is unavailable
+(`src/learn/core/judge.ts`). The doctor refuses output inside a work tree unless git ignores
+it, and never edits a skill file.
+
+Each memory ledger keeps episodes, captured worker observations and worker sessions in
+`raw/learn.sqlite`, an agent-kit database excluded from ledger commits along with its journal files.
+It does not replace claude-mem's database or require that plugin. An episode is keyed by session id;
+a refresh replaces its row. The first non-empty write (or worker-store replacement) imports existing
+`episodes.jsonl`, `raw/worker-observations.jsonl` and `raw/worker-sessions.jsonl` once, in the same
+transaction. Those files stay on disk and receive no further appends. Until that write, reads use
+the legacy files without creating a database. `memory.md`, `lessons/` and `lessons.md` stay in git
+and form the rollback layer; raw rows are never rolled back.
+
+Judge tracing defaults to metadata only. With `AK_LEARN_TRACE=full`, scrubbed prompts and replies
+go into the runtime directory's `trace.sqlite`, in the `judge_bodies` table keyed by call id.
+`judge-calls.jsonl` and `spans.jsonl` remain JSONL, each rotating at 10 MiB and retaining one previous
+generation. Dropping a judge metadata generation deletes its body rows and any corresponding
+legacy `<call-id>.prompt` and `.reply` files under `judge-bodies/`. The database has no separate byte
+cap; body retention follows metadata rotation (`src/learn/core/judge.ts`).

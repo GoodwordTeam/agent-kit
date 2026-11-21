@@ -1,31 +1,36 @@
-import { join, posix } from "node:path";
+import { join, posix, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
+import { stringify as stringifyYaml } from "yaml";
 
-import { entryBodyPath } from "../catalog/layout.ts";
-import { listDirs, readTextIfPresent, walkFiles } from "../util/fs.ts";
+import { DIRECTORY_SECTIONS, entryBodyPath, entryDir } from "../catalog/layout.ts";
+import { isInside, listDirs, readTextIfPresent, walkFiles } from "../util/fs.ts";
 import { parseFrontmatter } from "../util/frontmatter.ts";
 import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../util/links.ts";
 import type { CheckContext } from "../validation/context.ts";
 import { error, note, unavailable, type Issue } from "../validation/types.ts";
 import { generateHostFrontmatter } from "./frontmatter.ts";
 import { CAPABILITY_TABLE_FILE, ceilingFor, loadCapabilityTable, type Ceiling } from "./capability-table.ts";
-import { loadHostCapabilities, rewriteExplicitStarts, type HostId, type SkillMode } from "./hosts.ts";
+import { cursorAkLauncher } from "./cursor-ak.ts";
+import {
+  loadHostCapabilities,
+  relocateForHost,
+  rewriteAkCommands,
+  rewriteExplicitStarts,
+  type HostId,
+  type SkillMode,
+} from "./hosts.ts";
 import { INSTALL_FILE, loadInstallConfig, type InstallConfig } from "./install.ts";
 import { isUserInvoked, loadSkillManifest } from "./manifest.ts";
+import { linkMentions, mentionResolver, schemaRefs, type MentionResolver } from "./mentions.ts";
+import {
+  GATE_SOURCE_FILE,
+  SOURCE_ONLY_PREFIXES,
+  licenceBanner,
+  licenceClosure,
+  listCitationSources,
+} from "./licences.ts";
 import { resolveProfile } from "./profiles.ts";
-
-/** Trees excluded from dependency copying; LICENCE_FILES explicitly ships selected licence texts. */
-const SOURCE_ONLY_PREFIXES = [
-  "research/",
-  "provenance/",
-  "src/",
-  "tests/",
-  "dist/",
-  ".donors/",
-  ".work/",
-  "node_modules/",
-];
 
 /** Where the packager parks a copied shared dependency, preserving its source layout. */
 export const SHARED_ROOT = "references/shared";
@@ -46,6 +51,7 @@ export const HOST_MANIFEST_FILE: Record<HostId, string> = {
   grok: ".claude-plugin/plugin.json",
   kimi: ".kimi-plugin/plugin.json",
   droid: ".factory-plugin/plugin.json",
+  cursor: ".cursor-plugin/plugin.json",
 };
 
 /**
@@ -56,16 +62,22 @@ export const HOST_MANIFEST_FILE: Record<HostId, string> = {
  */
 const MARKETPLACE_FILE = ".claude-plugin/marketplace.json";
 
-type MaintenanceScript = { script: string; inlined: string[] | null };
+type MaintenanceBody = { body: string; inlined: string[] | null };
 
-const maintenanceScripts = new Map<string, MaintenanceScript | null>();
+const maintenanceBodies = new Map<string, MaintenanceBody | null>();
 
-function maintenanceScript(root: string): MaintenanceScript | null {
-  const cached = maintenanceScripts.get(root);
+const STOP_HOOK_FILE = "hooks/hooks.json";
+const STOP_HOOK_COMMANDS: Partial<Record<HostId, string>> = {
+  "claude-code": '"${CLAUDE_PLUGIN_ROOT}/bin/ak" semantic-lint hook',
+  codex: '"${PLUGIN_ROOT}/bin/ak" semantic-lint hook --host codex',
+};
+
+function maintenanceBody(root: string): MaintenanceBody | null {
+  const cached = maintenanceBodies.get(root);
   if (cached !== undefined) return cached;
-  const script = buildMaintenanceScript(root);
-  maintenanceScripts.set(root, script);
-  return script;
+  const built = buildMaintenanceScript(root);
+  maintenanceBodies.set(root, built);
+  return built;
 }
 
 /**
@@ -95,7 +107,7 @@ export function inlinedSetFromMetafile(text: string): string[] | null {
   return [...names].toSorted();
 }
 
-function buildMaintenanceScript(root: string): MaintenanceScript | null {
+function buildMaintenanceScript(root: string): MaintenanceBody | null {
   const source = join(root, "src/maintenance/cli.ts");
   if (!existsSync(source)) return null;
   const scratch = join(root, ".work");
@@ -110,9 +122,22 @@ function buildMaintenanceScript(root: string): MaintenanceScript | null {
       { cwd: root, encoding: "utf8" },
     );
     if (result.status !== 0) throw new Error(result.stderr || "bun build failed");
+    const metadata = readFileSync(metafile, "utf8");
+    const inputs = parsePackageJson(JSON.stringify(parsePackageJson(metadata)?.["inputs"] ?? null));
+    if (inputs !== null) {
+      // The bundler resolves symlinks before naming inputs. A schema excluded from the loose
+      // copies must not re-enter the distribution as bytes in the executable.
+      const base = realpathSync(root);
+      const inlinedPaths = new Set(Object.keys(inputs).map((path) => realpathSync(resolve(base, path))));
+      for (const schema of walkFiles(root, "schemas", new Set())) {
+        const path = join(root, schema);
+        if (!insideOwnTree(base, schema) && existsSync(path) && inlinedPaths.has(realpathSync(path)))
+          throw new Error(`${schema}: inlined schema leaves its source tree through a symlink`);
+      }
+    }
     const body = readFileSync(outfile, "utf8").replace(/^#![^\n]*\n/, "");
-    const inlined = inlinedSetFromMetafile(readFileSync(metafile, "utf8"));
-    return { script: `#!/usr/bin/env bun\n${licenceBanner(root)}${body}`, inlined };
+    const inlined = inlinedSetFromMetafile(metadata);
+    return { body, inlined };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -179,6 +204,7 @@ interface HostManifest {
   author?: { name: string };
   license?: string;
   skills?: string | string[];
+  agents?: string;
   experimental?: { evals: string };
 }
 
@@ -214,78 +240,13 @@ export const BUILD_RECORD_FILE: Record<HostId, string> = {
   grok: ".claude-plugin/ak.json",
   kimi: ".kimi-plugin/ak.json",
   droid: ".factory-plugin/ak.json",
+  cursor: ".cursor-plugin/ak.json",
 };
 
-/**
- * The licence files every bundle carries, copied verbatim.
- *
- * `source` is where the text is read. `path` is where the bundle ships it.
- * NOTICE and LICENSE stay at the bundle root: both host contracts specify
- * those two names at that place (`adapters/claude-code/CONTRACT.md` §1,
- * `adapters/codex/CONTRACT.md` §2). The other rows are the licence texts of
- * code inlined into `bin/ak` or `bin/ak-gate.mjs` (NOTICE). An installed
- * package keeps its text under `node_modules/`, and that path cannot be the
- * bundle path: gitignore drops it, and the packager's file walk skips it, so
- * the distributed copy would not contain the text. claude-mem's texts stay at their provenance paths,
- * the paths they hold in the source tree.
- *
- * A licensing obligation rather than bundle tidiness. The MIT donors' licence
- * requires the copyright notice and the permission notice accompany every
- * copy, Apache-2.0 §4(a) requires claude-mem's licence accompany the files
- * adapted from it, the inlined packages require the same of their own texts,
- * and `dist/` is the copy that gets distributed. Absence is an `error()` for
- * that reason -- a build that quietly omits them reports success over a
- * distribution that may not lawfully be distributed, which is the worst shape
- * this package has a name for.
- *
- * Emitted from here, once, for every host rather than per adapter. Two
- * bundles disagreeing about their own licensing is the defect this package
- * has already produced once in a different field.
- */
-export const LICENCE_FILES: ReadonlyArray<{ source: string; path: string }> = [
-  { source: "NOTICE", path: "NOTICE" },
-  { source: "LICENSE", path: "LICENSE" },
-  { source: "node_modules/ajv/LICENSE", path: "LICENSES/ajv.LICENSE" },
-  { source: "node_modules/ajv-formats/LICENSE", path: "LICENSES/ajv-formats.LICENSE" },
-  { source: "node_modules/fast-deep-equal/LICENSE", path: "LICENSES/fast-deep-equal.LICENSE" },
-  { source: "node_modules/fast-uri/LICENSE", path: "LICENSES/fast-uri.LICENSE" },
-  { source: "node_modules/json-schema-traverse/LICENSE", path: "LICENSES/json-schema-traverse.LICENSE" },
-  { source: "node_modules/yaml/LICENSE", path: "LICENSES/yaml.LICENSE" },
-  {
-    source: "provenance/licenses/thedotmack_claude-mem.LICENSE",
-    path: "provenance/licenses/thedotmack_claude-mem.LICENSE",
-  },
-  {
-    source: "provenance/licenses/thedotmack_claude-mem.NOTICE",
-    path: "provenance/licenses/thedotmack_claude-mem.NOTICE",
-  },
-];
-
-/**
- * Comment block prepended to the built `bin/ak`.
- *
- * The plugin bundles ship the same texts as files. The curl install is this
- * one file and has no neighbour to carry them, and `bun build` drops the
- * copyright comments from the inlined packages.
- */
-function licenceBanner(root: string): string {
-  const lines = [
-    "// Licence texts for this file and the third-party code inlined into it.",
-    "// Each block is also copied into the plugin bundles at the path in its heading.",
-  ];
-  for (const licence of LICENCE_FILES) {
-    const text = readTextIfPresent(join(root, licence.source));
-    if (text === null) continue;
-    lines.push(`// --- ${licence.path} ---`);
-    for (const line of text.replace(/\n$/, "").split("\n")) lines.push(line.length === 0 ? "//" : `// ${line}`);
-  }
-  return `${lines.join("\n")}\n`;
-}
-
-const GATE_SOURCE = "src/lifecycle/gate.ts";
 export const GATE_FILE = "bin/ak-gate.mjs";
 /** The skills whose text runs `../../bin/ak-gate.mjs`; a bundle with any of them carries the gate. */
 const GATE_SKILLS = [
+  "babysit-pr",
   "super-align",
   "super-bound",
   "super-build",
@@ -295,10 +256,12 @@ const GATE_SKILLS = [
   "verify",
 ];
 
-const gateScripts = new Map<string, string>();
+type GateBuild = { script: string; inlined: string[] | null };
+
+const gateScripts = new Map<string, GateBuild>();
 
 /** Bundle the schema-derived validator and its runtime helpers for ordinary Node. */
-function gateScript(root: string, source: string, adapterIds: readonly string[]): string {
+function gateScript(root: string, source: string, adapterIds: readonly string[]): GateBuild {
   const key = JSON.stringify([
     root,
     source,
@@ -317,16 +280,21 @@ function gateScript(root: string, source: string, adapterIds: readonly string[])
       process.execPath,
       [
         join(import.meta.dir, "../lifecycle/build-gate.ts"),
-        join(root, GATE_SOURCE),
+        join(root, GATE_SOURCE_FILE),
         outfile,
         JSON.stringify(adapterIds),
       ],
       { cwd: root, encoding: "utf8" },
     );
     if (built.status !== 0) throw new Error(built.stderr || "gate build failed");
-    const script = `// Generated by ak build from ${GATE_SOURCE}. Do not edit. Run it with no arguments for usage.\n${readFileSync(outfile, "utf8")}`;
-    gateScripts.set(key, script);
-    return script;
+    const script = readFileSync(outfile, "utf8");
+    const metaText = readTextIfPresent(`${outfile}.meta.json`);
+    const compiled = {
+      script,
+      inlined: metaText === null ? null : (inlinedSetFromMetafile(metaText) ?? []),
+    };
+    gateScripts.set(key, compiled);
+    return compiled;
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -338,6 +306,26 @@ export interface BundleFile {
   contents: string;
   /** Repo-relative source, when the file was copied rather than generated. */
   source?: string;
+  /**
+   * Copied with its source bytes to its source path: a declared role, catalog or
+   * schema, or an eval case. Its code spans stay as written, so the bundle check
+   * does not hold it to linking what it names.
+   */
+  verbatim?: true;
+}
+
+/**
+ * Whether `file` is a program the bundle runs by its own path: a `bin/` file
+ * that starts with a shebang. The skills run `ak …` or, on Cursor,
+ * `.cursor/bin/ak`, which resolves to the installed program, and a shell
+ * refuses that file with "Permission denied" unless it carries the executable
+ * bit. `bin/ak-gate.mjs` has no shebang and every caller runs it as
+ * `node …/bin/ak-gate.mjs`, so it needs none. Cursor's `ak.js` is the same:
+ * the launcher execs bun with that path.
+ */
+export function isExecutable(file: BundleFile): boolean {
+  const bin = file.path.startsWith("bin/") || file.path.startsWith(".cursor/bin/");
+  return bin && file.contents.startsWith("#!");
 }
 
 export interface HostDecision {
@@ -358,30 +346,40 @@ export interface BundlePlan {
 
 export interface PlanOptions {
   profile?: string;
+  project?: string;
 }
 
 function isSourceOnly(path: string): boolean {
   return SOURCE_ONLY_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 
-function publishedPathFor(sourcePath: string, includedSkillDirs: ReadonlySet<string>): string | null {
+function publishedPathFor(sourcePath: string, includedSkillDirs: ReadonlySet<string>, host: HostId): string | null {
   const skillDir = /^skills\/([^/]+)\//.exec(sourcePath)?.[1];
-  if (skillDir !== undefined) return includedSkillDirs.has(skillDir) ? sourcePath : null;
+  if (skillDir !== undefined) {
+    return includedSkillDirs.has(skillDir) ? relocateForHost(host, sourcePath) : null;
+  }
   if (isSourceOnly(sourcePath)) return null;
-  return posix.join(SHARED_ROOT, sourcePath);
+  return relocateForHost(host, posix.join(SHARED_ROOT, sourcePath));
 }
 
 /**
  * Rewrite every relative reference in `text` so it resolves inside the bundle,
  * pulling each referenced file in as a dependency. Returns the rewritten text
  * and the source paths that must also be copied.
+ *
+ * A Markdown file's code spans that name a role, protocol, schema or other
+ * catalog file by its root path, or a role by its catalog id, become links to
+ * the copy the bundle carries (`./mentions.ts`). A JSON Schema's relative
+ * `$ref` siblings travel with it.
  */
 function rewriteLinks(
   sourcePath: string,
   publishedPath: string,
   text: string,
   includedSkillDirs: ReadonlySet<string>,
+  mentions: MentionResolver,
   file: string,
+  host: HostId,
 ): { text: string; dependencies: string[]; issues: Issue[] } {
   const issues: Issue[] = [];
   const dependencies: string[] = [];
@@ -391,7 +389,7 @@ function rewriteLinks(
     const resolved = resolveFromFile(sourcePath, link.target);
     if (resolved === null) continue; // checkSourceLinks owns escaping references.
 
-    const targetPublished = publishedPathFor(resolved, includedSkillDirs);
+    const targetPublished = publishedPathFor(resolved, includedSkillDirs, host);
     if (targetPublished === null) {
       issues.push(
         error(
@@ -412,7 +410,62 @@ function rewriteLinks(
     out = out.split(link.raw).join(replacement);
   }
 
+  if (sourcePath.endsWith(".md")) {
+    const linked = linkMentions(sourcePath, publishedPath, out, mentions, (source) =>
+      publishedPathFor(source, includedSkillDirs, host),
+    );
+    out = linked.text;
+    dependencies.push(...linked.dependencies);
+  } else if (sourcePath.endsWith(".schema.json")) {
+    dependencies.push(...schemaRefs(sourcePath, text));
+  }
+
   return { text: out, dependencies, issues };
+}
+
+/**
+ * Whether `path` stays inside the tree it is named under once symlinks are followed: its real
+ * location is inside the real location of its top-level entry (`references/` for
+ * `references/x.md`). The entry itself may be a link, as it is in a root whose top-level entries
+ * link to a checkout; what this refuses is a link inside the tree that points out of it.
+ */
+function insideOwnTree(base: string, path: string): boolean {
+  const full = resolve(base, path);
+  if (full === base || !isInside(full, base)) return false;
+  try {
+    const top = path.split("/")[0] ?? path;
+    return isInside(realpathSync(full), realpathSync(resolve(base, top)));
+  } catch {
+    return false;
+  }
+}
+
+/** What a code span in a bundled body may name, read from this tree and its catalog. */
+function catalogMentions(root: string, catalog: CheckContext["catalog"]): MentionResolver {
+  const bodies = new Map<string, string>();
+  for (const section of DIRECTORY_SECTIONS) {
+    if (section === "skills") continue;
+    for (const entry of catalog.bySection(section)) {
+      if (entry.status === "authored") bodies.set(entryDir(section, entry.id), entryBodyPath(section, entry.id));
+    }
+  }
+  const base = resolve(root);
+  return mentionResolver({
+    // A root path names a file only inside its own tree (insideOwnTree). A catalog id or
+    // directory names a body by its catalog path; the closure applies the same bound when it
+    // reads that body, as it does to every dependency.
+    isFile: (path) => {
+      if (!insideOwnTree(base, path)) return false;
+      try {
+        return statSync(resolve(base, path)).isFile();
+      } catch {
+        return false;
+      }
+    },
+    bodyOf: (dir) => bodies.get(dir.replace(/\/$/, "")) ?? null,
+    roleBody: (id) => bodies.get(entryDir("roles", id)) ?? null,
+    protocolBody: (id) => bodies.get(entryDir("protocols", id)) ?? null,
+  });
 }
 
 /**
@@ -508,7 +561,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
   const install = loadInstallConfig(root, catalog);
   issues.push(...install.issues);
 
-  const membership = resolveProfile(root, catalog, options.profile);
+  const membership = resolveProfile(root, catalog, options.profile, options.project);
   issues.push(...membership.issues);
 
   /**
@@ -589,8 +642,11 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     .map((entry) => entry.id);
   const renderExplicitStarts = (text: string) =>
     rewriteExplicitStarts(text, host, catalog.package.namespace, userSkillIds);
+  const rewriteSkillCommands = (text: string, source = "") =>
+    rewriteAkCommands(renderExplicitStarts(text), host, source);
   const emitted: string[] = [];
   const pending: Array<{ source: string; published: string }> = [];
+  const mentions = catalogMentions(root, catalog);
 
   for (const entry of ordered) {
     const bodyPath = entryBodyPath("skills", entry.id);
@@ -654,9 +710,11 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
      * the installed skill sees, emitted into the body's frontmatter below, and
      * it is not an input to this decision.
      */
-    // Grok shares Claude's declarations and layout, not its permission semantics.
-    // Its own restriction declaration and the shared capability ceiling still apply.
-    const row = manifest.hosts[host] ?? (host === "grok" ? manifest.hosts["claude-code"] : undefined);
+    // Grok and Cursor inherit Claude packaging declarations when they have no
+    // row of their own. Restriction declarations and the shared capability
+    // ceiling still apply per host.
+    const row =
+      manifest.hosts[host] ?? (host === "grok" || host === "cursor" ? manifest.hosts["claude-code"] : undefined);
     const declaredMode: SkillMode = row?.mode ?? "manual";
     const unenforceable = row?.unsupported ?? [];
 
@@ -753,50 +811,67 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
     const canonical = parseFrontmatter(body);
     const generated = generateHostFrontmatter(entry, canonical, manifest, mode, unenforceable, host);
-    const rewritten = rewriteLinks(bodyPath, bodyPath, canonical.body, included, bodyPath);
+    const publishedBody = relocateForHost(host, bodyPath);
+    const rewritten = rewriteLinks(bodyPath, publishedBody, canonical.body, included, mentions, bodyPath, host);
     issues.push(...rewritten.issues);
-    const hostSkill = renderExplicitStarts(`${generated.text}${rewritten.text}`);
+    const hostSkill = rewriteSkillCommands(`${generated.text}${rewritten.text}`);
 
-    files.set(bodyPath, { path: bodyPath, contents: hostSkill, source: bodyPath });
+    files.set(publishedBody, { path: publishedBody, contents: hostSkill, source: bodyPath });
     emitted.push(entry.id);
     for (const dep of rewritten.dependencies) {
-      const published = publishedPathFor(dep, included);
+      const published = publishedPathFor(dep, included, host);
       if (published !== null) pending.push({ source: dep, published });
     }
 
     // Skill-local assets travel with the skill, keeping their own links valid.
     for (const asset of skillAssets(root, entry.id)) {
+      if (!insideOwnTree(resolve(root), asset)) continue;
       const text = readTextIfPresent(join(root, asset));
       if (text === null) continue;
-      const assetRewrite = rewriteLinks(asset, asset, text, included, asset);
+      const publishedAsset = relocateForHost(host, asset);
+      const assetRewrite = rewriteLinks(asset, publishedAsset, text, included, mentions, asset, host);
       issues.push(...assetRewrite.issues);
-      files.set(asset, { path: asset, contents: renderExplicitStarts(assetRewrite.text), source: asset });
+      files.set(publishedAsset, {
+        path: publishedAsset,
+        contents: rewriteSkillCommands(assetRewrite.text),
+        source: asset,
+      });
       for (const dep of assetRewrite.dependencies) {
-        const published = publishedPathFor(dep, included);
+        const published = publishedPathFor(dep, included, host);
         if (published !== null) pending.push({ source: dep, published });
       }
     }
   }
 
   // Authored roles, the catalog, and schemas stay at the paths consumers already write.
+  // A declared source or template that leaves its tree through a symlink is not copied.
   const shipDeclared = (source: string) => {
+    if (!insideOwnTree(resolve(root), source)) return;
     const text = readTextIfPresent(join(root, source));
     if (text === null) return;
-    files.set(source, { path: source, contents: text, source });
-    // Body bytes stay the source bytes, so a link keeps its source path. Copy a
-    // template that link names; other deps still travel through the shared closure.
-    const linked = rewriteLinks(source, source, text, included, source);
+    const published = relocateForHost(host, source);
+    const contents =
+      source.startsWith("schemas/") && source.endsWith(".schema.json") ? rewriteSkillCommands(text, source) : text;
+    files.set(published, { path: published, contents, source, verbatim: true });
+    // Body bytes stay the source bytes, so a link keeps its source path and a code
+    // span stays plain. Copy a template that link names; other deps, and the links
+    // a skill follows, travel through the shared closure.
+    const linked = rewriteLinks(source, published, text, included, () => null, source, host);
     issues.push(...linked.issues);
     for (const dep of linked.dependencies) {
-      if (!dep.startsWith("templates/")) continue;
+      if (!dep.startsWith("templates/") || !insideOwnTree(resolve(root), dep)) continue;
       const depText = readTextIfPresent(join(root, dep));
-      if (depText !== null) files.set(dep, { path: dep, contents: depText, source: dep });
+      if (depText !== null) {
+        const publishedDep = relocateForHost(host, dep);
+        files.set(publishedDep, { path: publishedDep, contents: depText, source: dep, verbatim: true });
+      }
     }
   };
   for (const entry of catalog.bySection("roles")) {
     if (entry.status === "authored") shipDeclared(entryBodyPath("roles", entry.id));
   }
   shipDeclared("catalog.yaml");
+  if (emitted.includes("autopilot")) shipDeclared("policies/invocation.yaml");
   for (const schema of walkFiles(root, "schemas")) {
     if (schema.endsWith(".schema.json")) shipDeclared(schema);
   }
@@ -809,18 +884,22 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     if (done.has(next.source) || files.has(next.published)) continue;
     done.add(next.source);
 
+    // A source that leaves its tree through a symlink is not copied. A Markdown link or
+    // mention to it, or a schema's $ref, then dangles and the bundle check fails; a link
+    // from any other file type dangles without a check reporting it.
+    if (!insideOwnTree(resolve(root), next.source)) continue;
     const text = readTextIfPresent(join(root, next.source));
     if (text === null) continue; // checkSourceLinks owns the dangling-source case.
 
-    const rewritten = rewriteLinks(next.source, next.published, text, included, next.source);
+    const rewritten = rewriteLinks(next.source, next.published, text, included, mentions, next.source, host);
     issues.push(...rewritten.issues);
     files.set(next.published, {
       path: next.published,
-      contents: renderExplicitStarts(rewritten.text),
+      contents: rewriteSkillCommands(rewritten.text, next.source),
       source: next.source,
     });
     for (const dep of rewritten.dependencies) {
-      const published = publishedPathFor(dep, included);
+      const published = publishedPathFor(dep, included, host);
       if (published !== null) pending.push({ source: dep, published });
     }
   }
@@ -857,7 +936,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
       for (const file of walkFiles(root, `${EVAL_DIR}/${id}`)) {
         const text = readTextIfPresent(join(root, file));
         if (text === null) continue;
-        files.set(file, { path: file, contents: text, source: file });
+        files.set(file, { path: file, contents: text, source: file, verbatim: true });
         cases += 1;
       }
     }
@@ -872,54 +951,15 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     }
   }
 
-  for (const licence of LICENCE_FILES) {
-    const text = readTextIfPresent(join(ctx.root, licence.source));
-    if (text === null) {
-      const remedy = licence.source.startsWith("node_modules/")
-        ? `Install dependencies so ${licence.source} is present.`
-        : `Restore ${licence.source}.`;
-      issues.push(
-        error(
-          "packaging.licence-file-missing",
-          licence.source,
-          `${licence.source} is missing, so the bundle cannot carry it. A licence requires its text to accompany every copy, and dist/ is a copy that gets distributed. ${remedy}`,
-        ),
-      );
-      continue;
-    }
-    files.set(licence.path, { path: licence.path, contents: text, source: licence.source });
-  }
-
   const memMode = readTextIfPresent(join(root, CLAUDE_MEM_MODE_FILE));
   if (memMode !== null) {
-    files.set(CLAUDE_MEM_MODE_FILE, { path: CLAUDE_MEM_MODE_FILE, contents: memMode, source: CLAUDE_MEM_MODE_FILE });
+    const memPath = relocateForHost(host, CLAUDE_MEM_MODE_FILE);
+    files.set(memPath, { path: memPath, contents: memMode, source: CLAUDE_MEM_MODE_FILE });
   }
 
+  let maintenance: MaintenanceBody | null = null;
   try {
-    const built = maintenanceScript(root);
-    if (built !== null) {
-      files.set("bin/ak", { path: "bin/ak", contents: built.script });
-      if (built.inlined === null) {
-        issues.push(
-          error(
-            "packaging.inlined-set-unproven",
-            "src/maintenance/cli.ts",
-            "bin/ak's bundler metafile does not name any inlined node_modules package. An absent, malformed, or empty inputs object, or inputs that match no package, leaves the build unable to show that every inlined package has a licence text. A licence requires its text to accompany every copy, and dist/ is a copy that gets distributed. The build refuses.",
-          ),
-        );
-      } else {
-        for (const name of built.inlined) {
-          if (LICENCE_FILES.some((licence) => licence.source.startsWith(`node_modules/${name}/`))) continue;
-          issues.push(
-            error(
-              "packaging.licence-file-missing",
-              `node_modules/${name}`,
-              `bin/ak inlines ${name}, and LICENCE_FILES has no row for its licence text, so neither the bundle nor bin/ak carries it. A licence requires its text to accompany every copy, and dist/ is a copy that gets distributed. Add a LICENCE_FILES row for ${name}'s licence file and name it in NOTICE.`,
-            ),
-          );
-        }
-      }
-    }
+    maintenance = maintenanceBody(root);
   } catch (cause) {
     issues.push(
       error(
@@ -932,29 +972,92 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
 
   // The lifecycle gate travels with the lifecycle: a session with only this bundle records and checks
   // gates with `node bin/ak-gate.mjs`, the same code `ak lifecycle` runs (src/lifecycle/gate.ts).
-  if (GATE_SKILLS.some((name) => emitted.includes(name))) {
-    const text = readTextIfPresent(join(root, GATE_SOURCE));
-    if (text === null) {
+  // Built before licence closure so the source header and inlined package set feed the same demand set.
+  let gateBuilt: GateBuild | null = null;
+  const gateNeeded = GATE_SKILLS.some((name) => emitted.includes(name));
+  const gateText = readTextIfPresent(join(root, GATE_SOURCE_FILE));
+  if (gateNeeded) {
+    if (gateText === null) {
       issues.push(
         error(
           "packaging.gate-source-missing",
-          GATE_SOURCE,
-          `${GATE_SOURCE} is missing, so the bundle cannot carry the lifecycle gate its super-* skills record and check.`,
+          GATE_SOURCE_FILE,
+          `${GATE_SOURCE_FILE} is missing, so the bundle cannot carry the lifecycle gate its super-* skills record and check.`,
         ),
       );
     } else {
       try {
-        files.set(GATE_FILE, {
-          path: GATE_FILE,
-          contents: gateScript(root, text, listDirs(join(root, "adapters"))),
-          source: GATE_SOURCE,
-        });
+        gateBuilt = gateScript(root, gateText, listDirs(join(root, "adapters")));
+        if (gateBuilt.inlined === null) {
+          issues.push(
+            error(
+              "packaging.inlined-set-unproven",
+              GATE_SOURCE_FILE,
+              "bin/ak-gate.mjs's bundler metafile does not name any inlined node_modules package. An absent, malformed, or empty inputs object, or inputs that match no package, leaves the build unable to show that every inlined package has a licence text. A licence requires its text to accompany every copy, and dist/ is a copy that gets distributed. The build refuses.",
+            ),
+          );
+        }
       } catch (cause) {
         issues.push(
-          error("packaging.gate-build-failed", GATE_SOURCE, cause instanceof Error ? cause.message : String(cause)),
+          error(
+            "packaging.gate-build-failed",
+            GATE_SOURCE_FILE,
+            cause instanceof Error ? cause.message : String(cause),
+          ),
         );
       }
     }
+  }
+
+  const closure = licenceClosure(root, listCitationSources(root), [
+    ...(maintenance?.inlined ?? []),
+    ...(gateBuilt?.inlined ?? []),
+  ]);
+  for (const problem of closure.problems) {
+    issues.push(error("packaging.licence-file-missing", problem.source, problem.message));
+  }
+  for (const duty of closure.duties) {
+    const path = relocateForHost(host, duty.path);
+    files.set(path, { path, contents: duty.text, source: duty.source });
+  }
+  if (maintenance !== null) {
+    const akPath = relocateForHost(host, "bin/ak");
+    const body = `${licenceBanner(closure.duties)}${maintenance.body}`;
+    if (host === "cursor") {
+      const scriptPath = relocateForHost(host, "bin/ak.js");
+      files.set(scriptPath, { path: scriptPath, contents: body });
+      files.set(akPath, { path: akPath, contents: cursorAkLauncher() });
+    } else {
+      files.set(akPath, {
+        path: akPath,
+        contents: `#!/usr/bin/env bun\n${body}`,
+      });
+    }
+    const stop = STOP_HOOK_COMMANDS[host];
+    // The semantic lint Stop hook rides on bin/ak, so it ships only with it, in the two hosts that run plugin hooks.
+    if (stop !== undefined)
+      files.set(STOP_HOOK_FILE, {
+        path: STOP_HOOK_FILE,
+        contents: `${JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command: stop, timeout: 30 }] }] } }, null, 2)}\n`,
+      });
+    if (maintenance.inlined === null) {
+      issues.push(
+        error(
+          "packaging.inlined-set-unproven",
+          "src/maintenance/cli.ts",
+          "bin/ak's bundler metafile does not name any inlined node_modules package. An absent, malformed, or empty inputs object, or inputs that match no package, leaves the build unable to show that every inlined package has a licence text. A licence requires its text to accompany every copy, and dist/ is a copy that gets distributed. The build refuses.",
+        ),
+      );
+    }
+  }
+
+  if (gateBuilt !== null) {
+    const gatePath = relocateForHost(host, GATE_FILE);
+    files.set(gatePath, {
+      path: gatePath,
+      contents: `${licenceBanner(closure.duties)}// Generated by ak build from ${GATE_SOURCE_FILE}. Do not edit. Run it with no arguments for usage.\n${gateBuilt.script}`,
+      source: GATE_SOURCE_FILE,
+    });
   }
 
   issues.push(...checkManifestIdentity(ctx.catalog.package));
@@ -970,11 +1073,19 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
     contents: `${JSON.stringify(manifest, null, 2)}\n`,
   });
   if (host !== "kimi") {
-    const marketplaceFile = host === "droid" ? ".factory-plugin/marketplace.json" : MARKETPLACE_FILE;
+    const marketplaceFile =
+      host === "droid"
+        ? ".factory-plugin/marketplace.json"
+        : host === "cursor"
+          ? ".cursor-plugin/marketplace.json"
+          : MARKETPLACE_FILE;
     files.set(marketplaceFile, { path: marketplaceFile, contents: marketplace(ctx) });
   }
-  files.set(BUILD_RECORD_FILE[host], {
-    path: BUILD_RECORD_FILE[host],
+  if (host === "cursor") emitCursorOverlay(ctx, files, excluded);
+  const recordPath = BUILD_RECORD_FILE[host];
+  const outputs = [...files.keys(), recordPath].toSorted((left, right) => left.localeCompare(right));
+  files.set(recordPath, {
+    path: recordPath,
     contents: buildRecord(
       host,
       membership.profile,
@@ -983,6 +1094,7 @@ export function planBundle(ctx: CheckContext, host: HostId, options: PlanOptions
       decisions,
       capabilities.enforces,
       capabilities.notes,
+      outputs,
     ),
   });
 
@@ -1000,6 +1112,136 @@ function skillAssets(root: string, skillId: string): string[] {
 
 function sortFiles(files: Map<string, BundleFile>): Map<string, BundleFile> {
   return new Map([...files.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+const REVIEWER_ROLE_PREFIXES = ["code-review/", "doc-review/", "plan-review/"];
+const REVIEWER_ROLE_IDS = new Set(["reviewer-spec", "reviewer-standards", "verifier", "trail-auditor"]);
+
+function isReviewerRole(id: string): boolean {
+  return REVIEWER_ROLE_IDS.has(id) || REVIEWER_ROLE_PREFIXES.some((prefix) => id.startsWith(prefix));
+}
+
+function roleAgentSlug(id: string): string {
+  return id.replaceAll("/", "-");
+}
+
+/**
+ * Cursor-only overlay: project-discoverable reviewer subagents, a non-always
+ * rule, and an AGENTS.md the consuming repo merges at its root.
+ *
+ * Skills, roles, references and bin/ are already relocated under `.cursor/` by
+ * `relocateForHost`. This only adds files that have no analogue on other hosts.
+ */
+/**
+ * ROLE.md lives three segments deep (`roles/<id>/ROLE.md`); the Cursor subagent
+ * file lives two (`.cursor/agents/<slug>.md`). Relative links that were valid
+ * beside the role are rewritten onto the relocated tree, the same prefix
+ * `relocateForHost` applies, so they still resolve after the overlay.
+ */
+function relocateCopiedLinks(sourcePath: string, publishedPath: string, text: string, host: HostId): string {
+  let out = text;
+  for (const link of extractRelativeLinks(text)) {
+    const resolved = resolveFromFile(sourcePath, link.target);
+    if (resolved === null) continue;
+    const wanted = relativeLinkBetween(publishedPath, relocateForHost(host, resolved));
+    if (wanted === link.target) continue;
+    const anchor = link.anchor === undefined ? "" : `#${link.anchor}`;
+    out = out.split(link.raw).join(link.raw.replace(`${link.target}${anchor}`, `${wanted}${anchor}`));
+  }
+  return out;
+}
+
+function emitCursorOverlay(
+  ctx: CheckContext,
+  files: Map<string, BundleFile>,
+  excludedSkills: ReadonlyArray<{ skill: string; reason: string }>,
+): void {
+  const excludedRoles: Array<{ role: string; reason: string }> = [];
+  for (const entry of ctx.catalog.bySection("roles")) {
+    if (entry.status !== "authored") {
+      excludedRoles.push({ role: entry.id, reason: `status: ${entry.status}` });
+      continue;
+    }
+    const source = entryBodyPath("roles", entry.id);
+    const body = readTextIfPresent(join(ctx.root, source));
+    if (body === null) {
+      excludedRoles.push({ role: entry.id, reason: "authored, but ROLE.md is missing" });
+      continue;
+    }
+    const name = roleAgentSlug(entry.id);
+    const description =
+      entry.summary ??
+      `Agent-kit role ${entry.id}. Load this subagent when super-review or the parent skill seats this role.`;
+    const frontmatter = isReviewerRole(entry.id) ? { name, description, readonly: true } : { name, description };
+    const path = `.cursor/agents/${name}.md`;
+    const relocated = relocateCopiedLinks(source, path, body, "cursor");
+    files.set(path, {
+      path,
+      contents: `---\n${stringifyYaml(frontmatter, { lineWidth: 0 })}---\n\n${relocated}`,
+      source,
+      // Mentions stay as in ROLE.md (shipDeclared copies that file verbatim).
+      // Relative links above are rewritten for the shallower agent path.
+      verbatim: true,
+    });
+  }
+
+  const rulePath = ".cursor/rules/ak-super-review.mdc";
+  files.set(rulePath, {
+    path: rulePath,
+    contents: [
+      "---",
+      "description: Start agent-kit super-review and seat the code-review panel on a Cursor Cloud Agent or IDE agent.",
+      "alwaysApply: false",
+      "---",
+      "",
+      "When a branch or pull request needs agent-kit review, invoke `/super-review`.",
+      "Seat each reviewer as a subagent from `.cursor/agents/` so the seat starts with a clean context.",
+      "The parent still briefs the seat; Cursor does not attest that the reviewer never saw the author's narrative.",
+      "Do not sit the author or spec approver on a reviewer seat (ruling `missing-supervisor-never-implementer`).",
+      "",
+    ].join("\n"),
+  });
+
+  files.set("AGENTS.md", {
+    path: "AGENTS.md",
+    contents: cursorAgentsGuide(excludedSkills, excludedRoles),
+  });
+}
+
+function cursorAgentsGuide(
+  excludedSkills: ReadonlyArray<{ skill: string; reason: string }>,
+  excludedRoles: ReadonlyArray<{ role: string; reason: string }>,
+): string {
+  const excludedSkillLines =
+    excludedSkills.length === 0
+      ? "- None. Every authored catalog skill is under `.cursor/skills/`."
+      : excludedSkills.map((row) => `- \`${row.skill}\`: ${row.reason}`).join("\n");
+  const excludedRoleLines =
+    excludedRoles.length === 0
+      ? "- None. Every authored catalog role is a `.cursor/agents/<id>.md` subagent."
+      : excludedRoles.map((row) => `- \`${row.role}\`: ${row.reason}`).join("\n");
+  return `# agent-kit on Cursor
+
+Project skills live in \`.cursor/skills/<id>/SKILL.md\`. Type \`/\` in Agent chat and pick the skill, or let Agent load it from the description. Human-started skills still require the turn to begin with \`/<id>\`.
+
+## super-review on a branch or pull request
+
+1. Open a Cloud Agent (or IDE Agent) on the branch or PR.
+2. Start \`/super-review\` with the mode (\`full\`, \`readiness\`, or \`delta\` inside an open run). An agent doing the work may start \`full\` and \`readiness\` (ADR-0013); that start is not approval.
+3. For each reviewer seat, dispatch the matching subagent under \`.cursor/agents/\` (for example reviewer-standards.md, reviewer-spec.md, code-review-security.md). Each subagent has its own context window. Reviewer files set \`readonly: true\`.
+4. The parent must not paste the author's narrative into a reviewer prompt. Isolation is conventional: Cursor does not attest excluded lineage.
+5. Close findings only with independent verification evidence. The author does not sit a reviewer seat.
+
+Plugin install (IDE): place this bundle under \`~/.cursor/plugins/local/ak\` so \`.cursor-plugin/plugin.json\` is at the plugin root. Cloud Automations do not load personal or unsynced skills; vendor \`.cursor/skills/\` and \`.cursor/agents/\` into the consuming repository.
+
+## Skills excluded from this bundle
+
+${excludedSkillLines}
+
+## Roles excluded from \`.cursor/agents/\`
+
+${excludedRoleLines}
+`;
 }
 
 /**
@@ -1040,6 +1282,7 @@ function manifestObject(
   if (declared(pkg.license)) manifest.license = pkg.license;
   // Droid discovers skills/ directly; its native manifest carries identity only.
   if (host !== "droid") manifest.skills = skillRegistration(host, skills);
+  if (host === "cursor") manifest.agents = "./.cursor/agents/";
   // Last, as in §1's example, and conditioned on the corpus alone rather than
   // on the corpus and the host. The key is a pointer: emitted with nothing
   // behind it, it is the pointer half of this feature shipping without the
@@ -1268,7 +1511,9 @@ function declared(value: string | undefined): value is string {
  * two bundles is a build failure, not a host difference.
  */
 function skillRegistration(host: HostId, skills: ReadonlyArray<string>): string | string[] {
-  return host === "codex" || host === "kimi" ? "./skills/" : skills.map((id) => `./skills/${id}`);
+  if (host === "codex" || host === "kimi") return "./skills/";
+  if (host === "cursor") return skills.map((id) => `./.cursor/skills/${id}`);
+  return skills.map((id) => `./skills/${id}`);
 }
 
 /**
@@ -1284,6 +1529,7 @@ function buildRecord(
   decisions: ReadonlyArray<HostDecision>,
   enforces: ReadonlySet<string>,
   notes: ReadonlyArray<string>,
+  outputs: ReadonlyArray<string>,
 ): string {
   const record = {
     profile,
@@ -1310,6 +1556,12 @@ function buildRecord(
       .filter((d) => d.rejected.length > 0)
       .map((d) => ({ skill: d.skill, unenforceable: d.unenforceable }))
       .toArray(),
+    /**
+     * Every path this build wrote. `--out` refuses to replace a directory that
+     * holds this record plus any entry that is not one of these paths or a
+     * directory that only exists to hold them.
+     */
+    outputs: [...outputs],
   };
   return `${JSON.stringify(record, null, 2)}\n`;
 }

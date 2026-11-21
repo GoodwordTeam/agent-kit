@@ -1,3 +1,6 @@
+import type { VetoRecord } from "../council/rule.ts";
+import type { BehaviorBinding } from "../lifecycle/behavior-policy.ts";
+
 export interface Grant {
   charter_hash: string;
   covers: string;
@@ -37,6 +40,8 @@ export interface Judgment {
 
 export interface Card extends CardInput {
   judgments: Judgment[];
+  /** The blind veto seat's record, kept apart from the two judgments (ADR-0015). */
+  veto?: VetoRecord;
 }
 
 export interface Evidence {
@@ -54,12 +59,14 @@ export interface Charter {
   status: string;
   project: { id: string; repo?: string };
   immutability: { hash: string; location: string; immutable: true; worker_writable: false };
-  repos: { repo: string }[];
+  repos: { repo: string; base_branch: string }[];
   allowed_capabilities: string[];
+  audit_cadence_seconds?: number;
   approvals: { artifact_hash: string; by: string; authority: string }[];
   standing_grants?: { covers: "autopilot.start"; controller: "firstmate" }[];
   sensitive_grants?: { approval: { artifact_hash: string; by: string; authority: string } }[];
   supervisors: { seats: { id: string; filled_by: string }[] };
+  council?: { blind_veto: "required" };
   checkpoints: string[];
   default_grants: string[];
   denied_actions: string[];
@@ -71,6 +78,8 @@ export interface Charter {
     fix_cycles: number;
     ci_repair_attempts: number;
     resource_units?: number;
+    /** Failed loop-probe or stand-down-replace attempts this run may spend before status goes guided. */
+    delegate_replacements?: number;
   };
 }
 
@@ -114,6 +123,29 @@ export interface Effect {
   observed?: string;
 }
 
+export interface Delegate {
+  id: string;
+  parent?: string;
+  started_at: string;
+  expected_runtime_seconds: number;
+  state: "active" | "replaced" | "finished";
+  replacement?: string;
+  progress: { kind: "commit" | "push" | "pr" | "check" | "store-report"; ref: string; at: string }[];
+}
+
+export type VerdictInvalidation = "patch-changed" | "ci-config-drift" | "merge-conflict";
+export interface PatchVerdict {
+  head_revision: string;
+  patch_id: string;
+  verified_base_revision: string;
+  reused_from?: string;
+  invalidated_by?: VerdictInvalidation;
+}
+export interface ProcedureIdentity {
+  bundle_version: string;
+  hash: string;
+}
+
 export interface Run {
   id: string;
   charter_path: string;
@@ -132,10 +164,25 @@ export interface Run {
   decisions: Decision[];
   budget_consumption: Record<string, number>;
   effects: Record<string, Effect>;
-  events: Record<string, { payload_hash: string; received_at: string; acted: boolean }>;
+  events: Record<
+    string,
+    { payload_hash: string; payload?: string; received_at: string; acted: boolean; terminal?: boolean }
+  >;
+  delegates?: Record<string, Delegate>;
+  procedure?: ProcedureIdentity;
+  verified_base_revision?: string;
+  verdict?: PatchVerdict;
+  priority_question?: {
+    id: string;
+    need: string;
+    started_at: string;
+    answer?: { text: string; source: string; ref: string };
+  };
   open_escalation: Escalation | null;
   cancellation?: { by: string; rationale: string; at: string };
   resume?: { run_state: string; next_permitted_action: string | null };
+  /** Frozen behavior policy; written at start from the KB/runner project binding. */
+  behavior?: BehaviorBinding;
 }
 
 export interface RunLedger {

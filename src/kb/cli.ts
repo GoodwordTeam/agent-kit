@@ -22,6 +22,7 @@ import {
   type KbResolution,
   type ResolvedKb,
 } from "./binding.ts";
+import { IN_REPO, readInRepoContext } from "./in-repo.ts";
 import {
   committedScopes,
   KB_KINDS,
@@ -57,12 +58,20 @@ interface UnresolvedResult {
   message: string;
 }
 
+/** A publish to a read-only knowledgebase: nothing written, a coverage limit the run records and continues past. */
+interface SkippedResult {
+  status: "skipped";
+  capability: "kb-write";
+  code: "kb.read-only";
+  message: string;
+}
+
 /** The refusal of one of the five operations no backend carries. */
 interface NotCarriedResult extends KbRefusal {
   operation: string;
 }
 
-type KbResult = ReadOutcome | PublishOutcome | KbRefusal | UnresolvedResult | NotCarriedResult;
+type KbResult = ReadOutcome | PublishOutcome | KbRefusal | UnresolvedResult | NotCarriedResult | SkippedResult;
 
 const USAGE = [
   "ak kb — reach the project's central knowledgebase (ak.kb.yaml)",
@@ -73,15 +82,16 @@ const USAGE = [
   "      readContext: committed pages at the scope and above it, most specific first",
   "  ak kb publish document --kind <kind> --scope <scope> --id <id> --title <title> --file <page.md> [--run <run-id>]",
   "      publishArtifact, kb-document placement; an adr is stored proposed",
-  "  ak kb publish artifact --file <artifact.json> --run <run-id> [--link <record-ref>]…",
+  "  ak kb publish artifact --file <artifact.json> --run <run-id> [--link <record-ref>]… [--trail-attempts <directory>]",
   "      publishArtifact, run-artifact placement; validated against its schema first",
+  "      --trail-attempts durably marks each trail or trail-audit record before sending it",
   "  ak kb register <knowledgebase-id> <path>",
   "      the operator's step, once per machine: where that knowledgebase is checked out",
   "",
   `  kinds: ${KB_KINDS.join(", ")}`,
   "  scope: a component as kebab-case words joined by '/', or 'project' for the whole project",
   "",
-  "Exit 0 complete, 1 failed or refused, 2 usage, 3 no knowledgebase configured.",
+  "Exit 0 complete, 1 failed or refused, 2 usage, 3 no knowledgebase configured, or a publish to a read-only one skipped.",
 ];
 
 /** The five operations no backend here carries, by the command a caller might reach for. */
@@ -93,7 +103,7 @@ const NOT_CARRIED = new Map([
   ["propose-lesson", "proposeLesson"],
 ]);
 
-const VALUE_FLAGS = new Set(["kind", "scope", "id", "title", "file", "run", "dir"]);
+const VALUE_FLAGS = new Set(["kind", "scope", "id", "title", "file", "run", "dir", "trail-attempts"]);
 
 interface KbArgs {
   positional: string[];
@@ -113,7 +123,11 @@ function parseArgs(argv: readonly string[]): KbArgs {
     }
     const name = token.slice(2);
     const value = argv[i + 1];
-    if ((!VALUE_FLAGS.has(name) && name !== "link") || value === undefined) {
+    if (
+      (!VALUE_FLAGS.has(name) && name !== "link") ||
+      value === undefined ||
+      (name === "trail-attempts" && value === "")
+    ) {
       args.bad ??= token;
       continue;
     }
@@ -172,6 +186,14 @@ function check(options: KbOptions, args: KbArgs): number {
   }
   const resolution = resolveKnowledgebase(root, options.registry ?? registryPath());
   for (const issue of sortIssues(resolution.issues)) options.io.out(formatIssue(issue));
+  if (resolution.resolved?.inRepo !== undefined) {
+    const kb = resolution.resolved;
+    const at = resolution.resolved.inRepo;
+    options.io.out(
+      `ak kb check: bound, read-only. ${BINDING_FILE} names backend ${kb.binding.backend}, knowledgebase '${kb.knowledgebase}' at path '${at.configuredPath}' read at ${at.revision.slice(0, 12)} (the merge-base of HEAD and the remote default branch ${at.base}), project '${kb.binding.project}'. readContext is carried; a publish is skipped (kb.read-only, a coverage limit); the other five operations refuse.`,
+    );
+    return 0;
+  }
   if (resolution.resolved !== null) {
     const kb = resolution.resolved;
     options.io.out(
@@ -204,10 +226,14 @@ function read(options: KbOptions, args: KbArgs): number {
   const resolution = resolveFor(options, args);
   if (resolution === null) return usage(options.io, "--dir is not a directory");
   if (resolution.resolved === null) return reportUnresolved(options.io, "kb-read", resolution);
-  const outcome = readContext(resolution.resolved, kinds.split(","), scope);
+  const resolved = resolution.resolved;
+  if (resolved.inRepo !== undefined) {
+    return finish(options.io, readInRepoContext(resolved, resolved.inRepo, kinds.split(","), scope));
+  }
+  const outcome = readContext(resolved, kinds.split(","), scope);
   // The result stays what the contract says (§7); a scope with nothing at or below it is only noted, on stderr.
   if (outcome.status === "complete" && scope !== PROJECT_SCOPE) {
-    const known = committedScopes(resolution.resolved);
+    const known = committedScopes(resolved);
     if (!known.includes(scope))
       options.io.err(
         `ak kb read: note: no committed page sits at scope '${scope}' or below it, so the result holds only the scopes above it: ${unknownSelector("scope", scope, known)}`,
@@ -229,8 +255,11 @@ function publishOne(options: KbOptions, args: KbArgs, kb: ResolvedKb, text: stri
   const run = args.values.get("run");
   if (args.positional[1] === "artifact") {
     if (run === undefined) return usage(options.io, "publish artifact needs --run");
-    return finish(options.io, publishRunArtifact(kb, text, run, args.links));
+    const attempts = args.values.get("trail-attempts");
+    const directory = attempts === undefined || isAbsolute(attempts) ? attempts : join(options.cwd, attempts);
+    return finish(options.io, publishRunArtifact(kb, text, run, args.links, directory));
   }
+  if (args.values.has("trail-attempts")) return usage(options.io, "--trail-attempts belongs to publish artifact");
   const kind = args.values.get("kind");
   const scope = args.values.get("scope");
   const id = args.values.get("id");
@@ -252,6 +281,16 @@ function publish(options: KbOptions, args: KbArgs): number {
   const resolution = resolveFor(options, args);
   if (resolution === null) return usage(options.io, "--dir is not a directory");
   if (resolution.resolved === null) return reportUnresolved(options.io, "kb-write", resolution);
+  if (resolution.resolved.inRepo !== undefined) {
+    // Before the file is read or an attempt marked: a read-only knowledgebase writes nothing anywhere (CONTRACT.md, "Centrality").
+    printResult(options.io, {
+      status: "skipped",
+      capability: "kb-write",
+      code: "kb.read-only",
+      message: `Knowledgebase '${resolution.resolved.knowledgebase}' is read-only (backend ${IN_REPO}), so nothing was published. A coverage limit: name this record as not published and continue.`,
+    });
+    return EXIT_UNAVAILABLE;
+  }
   const text = readFile(options, path);
   if (text === null) {
     printResult(options.io, { status: "refused", code: "kb.file-unreadable", message: `${path} could not be read.` });

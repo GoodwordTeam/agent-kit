@@ -7,6 +7,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import {
   appendFileSync,
   cpSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -17,15 +18,16 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { type LearnContext, parseLearnArgs } from "../../src/learn/core/context.ts";
-import { Ledger } from "../../src/learn/core/ledger.ts";
-import { inProtectedFolder } from "../../src/learn/core/paths.ts";
+import { Ledger, RAW_STORE_FILE } from "../../src/learn/core/ledger.ts";
+import { inProtectedFolder, projectFolderName, registryPath } from "../../src/learn/core/paths.ts";
 import { run } from "../../src/learn/core/proc.ts";
-import { readJsonl } from "../../src/learn/core/store.ts";
+import { readJsonl, writeJson } from "../../src/learn/core/store.ts";
 import { hookArea } from "../../src/learn/hooks.ts";
 import { ensureMemoryLedger, writeLesson } from "../../src/learn/memory/ledger.ts";
 import { memoryDir, readState } from "../../src/learn/memory/ledger.ts";
 import { loadEpisodes } from "../../src/learn/memory/episodes.ts";
-import { type Registry, readWorktrees, registerRoot } from "../../src/learn/memory/registry.ts";
+import { RawStore } from "../../src/learn/memory/raw-store.ts";
+import { type Registry, readRegistry, readWorktrees } from "../../src/learn/memory/registry.ts";
 import { fetchNew, formatObservation } from "../../src/learn/memory/reflect.ts";
 import { sessionStartBlock } from "../../src/learn/memory/session-context.ts";
 import { tick } from "../../src/learn/memory/tick.ts";
@@ -83,8 +85,16 @@ function linkWorktree(main: string, linked: string, name: string): void {
 }
 
 /** Start a session in the fixture's linked worktree; the ceiling keeps the checkout holding the test scratch out of root discovery. */
-function startSessionIn(linked: string, ctx: LearnContext): void {
+function startSessionIn(main: string, linked: string, ctx: LearnContext): void {
   withGitCeiling(dirname(linked), () => sessionStartBlock(ctx));
+  registerFixtureRoot(ctx, main);
+}
+
+/** Capture consumes an existing registry. Seed it directly so gate-worktree fixture paths are not rejected as managed repositories. */
+function registerFixtureRoot(ctx: LearnContext, root: string): void {
+  writeJson(registryPath(ctx.config), {
+    [projectFolderName(root)]: { root, mem_project: "registered", last_seen: Date.now() },
+  });
 }
 
 function captureWorkerSessions(
@@ -168,10 +178,10 @@ function codexToolCall(name: string, input: string) {
   return { type: "response_item", payload: { type: "custom_tool_call", name, input } };
 }
 
-function codexToolOutput(text: string) {
+function codexToolOutput(text: string, outcome: { is_error?: boolean } = {}) {
   return {
     type: "response_item",
-    payload: { type: "custom_tool_call_output", output: [{ type: "input_text", text }] },
+    payload: { type: "custom_tool_call_output", output: [{ type: "input_text", text }], ...outcome },
   };
 }
 
@@ -279,7 +289,7 @@ function writeRollout(home: string, id: string, cwd: string, rows: readonly obje
 }
 
 describe("worker session parsers", () => {
-  test("condenses a captured Codex rollout into one row per turn with its tool input, failure output and edited files", () => {
+  test("condenses a captured Codex rollout without treating apply_patch output wording as failure", () => {
     const path = join(FIXTURES, "codex", "sessions", "2026", "10", "04", "rollout-fixture.jsonl");
     const session = requiredSession(parseCodexSession(path));
     expect(session.platform).toBe("codex");
@@ -288,15 +298,15 @@ describe("worker session parsers", () => {
     expect(session.completed).toBe("I renamed the token and the lint command is green.");
     expect(session.prompt_count).toBe(1);
     expect(session.memory_session_id).toMatch(/^[0-9a-f]{32}$/);
-    expect(session.observations.map((row) => row.type)).toEqual(["error"]);
+    expect(session.observations.map((row) => row.type)).toEqual(["turn"]);
     expect(session.files_modified).toEqual(["src/lint.ts"]);
     const text = session.observations[0]?.text ?? "";
-    expect(text.split("\n").slice(0, 4)).toEqual([
+    expect(text.split("\n").slice(0, 3)).toEqual([
       "prompt: Fix the lint warnings without suppressing the rule.",
       "reply: I renamed the token and the lint command is green.",
-      "failed: apply_patch",
       "tools: apply_patch x1",
     ]);
+    expect(text).not.toContain("failed:");
     expect(text).toContain("-> 200 warnings remain: lint/no-placeholder");
     expect(text).not.toContain("injected project instructions");
     expect(text).not.toContain("injected global instructions");
@@ -315,7 +325,11 @@ describe("worker session parsers", () => {
       "0 errors, 0 failures, no regressions",
     ];
     const path = writeRollout(scratch("ak-codex-rollout-"), "clean", "/fixture/worktree", [
-      ...outputs.flatMap((output, index) => [codexMessage("user", `check ${index}`), codexToolOutput(output)]),
+      ...outputs.flatMap((output, index) => [
+        codexMessage("user", `check ${index}`),
+        codexToolCall("shell", "bun test"),
+        codexToolOutput(output),
+      ]),
       CODEX_TASK_COMPLETE,
     ]);
     const session = requiredSession(parseCodexSession(path));
@@ -425,9 +439,9 @@ describe("worker session parsers", () => {
     const session = requiredSession(parseCodexSession(path));
     expect(session.request).toBe("Charge with [redacted:stripe-key] now.");
     captureWorkerSessions(ledger, [{ ...session, completed: `Used ${stripe}.` }]);
-    expect(readFileSync(ledger.path("raw", "worker-sessions.jsonl"), "utf8")).not.toContain(stripe);
+    expect(JSON.stringify(RawStore.of(ledger.dir).workers().sessions)).not.toContain(stripe);
     expect(readJsonl<{ file: string; kinds: object }>(ledger.path("raw", "secret-redactions.jsonl"))).toEqual([
-      expect.objectContaining({ file: "raw/worker-sessions.jsonl", kinds: { "stripe-key": 1 } }),
+      expect.objectContaining({ file: `${RAW_STORE_FILE}#worker_sessions`, kinds: { "stripe-key": 1 } }),
     ]);
   });
 
@@ -440,7 +454,7 @@ describe("worker session parsers", () => {
       codexToolCall("apply_patch", "*** Update File: src/total.ts"),
       codexToolOutput("Success. Updated the following files: src/total.ts"),
       codexToolCall("deploy_preview", "{}"),
-      codexToolOutput("error: preview quota exceeded"),
+      codexToolOutput("error: preview quota exceeded", { is_error: true }),
       codexMessage("assistant", `The total now sums line items after discounts. ${"More detail. ".repeat(60)}`),
       CODEX_TASK_COMPLETE,
     ]);
@@ -460,7 +474,7 @@ describe("worker session parsers", () => {
     expect(session.request).toBe("Review why the verifier needed five rounds.");
     expect(session.files_modified).toEqual(["src/review.ts"]);
     expect(session.observations.some((row) => row.text.includes("injected project context"))).toBe(false);
-    expect(session.observations.map((row) => row.type)).toEqual(["error"]);
+    expect(session.observations.map((row) => row.type)).toEqual(["turn"]);
   });
 
   test("normalizes a captured Kimi wire and excludes injections and private reasoning", () => {
@@ -862,7 +876,7 @@ describe("memory tick worker capture", () => {
       },
       replies: [reflectorOrEmptyJudge, { lessons: [], review_events: [], log: "fixture batch" }],
     });
-    startSessionIn(linked, ctx);
+    startSessionIn(main, linked, ctx);
     expect(readWorktrees(ctx.config)).toEqual({ [linked]: main });
 
     expect(tick(ctx, { only: main, job: "reflect", force: true })).toBe(0);
@@ -922,6 +936,7 @@ describe("memory tick worker capture", () => {
           0,
         );
     });
+    registerFixtureRoot(ctx, main);
 
     expect(tick(ctx, { only: main, job: "reflect", force: true })).toBe(0);
     const episodes = loadEpisodes(new Ledger(memoryDir(ctx.config, main)));
@@ -936,7 +951,7 @@ describe("memory tick worker capture", () => {
     const { main } = linkedRepo();
     const codex = scratch("ak-worker-activity-");
     const ctx = testContext({ cwd: main, env: { AK_LEARN_CODEX_HOMES: codex } });
-    registerRoot(ctx.config, main);
+    registerFixtureRoot(ctx, main);
     writeRollout(codex, "captured", main, [
       codexMessage("user", "tidy the cart module"),
       codexMessage("assistant", "The cart module is tidy."),
@@ -967,7 +982,7 @@ describe("memory tick worker capture", () => {
         AK_LEARN_KIMI_HOMES: join(homes, "kimi"),
       },
     });
-    registerRoot(ctx.config, main);
+    registerFixtureRoot(ctx, main);
     expect(readWorktrees(ctx.config)).toEqual({});
 
     expect(tick(ctx, { only: main, job: "reflect" })).toBe(0);
@@ -977,6 +992,19 @@ describe("memory tick worker capture", () => {
         .toSorted(),
     ).toEqual(["grok", "kimi"]);
     expect(ctx.out.some((line) => line.includes("worker sessions skipped"))).toBe(false);
+    expect(readWorktrees(ctx.config)).toEqual({ [linked]: main });
+    rmSync(linked, { recursive: true });
+    expect(workerRootResolver(readRegistry(ctx.config), readWorktrees(ctx.config))(join(linked, "src"))).toBe(main);
+    writeRollout(join(homes, "codex"), "after-deletion", join(linked, "src"), [
+      codexMessage("user", "finish after deletion"),
+      CODEX_TASK_COMPLETE,
+    ]);
+    expect(tick(ctx, { only: main, job: "reflect" })).toBe(0);
+    expect(
+      WorkerSessionSource.open(new Ledger(memoryDir(ctx.config, main)))
+        .observationsSince("", 0)
+        .some((row) => row.facts?.includes("finish after deletion")),
+    ).toBe(true);
   });
 
   test("a worktree pointer naming an unregistered root places nothing", () => {
@@ -991,7 +1019,7 @@ describe("memory tick worker capture", () => {
     const { main, linked } = linkedRepo();
     const codex = scratch("ak-worker-removed-");
     const ctx = testContext({ cwd: linked, env: { AK_LEARN_CODEX_HOMES: codex } });
-    startSessionIn(linked, ctx);
+    startSessionIn(main, linked, ctx);
     rmSync(linked, { recursive: true });
     writeRollout(codex, "after-removal", join(linked, "packages", "web"), [
       codexMessage("user", "finish the cart fix"),
@@ -1095,7 +1123,7 @@ describe("worker capture in a macOS protected folder", () => {
     const home = scratch("ak-fake-home-");
     const codex = scratch("ak-worker-protected-tick-");
     const ctx = testContext({ cwd: main, env: { HOME: home, AK_LEARN_CODEX_HOMES: codex } });
-    registerRoot(ctx.config, main);
+    registerFixtureRoot(ctx, main);
     const linked = join(home, "Documents", "linked");
     linkWorktree(main, linked, "protected");
     for (const id of ["one", "two"]) writeRollout(codex, `documents-${id}`, linked, rows);
@@ -1150,16 +1178,20 @@ describe("captured observation ledger", () => {
     expect(observations).toHaveLength(4);
     expect(observations.every((row) => row.id >= CAPTURE_ID_BASE)).toBe(true);
     expect(new Set(observations.map((row) => row.id)).size).toBe(4);
-    expect(new Ledger(ledger.dir).git(["status", "--porcelain"]).stdout).not.toBe("");
+    // The rows sit in the raw store, which git ignores, so capture leaves the ledger's worktree clean.
+    expect(existsSync(ledger.path(RAW_STORE_FILE))).toBe(true);
+    expect(new Ledger(ledger.dir).git(["status", "--porcelain"]).stdout).toBe("");
   });
 
   test("a row's text is written once, beside a digest rather than a second copy", () => {
     const ledger = ensureMemoryLedger(scratch("ak-capture-once-"));
     captureWorkerSessions(ledger, [workerSession("t", [1])]);
 
-    const path = ledger.path("raw/worker-observations.jsonl");
-    expect(readFileSync(path, "utf8").split("t step 0")).toHaveLength(2);
-    const rows = readJsonl<{ narrative: string | null; facts: string; key: string }>(path);
+    const rows = RawStore.of(ledger.dir).workers<
+      { id: number; memory_session_id: string; narrative: string | null; facts: string; key: string },
+      { memory_session_id: string }
+    >().observations;
+    expect(JSON.stringify(rows).split("t step 0")).toHaveLength(2);
     expect(rows.map((row) => [row.narrative, row.facts])).toEqual([[null, "t step 0"]]);
     expect(rows[0]?.key).toMatch(/^[0-9a-f]{16}$/);
     expect(WorkerSessionSource.open(ledger).observationsSince("", 0).map(formatObservation).join("")).toContain(
@@ -1187,7 +1219,7 @@ describe("captured observation ledger", () => {
       current.memory_session_id,
       later.memory_session_id,
     ]);
-    expect(readFileSync(ledger.path("raw/worker-sessions.jsonl"), "utf8").trim().split("\n")).toHaveLength(2);
+    expect(RawStore.of(ledger.dir).workers().sessions).toHaveLength(2);
   });
 
   test("a host record rewritten shorter still appends its new rows, and only those", () => {

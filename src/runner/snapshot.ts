@@ -33,11 +33,31 @@ function failedGit(stderr: string): GitResult {
   return { code: -1, stdout: new Uint8Array(), text: "", stderr };
 }
 
+/** Isolated git argv: worker-owned config is ignored, including the commit graph. */
+export function isolatedGitArgv(project: string, args: readonly string[]): string[] {
+  return [
+    "-c",
+    `safe.directory=${realpathSync(project)}`,
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "core.excludesFile=/dev/null",
+    "-c",
+    "core.commitGraph=false",
+    "-c",
+    "advice.graftFileDeprecated=false",
+    ...args,
+  ];
+}
+
 export function gitProcess(
   context: RunnerGitContext,
   project: string,
   args: readonly string[],
   timeoutMs = 10_000,
+  input?: Uint8Array,
 ): GitResult {
   const env: NodeJS.ProcessEnv = {
     PATH: context.path,
@@ -47,23 +67,17 @@ export function gitProcess(
     GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_OPTIONAL_LOCKS: "0",
     GIT_NO_REPLACE_OBJECTS: "1",
+    GIT_GRAFT_FILE: "/dev/null",
     LC_ALL: "C",
   };
-  const proc = spawnSync(
-    context.binary,
-    [
-      "-c",
-      `safe.directory=${realpathSync(project)}`,
-      "-c",
-      "core.fsmonitor=false",
-      "-c",
-      "core.hooksPath=/dev/null",
-      "-c",
-      "core.excludesFile=/dev/null",
-      ...args,
-    ],
-    { cwd: project, env, maxBuffer: 1 << 30, timeout: timeoutMs, killSignal: "SIGKILL" },
-  );
+  const proc = spawnSync(context.binary, isolatedGitArgv(project, args), {
+    cwd: project,
+    env,
+    input,
+    maxBuffer: 1 << 30,
+    timeout: timeoutMs,
+    killSignal: "SIGKILL",
+  });
   if (proc.error !== undefined) {
     if ("code" in proc.error && proc.error.code === "ETIMEDOUT")
       return failedGit(`runner git timed out after ${timeoutMs / 1000} seconds`);
@@ -112,10 +126,67 @@ function checkGitControls(context: RunnerGitContext, project: string): GitResult
   return null;
 }
 
-export function runnerGit(context: RunnerGitContext, project: string, args: readonly string[]): GitResult {
+export function runnerGit(
+  context: RunnerGitContext,
+  project: string,
+  args: readonly string[],
+  input?: Uint8Array,
+): GitResult {
   const controls = checkGitControls(context, project);
   if (controls !== null) return controls;
-  return gitProcess(context, project, args);
+  return gitProcess(context, project, args, 10_000, input);
+}
+
+/** Stable identity for the complete committed change relative to its current merge base. */
+export function patchIdentity(context: RunnerGitContext, project: string, baseRef: string, head: string) {
+  const base = runnerGit(context, project, ["merge-base", baseRef, head]);
+  if (base.code !== 0 || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(base.text))
+    throw new Error(`cannot resolve verdict base: ${base.stderr || base.text}`);
+  const diff = runnerGit(context, project, ["diff", "--binary", base.text, head, "--"]);
+  if (diff.code !== 0) throw new Error(`cannot read committed patch: ${diff.stderr}`);
+  if (diff.stdout.length === 0) return null;
+  const patch = gitProcess(context, project, ["patch-id", "--stable"], 10_000, diff.stdout);
+  const patchId = patch.text.split(" ")[0];
+  if (patch.code !== 0 || patchId === undefined || !/^[0-9a-f]{40}$/.test(patchId))
+    throw new Error(`cannot compute stable patch-id: ${patch.stderr || patch.text}`);
+  return patchId;
+}
+
+/** Only trunk-side CI configuration changes invalidate an otherwise identical patch. */
+export function ciConfigDrift(context: RunnerGitContext, project: string, oldBase: string, newBase: string): boolean {
+  if (oldBase === newBase) return false;
+  const changed = runnerGit(context, project, ["diff", "--name-only", "-z", oldBase, newBase, "--"]);
+  if (changed.code !== 0) throw new Error(`cannot compare CI configuration: ${changed.stderr}`);
+  return new TextDecoder()
+    .decode(changed.stdout)
+    .split("\0")
+    .some(
+      (path) =>
+        path.startsWith(".github/workflows/") ||
+        path.startsWith(".github/actions/") ||
+        path.startsWith(".circleci/") ||
+        path.startsWith(".buildkite/") ||
+        [".gitlab-ci.yml", "azure-pipelines.yml", "Jenkinsfile", "bitbucket-pipelines.yml"].includes(path),
+    );
+}
+
+export function mergeTreeClean(context: RunnerGitContext, project: string, baseRef: string, head: string): boolean {
+  const result = runnerGit(context, project, ["merge-tree", "--write-tree", baseRef, head]);
+  if (result.code > 1) throw new Error(`cannot inspect merge tree: ${result.stderr}`);
+  return result.code === 0;
+}
+
+export function cleanCommittedTree(context: RunnerGitContext, project: string): boolean {
+  const status = runnerGit(context, project, ["status", "--porcelain", "-z", "--untracked-files=all"]);
+  if (status.code !== 0) throw new Error(`cannot inspect committed worktree: ${status.stderr}`);
+  return status.stdout.length === 0;
+}
+
+export function resolvedRevision(context: RunnerGitContext, project: string, ref: string): string {
+  const result = runnerGit(context, project, ["rev-parse", "--verify", ref]);
+  if (result.code !== 0 || !/^[0-9a-f]{40}([0-9a-f]{24})?$/.test(result.text))
+    throw new Error(`cannot resolve revision ${ref}: ${result.stderr || result.text}`);
+  return result.text;
 }
 
 function rawFile(context: RunnerGitContext, project: string, path: string): string {

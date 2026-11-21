@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
+import { processScratch } from "./helpers/process-tmp.ts";
 
 const ROOT = resolve(import.meta.dir, "..");
 
@@ -19,10 +19,13 @@ const EMPTY_WORKSPACE_CASES = [
   ["super-verify/refuses-code-quality-opinion", "src/session/store.js"],
   ["super-build/round-cap-adjudicates-open-findings", "runs/build/findings.json"],
   ["compound/no-knowledgebase-means-no-repo-fallback", "lesson-draft.md"],
-  ["doc-review/no-knowledgebase-write-stops-before-publishing", "runs/document-review/panel.json"],
-  ["super-align/no-knowledgebase-write-stops-before-publishing", "runs/alignment/approved.json"],
+  ["doc-review/configured-knowledgebase-failure-stops", "ak.kb.yaml"],
+  ["doc-review/no-knowledgebase-write-continues-unpublished", "runs/document-review/panel.json"],
+  ["super-align/configured-knowledgebase-failure-stops", "ak.kb.yaml"],
+  ["super-align/no-knowledgebase-write-continues-unpublished", "runs/alignment/approved.json"],
   ["super-align/typo-fix-does-not-start-alignment", "src/email/templates.js"],
-  ["super-bound/no-knowledgebase-write-stops-before-publishing", "specs/approved.md"],
+  ["super-bound/configured-knowledgebase-failure-stops", "ak.kb.yaml"],
+  ["super-bound/no-knowledgebase-write-continues-unpublished", "specs/approved.md"],
   ["super-bound/reviewed-ticket-does-not-reopen-bounding", "tickets/BILL-412.md"],
   ["super-review/refuses-to-edit-the-source-it-reviews", "review/finding.json"],
   ["wayfind/out-of-scope-needs-a-reason", "maps/search-migration.md"],
@@ -45,7 +48,7 @@ function loadCase(dir: string): CaseSpec {
 
 function buildScaffold(dir: string): string {
   const prefix = `ak-a1-${dir.replaceAll("/", "-")}-`;
-  const workspace = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  const workspace = processScratch(prefix);
   made.push(workspace);
   const script = join(ROOT, "evals", dir, "scaffold.sh");
   const result = spawnSync("bash", [script], { cwd: workspace, encoding: "utf8" });

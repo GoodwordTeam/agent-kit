@@ -46,6 +46,7 @@ The package computes no prices, selects nothing, and schedules nothing.
 | `runner-grants` | `fails-closed` | `delegated-grant` operations are unavailable and the entrypoint stops for explicit invocation (§2, "With no runner attached") |
 | `trusted-evidence` | `fails-closed` | Autonomous evidence-consuming operations are unavailable when the runner cannot keep their evidence outside worker reach (§2, "How a runner signals trusted evidence") |
 | `independent-context` | `fails-closed` | A seat whose distinct context and excluded lineage cannot be attested is unavailable and is never backfilled (§3, "Failure behavior") |
+| `event-delivery` | `fails-closed` | Without both a private event consumer and supervisor loop, or without a charter cadence, `status.autonomy` names guided mode; a run requesting unattended mode cannot decide a checkpoint (§6) |
 
 This table is read by `ak build` and `ak validate` (`loadAdapterSupplies` in
 `src/packaging/install.ts`). A row is a claim that an operation needing the capability refuses
@@ -53,13 +54,9 @@ when it is unconfigured rather than degrading, which is what lets an attached ad
 skill's mode ceiling on a host that does not provide the capability (ruling
 `fail-closed-adapter-lifts-ceiling`).
 
-`event-delivery` is deliberately **not** a row, although this contract owns it. It has no stated
-behavior for an unconfigured runner (§6 says what may be done on receipt, not what happens when
-nothing is delivered), so nothing here says its absence refuses. The local service (§9) stores a
-delivered `event` with its key, but nothing yet hands a stored event to the run; that consumer is
-the follow-up that would make this a row. A skill requiring it stays capped at `guided` on a host
-that lacks it, attached runner or not, and `profiles/autonomy` still does not install against a host
-on its own. `tracker-access` is not a row here because this contract does not supply it:
+The row describes the attached adapter's fail-closed behavior, not proof that a live service was
+configured. `autopilot` reads the live `status.autonomy` before advancing. `tracker-access` is not
+a row here because this contract does not supply it:
 `adapters/tracker/CONTRACT.md` §1 does, with the fallback it depends on stated beside it.
 
 ---
@@ -119,9 +116,14 @@ read-only work may continue within budget. Control returns to the runner. No age
 ### With no runner attached
 
 `delegated-grant` operations are unavailable. `explicit-or-delegated` operations install and run in
-their explicit form only. The public entrypoint **stops for explicit invocation** rather than
-reproducing a forbidden command's effect through a side door (`AGENTS.md`, "The invocation law";
+their explicit form only. A human-started public entrypoint **stops for explicit invocation**
+rather than reproducing a forbidden command's effect through a side door (`AGENTS.md`, "The invocation law";
 ruling `entrypoint-phase-operation-split`).
+Under the opt-in unattended policy ([ADR-0014](../../docs/decisions/0014-unattended-lifecycle-policy.md)),
+align, bound and ship start instead when the gate tool's `unattended check` exits 0, the human boundary
+being the live protected merge: an exception, for that policy only, to ruling
+`entrypoint-phase-operation-split`.
+For model-started review, see [ADR-0013](../../docs/decisions/0013-model-starts-super-review.md).
 
 ### How a runner signals trusted evidence
 
@@ -134,6 +136,10 @@ With this contract attached and no real runner behind it, no such evidence exist
 form of an evidence-consuming operation stops with `status: needs-input` naming trusted evidence as
 unavailable. That stop is the `fails-closed` row in §1. The explicit form is unaffected.
 
+The one exception is the opt-in unattended policy (ADR-0014): there the worker-attested gate records
+count, labelled so, and the boundary is the live merge-gate read with its residual assumptions
+stated. Work outside that opt-in keeps both restrictions above.
+
 ---
 
 ## 3. Seat independence
@@ -142,7 +148,11 @@ A **seat** is a run-scoped role assignment the runner makes and attests. `roles/
 prompt for a seat; the runner supplies who fills it.
 
 **Independence is a runner-enforced structural constraint, never a model identity.** It is never
-expressed as, satisfied by, or checked against a different model, provider or family. What the runner
+expressed as, satisfied by, or checked against a different model, provider or family. The one scoped
+exception is the forge-side independent review check under the opt-in unattended policy
+([ADR-0014](../../docs/decisions/0014-unattended-lifecycle-policy.md)), whose reviewer must be a
+canonical model identity different from every configured author model; the seats this contract fills
+and every run outside that policy are unchanged. What the runner
 must attest for two seats declared independent:
 
 - **Distinct seat identifiers** bound to the run, recorded in the decision card.
@@ -159,6 +169,9 @@ must attest for two seats declared independent:
 | Any reviewer | The author of the change under review | ruling `missing-supervisor-never-implementer` |
 | A `verifier` | The implementer, change author, spec approver, recipe author for this change, or a seat already used on the same decision | ruling `missing-supervisor-never-implementer` |
 | The second `supervisor` | The first `supervisor` | plan §7.3 |
+
+The supervisor exclusion is symmetric: neither supervisor's lineage may contain the other
+supervisor's actor.
 
 Independence means independent **of the author**, not amnesiac between cycles: reviewer continuity
 through a prior-review dossier is desirable and permitted (ruling `reviewer-continuity-not-amnesia`).
@@ -256,6 +269,37 @@ idempotency key. The package's obligation on receipt:
   (release scenario 15).
 - **An event for a run in a terminal state is recorded and not acted on.**
 
+The local service persists the payload and its digest before invoking its private `event-config`
+consumer. The consumer receives `{run,key,payload}` on stdin and can use only the run-scoped worker
+socket token. It returns `{run,key}` after it has delivered the wake into the run controller. The
+runner marks the event acted only after that matching acknowledgement. An unacknowledged event
+remains in the private queue and is retried after service restart. Duplicate keys with changed
+payloads refuse; duplicate keys with the same payload never repeat an acknowledged delivery.
+The supervisor configures an explicit command timeout; a timeout leaves the event pending and
+the run guided. Payload content is an untrusted claim and cannot issue a grant.
+
+The `loop-config` is a separate supervisor-owned command. The charter's
+`audit_cadence_seconds` arms a tick while any delegate remains active. Each tick re-reads the
+autopilot skill and checkpoint procedure at the bundle version and content hash recorded at run
+start; drift refuses the tick. The adapter probes every active owner and child and returns only
+observed side effects: commit, push, PR change, check change, or stored report. Narration is not
+progress. A delegate with no side effect within its expected runtime is sent to the adapter
+with a stable replacement key; only a matching stand-down and replacement read-back records the
+new delegate. The next tick audits the replacement too. A failed probe records no progress, and a
+failed replacement records no replacement for its delegate, which stays active. Effects of earlier
+steps in the same tick stand. No failure approves a checkpoint. While a failed attempt waits for its
+retry tick, `decide` is refused with `audit retry in progress` until the next successful tick, and the
+supervisor retries `decide` after one cadence. This is a transient wait, not a guided handoff. When the charter
+sets `limits.delegate_replacements`, the next cadence tick retries and status stays autonomous
+while that cap is unspent and a delegate remains active. Status goes guided only when the cap is
+spent, and `autonomy.missing` names `delegate-replacements`. A cap of N allows N failed
+attempts, and the Nth one halts the audit, so a cap of 1 allows no retry. The count is not reset by a later
+success. A charter that omits the cap supplies no retry budget, so the first failure goes guided
+and names `audit-failed` until a later tick succeeds. The timer drains only when no active
+delegate remains, and it stops when that cap is spent. The adapter owns the actual process stop
+and replacement; the runner owns the policy and durable record. Neither an event nor a probe
+result is authority for a phase.
+
 ### `tracker-access`
 
 Owned by `adapters/tracker/CONTRACT.md`: the ticket operations, the one-system-of-record rule
@@ -304,6 +348,10 @@ The runner persists, per run, and the package requires to be handed back on resu
 | Decided checkpoints | Each with its decision card, grant and artifact hashes, so a decision is not re-litigated |
 | Open escalation | The `escalation` object, if the run is `needs-input` |
 | Budget consumption | Against each cap the runner handed in |
+| Inbound events | Payload digest, acknowledged state and terminal marker; an unacknowledged event is replayed after restart |
+| Delegated work | Owner and child ids, expected runtime, side-effect refs and replacement lineage |
+| Governing procedure | Bundle version and content digest re-read on each audit tick |
+| Patch verdict | Reviewed head, stable patch-id, the trunk tip its verification ran against, reuse lineage and any invalidation cause |
 
 A restart with no such record does not resume — it starts a new run. Resuming from partial state is
 how a run repeats a remote effect, which is exactly what §5 exists to prevent.
@@ -362,6 +410,10 @@ card and ask `decide` to apply the next validated grant. `sync` observes the wor
 revision and diff; `run-verify` executes only the supervisor-configured command and stores its
 output privately.
 
+Workers may also register and answer prioritized questions under the
+[CLI question rules](CLI.md#prioritized-questions). These source attestations do not become
+trusted gate evidence or lift an existing approval stop.
+
 The runner's Git snapshot hashes raw worktree bytes, symlink targets, executable bits and index
 entries instead of trusting a Git text diff. At service start it pins an absolute Git executable
 outside the worker root; nested repositories use the same executable and a runner-private Git home.
@@ -394,6 +446,16 @@ exits non-zero, prints unparseable output, or returns an invalid answer or a cho
 options refuses the card: the run goes to `needs-input` with a `runner:seat-independence` escalation
 that carries each launcher's error, and the seat is not relaunched. Without a seat configuration the
 supervisor may submit separate judgments with `judge`, and a missing judgment blocks the card.
+
+When the charter carries `council.blind_veto: required` (ADR-0015), an approval the pair agrees on
+stands only after a blind veto seat also approves it. After the pair agrees on the approving option
+and before `decide` accepts it, the service runs the outbound gate on the same frozen packet and
+sends it to the veto seat named in the private `--council-config`. No judgment is in that input.
+The service tries the seat's substitutes in order, only when a launcher fails or returns no valid
+answer, and records the result on the card apart from the two judgments. A missing configuration,
+an exhausted chain, a refused payload, a veto that shares a lineage with either primary seat or an
+excluded actor, or a non-approving veto returns `needs-input` with a `runner:council-veto`
+escalation. The veto is not a third seat or a third judgment, and it never approves alone.
 
 Every card names its approving option in `approve`, one of its `options`; `prepare` refuses a card
 without it and refuses `no` or `retry` as approving options. The runner adds `no` as a refusal to

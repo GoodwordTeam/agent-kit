@@ -53,9 +53,19 @@ knowledgebase repository — and step 4. Step 3 is already in the project's hist
 Scope resolves to a location here, which is why a caller never supplies one (ADR-0001 §7):
 
 ```text
-projects/<project>/documents/[<scope segment>/…]<kind>/<id>.md      KB documents
-projects/<project>/runs/<run>/<schema>/<artifact id>.json           run artifacts
+projects/<project>/documents/[<scope segment>/…]<kind>/<id>.md      KB documents, one file each
+projects/<project>/runs/artifacts.jsonl                             run artifacts, one line each
 ```
+
+A **page** is its own markdown file, so a human accepts an ADR by editing that file (§5). A **run
+artifact** is one line of the project's `artifacts.jsonl`: one JSON object holding the stored
+record (ref, content hash, idempotency key, links) beside the artifact. The file is append-only. A
+publish adds a line and never rewrites one, so git can delta successive versions of the file. A later
+line for the same ref is a later copy of that record (the approved copy in §5) and is the one that
+counts. A line that does not parse as a record names no ref.
+
+The former `projects/<project>/runs/<run>/<schema>/<artifact id>.json` files are not read or
+automatically migrated by this backend.
 
 A **scope** is a component, written as kebab-case words joined by `/` (`billing/exports`), or
 `project` for the whole project. A scope segment may not be one of the nine kinds, nor `project`,
@@ -64,7 +74,8 @@ or `..` is refused as a computed path.
 
 A **record ref** is the opaque handle the contract's `KBRecordRef` asks for:
 `doc:<scope>/<kind>/<id>` for a page and `run:<run>/<schema>/<artifact id>` for a run artifact. A
-caller passes back what it was given and does not build one.
+caller passes back what it was given and does not build one. A ref is not a path: the layout above
+can change while the refs stay the same.
 
 ---
 
@@ -89,8 +100,10 @@ with its record ref, content hash, the knowledgebase commit that last changed it
 
 ## 5. `publishArtifact`
 
-One publish is one commit in the knowledgebase repository that touches one file. It is made with
-the operator's git identity, is not pushed, and is read back from the commit before it is reported.
+One publish is one commit in the knowledgebase repository that touches one file: the page's own
+file, or `artifacts.jsonl` for a run artifact. It is made with the operator's git identity, is not
+pushed, and is read back from the commit before it is reported. The record's body is in that
+commit, so reading the commit returns what was published.
 
 ### `kb-document` placement
 
@@ -109,18 +122,52 @@ header of its own is refused, because the header carries the status.
 
 ### `run-artifact` placement
 
-`ak kb publish artifact --file <artifact.json> --run <run> [--link <record-ref>]…`
+`ak kb publish artifact --file <artifact.json> --run <run> [--link <record-ref>]… [--trail-attempts <directory>]`
 
 - **Validated before any write** against the schema its envelope names. A failing artifact leaves
   the knowledgebase untouched.
 - **Bound to its project and run.** An artifact whose `project.id` is not the binding's, or whose
   `run_id` is set and is not `--run`, is refused.
-- **Links resolve or the publish is refused.** Each `--link` must name a committed record.
+- **Appended, not filed.** The record becomes one new line at the end of `artifacts.jsonl`, and
+  the commit touches that file alone. Lines already there are not changed.
+- **Links resolve or the publish is refused.** Each `--link` must name a committed record: a page
+  file, or a line of `artifacts.jsonl` that carries that ref.
+- **Trail attempts are durable and per record.** A `trail` or `trail-audit` publication requires
+  `--trail-attempts <directory>`, the existing attempt directory of the build's stretch index.
+  Inside the knowledgebase lock, after the checks that can refuse or answer `effect: none`
+  without writing, the command exclusively creates and flushes a mark for that knowledgebase,
+  project, run, kind and id immediately before writing the record. A refusal from those checks
+  consumes no mark. A mark already present when a write is due returns
+  `kb.trail-publication-unknown` without sending anything; a mark that cannot be made durable
+  returns `kb.trail-attempt-unrecorded` without sending anything. Neither result is itself a build gate.
+  If creation succeeded before durability failed, the first response says that this call sent
+  nothing and the mark remains. A later call conservatively reports publication-unknown; it does
+  not establish that the earlier call published. Unsupported directory flushing refuses in the
+  same way, without publishing or deleting the mark.
+  The caller records the outcome in its index and replays a recorded outcome without invoking the
+  publisher. It never removes marks or uses another directory to retry a record. Other artifact
+  kinds and document publication do not accept this flag.
+- **Write and cleanup failures are reported.** A record-write exception returns a structured
+  failure. Cleanup is limited to that record, and restores it only while HEAD, working content
+  and index state remain recognizable as the interrupted write. An incomplete write, concurrent
+  content or a refused cleanup is left in place with its diagnostic; unrelated staged work is
+  untouched. A trail whose cleanup cannot be confirmed returns `kb.trail-publication-unknown`
+  and warns that content may have been published or exposed. Its mark stays. A confirmed restore
+  still retains the mark and returns `kb.write-failed` or `kb.commit-failed`, not success.
+  Partial or unrecognized content left in the shared `artifacts.jsonl` can make **all later
+  project publications**, including required receipts, refuse with `kb.uncommitted-record`.
+  The trail result is not a gate, but this shared-file refusal can stop later build work.
+  An operator must preserve a copy, inspect the reported file against its committed content and
+  deliberately resolve only its contents under normal ownership. Never automatically reset or
+  delete concurrent changes, remove attempt marks, or resend an unknown publication outcome.
 
 ### Idempotency and read-back
 
 Per `adapters/runner-contract/CONTRACT.md` §5. The key is the digest of the run, the operation, the
 record ref and the content hash.
+
+Trail records follow the table too; only the rows that write pass the per-record attempt boundary
+above first.
 
 | The record at that ref | Result |
 |---|---|
@@ -128,19 +175,27 @@ record ref and the content hash.
 | exists with the same content hash | nothing written: `effect: none`, the existing commit returned |
 | exists with a different content hash | refused; a changed page is published under a new id that supersedes the old one |
 | is a run artifact with the same content hash and a different set of links | refused; a stored record's links are not rewritten |
-| is a run artifact with the same content hash, and the request carries every stored approval plus at least one more | the approved copy is committed over the record: `effect: published`, a new commit on the same ref |
+| is a run artifact with the same content hash, and the request carries every stored approval plus at least one more | the approved copy is appended as a new line for the same ref: `effect: published`, a new commit on the same ref |
 | is a run artifact with the same content hash, and every approval in the request is already stored | nothing written: `effect: none` |
 | is a run artifact with the same content hash, and the request both lacks a stored approval and carries one not stored | refused; stored approvals are added to, never replaced |
 
 Approvals are outside the content hash, so a draft and its approved copy share a ref, a hash and a
-key. Publishing the approved copy after the draft stores it; the draft stays in the record's git
-history. Approvals are compared entry by entry. A republish that carries none, or only some of
+key. Publishing the approved copy after the draft stores it; the draft stays as the earlier line.
+Approvals are compared entry by entry. A republish that carries none, or only some of
 those stored, writes nothing, so a late retry of an earlier copy does not strip the approvals
-already stored.
+already stored. This approval-superset append path does not override a `trail` or `trail-audit`
+attempt mark: a later write, including an approval-only copy after successful publication, is
+refused with `kb.trail-publication-unknown`. There is no approval exemption from that fence.
 
 Every result reports what the knowledgebase holds: `content_hash`, `idempotency_key` and `run` are
-read from the stored record. A page republished under another `--run` returns `effect: none` with
-the key and run it was first published under.
+read from the stored record. `effect: none` returns the commit that wrote the stored copy: for a
+page, the last commit that changed its file; for a run artifact, the commit that added its line. A
+page republished under another `--run` returns `effect: none` with the key and run it was first
+published under.
+
+A file the publish would write that has uncommitted changes in the checkout is refused with
+`kb.uncommitted-record`, and nothing is written over it. For a run artifact that file is
+`artifacts.jsonl`.
 
 Two publishes at once are serialized by a lock in the knowledgebase's git directory, so the second
 sees the first's record (contract §5).
@@ -170,6 +225,8 @@ Also absent, and worth knowing before relying on this binding:
 The registered checkout is refused on every operation, and at registration too when `ak kb register`
 runs from a bound project, when it is the
 project's own checkout, another work tree of the same repository, or a directory inside or around
-the project's tree (contract §3). Every git call this binding makes drops the caller's `GIT_*`
+the project's tree (contract §3). The one exception is a binding that cannot write:
+`backends/in-repo.md` reads pages the project itself commits and skips every publish (ruling
+`kb-binding-is-a-locator`). Every git call this binding makes drops the caller's `GIT_*`
 environment first, so a hook's `GIT_DIR` cannot point a publish at the repository the run is
 working in.

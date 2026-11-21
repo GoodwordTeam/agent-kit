@@ -12,7 +12,9 @@
 # oracles, project-declared checks and host-conditional advisor consultation. Row 33 is the first
 # raised by a reproduced failure: a lifecycle run in a task copy that could reach no knowledgebase.
 # Row 34 is the first raised by publishing with no supervisor and no gate at all. Row 35 keeps the
-# implementer's work trail, an account, from every seat that judges the change.
+# implementer's work trail, an account, from every seat that judges the change. Rows 36-37
+# are the comprehension seat: it stays naive, and a gap is not contestable on the author's word.
+# Row 38 is the first raised by an owner decision on review cost: review depth follows the class.
 #
 # Machine-read by `ak validate`, which checks that every `binds` id exists in catalog.yaml, that
 # every `scenario` is one of the numbered release scenarios in plan §10, that every `id` is
@@ -194,7 +196,7 @@
 
 schema_version: 1
 policy: resolved-conflicts
-rows: 35
+rows: 38
 
 conflicts:
 
@@ -324,7 +326,7 @@ conflicts:
     binds:
       skills: [super-verify, super-review, diagnose, super-build, ultraqa]
       protocols: [apply-findings, review-delta, tdd]
-      roles: [supervisor, implementer, verifier, reviewer-spec, reviewer-standards, trail-auditor, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document, learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
+      roles: [supervisor, implementer, verifier, reviewer-spec, reviewer-standards, trail-auditor, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document, doc-review/comprehension, learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout, learn/session-scorer, learn/skill-doctor]
       schemas: [finding, verification, review]
       policies: [review, authority-defaults]
       doctrine: [AUTHORING.md]
@@ -568,7 +570,12 @@ conflicts:
     ruling: >-
       At most two fix-and-verify cycles after the first pass. The third stops with an explicit
       blocked-or-replan decision and the open findings attached. Repeated failure is a signal
-      about the plan, not an invitation to a third loop. Anything still open is reported.
+      about the plan, not an invitation to a third loop. Anything still open is reported. After
+      the first full pass every later review in the run, past the cap or a replan included, is a
+      delta over the new commits; the cap never opens a new full scope. Where only P3 findings
+      remain at the cap, the decision recommends merge with them filed as follow-ups. Where two
+      consecutive cycles reopen the same finding theme, the decision is a design decision, not
+      another patch.
     discharged_in: [limits, stop-conditions]
     binds:
       skills: [super-review, ultraqa, autopilot, babysit-pr]
@@ -596,7 +603,10 @@ conflicts:
       materially, affected approvals are invalidated and a new baseline is deliberately
       established. That is a new review scope with its own pass 1, not an unbounded third delta
       loop. A review run records its comparison base, its reviewed head and the last head
-      verified in the delta loop, so the three are never conflated.
+      verified in the delta loop, so the three are never conflated. The fix commits, a reached
+      cap, or a replan or rebase that leaves the accepted requirements, the relevant architecture
+      and the patch all unchanged are not a material change, nor is a same-finding replan that
+      changes only the patch while no trigger applies.
     discharged_in: [workflow, outputs]
     binds:
       skills: [super-review, super-verify]
@@ -625,8 +635,10 @@ conflicts:
       maintainability, agent-native and learnings fire when the diff earns them; security,
       adversarial and the remaining conditional and stack seats are selected from artifact
       evidence, in practice from the attached packs. A substantive feature lands at the
-      six-ish panel the design preserves. A documentation typo does not. Security, API and data
-      facts are never dropped because a classifier was uncertain.
+      six-ish panel the design preserves. A documentation typo does not. A small pass-1 diff gets a
+      lean panel of the essential lanes; a delta gets its two core lanes plus only the specialist
+      seats a prior finding or its own diff triggers. Security, API and data facts are never
+      dropped because a classifier was uncertain.
     discharged_in: [inputs, workflow]
     binds:
       skills: [super-review, doc-review]
@@ -661,7 +673,7 @@ conflicts:
     discharged_in: [hard-gates, outputs]
     binds:
       skills: [super-review, receiving-review]
-      roles: [supervisor, implementer, verifier, reviewer-spec, reviewer-standards, trail-auditor, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document, learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
+      roles: [supervisor, implementer, verifier, reviewer-spec, reviewer-standards, trail-auditor, plan-review/planner, plan-review/architect, plan-review/critic, code-review/correctness, code-review/project-standards, code-review/testing, code-review/maintainability, code-review/agent-native, code-review/learnings, code-review/security, code-review/performance, code-review/api-contract, code-review/data-migration, code-review/reliability, code-review/adversarial, code-review/previous-comments, code-review/frontend-races, code-review/swift-ios, doc-review/coherence, doc-review/feasibility, doc-review/product-lens, doc-review/design-lens, doc-review/security-lens, doc-review/scope-guardian, doc-review/adversarial-document, doc-review/comprehension, learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout, learn/session-scorer, learn/skill-doctor]
       protocols: [review-delta]
       schemas: [review]
       policies: [review, authority-defaults]
@@ -1108,8 +1120,9 @@ conflicts:
       The reference learning stack picks a named model for each background job, and this catalog
       strips model selection, effort and routing from every file it ships.
     ruling: >-
-      Every judgement the learning runtime needs goes through one configurable judge command,
-      bound by whoever runs the runtime through `AK_LEARN_JUDGE`, with hooks disabled in the
+      Every judgement the learning runtime needs goes through configured judge commands,
+      bound by whoever runs the runtime through `AK_LEARN_JUDGE` and optional ordered
+      `AK_LEARN_JUDGE_FALLBACKS`, with hooks disabled in the
       judge's own session. The repository names no model, tier or effort for any learn role. The
       judge receives a role prompt read verbatim from roles/learn/, followed by an output contract
       and the inputs, both appended by the runtime. The judge never sets counts, status, ids or
@@ -1117,7 +1130,7 @@ conflicts:
       rejects, fails the job, the failure is recorded, and nothing is written from it.
     discharged_in: [authority]
     binds:
-      roles: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout]
+      roles: [learn/pattern-maintainer, learn/reflector, learn/consolidator, learn/lesson-merger, learn/skill-scout, learn/session-scorer, learn/skill-doctor]
       profiles: [learning]
     scenario: 23
     coverage: indirect
@@ -1147,7 +1160,7 @@ conflicts:
     binds:
       skills: [compound, compound-refresh]
       protocols: [evidence-gate]
-      roles: [learn/pattern-maintainer, learn/consolidator, learn/lesson-merger, learn/skill-scout, code-review/learnings]
+      roles: [learn/pattern-maintainer, learn/consolidator, learn/lesson-merger, learn/skill-scout, learn/skill-doctor, code-review/learnings]
       schemas: [lesson, review-pattern]
       profiles: [learning]
       adapters: [knowledgebase]
@@ -1305,12 +1318,16 @@ conflicts:
       A project reaches its knowledgebase through a committed binding file, `ak.kb.yaml`, that
       names a backend, the project id and a knowledgebase id, and holds neither a machine path nor
       a secret. Where that knowledgebase is on a machine is registered once per machine, outside
-      every checkout. With no binding, or no registration, the knowledgebase is unconfigured: a
-      read is unavailable, a write refuses, and the report names the missing setup step. The
-      install file takes no part in this. A binding that resolves to the application repository,
-      one of its work trees or a directory inside it is refused, and a configured knowledgebase
-      that cannot be used is failed, never unavailable. A backend carries only the operations its
-      document names, and the rest refuse.
+      every checkout, save a read-only in-repo binding, which names a directory the project itself
+      commits and needs no registration. With no binding, or no registration, the knowledgebase is
+      unconfigured: a read is unavailable, a write refuses, and the report names the missing setup
+      step; a missing in-repo knowledgebase (kb.in-repo-missing) is unconfigured the same way. The
+      install file takes no part in this. A binding that can be written and resolves to the
+      application repository, one of its work trees or a directory inside it is refused; a
+      read-only binding may name a directory inside it, because it carries no publish: every
+      publish to it is skipped (kb.read-only) and nothing is written anywhere. A configured
+      knowledgebase that cannot be used is failed, never unavailable. A backend carries only the
+      operations its document names, and the rest refuse.
     discharged_in: [inputs, side-effects, outputs]
     binds:
       adapters: [knowledgebase]
@@ -1414,3 +1431,97 @@ conflicts:
       what a trail or an audit holds, while this row governs what may be done with one.
     source:
       plan: "§5.6, §6.2, §7.3, §8"
+
+  - id: comprehension-seat-stays-naive
+    tension: >-
+      Continuity makes closure checks cheaper, but a reader who has seen the earlier gap cannot
+      test whether a newcomer would find it.
+    ruling: >-
+      The comprehension seat gets no prior-finding packet and no earlier paraphrase. Each round
+      is a new instance. Independence from the author and a fresh context are both required for
+      this seat. Continuity still holds for every other seat. A comprehension finding closes when
+      a later fresh read produces a paraphrase the human accepts as matching intent, recorded as
+      verification kind `manual`.
+    discharged_in: [workflow, inputs]
+    overrides:
+      source: conversation
+      locator: G:L580
+      position: "Subsequent reviews buy closure by keeping the finding list, not by reseating a fresh reader"
+      reason: >-
+        Continuity still holds for every other seat. A comprehension reader that has seen the
+        earlier gap is no longer naive, so this seat is the scoped exception.
+    binds:
+      skills: [doc-review]
+      roles: [doc-review/comprehension]
+      policies: [review]
+    scenario: 9
+    coverage: indirect
+    note: >-
+      Scenario 9 tests that moving a line neither duplicates nor suppresses a finding, which is
+      the continuity packet's identity half. This row exercises the other half on one seat: the
+      packet is withheld so the reader stays naive. Rejected `authority`, which continuity already
+      uses for independence from the author; this row does not change who may fill the seat.
+      Rejected `hard-gates`: a packet that arrived is a caller error, returned `unavailable`,
+      which is already `required-lane-failure-is-unavailable`. `inputs` is what the seat must
+      not be given; `workflow` is that each round reseats a new instance.
+    source:
+      plan: "§6.4, §6.5"
+      locator: G:L580
+
+  - id: comprehension-gap-not-contestable
+    tension: >-
+      The author wrote the document and wants to reject a comprehension finding as a
+      misunderstanding, which makes the author's memory the test of whether a newcomer can
+      follow the text.
+    ruling: >-
+      A comprehension finding is never rejected on the author's word. It resolves in one of four
+      ways: add the definition or the link to the document; publish the missing fact as a
+      `concept` or `adr` page and link it; `escalated` to the human, when the fact exists only as
+      a team convention or a verbal decision; or rejected by the human, when they judge that no
+      human reader of this document needs it. Do not add context only to satisfy a reviewer.
+    discharged_in: [hard-gates, workflow]
+    binds:
+      skills: [doc-review]
+      roles: [doc-review/comprehension]
+      policies: [review]
+    scenario: 3
+    coverage: indirect
+    note: >-
+      Scenario 3 tests that unsupported closure is blocked; this row is the same structure on
+      rejection of a comprehension gap. Rejected `authority`: rejection is a human disposition,
+      not a grant this skill issues. Rejected `outputs`: the four resolutions are refusals and
+      routes, not a new artifact. `hard-gates` is the refusal of author contest; `workflow` is
+      that synthesis must not settle the finding by picking a side.
+    source:
+      plan: "§6.5"
+
+  - id: review-depth-follows-delegation-class
+    tension: >-
+      Ruling `panel-composition-by-declared-risk` selects the first-pass panel from declared risk
+      and the size guidance, while the owner's ask of 2026-11-10 makes the delegation class decide
+      the level of scrutiny.
+    ruling: >-
+      The merge-stage delegation class selects the review depth, and the depth selects only the
+      baseline seats. Green sits one generalist reviewer. Both yellow classes sit the lean panel.
+      Red sits today's selection. Every conditional and stack seat that the artifact evidence
+      activates sits at every depth, and the security and adversarial seats stay required once
+      activated. Absent class evidence, the depth is full. A run may move to a deeper depth and
+      never moves to a shallower one after it starts. A named human may lower the merge-stage
+      class below the ticket-stage class, and that lowering never crosses a floor. The class stays
+      an authority input and is never a finding.
+    discharged_in: [inputs, workflow]
+    binds:
+      policies: [review]
+    scenario: 1
+    coverage: indirect
+    note: >-
+      Scenario 1 exercises proportional seating on the neighbouring declared-risk case: a
+      documentation typo does not run a six-persona panel. The class-to-depth map has no scenario
+      of its own. `inputs` carries the class and the depth, which the first pass receives;
+      `workflow` carries the selection step. Rejected `hard-gates`, the near miss: the never-drop
+      rule reads as a gate, but the row decides a selection. The binding is the policy record
+      alone; the review skill and the generalist seat join the row when the changes that
+      implement it land, rather than receiving citations first.
+    source:
+      plan: "§6.1"
+      adr: docs/decisions/0017-review-depth-follows-delegation-class.md

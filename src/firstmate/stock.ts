@@ -34,19 +34,27 @@ export function preflightStock(
       };
   const checkout = git(project, ["rev-parse", "--show-toplevel"]);
   const repository: Check =
-    checkout.code === 0
+    checkout.code === 0 && checkout.text.trim() !== ""
       ? { id: "project", ok: true, detail: `${checkout.text.trim()} is a git checkout` }
       : { id: "project", ok: false, detail: `${project} is not a git checkout` };
+  // Preflight reads no run state, and a socket check only tests the file type. The no-socket text restates
+  // evaluateEvidence in src/lifecycle/gate.ts (reason unattested-verifier); keep the two in step.
   const runner: Check =
     socket === undefined
-      ? { id: "runner", ok: true, detail: "no runner socket supplied; guided checkpoints only" }
+      ? {
+          id: "runner",
+          ok: true,
+          detail:
+            "no runner socket supplied; guided checkpoints only. Preflight reads no run state, grant, seat or receipt and does not report whether any exists. The strengthened autonomous-ship evidence decision runs when evidence is checked explicitly or a task-bound run record exists: if the run holds a bypass or delegated grant record or its build gate records an implementer seat, it refuses a verifier receipt whose seat is not runner-attested, covering every such receipt when an implementer seat is recorded and, with only a grant record, the receipts of checks that declare required evidence or a recipe; a grant recorded later applies to receipts already recorded when next evaluated; with neither, only such a receipt of a check that declares required evidence or a recipe is noted as worker-attested and counts for guided ship only.",
+        }
       : existsSync(socket) && statSync(socket).isSocket()
         ? {
             id: "runner",
             ok: true,
-            detail: "runner socket exists; each run still validates its standing grant and trusted evidence",
+            detail:
+              "socket-type file exists at the path; only the file type was checked, nothing connected, no grant was read and no producer was identified. File type is not liveness, identity or qualification, and a socket alone does not establish a configured qualified producer or a passed gate.",
           }
-        : { id: "runner", ok: false, detail: `${socket} is not a live runner socket` };
+        : { id: "runner", ok: false, detail: `${socket} is not a socket-type file` };
   const token: Check = {
     id: "supervisor-token",
     ok: true,
@@ -103,6 +111,10 @@ seats as separate ordinary crewmates, never your children. With configured seat 
 runner asks Firstmate for them on decide; otherwise Firstmate submits both judgments before you
 call decide, using the stock seat-launch and seat-judge commands. Use the normal status and inbox
 handoff, not a polling loop.
+
+For a P0 or prioritized order, register each question before investigation with ak runner call
+question; its request and continuation rules are in skills/autopilot/references/checkpoints.md.
+Firstmate owns dedicated dispatch and every-cycle monitoring; other lanes keep running.
 
 Use ak runner call prepare and decide for checkpoints, sync after code changes, run-verify for
 runner-owned verification, and ledger for the handback. A refused card returns one escalation;

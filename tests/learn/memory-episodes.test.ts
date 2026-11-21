@@ -1,10 +1,10 @@
 /**
  * Episodes from a claude-mem fixture: fields and priority literals, the stale
  * active session, edits recorded only by tool use, a second run that
- * appends nothing, and the ids a session was shown joined onto its row.
+ * writes nothing, and the ids a session was shown joined onto its row.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildEpisodes,
@@ -14,7 +14,7 @@ import {
   markConsolidated,
   unconsolidatedEpisodes,
 } from "../../src/learn/memory/episodes.ts";
-import { readJsonl } from "../../src/learn/core/store.ts";
+import { RAW_STORE_FILE } from "../../src/learn/core/ledger.ts";
 import { sessionKey, span } from "../../src/learn/core/trace.ts";
 import { shownLookup } from "../../src/learn/memory/exposure.ts";
 import { ensureMemoryLedger } from "../../src/learn/memory/ledger.ts";
@@ -137,11 +137,7 @@ describe("episodes", () => {
     // s2: T=0.5 N=0.5 (a.ts seen in s1) A=1        -> 0.05+0.05+0.15 = 0.25
     // s3: T=0.125 N=0 A=e^(-(7/24)/14)=0.979382    -> 0.0125+0.146907 = 0.1594
     expect([by.get("s1")!.priority, by.get("s2")!.priority, by.get("s3")!.priority]).toEqual([0.4252, 0.25, 0.1594]);
-    const rows = readFileSync(ledger.path("episodes.jsonl"), "utf8")
-      .split("\n")
-      .filter((line) => line !== "")
-      .map((line) => (JSON.parse(line) as Episode).sid);
-    expect(rows).toEqual(["s1", "s3", "s2"]); // written oldest first
+    expect(loadEpisodes(ledger).map((row) => row.sid)).toEqual(["s1", "s3", "s2"]); // written oldest first
   });
 
   test("a second run appends nothing", () => {
@@ -152,11 +148,7 @@ describe("episodes", () => {
     } finally {
       source.close();
     }
-    expect(
-      readFileSync(ledger.path("episodes.jsonl"), "utf8")
-        .split("\n")
-        .filter((line) => line !== "").length,
-    ).toBe(3);
+    expect(loadEpisodes(ledger)).toHaveLength(3);
   });
 
   test("a session with new observations is rebuilt and re-queued for nightly", () => {
@@ -191,6 +183,98 @@ describe("episodes", () => {
     }
     expect(loadEpisodes(ledger)).toHaveLength(1);
     expect(unconsolidatedEpisodes(ledger).map((episode) => episode.sid)).toEqual(["growing"]);
+  });
+
+  test("same-count failure label changes refresh episode counts and priority in either direction", () => {
+    const dir = scratch("ak-episode-label-refresh-");
+    const mem = new MemFixture(join(dir, "mem.db"));
+    mem.session({ sid: "relabeled", project: "app", started: NOW - 2 * H, completed: NOW - H });
+    const id = mem.observation({
+      sid: "relabeled",
+      project: "app",
+      type: "error",
+      title: "worker turn",
+      tokens: 100,
+      at: NOW - H,
+    });
+    const ledger = ensureMemoryLedger(join(dir, "memory"));
+    const source = ClaudeMemSource.open(mem.path);
+    if (source === null) throw new Error("fixture source did not open");
+    try {
+      let previous = buildEpisodes(source, ledger, "app", [], { now: NOW })[0];
+      expect(previous?.failure_signals).toBe(1);
+      for (const [type, title, failures] of [
+        ["turn", "worker turn", 0],
+        ["error", "worker turn", 1],
+        ["turn", "worker turn", 0],
+        ["turn", "tests failed in CI", 1],
+        ["turn", "worker turn", 0],
+      ] as const) {
+        mem.db.query("UPDATE observations SET type = ?, title = ? WHERE id = ?").run(type, title, id);
+        const fresh = buildEpisodes(source, ledger, "app", [], { now: NOW });
+        expect(fresh).toHaveLength(1);
+        const current = fresh[0];
+        expect(current).toMatchObject({ sid: "relabeled", obs: 1, failure_signals: failures });
+        expect((current?.priority ?? 0) - (previous?.priority ?? 0)).toBeCloseTo(
+          0.04 * (failures - (previous?.failure_signals ?? 0)),
+          4,
+        );
+        expect(loadEpisodes(ledger)).toHaveLength(1);
+        expect(buildEpisodes(source, ledger, "app", [], { now: NOW })).toEqual([]);
+        previous = current;
+      }
+    } finally {
+      source.close();
+      mem.close();
+    }
+  });
+
+  test.each([false, true])("refresh preserves chronological novelty (equal starts: %s)", (equalStarts) => {
+    const dir = scratch("ak-episode-refresh-novelty-");
+    const mem = new MemFixture(join(dir, "mem.db"));
+    mem.session({ sid: "earlier", project: "app", started: NOW - 4 * H, completed: NOW - H });
+    mem.session({ sid: "later", project: "app", started: equalStarts ? NOW - 4 * H : NOW - 2 * H, completed: NOW - H });
+    const firstId = mem.observation({
+      sid: "earlier",
+      project: "app",
+      type: "error",
+      title: "worker turn",
+      tokens: 100,
+      filesModified: ["x.ts"],
+      at: NOW - H,
+    });
+    const secondId = mem.observation({
+      sid: "later",
+      project: "app",
+      type: "turn",
+      title: "worker turn",
+      tokens: 100,
+      filesModified: ["x.ts"],
+      at: NOW - H,
+    });
+    const ledger = ensureMemoryLedger(join(dir, "memory"));
+    const source = ClaudeMemSource.open(mem.path);
+    if (source === null) throw new Error("fixture source did not open");
+    try {
+      const before = buildEpisodes(source, ledger, "app", [], { now: NOW });
+      const first = before.find((episode) => episode.sid === "earlier");
+      const second = before.find((episode) => episode.sid === "later");
+      expect((first?.priority ?? 0) - (second?.priority ?? 0)).toBeCloseTo(equalStarts ? 0.04 : 0.14, 4);
+      mem.db.query("UPDATE observations SET type = 'turn' WHERE id = ?").run(firstId);
+      const corrected = buildEpisodes(source, ledger, "app", [], { now: NOW });
+      expect(corrected).toHaveLength(1);
+      expect(corrected[0]).toMatchObject({ sid: "earlier", failure_signals: 0, files_modified: ["x.ts"] });
+      expect((first?.priority ?? 0) - (corrected[0]?.priority ?? 0)).toBeCloseTo(0.04, 4);
+      mem.db.query("UPDATE observations SET type = 'error' WHERE id = ?").run(secondId);
+      const later = buildEpisodes(source, ledger, "app", [], { now: NOW });
+      expect(later).toHaveLength(1);
+      expect(later[0]).toMatchObject({ sid: "later", failure_signals: 1 });
+      expect((later[0]?.priority ?? 0) - (second?.priority ?? 0)).toBeCloseTo(0.04, 4);
+      expect(buildEpisodes(source, ledger, "app", [], { now: NOW })).toEqual([]);
+    } finally {
+      source.close();
+      mem.close();
+    }
   });
 
   test("bugfix observations and failure wording in titles fill the failure signal", () => {
@@ -228,7 +312,7 @@ describe("episodes", () => {
     } finally {
       source.close();
     }
-    expect(readFileSync(ledger.path("episodes.jsonl"), "utf8")).toBe("");
+    expect(existsSync(ledger.path(RAW_STORE_FILE))).toBe(false);
   });
 });
 
@@ -279,7 +363,7 @@ describe("what a session was shown", () => {
       source.close();
     }
     expect(asked).toEqual(["host-a", "host-b", "host-c"]);
-    const rows = readJsonl<Episode>(ledger.path("episodes.jsonl"));
+    const rows = loadEpisodes(ledger);
     expect(rows.map((row) => [row.sid, row.shown])).toEqual([
       ["a", ["rp-001", "ls-002"]],
       ["b", []],
