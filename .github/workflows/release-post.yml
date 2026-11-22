@@ -1,0 +1,26 @@
+name: Post published Agent Kit version
+
+on:
+  workflow_run:
+    workflows: [publish-bundle]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  post:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Render and post the version announcement
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SLACK_TOKEN: ${{ secrets.GOODWORD_RELEASES_SLACK_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.RELEASES_SLACK_CHANNEL_ID }}
+        run: node .github/scripts/release-post.mjs
