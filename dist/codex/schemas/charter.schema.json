@@ -163,8 +163,18 @@
           "type": "integer",
           "minimum": 1
         },
-        "review_rounds": { "type": "integer", "minimum": 1, "maximum": 5 }
+        "review_rounds": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "delegate_replacements": {
+          "description": "Failed loop-probe or stand-down-replace attempts this run may spend before status goes guided and names delegate-replacements. A cap of N allows N failed attempts, and the Nth one halts the audit, so a cap of 1 allows no retry. The count is not reset by a later successful tick. The runner enforces the integer it was handed and does not invent one. Absence supplies no retry budget, so the first failed attempt goes guided and names audit-failed until a later tick succeeds. A failed probe records no progress, and a failed replacement records no replacement for its delegate. Effects of earlier steps in the same tick stand. No failed attempt approves a checkpoint.",
+          "type": "integer",
+          "minimum": 0
+        }
       }
+    },
+    "audit_cadence_seconds": {
+      "description": "Supervisor audit cadence supplied by the charter. Required for unattended mode; absence keeps the run guided.",
+      "type": "integer",
+      "minimum": 1
     },
     "budgets": {
       "description": "Plan 7.2: cost accounting, when available, is passed in by the runner. 'provided_by' is pinned so a charter cannot become the place where consumption is calculated; the charter records only the cap it was handed and which limits it enforces.",
@@ -210,6 +220,15 @@
         }
       },
       "x-validator-rule": "charter.supervisor-seats-independent-and-not-the-implementer"
+    },
+    "council": {
+      "description": "Opt-in blind veto (docs/decisions/0015-council-blind-veto.md). With 'blind_veto' set to 'required', an approval the two supervisor seats agree on stands only when a third, blind veto seat also approves the same frozen packet. The veto is a refusal-only side record: it is not a third supervisor seat and not a third judgment, it never breaks a tie and it never approves alone. A missing, unavailable, non-independent or non-approving veto turns the pair's approval into one escalation. Who fills the veto seat lives in the operator's private council configuration, never in the charter.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blind_veto"],
+      "properties": {
+        "blind_veto": { "const": "required" }
+      }
     },
     "ci_repair": {
       "description": "Plan 7.5. The repair's purpose is limited to test failures; that is a limit on purpose, not permission to edit tests until they pass. No skipped check, weakened assertion, lowered threshold or removed coverage without a separate decision, and a required product-code change goes back through diagnosis, a bounded patch, new verification and affected delta review (release scenario 19).",

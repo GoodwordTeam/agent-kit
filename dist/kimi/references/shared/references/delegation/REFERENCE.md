@@ -19,23 +19,30 @@ The authoritative class-to-checkpoint map is
 [`delegation_classes`](../../policies/authority-defaults.yaml). Read it at the checkpoint; do not
 copy its lists into a skill. A class only narrows checkpoint authority already present in a
 runner-validated charter. It never grants authority, and it is never a finding. Project guidance
-may raise the class without producing a finding (ruling
-`delegation-class-is-authority-not-finding`). Record downstream authorship as author kind plus host,
+numbers may raise the class; only a named human may lower it, with the reason recorded (ruling
+`delegation-class-is-authority-not-finding`). An unavailable on-mode cold read raises a green
+class to yellow-agent by the captain's Q1 decision (GS-004k). Record downstream authorship as author kind plus host,
 never as an implementation identity.
 
 The class changes authorship and checkpoint authority, not whether bounding produces a ticket. A
 `red` result produces a human-owned implementation ticket and limits agent participation to the
-bounded assistance the ticket names. A ticket whose class makes a human the author states the
+bounded assistance the ticket names. Under the opt-in unattended policy (ADR-0014,
+`docs/decisions/0014-unattended-lifecycle-policy.md`) the agent implements a ticket whose class makes
+a human the author, within its allowed changes, with the true class, floor and `author_kind: agent`
+recorded and no approval written, the human boundary being the live protected merge: an exception to
+ruling `delegation-class-is-authority-not-finding` for that policy only. A ticket whose class makes a human the author states the
 authorship boundary in existing fields. `allowed_changes` remains the ticket's
 full write scope for the implementer. Name the agent's permitted file and symbol subset in text, in
 `goal` or `stop_conditions`, alongside non-file assistance such as research; put prohibited agent
-work, including authoring the implementation, in `non_goals`. On a decision ticket the boundary
+work, including authoring the implementation outside the unattended policy, in `non_goals`. Under that
+policy the agent may author only the ticket-scoped implementation, its author kind recorded as `agent`. On a decision ticket the boundary
 lives in `goal` and `non_goals`. Naming a human owner alone is not that boundary.
 
 `merge` and `deploy` remain sensitive actions for every class, and a human merges every class. A
 never-dropped pack or required sensitive action sets a floor that no factor or lowering may cross;
 re-evaluate that floor from the actual diff before closure (ruling
-`sensitive-surface-sets-the-floor`).
+`sensitive-surface-sets-the-floor`). A path the project declares as a shared surface is the third
+floor source, beside the never-dropped packs and the required sensitive actions.
 
 ## Two snapshots and lowering
 
@@ -45,7 +52,11 @@ verification. It decides how the work may be staffed before implementation.
 
 The merge-time snapshot carries `stage: merge`. It uses the actual diff and verification evidence.
 It may raise the class automatically. It does not inherit a lower ticket-time result when the diff
-requires a higher one (ruling `delegation-class-is-authority-not-finding`).
+requires a higher one (ruling `delegation-class-is-authority-not-finding`). Obtain it with the
+merge-stage command below: its seed is the approved ticket's persisted class, and its floor is the
+union of the ticket-stage floor and what the diff shows. That record selects the review depth
+(ruling `review-depth-follows-delegation-class`); see `pass_1.depth` in
+[`policies/review.yaml`](../../policies/review.yaml).
 
 `lowered_by` is normally `null`. A lowering records:
 
@@ -65,17 +76,60 @@ and ensure both the ticket and project record validate. The seed is an input the
 not a judgment: a first ticket-time block seeds `class` at `green`, and a re-run carries the class
 the previous run persisted. When `lowered_by` records a named human's lowering, the seed is the
 class that person lowered to; the scorer still holds the floor and supersedes the lowering when a
-later computed class exceeds `from`. The scorer only raises the seed, so any seed outside these
-three cases is a hand-derived class. Then run:
+later computed class exceeds `from`. When `review.cold_read` is on, the cited read is unavailable,
+and the computed class is `green`, seed `yellow-agent` by the captain's Q1 decision (GS-004k), unless a live named-human lowering is in
+force. A live lowering supersedes that raise: keep the lowered class and leave `lowered_by`
+unsuperseded. A later completed read does not reseed `green`; the raised class persists until a
+named human lowers it. Only a named human may lower the class, with the reason recorded (ruling
+`delegation-class-is-authority-not-finding`). The scorer only raises the seed, so any seed outside these four cases is a
+hand-derived class. Then run:
 
 ```text
 ak delegation <ticket> --project <project-record>
 ```
 
+For the merge-stage record, run instead:
+
+```text
+ak delegation <ticket> --project <project-record> --stage merge --base <rev> [--head <rev>] [--evidence <file>]
+```
+
+Run in the implementation repository. `--head` defaults to `HEAD`; both revisions must resolve to
+commits. The diff is `<base>...<head>`, excluding uncommitted changes. The optional evidence file
+is a JSON object accepting only `factors`, `floor` and `lowered_by`, using the corresponding
+[`ticket delegation schema`](../../schemas/ticket.schema.json) definitions, except that `floor`
+may omit members. Supplied `factors` replaces all five factors; omitted factors and lowering retain
+the ticket's values. Explicit `lowered_by: null` clears the lowering. Evidence floor members add to
+the ticket floor; they never remove it. `class` and `stage` are not accepted in evidence. Malformed
+evidence is refused before scoring. Without evidence, the command retains the ticket's factors;
+it does not derive new factor scores or discover packs and sensitive actions from the diff. Supply
+the re-evidenced factors and additional packs and actions when they differ at merge time.
+
 Persist the command's complete JSON output as the ticket's `delegation` block. Cite the ticket and
 project artifact references used for the run wherever another artifact consumes the result. A body
 must not reproduce the formula, weights, cut points, floor table or lowering logic. A missing or
 failed scorer run leaves no delegation record and blocks the checkpoint.
+
+Under the unattended policy only, a delegation coverage limit — no project record, a valid one
+without delegation guidance, or a missing `ak delegation` command — is not a missing scorer run and
+never stops a phase. Record it once naming its cause. A missing `ak delegation` command is one not on `PATH`, an unknown subcommand or a usage error from an older CLI, as in a sandbox with only `node <bundle>/bin/ak-gate.mjs`. With it, a present record's validity is not checked, and the cause reads `missing ak delegation command, project record validity not checked`. A present project record is decided by `ak delegation`, never by hand, whether
+or not the draft ticket carries a `delegation` block, since the command reports the project's
+errors before the ticket's missing block: `ak delegation: project does not match its schema: …` is
+`needs-input`, and `ak delegation: project has no guidance.delegation block (weights and cut points)`
+is the coverage limit. Decide it at super-bound step 10. A ticket-side error
+(`ak delegation: ticket has no delegation block to score`, or
+`ak delegation: ticket does not match its schema: …`) is about the draft, not the record. Under the
+limit the persisted unscored ticket carries no `delegation` block, seeded or default, so build has
+no class to pass. Only an absent project
+record skips the command. The ticket carries no `delegation` block, keeps `readiness` and
+`assumptions`, and adds an assumption, resolved `non-goal`, reading
+`delegation unscored: <cause> (coverage limit); floor not evaluated; packs: <ids or none>; sensitive actions: <ids or none>`,
+listing the attached never-dropped packs and required sensitive actions in place of the floor.
+Scorer inputs are never invented, and every required sensitive action still stops. No class is
+derived for the ticket downstream: build records no class but still declares the implementer seat,
+and ship states the class as unscored with those packs and actions. A project record that fails
+[`schemas/project.schema.json`](../../schemas/project.schema.json) validation stops under every policy, and outside the unattended
+policy missing delegation guidance is `needs-input`.
 
 ## Factor evidence
 
@@ -92,6 +146,17 @@ ticket with no tests scores 0.
 | `complexity` | Concurrency, caching, distributed state, known hotspots and prior fixes. | Complexity delta, churn, prior-fix evidence and new stateful constructs. |
 | `spec` | The six readiness criteria, vague terms and unresolved assumptions below. | Decisions exposed by the diff that the approved ticket did not settle. |
 | `verification` | Existing tests, the planned oracle and named verification path. | Receipts for tests, fail-before evidence, static checks and integration coverage. |
+
+A project declares shared surfaces in `guidance.delegation.shared_surfaces`; each entry has
+`path`, `class` and `reason` as defined by the
+[`project schema`](../../schemas/project.schema.json). Where none are declared, the absence is
+recorded and no measurement is invented. Each `path` matches the whole repository-relative path:
+`*` stays within one segment, `?` matches one non-slash character, `**` spans directories and
+`**/` may match no directory. Other pattern characters are literal. Declare a directory as
+`src/core/**`, not `src/core`. The ticket's `floor.shared_surfaces` lists declared patterns, not
+individual changed paths; undeclared entries are refused. Repeated declarations keep the highest
+class, regardless of order. Merge scoring adds matching patterns automatically from the branch's
+diff against the merge base, with renames split into the deleted source and added destination.
 
 Hotspot overlap and prior-fix density are transparent evidence when a project can supply them. Their
 absence is recorded; a body does not invent either measurement.
@@ -172,3 +237,133 @@ Consultation adds judgment evidence only: it never lowers `delegation.class`, au
 action, closes a finding or substitutes for a required independent lane. A host without the
 facility remains valid and records no invented consultation evidence (ruling
 `advisor-consultation-follows-class`).
+
+## Light route for a text-only single-slice ticket
+
+Load this section at super-bound step 7 when the author claims a single-slice ticket is text-only.
+It is the single normative definition of that route; super-bound step 7 holds only a pointer here.
+
+**Eligibility.** The route is open only to a single-slice ticket whose every changed path the
+author claims, path by path, changes no required behavior. An eligible path is non-normative
+documentation, or explanatory or optional guidance prose in an existing skill or reference, that
+changes no required action, trigger, process ordering, acceptance criterion, limit, model routing,
+independence, permission, authority or trust rule, gate or receipt rule, publication guarantee or
+destructive guarantee. Executable, source, configuration, schema, API-contract, policy, adapter,
+role, protocol, test and tooling surfaces stay excluded, and the exclusions always win: clarifying
+prose cannot amend a rule by calling itself clarification, and a disputed or uncertain restatement
+takes the normal path. Extension alone and a green class alone never establish eligibility, and
+doubt takes the normal path. A restated rule needs the exact pinned settled-source quote with its
+context and a no-looser comparison. The cold-read skip is narrower than this route: step 13 skips
+only when the validator's exemption detector would exempt the ticket. Explanatory `skills/` or
+`references/` prose may still take this route and still dispatches a cold read when
+`review.cold_read` is on.
+
+**The claim.** The claim is written before review, in existing ticket, specification, readiness
+and verification fields only: the per-path semantic explanations, the integration owner named in
+the existing `integration_owner` field and, for any restated rule, the pinned quote with context
+and the no-looser comparison. The claim is not an approval, and no field is added for it.
+
+**Preparation.** The one real saving is bounded compact preparation: one compact content is
+written once and the complete existing-schema specification and ticket are both prepared from it
+before the review snapshot, and the route has no light correction loop, so any correction takes
+the normal path. The plan record is still produced. The capability map, consensus gate and
+multi-slice slicing are already skipped for this ticket shape on the normal path and are not
+savings. For an eligible candidate only, the complete ticket — interfaces, edges, readiness, the
+zero-context details and the persisted real scorer output — is prepared before the step 7
+snapshot; this narrow ordering exception leaves the non-eligible path's steps in their current
+order. Persisting the real scorer output is part of that preparation, never a post-snapshot edit.
+
+**Review.** One unchanged full first-pass document review reads the derived specification as the
+document. The specification is the one reviewed document: the eligibility claim, the per-path
+semantic explanations and any pinned settled-source quotes are written in the specification's
+existing fields, so they sit under the reviewed hash. The complete ticket is pinned in the
+review's `inputs` as provenance of the frozen second hash; it is not presented to seats as settled
+recorded context, and no seat is promised ticket text that is not in the specification. Both exact
+specification and ticket hashes are frozen at the snapshot; steps 10 to 13 then only check the
+already-prepared content, any semantic change they would need takes the normal fallback, and any
+later ticket edit invalidates eligibility normally. Step 13 skips the independent cold read only
+when the validator's exemption detector would exempt the ticket.
+
+**Exits.** The route is left on any verdict other than approved, any non-empty Proposed fixes or
+Decisions bucket, any unavailable required lane, any reported finding in any bucket including FYI,
+or any semantic edit after the snapshot, including an Applied edit. An eligibility doubt is a
+finding a seat files at anchor 50 or above. Preserved lane raw outputs are an audit surface only:
+a doubt reaches this exit only as a filed finding, and no exit is promised on a doubt a seat does
+not file. Leaving
+the route keeps the real first-pass receipt for its original hashes and roster and the review's
+run, cycle and counter history; it never declares changed hashes reviewed, never drops a newly
+required lane and never repeats a valid seat without cause. The existing delta, primer and
+required-lane rules in the review policy govern continuation.
+
+**Approvals.** The supervisor's existing specification stop and ticket stop approve or refuse the
+eligibility claim bound to those exact hashes; both approval requests state that the light route
+was taken and enumerate the per-path claims and the exact input hashes. There is no earlier gate
+and no inherited approval.
+
+**Before closure.** A manual semantic comparison of the actual exact-head diff against the pinned
+settled rule and each per-path claim is additional closure evidence on this route: the independent
+code-review actor receives the pinned quote, the per-path claims and the diff and
+reports the comparison, and the ticket's integration owner accepts or refuses it. With no actual
+manual comparison the ticket is not eligible and takes the normal path. A normative or
+required-action change leaves the route, and the existing class rules decide whether the class
+raises. A series that raises uncertainty takes the normal path with no new counter or monitor.
+
+## Independent cold read of a ticket
+
+Load this section at super-bound step 13. The scorer formula does not change. Not yet backed by
+live probe evidence (phase 1b, GS-004i).
+
+**Mode.** Read `review.cold_read` from the checkout's own indexed project record, not from the
+ticket's project field. A missing review object, a missing key, an unknown value, or a checkout
+with no indexed project record is off. On requires exactly one indexed project record. Several
+indexed records fail closed. Off dispatches nothing, stores nothing, and leaves the author's
+type-check as the zero-context gate.
+
+**Skip.** Dispatch is skipped only when the validator's exemption detector would exempt the ticket.
+A ticket is exempt from `cold_read_ref` only when every declared write
+glob (`allowed_changes.files`, `write_ownership.paths` and `write_ownership.generated_artifacts`) is
+documentation markdown under `docs/` (`docs/**/*.md`), or exactly `README.md`, `CHANGELOG.md`,
+`NOTICE` or `LICENSE`, `allowed_changes.symbols` is empty, `work_source.ref.id` is present, and no
+other indexed ticket shares that id. `docs/**` is refused; a glob containing `{` is refused; a
+markdown last segment is required. A literal glob that resolves through a symlink is refused when
+the checkout is present. Wildcard
+globs over a symlinked tree are not checked. A note or approval does not exempt. The exemption is
+declaration-only: the write guard lifts tests protection and does not deny a write outside those
+globs. A light-route ticket that touches `skills/` or `references/` still dispatches when on. Any
+other implementation ticket still requires a cited read.
+
+**Dispatch.** In shadow and on, dispatch one cold reader per remaining implementation ticket, in
+parallel, each in its own context. Give the reader the ticket and a read-only checkout at the
+stated revision, including `read_dependencies`. Do not give the specification, the alignment
+interview, other tickets, host session transcripts, or the author's scratch files. Each new read
+is a fresh reader with no prior-finding packet.
+
+**Return.** The reader returns a `cold-read` record ([`schemas/cold-read.schema.json`](../../schemas/cold-read.schema.json)). Persist it
+as a run artifact. The record holds a paraphrase of what the reader would build, every decision
+it would have to make that the ticket does not settle, terms it could not resolve, each codebase
+claim labelled `exists` or `proposed`, and, for each of the six readiness criteria above, whether
+it found the evidence that criterion names, and where. Proposed code is never a finding for being
+absent. A path that does not exist at the stated revision, or a name the ticket lists under what
+it produces, is `proposed`. A ticket that names an existing helper that is not there is a finding.
+
+**Rewrite.** When the mode is on, each listed decision either reclassifies the ticket
+`type: decision` or becomes a frontier question. The author may rewrite the ticket and run a new
+read, at most twice per ticket. The author may not overrule a listed decision.
+
+**Shadow.** The read runs and is stored. Print listed decisions beside the ticket. Do not
+reclassify the ticket. Do not add the read to spec-factor or readiness evidence. Do not change
+the class. Keep the author's type-check as the zero-context gate.
+
+**On.** Cite the stored record from `cold_read_ref` as evidence for the `spec` factor and the
+readiness criteria, then re-run the scorer command from step 10. The read adds evidence only
+and does not change factor scores or weights. A completed cold read is binding. An unavailable
+read is cited with its reason; for that ticket only, the author's empty-context check decides
+whether it publishes, is reshaped, or is reclassified `type: decision` and sent back. If that
+ticket's class is `green`, seed `yellow-agent` and re-run the scorer, unless a live named-human
+lowering is in force. A live lowering supersedes this raise: keep the lowered class and leave
+`lowered_by` unsuperseded. That yellow-agent seed is the captain's Q1 decision (GS-004k), not a
+hand-derived class. Only a named human may lower the class, with the reason recorded (ruling
+`delegation-class-is-authority-not-finding`). A later completed read
+does not reseed `green`; the raised class persists until a named human lowers it. Off and shadow
+do not seed from the read. An unscored ticket has no class, so the raise is skipped. The validator
+does not yet check the raise; that check and a revert path are follow-ups (GS-004l hardening).

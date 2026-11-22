@@ -31,8 +31,8 @@ catalog differs from code review; meaning-changing forks cannot be silently sett
 - Deciding what the document should say. A document whose direction is unsettled goes back to a
   human-started alignment run, not to a review panel.
 - A document that has not been drafted. There is nothing to review, and an outline is not a draft.
-- A third fix round on a document whose forks keep bouncing. Two rounds is the cap, and the third
-  is a human's call.
+- A third fix round on a document whose forks keep bouncing, with no recorded human extension.
+  Two rounds is the cap; a cycle past it is a human's call, recorded and reviewed as a delta.
 
 ## Authority
 
@@ -51,10 +51,16 @@ authority to apply a correction rides on the caller's authorization, recorded on
 - Origin: the upstream provenance the document derives from, as an artifact reference or the value
   `none`. Absent is not a stop — `none` is a real value and it changes which persona sections run.
 - Prior round state, at a later round: the open `review` run, its findings and their dispositions.
+  [`doc-review/comprehension`](../../references/shared/roles/doc-review/comprehension/ROLE.md) does not receive that packet, nor any earlier paraphrase (ruling
+  `comprehension-seat-stays-naive`).
 - Recorded context: the settled decision pages and the glossary whose vocabulary the document is
-  supposed to be using, read through the knowledgebase adapter's `readContext`.
+  supposed to be using, read through the knowledgebase adapter's `readContext`. The comprehension
+  seat receives only the files and pages the document links to or names by path, plus governing
+  host constraints.
 - Declared risk, where the project declares it. Absent, the conditional lanes are selected from
   artifact evidence alone.
+- The project's comprehension setting: `off`, `shadow` or `on`, default `off`. A missing review
+  object, or a missing key, is off. (phase 1b, GS-004h)
 
 ## Workflow
 
@@ -70,16 +76,25 @@ authority to apply a correction rides on the caller's authorization, recorded on
    the same document starts at round one with no primer.
 4. Compose the panel. Selection is layered: a seat runs when the artifact's own evidence and the
    declared risk earn it, never off a fixed roster (ruling `panel-composition-by-declared-risk`).
-   `doc-review/coherence` and `doc-review/feasibility` declare no activation signal and so reach
-   every document; `doc-review/product-lens`, `doc-review/design-lens`, `doc-review/security-lens`,
-   `doc-review/scope-guardian` and `doc-review/adversarial-document` each state their own signal,
+   [`doc-review/coherence`](../../references/shared/roles/doc-review/coherence/ROLE.md) and [`doc-review/feasibility`](../../references/shared/roles/doc-review/feasibility/ROLE.md) declare no activation signal and so reach
+   every document. [`doc-review/comprehension`](../../references/shared/roles/doc-review/comprehension/ROLE.md) reaches every document when the comprehension setting
+   is `shadow` or `on`; off skips it (phase 1b, GS-004h). [`doc-review/product-lens`](../../references/shared/roles/doc-review/product-lens/ROLE.md),
+   [`doc-review/design-lens`](../../references/shared/roles/doc-review/design-lens/ROLE.md), [`doc-review/security-lens`](../../references/shared/roles/doc-review/security-lens/ROLE.md), [`doc-review/scope-guardian`](../../references/shared/roles/doc-review/scope-guardian/ROLE.md) and
+   [`doc-review/adversarial-document`](../../references/shared/roles/doc-review/adversarial-document/ROLE.md) each state their own signal,
    which this skill reads from the seat rather than restating. Uncertainty is not a missing signal:
-   where the classification or the artifact's evidence is unclear, `doc-review/security-lens` and
-   `doc-review/adversarial-document` run rather than being skipped (ruling
+   where the classification or the artifact's evidence is unclear, [`doc-review/security-lens`](../../references/shared/roles/doc-review/security-lens/ROLE.md) and
+   [`doc-review/adversarial-document`](../../references/shared/roles/doc-review/adversarial-document/ROLE.md) run rather than being skipped (ruling
    `low-confidence-security-adjudicated`). Record every lane in the lane table, including the ones
    that did not activate and why.
-5. Dispatch each selected lane into its own independent context with the snapshot and its own
-   relevant context. A lane's suppressed sections come from that lane's own rules — a plan with a
+5. Dispatch each selected lane into its own independent context with the snapshot, its own
+   relevant context and the shell rule: deletes and container removals run standalone on literal
+   scratch paths, or as `docker run --rm`, never inside a compound command or script. When the
+   comprehension setting is `shadow` or `on`, store each lane's complete output as a run artifact
+   and set `raw_output.hash` before synthesis reads it. Off, a missing setting, and an unknown
+   value leave this step as dispatch only. [`doc-review/comprehension`](../../references/shared/roles/doc-review/comprehension/ROLE.md) is a new instance every
+   round, with no prior-finding packet and no earlier paraphrase (ruling
+   `comprehension-seat-stays-naive`). In `shadow` the lane is not required, so an unavailable run
+   cannot block. A lane's suppressed sections come from that lane's own rules — a plan with a
    validated origin suppresses different sections in each seat, and they are not flattened into
    one shared rule.
 6. Collect results. A lane that returned no finding is `covered` with no finding. A lane that could
@@ -94,10 +109,17 @@ authority to apply a correction rides on the caller's authorization, recorded on
    observation that a fix did land is logged in coverage and not presented.
 9. Gate on the confidence anchor before bucketing: anchors 0 and 25 are dropped, anchor 50 is
    observation that never enters the walk-through, and 75 and 100 are actionable. A finding from
-   `doc-review/security-lens` is never dropped by that gate — it stays visible and is adjudicated
+   [`doc-review/security-lens`](../../references/shared/roles/doc-review/security-lens/ROLE.md) is never dropped by that gate — it stays visible and is adjudicated
    (ruling `low-confidence-security-adjudicated`).
-10. Assign the action class per seat and sort every finding into its bucket. The result takes
-    exactly this form, in this order, with every heading present even when its bucket is empty:
+10. Assign the action class per seat and sort every finding into its bucket. When the
+    comprehension setting is `on`, print the paraphrase verbatim above `## Applied`, including
+    when the seat found nothing. When `shadow`, print the paraphrase and the seat's findings
+    under `## FYI` only; they never enter Applied, Proposed fixes or Decisions, and they do not
+    change the verdict. Record each such finding with autofix_class `advisory` and the lane
+    verdict as `approve` or `no-opinion`. Off prints nothing from this seat. Synthesis does not summarize or merge
+    the paraphrase. A comprehension finding is never settled by picking a side (ruling
+    `comprehension-gap-not-contestable`). The result takes exactly this form, in this order, with
+    every heading present even when its bucket is empty:
 
     ```text
     Verdict: <approved, changes-requested, blocked or unavailable>
@@ -129,7 +151,7 @@ Gate: a correction that changes what the document *decides*, rather than how it 
 applied on one lane's say-so. It needs a second lane that found the same thing independently, or
 it is a Decision and goes to the human as one question.
 
-Gate: `safe_auto` is emitted by `doc-review/coherence` only, for its own closed pattern list, and
+Gate: `safe_auto` is emitted by [`doc-review/coherence`](../../references/shared/roles/doc-review/coherence/ROLE.md) only, for its own closed pattern list, and
 only where `spec_quality: patch`, `difficulty: mechanical` and a `suggested_fix` all hold. A
 `safe_auto` arriving from any other lane is remapped to `gated_auto`; it is never dropped (ruling
 `safe-auto-restricted-per-seat`).
@@ -142,25 +164,39 @@ Gate: a previously rejected finding is re-raised only on changed evidence. An un
 quote does not establish unchanged evidence, and neither does a differently worded restatement of
 the same concern.
 
-Gate: at most two fix rounds. The third does not run; the run returns the open forks and stops
-(`schemas/review.schema.json`, `fix_cycles`).
+Gate: at most two fix rounds. The third request stops with the open forks attached
+([`schemas/review.schema.json`](../../references/shared/schemas/review.schema.json), `fix_cycles`). A cycle a human authorizes after the cap is recorded
+in `fix_cycles.extensions` (`authorized_by: human`, operator-attested, and when) and reviewed as a
+`delta`; without that entry it is refused.
+
+Gate: a comprehension finding is never rejected on the author's word. It resolves by adding the
+definition or the link; by publishing a `concept` or `adr` page and linking it; by `escalated` to
+the human, when the fact exists only as a team convention or a verbal decision; or by the human
+rejecting it, when they judge that no human reader of this document needs it (ruling
+`comprehension-gap-not-contestable`).
+
+Gate: in `shadow`, comprehension findings stay under `## FYI`. They never enter the other buckets
+and they do not change the verdict. Each is recorded `advisory`, and the lane verdict is `approve`
+or `no-opinion`. The lane is not required, so unavailability cannot block.
 
 | The thought | Why it is wrong | Do this instead |
 |---|---|---|
 | "Both sides of the contradiction are in the document, and one is obviously right — I'll apply it." | Choosing which side wins changes what the document decides. Obvious to a reviewer is not decided by the people who own the document. | Raise it as a Decision with one question naming both sides. |
 | "One lane timed out and the other five agree, so the review is effectively complete." | A lane that did not run produced no evidence, and five agreements about other things are not that lane's result. | Record it `unavailable` with the reason and let it block the approval verdict. |
 | "We rejected this in round one and the document still says the same thing, so I'll suppress it again." | Suppression rides on the rejection's evidence still being current, not on the document being unchanged. The constraints or the facts may have moved under it. | Check what the rejection rested on. If any of it moved, re-raise the finding. |
-| "This is a clean one-line patch with an obvious fix, so I'll mark it automatic from the feasibility lane." | The restriction is on emission by a seat, not on how tidy the fix looks. Only `doc-review/coherence`'s own closed pattern list qualifies. | Emit it `gated_auto` and let it go through the grouped confirmation. |
-| "Round two did not settle the fork, but it is close — one more round will finish it." | A fork that survived two rounds is not converging; it is a decision nobody in the run has the authority to make. | Stop at two, return the open fork, and hand it to a human. |
+| "This is a clean one-line patch with an obvious fix, so I'll mark it automatic from the feasibility lane." | The restriction is on emission by a seat, not on how tidy the fix looks. Only [`doc-review/coherence`](../../references/shared/roles/doc-review/coherence/ROLE.md)'s own closed pattern list qualifies. | Emit it `gated_auto` and let it go through the grouped confirmation. |
+| "Round two did not settle the fork, but it is close — one more round will finish it." | A fork that survived two rounds is not converging; it is a decision nobody in the run has the authority to make. | Stop at two and return the open fork, unless a recorded human extension authorizes a delta. |
+| "The author says that term is team knowledge, so I'll drop the comprehension finding." | Author contest is not a resolution. | Keep it. The four resolutions in the gate above are the only ones. |
+| "Shadow found a P1, so I'll put it in Decisions to be safe." | Shadow must not change the verdict or the other buckets. | Print it under FYI only. |
 
 ## Outputs
 
-- `review` (`schemas/review.schema.json`) — the run artifact: mode `full` at round one and `delta`
+- `review` ([`schemas/review.schema.json`](../../references/shared/schemas/review.schema.json)) — the run artifact: mode `full` at round one and `delta`
   at a later round, the snapshot hash, the reviewed head, the full lane table with a reason on
   every skipped and unavailable lane, the verdict, and `fix_cycles`. Published through the
   knowledgebase adapter's `publishArtifact` under a run-artifact placement; no repository path is
   written (ruling `central-kb-owns-project-artifacts`).
-- `finding` (`schemas/finding.schema.json`) — one per retained observation, each carrying its lane,
+- `finding` ([`schemas/finding.schema.json`](../../references/shared/schemas/finding.schema.json)) — one per retained observation, each carrying its lane,
   its fingerprint, severity, `confidence_anchor`, `spec_quality`, `difficulty`, `autofix_class`,
   evidence and verification.
 - The fixed presented form, printed in the final reply after the edits are read back and the
@@ -181,7 +217,7 @@ the document under review and never the source the document describes.
 
 `kb-publish` is a remote effect. Its idempotency key derives from the run, the operation, the
 record's stable identity and the artifact's hash, and the read-back is the record the write
-returns, read before the write and confirmed after it (`adapters/runner-contract/CONTRACT.md`,
+returns, read before the write and confirmed after it ([`adapters/runner-contract/CONTRACT.md`](../../references/shared/adapters/runner-contract/CONTRACT.md),
 "Idempotency"). A publish whose read-back cannot be performed is recorded as failed.
 
 ## Stop conditions
@@ -191,15 +227,19 @@ returns, read before the write and confirmed after it (`adapters/runner-contract
   `blocked` is a completed review with a blocking result, not an incomplete one.
 - `needs-input` — there is no document, its identity cannot be computed, or a later round was
   started without the prior round's findings.
-- `cap-reached` — two fix rounds are used and a Decision is still open. Returns the open forks and
-  the review as it stands.
+- `cap-reached` — two fix rounds are used, a Decision is still open, and no recorded human
+  extension authorizes another. Returns the open forks and the review as it stands.
 - `cancelled` — the caller ended the run before the panel returned.
-- `failed` — the knowledgebase is unreachable, or a publication's read-back cannot be performed.
+- `failed` — a configured knowledgebase is unreachable, or a publication's read-back cannot be
+  performed. A knowledgebase coverage limit (no binding, an unregistered one, a publish skipped as read-only (kb.read-only), a missing in-repo one (kb.in-repo-missing), or a missing or
+  unknown `ak kb` command) stops nothing: the records are returned in the session and named as not
+  published, and the calling phase continues.
 
 ## Limits
 
-- Fix rounds: 2 (gate). The cap is structural in `schemas/review.schema.json`, whose `fix_cycles`
-  admits no value above two, so no configuration buys a third.
+- Fix rounds: 2 (gate). [`schemas/review.schema.json`](../../references/shared/schemas/review.schema.json) `fix_cycles`. `allowed` admits no value above
+  two, so no configuration raises the cap; a third cycle runs only on a recorded human extension
+  in `fix_cycles.extensions`, reviewed as a `delta`.
 - Confidence anchors: 0 and 25 are dropped before any bucket, 50 never enters the walk-through,
   and the security exception above overrides both.
 - Evidence overlap for a fingerprint match: more than half. The figure calibrates a matching
@@ -209,3 +249,13 @@ returns, read before the write and confirmed after it (`adapters/runner-contract
   catalog and a small correction does not.
 - Session scope: the primer is intra-session. A later review of the same document starts at round
   one and reads the durable disposition record instead.
+- Seat capability and cost (guidance): [`doc-review/coherence`](../../references/shared/roles/doc-review/coherence/ROLE.md), [`doc-review/feasibility`](../../references/shared/roles/doc-review/feasibility/ROLE.md),
+  [`doc-review/comprehension`](../../references/shared/roles/doc-review/comprehension/ROLE.md), [`doc-review/product-lens`](../../references/shared/roles/doc-review/product-lens/ROLE.md), [`doc-review/design-lens`](../../references/shared/roles/doc-review/design-lens/ROLE.md) and
+  [`doc-review/scope-guardian`](../../references/shared/roles/doc-review/scope-guardian/ROLE.md) read a pinned snapshot against recorded context, so the lane does not
+  by itself call for the strongest reasoning available; a document that turns on complex judgment
+  may still need it. Whoever binds a seat decides, an explicit choice by the human or the runner
+  stands, and this skill never changes a seat on its own. Lane independence, the unavailable-lane
+  rule, [`doc-review/security-lens`](../../references/shared/roles/doc-review/security-lens/ROLE.md) and [`doc-review/adversarial-document`](../../references/shared/roles/doc-review/adversarial-document/ROLE.md) are untouched. Do not claim
+  a saving without measurement.
+- Comprehension mode: `off`, `shadow` or `on`, default `off`. Off does not seat it. Shadow stores
+  and prints under FYI only. On uses the ordinary buckets.

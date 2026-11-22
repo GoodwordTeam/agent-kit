@@ -1,7 +1,7 @@
 # The delta pass: packet, scope, continuity and the end of the loop
 
-Loaded by `super-review delta`. The authority for every rule here is `policies/review.yaml` and
-`schemas/review.schema.json`; this file is the operating form of them.
+Loaded by `super-review delta`. The authority for every rule here is [`policies/review.yaml`](../../../references/shared/policies/review.yaml) and
+[`schemas/review.schema.json`](../../../references/shared/schemas/review.schema.json); this file is the operating form of them.
 
 ## What the delta is not
 
@@ -18,8 +18,8 @@ A delta invoked with no open review run does not open one. It stops with `needs-
 
 ## The two lanes
 
-`reviewer-spec` — were the accepted findings and the ticket obligations actually addressed.
-`reviewer-standards` — did the fixes introduce relevant regressions or new rule violations.
+[`reviewer-spec`](../../../references/shared/roles/reviewer-spec/ROLE.md) — were the accepted findings and the ticket obligations actually addressed.
+[`reviewer-standards`](../../../references/shared/roles/reviewer-standards/ROLE.md) — did the fixes introduce relevant regressions or new rule violations.
 
 The two run independently and in parallel against the same snapshot. Per-ticket build checks are the
 other ordering: there, spec compliance runs before standards review.
@@ -70,12 +70,30 @@ At most two fix-and-verify cycles after the first pass. The third stops with an 
 blocked-or-replan decision, and anything still open is reported rather than looped (ruling
 `two-fix-cycles-then-stop`).
 
+The decision takes one of four values in `fix_cycles.exhausted_action`:
+
+| Open at the cap | Decision |
+|---|---|
+| Only P3 findings | `merge-with-follow-ups`: recommend merge, each P3 listed in `fix_cycles.follow_ups`; the verdict may be `approved` |
+| A finding theme the last two cycles both reopened | `design-decision`: name the theme and the design question behind it; no further patch is proposed |
+| Anything else | `blocked` or `replan` |
+
+The theme is the cause the findings share, not their fingerprints: two cycles that each tighten a
+different bound on the same input are one theme. A cycle a human authorizes after the decision is
+recorded in `fix_cycles.extensions` with `authorized_by: human` and when; the operator attests the
+human authorization, and the record does not prove it. The cycle is reviewed here, as a delta
+over the commits since the last reviewed head, and that delta may approve. It never opens a new full
+scope over the whole change, and a cycle past the cap with no extension entry is refused.
+
 ## Baseline reset
 
 Where architecture, requirements, the comparison base or the affected surface changes materially, the
 affected approvals are invalidated and a new baseline is deliberately established. That is a new
 review scope with its own pass 1, not an unbounded third delta loop, and it is not the third cycle
-the cap forbids wearing a different name (ruling `delta-baseline-reset-not-third-loop`).
+the cap forbids wearing a different name (ruling `delta-baseline-reset-not-third-loop`). The fix
+commits, a reached cap, and a replan or rebase that leaves the accepted requirements, the relevant
+architecture and the patch all unchanged are not material changes: each continues as a delta, and so
+does a same-finding replan that changes only the patch while none of the triggers above applies.
 
 The run records its comparison base, its reviewed head and the last head verified in the delta loop,
 so the three are never conflated (ruling `delta-baseline-reset-not-third-loop`). A verification

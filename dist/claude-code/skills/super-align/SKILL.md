@@ -1,6 +1,6 @@
 ---
 name: super-align
-description: "Human-started command: it runs only when the human's message begins with `/ak:super-align`, or under a validated grant, or when a supervisor's bypass grant passes the bundle's `ak-gate.mjs bypass check`. On any other request do not load or follow it; tell the human to type that command. When prose asks for this alignment work, do not answer its questions or inspect project context; tell the human to type `/ak:super-align` followed by their request. Grills an unsettled request into agreed direction: a design tree worked in rounds, named terms, two or three approaches with a recommendation, and an explicit human yes before anything is built. Use when what to build is not yet agreed. Not for a request that already carries acceptance criteria, and not for a single-file fix with no decision in it."
+description: "Human-started command: it runs only when the human's message begins with `/ak:super-align`, or under a validated grant, or when a supervisor's bypass grant passes the bundle's `ak-gate.mjs bypass check`, or when the repository or environment opts into the unattended policy and `ak-gate.mjs unattended check` exits 0. On any other request do not load or follow it; tell the human to type that command. When prose asks for this alignment work, do not answer its questions or inspect project context; tell the human to type `/ak:super-align` followed by their request. Grills an unsettled request into agreed direction: a design tree worked in rounds, named terms, two or three approaches with a recommendation, and an explicit human yes before anything is built. Use when what to build is not yet agreed. Not for a request that already carries acceptance criteria, and not for a single-file fix with no decision in it."
 license: MIT
 metadata:
   ak_catalog_id: super-align
@@ -43,7 +43,7 @@ Authority: `explicit` at the public entrypoint, `delegated-grant` at the phase o
 `align.run`. A human starts the public entrypoint by typing `/ak:super-align`. A request in prose
 is not a start, even when it names this skill or the command. A delegated controller starts
 `align.run` only under a runner-validated grant covering `align-answer`
-(`adapters/runner-contract/CONTRACT.md`), and only for a bounded question inside the charter's work
+([`adapters/runner-contract/CONTRACT.md`](../../references/shared/adapters/runner-contract/CONTRACT.md)), and only for a bounded question inside the charter's work
 source. Where the host cannot validate that grant, the operation stops for explicit invocation
 rather than answering (ruling `entrypoint-phase-operation-split`). No skill starts this skill
 directly.
@@ -53,6 +53,11 @@ task. From the task's worktree, run `node <this skill's directory>/../../bin/ak-
 --phase super-align`: exit 0 is the start, and a refusal is a stop with
 `needs-decision`. The grant starts the interview and nothing else. The explicit yes at step 11 still
 comes from the supervisor through `needs-decision`; the worker never approves its own direction.
+
+Under the unattended policy (ADR-0014), `node <this skill's directory>/../../bin/ak-gate.mjs unattended
+check --phase super-align` exiting 0 is the start, with no command or grant (an exception to ruling
+`entrypoint-phase-operation-split`). Each frontier round and the step 11 approval then proceed with your own recommended answers, recorded as unattended advances
+and never as an approval; record the `align` gate as [the unattended-lifecycle reference](../../references/shared/references/unattended-lifecycle/REFERENCE.md) says.
 
 ## Inputs
 
@@ -65,12 +70,12 @@ comes from the supervisor through `needs-decision`; the worker never approves it
   first and run its check: it gives the commands and tells an unconfigured knowledgebase from a
   broken one. An empty result is a fact, not an error — say the project has recorded none and
   continue. An unavailable adapter is a coverage limit: name missing `kb-read` and the cause the
-  check printed — no committed `ak.kb.yaml`, or a knowledgebase this machine has not registered —
-  never a missing `ak.install.yaml`, which no knowledgebase depends on. Continue the interview
-  through the six-field restatement, then stop before publication with `needs-input` naming both
-  `kb-read` and `kb-write` and that setup step. A configured knowledgebase that fails or cannot be
-  reached returns `failed`; stop and report it rather than proceeding from memory.
-- At `align.run` only: a `charter` (`schemas/charter.schema.json`) listing the `align-answer`
+  check printed — no committed `ak.kb.yaml`, a knowledgebase this machine has not registered, or a
+  missing or unknown `ak kb` command — never a missing `ak.install.yaml`, which no knowledgebase
+  depends on. Continue the interview through approval; at publication name `kb-write` and that
+  setup step, and each page as not published. A configured knowledgebase that fails or cannot be
+  reached (exit 1) returns `failed`; stop and report it rather than proceeding from memory.
+- At `align.run` only: a `charter` ([`schemas/charter.schema.json`](../../references/shared/schemas/charter.schema.json)) listing the `align-answer`
   checkpoint category. Absent, or listing a different category: `needs-input`.
 - Facts about the codebase are this skill's own job to find. A fact the agent could look up is
   never a question for the human, and looking it up never blocks a round.
@@ -79,7 +84,8 @@ comes from the supervisor through `needs-decision`; the worker never approves it
 
 1. Check how this run was started, before any other step and before any tool call. It is started
    only when the human's message begins with `/ak:super-align`, when a controller started the phase
-   operation `align.run` under a validated grant, or when the bypass check in Authority exits 0. A
+   operation `align.run` under a validated grant, when the bypass check in Authority exits 0, or
+   when its unattended check exits 0. A
    request in prose is not a start, even when it names this skill or the command, or asks for this
    work without naming either. With neither, stop before answering the task, inspecting project
    context or checking inputs: the only response is to tell the human to type `/ak:super-align`
@@ -113,21 +119,21 @@ comes from the supervisor through `needs-decision`; the worker never approves it
     success field describing a rendered interface or running service, name the observable surface,
     user path or request, and evidence kinds the project declares. Do not assume a browser, trace
     collector or running service.
-12. On an explicit yes, publish the settled vocabulary as a `concept` page and the direction as an
+12. On an explicit yes (under the unattended policy, the recorded step 11 advance), publish the settled vocabulary as a `concept` page and the direction as an
     `adr` with status `proposed`. On a fork the human cannot settle, publish a `type: decision`
-    ticket instead and say what it blocks. If the knowledgebase adapter was unavailable, publish
-    nothing and return `needs-input` naming `kb-read`, `kb-write` and the setup step the check
-    printed; the completed interview is returned in the session so publication can resume without
-    repeating it.
+    ticket instead and say what it blocks. Under a knowledgebase coverage limit, skip publication,
+    name each page as not published with `kb-write` and the setup step the check printed, and
+    return the completed interview in the session so publication can resume without repeating it;
+    the phase continues.
 
 ## Hard gates
 
 Gate: nothing is implemented before approval. On every classification this skill writes no source
 file, scaffolds no project and starts no implementation skill until the human has approved the
-restated direction. The ceremony scales with the work; the gate does not.
+restated direction (under the unattended policy, until the step 11 unattended advance is recorded). The ceremony scales with the work; the gate does not.
 
 Gate: approval is an explicit yes to the restatement. "Whatever you think is best", "sounds good",
-"sure, let's go" and silence are not approval. Restate and ask again.
+"sure, let's go" and silence are not approval, nor is an unattended advance. Restate and ask again.
 
 Gate: complexity found mid-run upgrades the classification, and nothing downgrades it. Say when it
 moves and why.
@@ -145,7 +151,7 @@ answer, and no implementation file is written in that operation.
 | "They said 'whatever you think is best', so that is a yes." | That answer hands the decision back; it agrees to nothing, and the human has not yet seen a direction to agree to. | Restate the direction in the six fields and ask again for a yes or a change. |
 | "It grew while I worked, but I'm nearly done — re-classifying now wastes a round." | Hidden complexity upgrades the classification and nothing downgrades it; "nearly done" is when the upgrade matters most. | Stop, say the classification moved and why, and run the heavier path. |
 | "The ask is clear enough — more questions would waste their time." | An ask that is clear to the agent is the shape of an assumption, not of agreement. | Run the frontier round. If you can already predict the next three answers, say so and go to the restatement. |
-| "The knowledgebase is not configured, so the interview cannot start." | Unavailable is not failed. The adapter contract makes missing `kb-read` a reported limitation, while the questions themselves need only the human channel. | Name missing `kb-read`, run the interview, and stop at publication with `needs-input` naming both `kb-read` and `kb-write`. |
+| "The knowledgebase is not configured, so the interview cannot start." | Unavailable is not failed. The adapter contract makes missing `kb-read` a reported limitation, while the questions themselves need only the human channel. | Name missing `kb-read`, run the interview, and at publication name `kb-write` and each page as not published, then continue. |
 
 ## Outputs
 
@@ -156,7 +162,7 @@ answer, and no implementation file is written in that operation.
 - `adr` page — the approved direction, published with status `proposed` through `publishArtifact`.
   This skill never accepts one: acceptance happens in review and never by the author
   (`docs/decisions/0001-kb-document-vocabulary.md`, "Authorship separation carries into the KB").
-- `ticket` (`schemas/ticket.schema.json`), `type: decision`, id shape `align-<scope>-<topic>`,
+- `ticket` ([`schemas/ticket.schema.json`](../../references/shared/schemas/ticket.schema.json)), `type: decision`, id shape `align-<scope>-<topic>`,
   published through `publishArtifact` under a `run-artifact` placement when a fork is left open.
 - At `align.run`: the alignment result as a run artifact carrying the approved direction or the
   open decision. That operation writes no knowledgebase page.
@@ -169,18 +175,20 @@ not edit the repository under discussion.
 `kb-publish` is a remote side effect. Its idempotency key derives from the run, the operation, the
 knowledgebase record identity and the published artifact's hash; the read-back is the record ref and
 stored hash `publishArtifact` returns, read before the write and confirmed after it
-(`adapters/runner-contract/CONTRACT.md`, "Idempotency"). A publication whose read-back cannot be
+([`adapters/runner-contract/CONTRACT.md`](../../references/shared/adapters/runner-contract/CONTRACT.md), "Idempotency"). A publication whose read-back cannot be
 performed is `failed`, never complete.
 
 ## Stop conditions
 
-- `complete` — the human approved the restated direction, and every published artifact's read-back
-  matched what was sent.
-- `needs-input` — a start by neither the typed command nor a validated grant, no request, no
-  explicit approval, a question outside the charter at `align.run`, a fork only the human can
-  settle, or publication reached an unavailable knowledgebase adapter. The first returns the
-  command to type and nothing else. The unavailable-adapter result names `kb-read` and `kb-write`
-  and returns the completed interview without publishing it.
+- `complete` — the human approved the restated direction (under the unattended policy, a recorded
+  unattended advance, never an approval), and every published artifact's read-back matched what was sent.
+- `needs-input` — a start by none of the typed command, a validated grant, a passing bypass check and the unattended policy's passing `unattended check`, no request, no
+  explicit approval (outside the unattended policy, whose recorded advance stands in), a question outside the charter at `align.run`, or a fork only the human can
+  settle. The first returns the command to type and nothing else.
+- A knowledgebase coverage limit — `ak kb check` exit 3 (kb.unbound, kb.unregistered), a publish exit 3 (kb.read-only), kb.in-repo-missing, or a
+  missing or unknown `ak kb` command — never stops this phase under any policy: reads are
+  unavailable, each skipped publish is named in the result as not published, and of these results
+  only exit 1 stops.
 - `cap-reached` — the runner-supplied alignment budget is exhausted. Returns the settled part of the
   tree and the open frontier, and decides none of it.
 - `cancelled` — the human ends the run. Nothing is published.
@@ -191,7 +199,7 @@ performed is `failed`, never complete.
 
 - Alignment exchanges: the runner-supplied `alignment-budget` (gate when supplied). A cap the runner
   did not supply is not enforced and not guessed; the run records that it was absent
-  (`policies/limits.yaml`).
+  ([`policies/limits.yaml`](../../references/shared/policies/limits.yaml)).
 - Questions per round: the whole frontier, asked once (gate). This skill caps the number of rounds
   at nothing of its own.
 - Approaches offered per fork: two or three (guidance). A fork with one real option is presented as

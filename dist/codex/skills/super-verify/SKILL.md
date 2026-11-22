@@ -52,15 +52,15 @@ Authority: `model`. A controller or a parent skill starts it when a claim needs 
 command exposes it and no human act is required to start it.
 
 No grant covers delegation, because no phase operation exposes this skill
-(`policies/invocation.yaml`). The implementer may start the skill, but may not fill its verifier seat
-or author gate-eligible receipts. The runner assigns a distinct `verifier` seat, and closure depends
+([`policies/invocation.yaml`](../../references/shared/policies/invocation.yaml)). The implementer may start the skill, but may not fill its verifier seat
+or author gate-eligible receipts. The runner assigns a distinct [`verifier`](../../references/shared/roles/verifier/ROLE.md) seat, and closure depends
 on that seat's receipts plus the applicable policy rule, never on the caller's confidence. A seat
 that cannot be filled independently is `unavailable` and is never backfilled by the implementer,
 author, spec approver or another seated role (ruling `missing-supervisor-never-implementer`).
 
 ## Inputs
 
-The claim, resolved to named acceptance criteria (`schemas/ticket.schema.json` `acceptance_criteria`,
+The claim, resolved to named acceptance criteria ([`schemas/ticket.schema.json`](../../references/shared/schemas/ticket.schema.json) `acceptance_criteria`,
 by AC id). Absent, or phrased so that no command could settle it: stop and report `needs-input` with
 the criterion it would need.
 
@@ -74,9 +74,12 @@ publish a recipe only after its complete build, launch, readiness, drive and cle
 One runner-assigned verifier context (`independent-context`) and trusted evidence storage for the
 autonomous form. A fresh host context without attestation remains valid in guided mode and records
 `host-unattested`; the gate refuses it once the build gate records an implementer seat or the run
-holds any bypass or delegated grant record, for the rest of that run.
+holds any bypass or delegated grant record, for the rest of that run. Under the unattended policy
+(ADR-0014) it is a recorded note instead, whose boundary is the live merge-gate read (an exception
+to ruling `closure-requires-independent-verification`), and the gate is recorded with its evidence
+command, as [the unattended-lifecycle reference](../../references/shared/references/unattended-lifecycle/REFERENCE.md) says.
 
-The environment the checks run in, identified (`schemas/verification.schema.json`). Test execution
+The environment the checks run in, identified ([`schemas/verification.schema.json`](../../references/shared/schemas/verification.schema.json)). Test execution
 belongs in the appropriate isolated environment, and repository test code does not receive production
 credentials by default.
 
@@ -94,7 +97,7 @@ receipt's (`common#/$defs/revision_ref`); an uncommitted edit on the same revisi
    only after the whole path works; never write a host-specific recipe into the application tree.
    Load [verification evidence](../../references/shared/references/verification-evidence/REFERENCE.md) before matching
    a surface to an evidence kind.
-3. Seat `roles/verifier/ROLE.md` outside the implementer lineage. Give it the claim, criteria,
+3. Seat [`roles/verifier/ROLE.md`](../../references/shared/roles/verifier/ROLE.md) outside the implementer lineage. Give it the claim, criteria,
    revision, recipe, permitted commands, environment and required evidence kinds—never the
    implementer's narrative, claimed result or reviewer verdict. An unfillable seat is `unavailable`.
 4. Run each command fresh and complete, at the revision under verification. A partial run, a cached
@@ -122,7 +125,8 @@ receipt's (`common#/$defs/revision_ref`); an uncommitted edit on the same revisi
 9. Never rewrite a recorded receipt. To correct one, record a new passed or failed receipt for the
    same check, covering every criterion it supports, whose `supersedes` names its `{id, hash}`.
 10. Claim exactly what the receipts support, and publish the matrix and the receipts through the
-    knowledgebase adapter's `publishArtifact` operation with a run-artifact placement. Return the
+    knowledgebase adapter's `publishArtifact` operation with a run-artifact placement (under a
+    knowledgebase coverage limit, skip it and name them as not published). Return the
     receipts and matrix exactly as artifacts. Do not add a prose approval over them; each criterion's
     outcome is the verdict. Publish a successful newly discovered recipe as a content-addressed
     `verification-recipe` artifact for later runs.
@@ -153,7 +157,10 @@ inherit it (ruling `closure-requires-independent-verification`).
 Gate: a runnable frontend or backend criterion is never passed by tests, type checks or a build alone.
 It needs the project-declared running-surface evidence kind, or an explicit non-pass outcome.
 
-Gate: an implementer-authored or host-unattested receipt cannot satisfy autonomous closure. A missing
+Gate: an implementer-authored or host-unattested receipt cannot satisfy autonomous closure; under the
+unattended policy a host-unattested one counts, labelled worker-attested, whose boundary is the live
+merge-gate read (an exception to ruling `closure-requires-independent-verification`), and an
+implementer-authored one still never does. A missing
 independent seat is `unavailable`, never self-verification with a note.
 
 Gate: a classifier, a confidence score and a reviewer's judgement are advisory and are recorded as
@@ -190,7 +197,7 @@ is the result; a run that reports nothing because the news was bad has failed at
 
 ## Outputs
 
-One receipt per check (`schemas/verification.schema.json`), each naming the criteria it supports and
+One receipt per check ([`schemas/verification.schema.json`](../../references/shared/schemas/verification.schema.json)), each naming the criteria it supports and
 bound to the revision it describes. Each receipt names its recipe digest, evidence kind, evidence
 artifacts and verifier seat. A receipt that supports nothing is not part of the matrix and is not
 evidence for anything.
@@ -206,7 +213,7 @@ Invalidation records against receipts this run supersedes, naming what changed. 
 in place.
 
 All of it is published through the knowledgebase adapter's `publishArtifact` operation with a
-run-artifact placement (`adapters/knowledgebase/CONTRACT.md`); the commands are in
+run-artifact placement ([`adapters/knowledgebase/CONTRACT.md`](../../references/shared/adapters/knowledgebase/CONTRACT.md)); the commands are in
 [the knowledgebase-binding reference pack](../../references/shared/references/knowledgebase-binding/REFERENCE.md).
 This skill names no repository path for project-derived content.
 
@@ -215,7 +222,7 @@ This skill names no repository path for project-derived content.
 `process-exec`, `scratch-write`, `artifact-write`, `kb-publish`.
 
 `kb-publish` is a remote effect: the idempotency key is derived from the content hash of the receipt
-set per `adapters/runner-contract/CONTRACT.md` §5, and the returned record reference is read back
+set per [`adapters/runner-contract/CONTRACT.md`](../../references/shared/adapters/runner-contract/CONTRACT.md) §5, and the returned record reference is read back
 before the run reports. Republishing an unchanged set after an interruption is a no-op success rather
 than a second record.
 
@@ -226,15 +233,30 @@ is reported, not accommodated.
 ## Stop conditions
 
 `complete`: every acceptance criterion has an outcome and a reason where that outcome is not a pass,
-and the receipts are published. A run whose checks all failed is complete; the failures are the
-result.
+and the receipts are published (or, under a knowledgebase coverage limit, named as not published).
+A run whose checks all failed is complete; the failures are the result.
 
 `needs-input`: the claim resolves to no acceptance criterion, or no revision was named. Returns the
 criterion or the revision it would need, and no partial matrix presented as a verdict.
 
+Under the unattended policy, a ticket that declares no acceptance criteria and no verification at
+all is a coverage limit, never `needs-input`: record it once naming its cause and verify with the
+repository checks actually run, the project's declared test command among them when it declares one
+(its verification recipes, [`schemas/project.schema.json`](../../references/shared/schemas/project.schema.json)). The independent verifier seat records
+each on the `verify` gate with its real command, exit status and output digest, declaring itself
+with `--author-kind`, `--host` and `--seat-id`; a verify must always declare an independent seat, so
+the build's implementer seat, or no seat, is refused. The gate
+counts those checks and nothing else, and records the limit on its ship decision and in the ship
+disclosure. A ticket that declares criteria or verification the gate cannot read is judged like any
+other. Outside the policy it is `unavailable`.
+
 `failed`: the repository is unreadable at the named revision, the environment cannot be identified,
-or the knowledgebase refuses the write. The receipts are returned unpublished with the refusal rather
-than written to a path in the repository.
+or a configured knowledgebase refuses the write. The receipts are returned unpublished with the
+refusal rather than written to a path in the repository.
+
+A knowledgebase coverage limit — `ak kb check` exit 3 (kb.unbound, kb.unregistered), a publish exit 3 (kb.read-only), kb.in-repo-missing, or a
+missing or unknown `ak kb` command — never stops this phase under any policy: reads are unavailable,
+each skipped publish is named in the result as not published, and only exit 1 stops.
 
 `cancelled`: the caller withdrew the claim mid-run. Receipts already taken are kept and published as
 what they are — evidence about the checks that ran — because a completed check is a fact whether or
@@ -244,7 +266,7 @@ not anyone still wants it.
 
 This skill declares no numeric cap of its own. The runner's elapsed-time budget is the only bound it
 enforces, and a budget the runner did not supply is not enforced and not guessed
-(`policies/limits.yaml`).
+([`policies/limits.yaml`](../../references/shared/policies/limits.yaml)).
 
 Receipts per criterion: at least one, always (gate). A criterion may carry several, and none of them
 replaces another.

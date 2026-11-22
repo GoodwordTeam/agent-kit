@@ -3,7 +3,7 @@
 Loaded by `super-ship publish` when the push and the pull request go straight to the forge through
 `git` and the forge's command-line client, with no gate and no supervisor between them. The authority
 for every rule here is ruling `direct-push-as-ship-transport` and
-`adapters/runner-contract/CONTRACT.md` §5; this file is the operating form of them. The commands are
+[`adapters/runner-contract/CONTRACT.md`](../../../references/shared/adapters/runner-contract/CONTRACT.md) §5; this file is the operating form of them. The commands are
 GitHub's `gh`. Another forge's client stands in only where it gives the same exit-status guarantees;
 where it does not, every lookup below is unknown and the run stops.
 
@@ -94,6 +94,13 @@ have gone.
 4. The assignee and the body shape: a required assignee, and the template the body must follow — the
    repository's own pull-request template, or the shape the conventions give. Where the conventions
    require no assignee, nothing is assigned. Nothing here is a package default.
+5. The publish scan of workflow step 3, once per repository the text reaches: the base, and the
+   head repository where it differs. Prepare the title and body file first. In `publish`, read
+   `<v>` with `gh repo view <forge-host>/<owner>/<repo> --json visibility --jq .visibility`; in
+   `dry-run`, or when that lookup fails, omit `--visibility`, which scans as public. Run
+   `node <skill directory>/../../bin/ak-gate.mjs publish-scan --repo <owner>/<repo> --visibility <v>
+   --title <title> --body-file <body-file> --commits <base-remote>/<base>..<shipped-commit>`.
+   A hit is `failed` before any push. A rewritten commit message is a new head and a new run.
 
 ## The commit
 
@@ -137,7 +144,7 @@ so the hook has nothing left to rewrite.
 
 ## The push
 
-Reconcile before the effect, per `adapters/runner-contract/CONTRACT.md` §5:
+Reconcile before the effect, per [`adapters/runner-contract/CONTRACT.md`](../../../references/shared/adapters/runner-contract/CONTRACT.md) §5:
 
 1. Re-read `git branch --show-current` and `git remote get-url --push --all <remote>`. They must
    still be the resolved branch and sole `<push-url>`; a changed target stops with `needs-input`.
