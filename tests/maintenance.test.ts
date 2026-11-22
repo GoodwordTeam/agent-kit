@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { chmodSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createServer, type AddressInfo } from "node:net";
+
+/** `address()` is a pipe path or a TCP address. A pipe is a string; a TCP port is on the object. */
+function isTcpAddress(address: string | AddressInfo | null): address is AddressInfo {
+  return address !== null && Object(address) === address;
+}
 import { join } from "node:path";
 import Ajv from "ajv";
 
@@ -10,6 +15,7 @@ import {
   checkMaintenanceCommand,
   checkPlugin,
   checkProjectEnablement,
+  checkSemanticLint,
   checkSource,
   checkToken,
   command,
@@ -20,6 +26,7 @@ import {
   manifest as fetchManifest,
   parseBinding,
 } from "../src/maintenance/cli.ts";
+import { processScratch } from "./helpers/process-tmp.ts";
 
 const roots: string[] = [];
 afterEach(() => {
@@ -27,7 +34,7 @@ afterEach(() => {
 });
 
 function project(): string {
-  const root = mkdtempSync(join(tmpdir(), "ak-doctor-"));
+  const root = processScratch("ak-doctor-");
   roots.push(root);
   spawnSync("git", ["init", "-q", root]);
   return root;
@@ -37,13 +44,18 @@ function project(): string {
 // timeout scheduling Bun. The assertions below still cover their exit codes and complete output.
 const maintenanceRoot = project();
 const maintenanceCli = join(import.meta.dir, "../src/maintenance/cli.ts");
-const maintenanceEnv = {
+const maintenanceHome = join(maintenanceRoot, "home");
+mkdirSync(join(maintenanceHome, ".config"), { recursive: true });
+const maintenanceEnv: NodeJS.ProcessEnv = {
   ...process.env,
   PATH: "/usr/bin:/bin",
+  HOME: maintenanceHome,
+  XDG_CONFIG_HOME: join(maintenanceHome, ".config"),
   CLAUDE_CONFIG_DIR: join(maintenanceRoot, "claude-home"),
   CODEX_HOME: join(maintenanceRoot, "codex-home"),
   AK_PUBLISHED_ROOT: join(maintenanceRoot, "missing-published"),
 };
+delete maintenanceEnv.AK_JEV_ENABLED;
 const doctorJson = spawnSync(process.execPath, [maintenanceCli, "doctor", "--json"], {
   cwd: maintenanceRoot,
   env: maintenanceEnv,
@@ -59,6 +71,30 @@ const repoUpdate = spawnSync(process.execPath, [join(import.meta.dir, "../src/cl
   env: maintenanceEnv,
   encoding: "utf8",
 });
+const councilRun = spawnSync(process.execPath, [maintenanceCli, "council", "run"], {
+  cwd: maintenanceRoot,
+  env: maintenanceEnv,
+  encoding: "utf8",
+});
+const councilAlone = spawnSync(process.execPath, [maintenanceCli, "council"], {
+  cwd: maintenanceRoot,
+  env: maintenanceEnv,
+  encoding: "utf8",
+});
+const reviewAlone = spawnSync(process.execPath, [maintenanceCli, "review"], {
+  cwd: maintenanceRoot,
+  env: maintenanceEnv,
+  encoding: "utf8",
+});
+const reviewShow = spawnSync(
+  process.execPath,
+  [maintenanceCli, "review", "ledger", "show", "--ledger", "absent.jsonl"],
+  {
+    cwd: maintenanceRoot,
+    env: maintenanceEnv,
+    encoding: "utf8",
+  },
+);
 
 function runLinkedWorktreeFixture() {
   const root = realpathSync(project());
@@ -102,15 +138,20 @@ fi
   const codex = join(fakeBin, "codex");
   writeFileSync(codex, "#!/bin/sh\necho '{\"installed\":[]}'\n");
   chmodSync(codex, 0o755);
-  const env = {
+  const home = join(root, "home");
+  mkdirSync(join(home, ".config"), { recursive: true });
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     PATH: `${fakeBin}:${process.env.PATH}`,
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, ".config"),
     AK_PUBLISHED_ROOT: published,
     AK_TEST_ROOT: root,
     AK_TEST_LINKED: realpathSync(linked),
     CODEX_HOME: join(root, "empty-codex"),
     AK_TEST_MARKET_SOURCE: "github",
   };
+  delete env.AK_JEV_ENABLED;
   const projectRuns = [linked, join(root, "src")].map((cwd) => {
     if (cwd.endsWith("src")) mkdirSync(cwd);
     return {
@@ -280,16 +321,29 @@ describe("ak doctor checks", () => {
       const result = await fetchManifest("claude-code", `http://127.0.0.1:${missing.port}`, 500);
       expect(result.failure).toEqual({ reason: "missing", status: 404 });
     } finally {
-      void missing.stop(true);
+      await missing.stop(true);
     }
-    const stalled = Bun.serve({ port: 0, fetch: () => new Promise<Response>(() => {}) });
+    // A handler that never resolves can still be answered by the server under load. A peer that
+    // accepts and writes nothing cannot produce an HTTP status, so only the fetch timeout finishes it.
+    const stalled = createServer((socket) => {
+      socket.on("error", () => {
+        // The client aborts when the timeout fires, and the socket then resets.
+      });
+    });
     try {
+      await new Promise<void>((resolve, reject) => {
+        stalled.once("error", reject);
+        stalled.listen(0, "127.0.0.1", () => resolve());
+      });
+      const address = stalled.address();
+      if (!isTcpAddress(address)) throw new Error("stall server has no port");
+      const port = address.port;
       const start = Date.now();
-      const result = await fetchManifest("codex", `http://127.0.0.1:${stalled.port}`, 100);
-      expect(result.failure?.reason).toBe("network");
+      const result = await fetchManifest("codex", `http://127.0.0.1:${port}`, 100);
+      expect(result.failure?.reason, JSON.stringify(result.failure)).toBe("network");
       expect(Date.now() - start).toBeLessThan(2000);
     } finally {
-      void stalled.stop(true);
+      await new Promise<void>((resolve) => stalled.close(() => resolve()));
     }
   });
 
@@ -334,12 +388,26 @@ describe("ak doctor checks", () => {
     });
     expect(valid(parsed)).toBe(true);
     expect(rejectedUpdate.status).toBe(2);
-    expect(rejectedUpdate.stderr).toContain("Usage: ak doctor [--json] | ak update");
+    expect(rejectedUpdate.stderr).toContain("Usage: ak doctor [--json] [--lessons <dir>] | ak update");
   });
 
   test("the repo CLI forwards maintenance flags instead of running a real update", () => {
     expect(repoUpdate.status).toBe(2);
-    expect(repoUpdate.stderr).toContain("Usage: ak doctor [--json] | ak update");
+    expect(repoUpdate.stderr).toContain("Usage: ak doctor [--json] [--lessons <dir>] | ak update");
+  });
+
+  test("the packaged CLI dispatches ak council run instead of the generic usage", () => {
+    expect(councilRun.status).toBe(2);
+    expect(councilRun.stderr).toContain("usage: ak council run --card <card.json> --council-config");
+    expect(councilAlone.status).toBe(2);
+    expect(councilAlone.stderr).toContain("usage: ak council run --card <card.json> --council-config");
+  });
+
+  test("the packaged CLI dispatches ak review instead of the generic usage", () => {
+    expect(reviewAlone.status).toBe(2);
+    expect(reviewAlone.stderr).toContain("usage: ak review ledger add --ledger <ledger.jsonl> --event <file|->");
+    expect(reviewShow.status).toBe(0);
+    expect(reviewShow.stdout).toContain('"schema": "review-ledger-state"');
   });
 
   test("doctor ignores foreign GIT_DIR and GIT_WORK_TREE", () => {
@@ -484,5 +552,160 @@ describe("ak doctor checks", () => {
     mkdirSync(nestedBin, { recursive: true });
     symlinkSync(outside, join(nestedBin, "linearis"));
     expect(checkLinearis(nested, "linear-linearis").level).toBe("FAIL");
+  });
+});
+
+function keyed(text: string, mode = 0o600): string {
+  const file = join(processScratch("ak-doctor-jev-"), "jev.env");
+  writeFileSync(file, text, { mode });
+  chmodSync(file, mode);
+  return file;
+}
+
+function doctorWith(value: string, mode: number, flag: string | null = "1") {
+  const home = processScratch("ak-doctor-jev-home-");
+  mkdirSync(join(home, ".config/agent-kit"), { recursive: true });
+  writeFileSync(join(home, ".config/agent-kit/jev.env"), `TYPESAFE_API_KEY='${value}'\n`, { mode });
+  chmodSync(join(home, ".config/agent-kit/jev.env"), mode);
+  const cwd = project();
+  const env: NodeJS.ProcessEnv = {
+    ...maintenanceEnv,
+    CLAUDE_CONFIG_DIR: join(cwd, "claude-home"),
+    CODEX_HOME: join(cwd, "codex-home"),
+    HOME: home,
+    XDG_CONFIG_HOME: join(home, ".config"),
+  };
+  if (flag === null) delete env.AK_JEV_ENABLED;
+  else env.AK_JEV_ENABLED = flag;
+  return spawnSync(process.execPath, [maintenanceCli, "doctor", "--json"], {
+    cwd,
+    env,
+    encoding: "utf8",
+  });
+}
+
+describe("ak doctor semantic lint check", () => {
+  const value = "fixture-doctor-key-value";
+  const notOne =
+    "AK_JEV_ENABLED is not 1 in this shell; the Stop hook runs only where its host process has AK_JEV_ENABLED=1";
+  const passWhenHostHasFlag =
+    "key file present and owner-only; the Stop hook runs on changed files when the host process also has AK_JEV_ENABLED=1";
+
+  test("reports each key-file state without the key value", () => {
+    const good = keyed(`TYPESAFE_API_KEY="${value}"\n`);
+    const found = [
+      checkSemanticLint(good, undefined),
+      checkSemanticLint(good, "1"),
+      checkSemanticLint(good, "0"),
+      checkSemanticLint(join(processScratch("ak-doctor-jev-none-"), "jev.env"), "1"),
+      checkSemanticLint(keyed(`TYPESAFE_API_KEY="${value}"\n`, 0o644), "1"),
+      checkSemanticLint(keyed("OTHER=1\n"), "1"),
+    ];
+    expect(found.map((item) => item.level)).toEqual(["WARN", "PASS", "WARN", "WARN", "FAIL", "FAIL"]);
+    expect(found[0]?.detail).toBe(notOne);
+    expect(found[0]?.remedy).toBe(
+      "If the hook's host already has AK_JEV_ENABLED=1, re-run doctor with it set to check the key. Doctor reads only this shell.",
+    );
+    expect(found[1]?.detail).toBe(passWhenHostHasFlag);
+    expect(found[2]?.detail).toBe(notOne);
+    expect(found[3]?.detail).toStartWith("no key file at ");
+    expect(found[3]?.detail).toEndWith("; the Stop hook skips (missing-key)");
+    expect(found[4]?.detail).toEndWith(" is not a private owner-only file with one key assignment");
+    for (const item of found) {
+      expect(item.check).toBe("semantic lint");
+      expect(JSON.stringify(item)).not.toContain(value);
+    }
+    for (const flag of ["", "true", " 1"]) {
+      const item = checkSemanticLint(good, flag);
+      expect(item.level).toBe("WARN");
+      expect(item.detail).toBe(notOne);
+      expect(JSON.stringify(item)).not.toContain(value);
+    }
+  });
+
+  test("refuses a symlinked key file even when its target is private", () => {
+    const target = keyed(`TYPESAFE_API_KEY=${value}\n`);
+    const link = join(processScratch("ak-doctor-jev-link-"), "jev.env");
+    symlinkSync(target, link);
+    const item = checkSemanticLint(link, "1");
+    expect(item.level).toBe("FAIL");
+    expect(JSON.stringify(item)).not.toContain(value);
+  });
+
+  test("a disabled doctor check returns before reading a bad key file", () => {
+    const unsafe = keyed(`TYPESAFE_API_KEY="${value}"\n`, 0o644);
+    const link = join(processScratch("ak-doctor-jev-disabled-link-"), "jev.env");
+    symlinkSync(keyed(`TYPESAFE_API_KEY=${value}\n`), link);
+    for (const file of [unsafe, link]) {
+      const item = checkSemanticLint(file, undefined);
+      expect(item.level).toBe("WARN");
+      expect(item.detail).toBe(notOne);
+      expect(JSON.stringify(item)).not.toContain(value);
+    }
+  });
+
+  test("doctor warns on unset even with a good key file", () => {
+    const run = doctorWith(value, 0o600, null);
+    expect(JSON.parse(run.stdout)).toHaveProperty(
+      "findings",
+      expect.arrayContaining([
+        expect.objectContaining({
+          check: "semantic lint",
+          level: "WARN",
+          detail: notOne,
+        }),
+      ]),
+    );
+    expect(run.stdout + run.stderr).not.toContain(value);
+  });
+
+  test("the doctor reports the key file it found and never prints its value", () => {
+    for (const [mode, level] of [
+      [0o600, "PASS"],
+      [0o644, "FAIL"],
+    ] as const) {
+      const run = doctorWith(value, mode);
+      expect(run.stdout.split('"check":"semantic lint"')).toHaveLength(2);
+      expect(JSON.parse(run.stdout)).toHaveProperty(
+        "findings",
+        expect.arrayContaining([expect.objectContaining({ check: "semantic lint", level })]),
+      );
+      expect(run.stdout + run.stderr).not.toContain(value);
+    }
+  });
+
+  test("the bundled CLI runs the Stop hook and refuses other arguments", () => {
+    const home = processScratch("ak-cli-jev-home-");
+    const env = { PATH: process.env.PATH, HOME: home };
+    const quiet = spawnSync(process.execPath, [maintenanceCli, "semantic-lint", "hook"], {
+      cwd: home,
+      env,
+      encoding: "utf8",
+    });
+    expect(quiet.status).toBe(0);
+    expect(JSON.parse(quiet.stdout)).toEqual({
+      status: "skipped",
+      reason: "disabled",
+      findings: [],
+      advisory: true,
+      excluded: [],
+      excludedOmitted: 0,
+    });
+    const codex = spawnSync(process.execPath, [maintenanceCli, "semantic-lint", "hook", "--host", "codex"], {
+      cwd: home,
+      env,
+      encoding: "utf8",
+    });
+    expect(JSON.parse(codex.stdout)).toEqual({});
+    for (const args of [["semantic-lint"], ["semantic-lint", "hook", "--host"], ["semantic-lint", "wire", "x"]]) {
+      const bad = spawnSync(process.execPath, [maintenanceCli, ...args], {
+        cwd: home,
+        env: { ...env, AK_JEV_ENABLED: "0" },
+        encoding: "utf8",
+      });
+      expect(bad.status).toBe(2);
+      expect(bad.stdout).toBe("");
+      expect(bad.stderr).toStartWith("Usage: ak doctor");
+    }
   });
 });

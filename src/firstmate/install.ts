@@ -48,6 +48,8 @@ function evidenceText(evidence: Evidence): string {
   return `${ENV_HEADER}\nAK_FIRSTMATE_EVIDENCE=${evidence.store}\nAK_FIRSTMATE_EVIDENCE_LOCATION=${evidence.location}\n`;
 }
 
+const SEMANTIC_LINT_HOOK = "tools/hooks/semantic-lint.ts";
+
 function settingsText(akRoot: string): string {
   const hook = join(akRoot, CHILD_GUARD);
   const settings = {
@@ -58,6 +60,8 @@ function settingsText(akRoot: string): string {
           hooks: [{ type: "command", command: `bash '${hook}' --binding '${BINDING_TOKEN}'` }],
         },
       ],
+      // The advisory semantic lint: off unless AK_JEV_ENABLED=1 in the hook process.
+      Stop: [{ hooks: [{ type: "command", command: `bun '${join(akRoot, SEMANTIC_LINT_HOOK)}' hook`, timeout: 30 }] }],
     },
   };
   return `${JSON.stringify(settings, null, 2)}\n`;

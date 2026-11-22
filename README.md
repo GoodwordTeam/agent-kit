@@ -1,9 +1,9 @@
 # agent-kit
 
-One engineering lifecycle, amalgamated from ten donors (nine MIT-licensed, one Apache-2.0) into a single installable
+One engineering lifecycle, amalgamated from eleven donors (ten MIT-licensed, one Apache-2.0) into a single installable
 catalog — rather than four plugins competing over activation descriptions.
 
-**36 public skills · 8 domain packs · 9 protocols · 36 role prompts · 9 reference packs · 36 schemas**,
+**36 public skills · 8 domain packs · 9 protocols · 39 role prompts · 11 reference packs · 36 schemas**,
 with a validator (`ak`) that makes the catalog self-checking and a packager that emits per-host
 bundles.
 
@@ -55,22 +55,89 @@ codex plugin add ak@agent-kit
 ```
 
 `ak doctor` prints PASS, WARN or FAIL with a remedy for each host and project check, and exits
-nonzero on FAIL. Use `ak doctor --json` for machine-readable findings. `ak update` refreshes each
-installed host and reports old and new versions; it is safe to rerun. If the curl-installed
+nonzero on FAIL. Where the project has review-isolation probe notes under `research/host-facts/`,
+it warns, without a model call or network access, when an installed host's `--version` differs
+from the last probed version. A missing host, missing note, or project without those notes emits
+no extra finding and does not spawn `--version`. Use `ak doctor --json` for
+machine-readable findings. `ak doctor` also reads the project's canonical
+learnings file — the memory ledger's lesson pages, or `--lessons <dir>` for
+another ledger — and reports, per live lesson, whether it is enforced or
+prose-only (superseded and conflicting lessons are history and are skipped): a lesson is enforced only when its `check` field names a check
+`ak doctor` itself runs (tracker token, tracker binding, plugin enabled and
+the rest of the registry in `src/learn/lessons.ts`), and an enforced lesson
+whose check currently FAILs fails that lesson's finding too. Prose-only
+lessons warn; they never fail the run on their own. That report is the AFK
+preflight surface for lessons: captains and workers already get the
+confirmed lessons at session start through the learning runtime's
+session-start block, and running `ak doctor` before dispatch shows which of
+them bite. After a run, `ak learn memory triage --file <failures.json>`
+dedupes stated failures against the live lesson pages and within the file
+(restating a history lesson makes a new one),
+appends new lessons as the next pages (as `hypothesis`; consolidation
+confirms them from evidence), keeps a duplicate's check and issue link in
+its run record and printed line without touching the lesson page, and
+records failures with no issue link as
+issue candidates in the ledger's `raw/triage-issues.jsonl`. It makes no
+judge call and files no issue. `ak update` refreshes each installed host and reports old and new
+versions; it is safe to rerun. If the curl-installed
 `bin/ak` differs from the published command, update warns and gives the download remedy. Add
 `$HOME/.local/bin` to `PATH` if it is not already there. The same command carries
 `ak delegation <ticket> --project <project-record>`, which `/ak:super-bound` runs to score each
 ticket, so that skill needs a current `ak` on `PATH`
 ([`skills/super-bound/SKILL.md`](skills/super-bound/SKILL.md)). It also carries `ak learn`, the opt-in learning runtime
 ([`adapters/claude-code/CONTRACT.md`](adapters/claude-code/CONTRACT.md) §7). The `published` branch
-is created by `.github/workflows/publish-bundle.yml` after a green push to `main`. On the first
-merge, wait for that workflow to complete before using the commands above; no release tag is
-needed. Later bundle changes require a new matching version in `catalog.yaml` and `package.json`;
+is created by `.github/workflows/publish-bundle.yml` after a green run for a merged commit. Publication
+requires the release tag `v<version>` at the merged commit on `main`, so the run for the push to
+`main` refuses a changed bundle. Pushing that tag runs the workflow at the tagged commit, which it
+builds and publishes once it confirms the commit is on `main`. To retry, dispatch the workflow with
+the tag as its ref; a dispatch at the tip of `main` refuses once `main` has moved past the tagged
+commit. On the first merge, tag the merged commit, wait for that workflow to complete, then use the
+commands above. Later bundle changes require a new matching version in `catalog.yaml` and `package.json`;
 `tools/publish/version-gate.sh` refuses changed bundles at the old version, in pull-request CI and
 again before publishing, so host caches cannot hide an update.
 
 Use `ak learn skills list [--repo P]` to inspect skill candidates, their status, use counts and
 evidence. If the skills ledger is absent, the command reports zero counts without creating it.
+
+Learning and memory use `AK_LEARN_JUDGE` as the primary judge command. Optional
+`AK_LEARN_JUDGE_FALLBACKS` is a JSON array of command strings, tried in order after a quota or
+service availability failure, missing executable or timeout. For example:
+`["/opt/judges/secondary --json", "/opt/judges/reserve --json"]`. Commands use the primary's
+quote splitting rules, with no shell expansion. Every command receives the same prompt on stdin
+and must return the same JSON object on stdout. Ordinary failures and malformed replies retain
+one retry. With no fallback configured, a quota, service availability or missing-executable
+failure keeps that same retry, and a timeout still returns at once. A role's `unavailable` reply
+ends the call. Exhaustion returns no judgement and writes no learned content. `judge-calls.jsonl` records each attempt's outcome, `judge_index` (primary 0)
+and `judge_command_sha256` (SHA256 of the configured argv as JSON), identifying the answering binding
+without storing its arguments. No alternatives run unless configured.
+
+Bind only adapters verified against this contract, with comparable reasoning capability. Each
+adapter wrapper must check current quota and remaining capacity at call time and decline when
+unavailable. The runtime does not verify comparability or provider capacity. Keep these bindings
+in the operator's environment; this repository carries no provider selection. The subscription-only
+`ak learn doctor` still refuses commands outside its verified host adapter. Live verification of
+an operator's bindings is a separate owner action.
+
+Use `ak learn doctor run --out DIR [--repo P | --all]` to score recent Claude Code, Codex and Grok
+sessions against four rubrics and write one self-contained HTML report. The report lists the
+proposed skill edits that passed every gate, each with its diff. `--out` holds condensed
+transcripts, so it must be outside every work tree or a path git ignores. The command never edits
+a skill file. With
+`--record`, it keeps the proposals in the skills ledger. `ak learn doctor accept|reject <id>`
+then records your decision, and the next run reads it. The design is adapted from
+warpdotdev/common-skills `skill-doctor`.
+
+`ak learn doctor loop --out DIR --repo P` is the improvement loop on top of that run. It takes the
+proposals that the failed sessions support and asks the signed-in seat for each as a rewrite of the
+whole skill file. It refuses an appended addendum, and refuses text that repeats a session. With
+`--publish` it opens one pull request per rewrite through the repository's `no-mistakes` remote, and
+refuses when that remote is absent. Without `--publish` the rewrites stay in `DIR/rewrites/`.
+It never merges. The next pass records a merge as accepted and a close as rejected. `ak learn doctor
+schedule` writes a local scheduler unit for the loop that runs on Sundays at noon, and not at login or
+boot, and loads it only with `--load`. Where only cron exists, it prints the crontab line for you to add
+and remove. The unit runs on this machine because the transcripts and the signed-in
+seat are here, and `ak learn setup uninstall` removes it. See
+`docs/decisions/0016-skill-doctor-improvement-loop.md`.
 
 Grok Build has a generated Claude-compatible bundle at `dist/grok`. Build it with
 `bun run ak build --host grok`, then install that local directory with
@@ -81,13 +148,30 @@ Grok's Claude-compatibility skill discovery may also load an installed Claude `a
 
 `profiles/core.yaml` is the recommended install. The full catalog has a real startup cost even
 with progressive disclosure.
+To make autonomy the default for one project, set `autonomy: {default: true}` in a valid project
+record and run `bun run ak build --project <record-path>`. The package default remains core;
+`--profile` overrides the project setting. The installed profile alone grants no action: the live
+runner still needs a charter, independent seats, a delivered-event consumer and an audit loop.
 
 Factory Droid has a native bundle at `dist/droid`, built with `bun run ak build --host droid`.
 Its human-started commands use `/<id>`. See the [Droid host contract](adapters/droid/CONTRACT.md)
 for isolated local installation and acceptance limits. Installation is model-free verified;
 live acceptance remains separate for each served binding, and `ak update` does not manage Droid.
 
+Cursor IDE and Cloud Agents use the native bundle at `dist/cursor`, built with
+`bun run ak build --host cursor` (or `--out <dir>` for a dedicated directory).
+Human-started skills use `/<id>`. Vendor `.cursor/skills/` and `.cursor/agents/`
+into the consuming repository so Cloud Agents load them from the clone. Cloud
+Agents run `.cursor/bin/ak` from the repo root, not `ak` or `bun run ak`. See the
+[Cursor host README](adapters/cursor/README.md) for the exact rsync commands and
+[contract](adapters/cursor/CONTRACT.md) for discovery paths and super-review seating.
+`ak update` does not manage Cursor.
+
 ## Guard hook
+
+The Claude Code and Codex bundles and `ak firstmate install` register an advisory
+[semantic lint `Stop` hook](docs/semantic-lint.md). The source checkout provides the same command
+for manual wiring. See its contract for enablement and key-file requirements.
 
 The source CLI (`bun run ak`) and the installed `bin/ak` carry the opt-in Claude Code hook:
 
@@ -112,10 +196,19 @@ unreadable judged inputs, other payload events, PowerShell and caught guard erro
 A deny writes `hookSpecificOutput.permissionDecision: "deny"` and its reason to stdout with exit 0.
 An allow is silence with exit 0; the encoder never emits `allow` or `ask`. Unknown hook events or
 hosts exit 1 without a verdict. A missing or unknown `ak guard` verb prints usage and exits 2.
-The guard is feedback, not a security boundary: a missing, timed-out or crashing hook lets the call
-through on Claude Code ([host evidence](research/host-facts/2026-10-03/claude-code-1-hook-failures.md)).
-No hook is wired automatically. Codex support is deferred to CS-12; setup, the `guard` profile and
-block logging are deferred to CS-13 in the [implementation plan](research/briefs/constitution-support-plan.md).
+
+[`templates/guard/review-session.policy.json`](templates/guard/review-session.policy.json)
+lists Claude Code's session store (`**/.claude/projects/**`) under `secret_paths` so a review
+seat's read of the author's transcript is denied. It does not match the host's own memory
+files (`CLAUDE.md`, `~/.claude/memory/`, `~/.claude/settings.json` and other paths under
+`~/.claude/` outside `projects/`). Nothing wires this file automatically; pass it as
+`--policy`. See [`templates/guard/README.md`](templates/guard/README.md).
+
+The guard is feedback, not a security boundary. A missing, timed-out or crashing hook lets
+the call through on Claude Code ([host evidence](research/host-facts/2026-10-03/claude-code-1-hook-failures.md));
+the deny is a signal, not confinement. Codex guard support is deferred to CS-12, so on Codex
+the transcript-on-disk channel stays uncovered. Setup, the `guard` profile and block logging
+are deferred to CS-13 in the [implementation plan](research/briefs/constitution-support-plan.md).
 
 ## The spine: seven super skills
 
@@ -128,8 +221,15 @@ The lifecycle is seven skills, not twenty. Each has one job, one required output
 | `super-scout` | Bounded read-only exploration into a revision-bound evidence dossier | Reports coverage limits and unknowns — **never an architectural verdict** |
 | `super-build` | Execute an approved ticket under TDD in an owned worktree | No self-approval, no silent scope expansion |
 | `super-verify` | Acceptance-to-evidence matrix with command, exit status, revision | An agent's description of green tests is not a receipt |
-| `super-review` | Specialist panel (full) or two-axis delta on a fix | Reviewers cannot edit |
+| `super-review` | Specialist panel (full) or two-axis delta on a fix — first pass seats by review depth when routing is on | Reviewers cannot edit |
 | `super-ship` | Release checks and PR preparation | Merge and deploy are separate capabilities |
+
+The agent starts `super-review` full and readiness as part of the work. No slash command or grant
+is required. See [review authority](skills/super-review/SKILL.md#authority) for start rules and
+the boundary between starting a review and approving it. The project setting `review.routing`
+takes `off`, `shadow` or `on` and defaults to `off`. The delegation class selects how many
+baseline seats sit; activated risk seats always sit, and the delivery pipeline's Review is
+unchanged ([ADR-0017](docs/decisions/0017-review-depth-follows-delegation-class.md)).
 
 Plus `autopilot`: a human-started supervisor pair, or a Firstmate-started one under a
 runner-validated standing grant in a captain-approved charter. It exercises delegated checkpoint
@@ -148,6 +248,22 @@ See [super-ship](skills/super-ship/SKILL.md) for its inputs and
 [direct transport](skills/super-ship/references/transport-direct.md) for selection and publication
 instructions when using `git` and `gh` without a gate.
 
+Before pull-request text leaves the machine, `super-ship` runs `ak-gate.mjs publish-scan` on its
+title, body and commit messages, and `babysit-pr` runs it on the commits a CI repair pushes. To use it, list your internal markers in
+`~/.agent-kit/publish-markers` (or the file `AK_PUBLISH_MARKERS` names), one entry per line:
+`owner: <forge owner>` for the owners whose private repositories are internal, `marker: <text>` for
+organization names, internal hostnames and work e-mail domains, and `instructions: <file>` for your
+own agent instructions, which must not be copied into a public pull request. Standard commit trailers
+and a generated-by footer naming only its tool are not matched against those instructions; `allow: <text>` exempts other
+boilerplate they share with every pull request. The scan stops on a hit
+unless the target is private or internal and its owner is listed. Without the file it scans nothing
+and says so. The matching is heuristic: a marker is caught only as written, in any letter case,
+instruction text only as 8 or more consecutive copied words, and nothing outside the title, body
+and commit messages is read, so a pass is not proof that the text is clean. A commit message is
+read only up to a NUL byte, which only a commit built by hand with plumbing can hold.
+When scanning commits, `--commits <range>` requires a nonempty revision expression that does not
+start with `-`; a valid range containing no commits, such as `HEAD..HEAD`, contributes zero commit texts.
+
 **Firstmate is optional**, for people who want one supervisor running several agents at once.
 On an unmodified Firstmate home, run `ak firstmate preflight`, start the task-scoped `ak runner`
 service, and add the section printed by `ak firstmate brief` to an ordinary crewmate brief. Use the
@@ -156,6 +272,22 @@ start, checkpoint ledger and trusted evidence outside the worker worktree. The o
 `ak firstmate bind` and the patched-home path are deprecated for existing installations; they are
 not required for stock Firstmate (`adapters/firstmate/CONTRACT.md`). Nothing in core, its tests or
 CI needs Firstmate installed.
+
+**The council is optional.** `ak council run --card <card.json> --council-config <roster> [--context <file>]... [--out <record.json>]`
+asks two primary seats one question outside a runner, and asks a blind veto seat the same question only when both
+primary seats choose `approve`. `isCouncilCard` and `runCouncil` in `src/council/cli.ts` define the card and the
+exit status; `isCouncilConfig`, `rosterProblems` and `isCouncilAnswer` in `src/council/config.ts` define the
+owner-only roster and a launcher's answer. The record grants no authority.
+[ADR-0015](docs/decisions/0015-council-blind-veto.md) owns the rule and the outbound gate;
+[`adapters/runner-contract/CLI.md`](adapters/runner-contract/CLI.md) owns the runner's `--council-config`.
+
+**The convergence ledger is optional.** `ak review ledger add --ledger <ledger.jsonl> --event <file|->` appends what
+seats, the author and a gate reported for one pull request, `ak review ledger show --ledger <ledger.jsonl>` prints the
+state the lines fold to, and `ak review decide --ledger <ledger.jsonl> --head <sha> --seats <n>` prints the verdict for
+one exact head: `approved`, `blocked` or `incomplete`, with one next action. `runReview` in `src/review/cli.ts` defines
+the flags, the records and the exit status; `decide` in `src/review/converge.ts` is the rule, and it reads no file,
+clock or model. The record grants no authority. [ADR-0018](docs/decisions/0018-review-convergence.md) owns the
+evidence bar, the round cap and the stop rule.
 
 **Bypass, for one task.** A supervisor who wants a task to run without typing each phase command writes
 a grant from its own home with `node <bundle>/bin/ak-gate.mjs bypass grant`, and the worker checks it before
@@ -172,14 +304,16 @@ directory with no entry.
 
 | Group | Members |
 |---|---|
-| **Lifecycle** (7) | `super-align` U · `super-bound` U · `super-scout` M · `super-build` M · `super-verify` M · `super-review` U/M · `super-ship` U |
+| **Lifecycle** (7) | `super-align` U · `super-bound` U · `super-scout` M · `super-build` M · `super-verify` M · [super-review](skills/super-review/SKILL.md#authority) · `super-ship` U |
 | **Supervisor** (1) | `autopilot` U |
 | **Standalone** (22) | `codebase-design` M · `verify` U · `visual-edit` U · `compound` U · `compound-refresh` U · `ideate` U · `pov` U · `bakeoff` U · `doc-review` M · `receiving-review` U · `diagnose` M · `improve-architecture` U · `doubt-driven` U · `simplify` M · `research` M · `source-driven` M · `deprecate` U · `explain` U · `triage` U · `strategy` U · `product-pulse` U · `writing-skills` U |
 | **Primitives** (4) | `prototype` M · `handoff` M · `wait-what` M · `wayfind` U |
 | **Operational** (2) | `babysit-pr` U · `ultraqa` U |
 
 **U** = user-invoked; only a human starts it except autopilot under Firstmate's runner-validated
-standing grant. **M** = model-invoked. See the invocation law in
+standing grant, a phase under a supervisor's bypass grant, and align, bound and ship under the
+opt-in unattended policy (`docs/decisions/0014-unattended-lifecycle-policy.md`). **M** =
+model-invoked. See the invocation law in
 `AGENTS.md`.
 
 ### Packs (8)
@@ -197,17 +331,18 @@ Shared phase logic, invoked by skills rather than by humans:
 `phase-operations` · `consensus-plan-gate` · `tdd` · `apply-findings` · `review-delta` ·
 `worktree-ownership` · `attach-pack` · `evidence-gate` · `work-trail`
 
-### Roles (36)
+### Roles (39)
 
 6 core (`supervisor`, `implementer`, `verifier`, `reviewer-spec`, `reviewer-standards`, `trail-auditor`) · 15 code-review ·
-7 doc-review · 3 plan-review (`planner`, `architect`, `critic`) · 5 learn (`learn/pattern-maintainer`,
-`learn/reflector`, `learn/consolidator`, `learn/lesson-merger`, `learn/skill-scout`).
+8 doc-review · 3 plan-review (`planner`, `architect`, `critic`) · 7 learn (`learn/pattern-maintainer`,
+`learn/reflector`, `learn/consolidator`, `learn/lesson-merger`, `learn/skill-scout`,
+`learn/session-scorer`, `learn/skill-doctor`).
 
-### References (9)
+### References (11)
 
 `codebase-design-vocabulary` · `domain-modeling` · `engineering-principles` · `prose-quality` ·
 `tracker-of-record` · `delegation` · `structural-checks` · `verification-evidence` ·
-`knowledgebase-binding`. Loaded on demand,
+`knowledgebase-binding` · `read-economy` · `unattended-lifecycle`. Loaded on demand,
 never exposed as slash commands. `structural-checks` is declared at `status: contract`; its body is
 not authored yet.
 
@@ -223,18 +358,24 @@ bun run ak kb check <project-dir>       # a project's knowledgebase binding, and
 ```
 
 `bun run test` runs every test file once. The ordinary lane uses four parallel workers
-by default; set `AK_TEST_PARALLEL` to change the worker count (for example,
+when the one-minute load average per CPU is below 2, two workers from 2 up to 4, and one
+worker at 4 or above. Set `AK_TEST_PARALLEL` to override that count (for example,
 `AK_TEST_PARALLEL=1 bun run test`). It finishes before starting
 the files in `tools/test/integration-files.txt`. Each integration file runs in a fresh
 Bun process with concurrency limited to one. This separates the learning role calls,
 bundle CLI, Git fixtures, Firstmate, lifecycle and runner tests from the rest of the
-suite and from each other. Test and hook timeouts, assertions and role calls stay
-unchanged. There are no retries. Both lanes finish even if an earlier file fails;
-the command then returns failure. CI and the configured gate use `bun run test`.
+suite and from each other. The runner does not retry a file or an assertion. A git spawn
+is tried again, at most three times, only when it does not finish or when a read that
+must print a path or a hash exits 0 with empty output. A silent success, such as
+deleting or setting a symbolic ref, is left as it is. Both lanes finish even if an earlier file fails;
+the command then returns failure. CI uses `bun run test`; the no-mistakes gate does not run the
+suite (`.no-mistakes.yaml` says why).
 
-The runner gives both lanes a private `TMPDIR` and removes it at exit. Before Bun
-starts, it clears inherited Git overrides from `GIT_CONFIG_PARAMETERS` and
-`GIT_CONFIG_COUNT`, and disables automatic Git maintenance. On macOS, when Git resolves to `/usr/bin/git`,
+The runner gives both lanes a private `TMPDIR` and removes it at exit. Shared fixture
+helpers use a separate process directory; [`tests/helpers/process-tmp.ts`](tests/helpers/process-tmp.ts)
+owns its path and cleanup policy. Before Bun starts, the runner clears inherited Git
+overrides from `GIT_CONFIG_PARAMETERS` and `GIT_CONFIG_COUNT`, and disables automatic Git
+maintenance. On macOS, when Git resolves to `/usr/bin/git`,
 it bypasses that launcher with a link to the selected developer tool only if the link
 preserves Git's executable search path.
 
@@ -270,7 +411,6 @@ and the release scenario that tests it; the ids below are the lookup keys.
 
 ## Provenance
 
-Ten donors, pinned to exact commits in `provenance/upstream.lock.yaml`: nine MIT and one Apache-2.0.
 For adopted and research-only upstream pins, see [`provenance/upstream.lock.yaml`](provenance/upstream.lock.yaml).
 The research-only [`caveman-ai/blocks` pin](research/sources/caveman-blocks-verified-blocks.md) records the procedure-detection donor and its licence and trademark limits; no donor executable is shipped.
 Six MIT donors make up the engineering lifecycle (pinned 2026-09-18):
@@ -279,8 +419,9 @@ Six MIT donors make up the engineering lifecycle (pinned 2026-09-18):
 `BuilderIO/skills` (MIT, pinned at its 2026-09-30 commit) is the source of `visual-edit`.
 `cursor/plugins` (MIT, pinned at its 2026-10-03 commit) holds pstack, and only its `pstack/`
 directory is used: from it agent-kit takes the shape of the work trail and its audit, nothing else.
-Two more feed the opt-in learning runtime: `BayramAnnakov/claude-reflect` (MIT) and
-`thedotmack/claude-mem`, which is **Apache-2.0**, not MIT. Its licence text and NOTICE are in
+Three more feed the opt-in learning runtime: `BayramAnnakov/claude-reflect` (MIT),
+`warpdotdev/common-skills` (MIT, pinned at its 2026-10-20 commit; only its skill-doctor directory
+is used, by `ak learn doctor`) and `thedotmack/claude-mem`, which is **Apache-2.0**, not MIT. Its licence text and NOTICE are in
 `provenance/licenses/`, the root `NOTICE` carries its NOTICE, and each file adapted from it records
 what was changed.
 

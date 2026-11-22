@@ -18,11 +18,23 @@ import {
   type BindingValidators,
   type TrackerBinding,
 } from "../tracker/binding.ts";
-import { scoreDelegationFiles } from "../delegation.ts";
+import { delegationRunProblem, scoreDelegationRun, type DelegationRun } from "../delegation.ts";
 import { findKbProjectRoot, registryPath, resolveKnowledgebase } from "../kb/binding.ts";
+import { IN_REPO_MISSING_REMEDY } from "../kb/in-repo.ts";
 import { runKb } from "../kb/cli.ts";
 import { readHookStdin, runLearn } from "../learn/cli.ts";
 import { readGuardStdin, runGuard } from "../guard/cli.ts";
+import { runRunner } from "../runner/cli.ts";
+import { runCouncil } from "../council/cli.ts";
+import { runReview } from "../review/cli.ts";
+import { readKeyFile } from "../semantic-lint/key.ts";
+import pin from "../../provenance/semantic-lint.json" with { type: "json" };
+import { hookMain } from "../../tools/hooks/semantic-lint.ts";
+import { probedHostVersionFindings, readInstalledHostVersion } from "./host-probe-version.ts";
+import { loadConfig } from "../learn/core/config.ts";
+import { loopDir } from "../learn/core/paths.ts";
+import { sessionRoot } from "../learn/memory/session-context.ts";
+import { classifyLessons, lessonsFindings, readLessons, type LessonFinding } from "../learn/lessons.ts";
 
 type Level = "PASS" | "WARN" | "FAIL";
 export interface Finding {
@@ -372,11 +384,19 @@ export function checkKnowledgebase(cwd: string, registry: string = registryPath(
     return finding(
       "PASS",
       "knowledgebase binding",
-      `${kb.binding.backend} reaches '${kb.knowledgebase}' for project '${kb.binding.project}'`,
+      `${kb.binding.backend} reaches '${kb.knowledgebase}' for project '${kb.binding.project}'${kb.inRepo === undefined ? "" : ", read-only: a publish is skipped"}`,
       "No action needed.",
     );
   }
   const issue = resolution.issues[0];
+  if (issue?.rule === "kb.in-repo-missing") {
+    return finding(
+      "WARN",
+      "knowledgebase binding",
+      `kb.in-repo-missing: ${issue.message}`,
+      `${IN_REPO_MISSING_REMEDY} Then run ak kb check.`,
+    );
+  }
   if (resolution.state === "unavailable") {
     return finding(
       "WARN",
@@ -480,13 +500,84 @@ export async function manifest(
   }
 }
 
+/** Reads the key through the hook's own strict reader and keeps only whether it holds one. */
+export function checkSemanticLint(keyFile: string, flag: string | undefined): Finding {
+  const check = "semantic lint";
+  if (flag !== "1")
+    return finding(
+      "WARN",
+      check,
+      "AK_JEV_ENABLED is not 1 in this shell; the Stop hook runs only where its host process has AK_JEV_ENABLED=1",
+      "If the hook's host already has AK_JEV_ENABLED=1, re-run doctor with it set to check the key. Doctor reads only this shell.",
+    );
+  let present: boolean;
+  try {
+    present = readKeyFile(keyFile) !== null;
+  } catch {
+    return finding(
+      "FAIL",
+      check,
+      `${keyFile} is not a private owner-only file with one key assignment`,
+      "Make it a regular file you own, mode 0600, holding one TYPESAFE_API_KEY= line.",
+    );
+  }
+  return present
+    ? finding(
+        "PASS",
+        check,
+        "key file present and owner-only; the Stop hook runs on changed files when the host process also has AK_JEV_ENABLED=1",
+        "None.",
+      )
+    : finding(
+        "WARN",
+        check,
+        `no key file at ${keyFile}; the Stop hook skips (missing-key)`,
+        "Place an existing key in that file, mode 0600, to turn the check on.",
+      );
+}
+
 function print(items: Finding[], json = false): number {
   if (json) console.log(JSON.stringify({ findings: items }));
   else for (const item of items) console.log(`${item.level} ${item.check}: ${item.detail}. Remedy: ${item.remedy}`);
   return items.some((item) => item.level === "FAIL") ? 1 : 0;
 }
 
-async function doctor(json = false): Promise<number> {
+/**
+ * Lessons coverage for `ak doctor`: the canonical learnings file is the
+ * current project's memory ledger, unless `--lessons <dir>` names another
+ * ledger, whose pages sit under its `lessons/`. Reading it is
+ * what loads the lessons at a preflight; session start loads the confirmed
+ * ones into the worker's context. A ledger that cannot be resolved is a
+ * warning naming that, never silence.
+ */
+export function doctorLessonsFindings(lessonsDir: string | undefined, ran: readonly Finding[]): Finding[] {
+  let dir = lessonsDir;
+  if (dir === undefined) {
+    try {
+      const root = sessionRoot(process.cwd());
+      if (root === null) throw new Error("no project root");
+      dir = loopDir(loadConfig(process.env), root, "memory");
+    } catch {
+      return [
+        finding(
+          "WARN",
+          "lessons coverage",
+          "the canonical learnings file could not be located for this project",
+          "Pass --lessons <ledger-dir> naming the memory ledger to read.",
+        ),
+      ];
+    }
+  }
+  const coverage = classifyLessons(readLessons(dir));
+  return lessonsFindings(coverage, ran).map((row: LessonFinding): Finding => ({
+    level: row.level,
+    check: row.check,
+    detail: row.detail,
+    remedy: row.remedy,
+  }));
+}
+
+async function doctor(json = false, lessonsDir?: string): Promise<number> {
   const [claudeSource, codexSource] = await Promise.all([manifest("claude-code"), manifest("codex")]);
   const hostRoot = projectRoot();
   const claude = claudeRecords(hostRoot);
@@ -506,12 +597,17 @@ async function doctor(json = false): Promise<number> {
       : finding("WARN", "Codex marketplace source", "not configured", `Add ${SOURCE_REPO} --ref published.`),
     checkPlugin("Claude Code", claude, claudeSource.value?.version ?? null),
     checkPlugin("Codex", codex, codexSource.value?.version ?? null),
+    ...probedHostVersionFindings(join(hostRoot, "research/host-facts"), (host) =>
+      readInstalledHostVersion(host, process.env),
+    ),
     checkProjectEnablement(process.cwd()),
     binding.finding,
     checkToken(root, binding.binding),
     checkLinearis(root, binding.binding?.backend ?? null),
     checkKnowledgebase(process.cwd()),
+    checkSemanticLint(join(homedir(), pin.key_file), process.env.AK_JEV_ENABLED),
   ];
+  items.push(...doctorLessonsFindings(lessonsDir, items));
   if (!hasClaude && !hasCodex) {
     items.push(
       finding(
@@ -629,9 +725,59 @@ async function update(): Promise<number> {
   return failures ? 1 : 0;
 }
 
+/** `ak doctor [--json] [--lessons <dir>]`: null when a flag is neither, or `--lessons` has no value. */
+function doctorFlags(flags: readonly string[]): { json: boolean; lessons?: string } | null {
+  let json = false;
+  let lessons: string | undefined;
+  for (let i = 0; i < flags.length; i += 1) {
+    const flag = flags[i];
+    if (flag === undefined) return null;
+    if (flag === "--json") json = true;
+    else if (flag === "--lessons") {
+      lessons = flags[i + 1];
+      if (lessons === undefined || lessons.startsWith("--")) return null;
+      i += 1;
+    } else return null;
+  }
+  return { json, lessons };
+}
+
+const DELEGATION_FLAGS = new Set(["project", "stage", "base", "head", "evidence"]);
+
+/** One ticket path and the delegation flags, each with a value; anything else is the usage line. */
+function delegationRun(args: readonly string[]): DelegationRun | null {
+  const positional: string[] = [];
+  const values = new Map<string, string>();
+  for (let i = 0; i < args.length; i += 1) {
+    const token = args[i] ?? "";
+    if (!token.startsWith("--")) {
+      positional.push(token);
+      continue;
+    }
+    const [name = "", inline] = token.slice(2).split("=", 2);
+    const value = inline ?? args[i + 1];
+    if (!DELEGATION_FLAGS.has(name) || values.has(name) || value === undefined || value.startsWith("--")) return null;
+    if (inline === undefined) i += 1;
+    values.set(name, value);
+  }
+  const project = values.get("project");
+  const ticket = positional[0];
+  if (ticket === undefined || positional.length !== 1 || project === undefined) return null;
+  return {
+    ticket,
+    project,
+    stage: values.get("stage"),
+    base: values.get("base"),
+    head: values.get("head"),
+    evidence: values.get("evidence"),
+  };
+}
+
 if (import.meta.main) {
   const action = process.argv[2];
   const flags = process.argv.slice(3);
+  const doctorArgs = action === "doctor" ? doctorFlags(flags) : null;
+  const delegation = action === "delegation" ? delegationRun(flags) : null;
   if (action === "learn") {
     // The learning runtime travels in this bundle so a plugin install can run it without a checkout.
     const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
@@ -644,22 +790,39 @@ if (import.meta.main) {
     // The knowledgebase operations travel here too: a lifecycle skill calls them from an install with no checkout.
     const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
     process.exitCode = runKb(flags, { cwd: process.cwd(), io });
-  } else if (
-    (action === "doctor" && flags.every((flag) => flag === "--json") && flags.length <= 1) ||
-    (action === "update" && flags.length === 0)
-  )
-    process.exitCode = action === "doctor" ? await doctor(flags[0] === "--json") : await update();
-  else if (action === "delegation" && flags.length === 3 && flags[1] === "--project") {
-    // The bundle's only `ak`: super-bound runs the scorer from an install that has no repository checkout.
-    try {
-      console.log(JSON.stringify(scoreDelegationFiles(flags[0] ?? "", flags[2] ?? ""), null, 2));
-    } catch (cause) {
-      console.error(`ak delegation: ${cause instanceof Error ? cause.message : String(cause)}`);
+  } else if (action === "runner") {
+    const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
+    process.exitCode = await runRunner(flags, io);
+  } else if (action === "council") {
+    // The standalone council (ADR-0015) travels here too: an install with no checkout runs it.
+    const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
+    process.exitCode = await runCouncil(flags, io);
+  } else if (action === "review") {
+    // The convergence ledger and its verdict (ADR-0018) travel here too: a review protocol calls them from an install with no checkout.
+    const io = { out: (line: string) => console.log(line), err: (line: string) => console.error(line) };
+    process.exitCode = runReview(flags, io);
+  } else if (action === "semantic-lint" && flags[0] === "hook" && (await hookMain(flags.slice(1))) === 0) {
+    // The plugin's Stop hook: hookMain printed the host output.
+  } else if (doctorArgs !== null) process.exitCode = await doctor(doctorArgs.json, doctorArgs.lessons);
+  else if (action === "update" && flags.length === 0) process.exitCode = await update();
+  else if (delegation !== null) {
+    // The bundle's only `ak`: super-bound runs the scorer, and a merge check runs it with --stage merge,
+    // from an install that has no repository checkout.
+    const problem = delegationRunProblem(delegation);
+    if (problem !== null) {
+      console.error(problem);
       process.exitCode = 1;
+    } else {
+      try {
+        console.log(JSON.stringify(scoreDelegationRun(delegation, process.cwd()), null, 2));
+      } catch (cause) {
+        console.error(`ak delegation: ${cause instanceof Error ? cause.message : String(cause)}`);
+        process.exitCode = 1;
+      }
     }
   } else {
     console.error(
-      "Usage: ak doctor [--json] | ak update | ak delegation <ticket> --project <path> | ak learn … | ak guard hook <event> … | ak kb …",
+      "Usage: ak doctor [--json] [--lessons <dir>] | ak update | ak delegation <ticket> --project <path> [--stage merge --base <rev> [--head <rev>] [--evidence <file>]] | ak learn … | ak guard hook <event> … | ak kb … | ak runner serve|call … | ak council run … | ak review ledger add|show … | ak review decide … | ak semantic-lint hook [--host codex]",
     );
     process.exitCode = 2;
   }

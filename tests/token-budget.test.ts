@@ -9,12 +9,11 @@
  * the ratchet does, not about the size of any text in the repository.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, lstatSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, lstatSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { loadCatalog } from "../src/catalog/load.ts";
-import { HOST_IDS } from "../src/packaging/hosts.ts";
+import { HOST_IDS, packagedSkillFile } from "../src/packaging/hosts.ts";
 import {
   applyUpdate,
   compare,
@@ -29,6 +28,7 @@ import {
   type Baseline,
 } from "../tools/budget/ratchet.ts";
 import { collectSurfaces, withDefaultInstall, type Surface } from "../tools/budget/surfaces.ts";
+import { processScratch } from "./helpers/process-tmp.ts";
 
 const REPO = resolve(import.meta.dir, "..");
 
@@ -57,8 +57,17 @@ describe("this tree's agent-facing text", () => {
       "hook:session-start (invented project)",
       "firstmate:adapters/firstmate/WORKER.md",
       "firstmate:stock-brief",
-      ...["pattern-maintainer", "reflector", "consolidator", "lesson-merger", "skill-scout"].map((r) => `judge:${r}`),
+      ...[
+        "pattern-maintainer",
+        "reflector",
+        "consolidator",
+        "lesson-merger",
+        "skill-scout",
+        "session-scorer",
+        "skill-doctor",
+      ].map((r) => `judge:${r}`),
       "distill:tool-calls",
+      "hook:semantic-lint-questions",
       ...catalog
         .bySection("roles")
         .filter((entry) => entry.status === "authored")
@@ -68,7 +77,7 @@ describe("this tree's agent-facing text", () => {
         ...catalog
           .bySection("skills")
           .filter((entry) => entry.status === "authored")
-          .map((entry) => `bundle/${host}:skills/${entry.id}/SKILL.md`),
+          .map((entry) => `bundle/${host}:${packagedSkillFile(host, entry.id)}`),
       ]),
     ];
     expect(expected.filter((id) => !ids.has(id))).toEqual([]);
@@ -141,7 +150,7 @@ describe("the ratchet", () => {
   });
 
   test("the bundle is planned without the install file, which would change its frontmatter", () => {
-    const root = realpathSync(mkdtempSync(join(tmpdir(), "ak-budget-test-")));
+    const root = processScratch("ak-budget-test-");
     writeFileSync(join(root, "ak.install.yaml"), "attached: []\n");
     writeFileSync(join(root, "catalog.yaml"), "skills: []\n");
     const seen = withDefaultInstall(root, (planRoot) => ({

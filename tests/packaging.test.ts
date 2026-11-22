@@ -1,16 +1,45 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+  mkdirSync,
+  symlinkSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, posix } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 import { parse as parseYaml } from "yaml";
 
 import { loadCatalog } from "../src/catalog/load.ts";
+import { DIRECTORY_SECTIONS, entryBodyPath, entryDir } from "../src/catalog/layout.ts";
 import { parseFrontmatter } from "../src/util/frontmatter.ts";
+import { extractRelativeLinks, relativeLinkBetween, resolveFromFile } from "../src/util/links.ts";
+import { linkMentions, mentionResolver, type MentionResolver } from "../src/packaging/mentions.ts";
 import { splitSections } from "../src/validation/bodies.ts";
 import { firstNumberedItem } from "../src/validation/human-start.ts";
 import { compileSchemas } from "../src/validation/schemas.ts";
 import { checkCompleteness } from "../src/validation/completeness.ts";
-import { HOST_IDS, RESTRICTIONS, explicitStartPattern, loadHostCapabilities } from "../src/packaging/hosts.ts";
+import {
+  HOST_IDS,
+  RESTRICTIONS,
+  explicitStartPattern,
+  loadHostCapabilities,
+  packagedAkScriptFile,
+  packagedBinFile,
+  packagedSkillFile,
+  relocateForHost,
+  rewriteAkCommands,
+  type HostId,
+} from "../src/packaging/hosts.ts";
 import { MODE_CEILING_CHECK } from "../src/packaging/capability-table.ts";
 import {
   INSTALL_FILE,
@@ -19,18 +48,146 @@ import {
   loadAdapterSupplies,
   loadInstallConfig,
 } from "../src/packaging/install.ts";
-import { BUILD_RECORD_FILE, GATE_FILE, inlinedSetFromMetafile, planBundle } from "../src/packaging/plan.ts";
+import {
+  NOT_BUNDLED_HEADING,
+  SOURCE_ONLY_PREFIXES,
+  fileHeader,
+  heldCitedLicencePaths,
+  shippingCitedLicencePaths,
+} from "../src/packaging/licences.ts";
+import { checkContent } from "../src/validation/content.ts";
+import {
+  BUILD_RECORD_FILE,
+  GATE_FILE,
+  SHARED_ROOT,
+  inlinedSetFromMetafile,
+  isExecutable,
+  planBundle,
+} from "../src/packaging/plan.ts";
+import { resolveProfile } from "../src/packaging/profiles.ts";
 import { checkBundleLinks } from "../src/validation/links.ts";
 import { runCli } from "../src/cli.ts";
 import { writeBundles, checkBundles } from "../src/packaging/build.ts";
 import { hasBlockingSkips, hasErrors } from "../src/validation/types.ts";
 import { expectError } from "./helpers/issues.ts";
-import { makeTree } from "./helpers/tree.ts";
+import { parseJson, type JsonValue } from "./helpers/json.ts";
+import { EMPTY_ADAPTATIONS, EMPTY_LOCK, makeTree } from "./helpers/tree.ts";
 
 const HEAD = (name: string) => `---\nname: ${name}\ndescription: Use when asked.\n---\n`;
 
 /** This repository, for the tests that measure against its real schemas. */
 const REPO = join(import.meta.dir, "..");
+
+function publishedSharedPath(resolved: string, host: HostId, includedSkills: ReadonlySet<string>): string | null {
+  const skillDir = /^skills\/([^/]+)\//.exec(resolved)?.[1];
+  if (skillDir !== undefined) return includedSkills.has(skillDir) ? relocateForHost(host, resolved) : null;
+  if (SOURCE_ONLY_PREFIXES.some((prefix) => resolved.startsWith(prefix))) return null;
+  return relocateForHost(host, posix.join(SHARED_ROOT, resolved));
+}
+
+function catalogMentionResolver(): MentionResolver {
+  const { catalog } = loadCatalog(REPO);
+  if (catalog === null) throw new Error("repository has no catalog");
+  const bodies = new Map<string, string>();
+  for (const section of DIRECTORY_SECTIONS) {
+    if (section === "skills") continue;
+    for (const entry of catalog.bySection(section)) {
+      if (entry.status === "authored") bodies.set(entryDir(section, entry.id), entryBodyPath(section, entry.id));
+    }
+  }
+  return mentionResolver({
+    isFile: (path) => existsSync(join(REPO, path)) && statSync(join(REPO, path)).isFile(),
+    bodyOf: (dir) => bodies.get(dir.replace(/\/$/, "")) ?? null,
+    roleBody: (id) => bodies.get(entryDir("roles", id)) ?? null,
+    protocolBody: (id) => bodies.get(entryDir("protocols", id)) ?? null,
+  });
+}
+
+function expectedShippedReference(
+  sourcePath: string,
+  publishedPath: string,
+  text: string,
+  host: HostId,
+  includedSkills: ReadonlySet<string>,
+  mentions: MentionResolver,
+): string {
+  let out = text;
+  for (const link of extractRelativeLinks(text)) {
+    const resolved = resolveFromFile(sourcePath, link.target);
+    if (resolved === null) continue;
+    const targetPublished = publishedSharedPath(resolved, host, includedSkills);
+    if (targetPublished === null) continue;
+    const wanted = relativeLinkBetween(publishedPath, targetPublished);
+    if (wanted === link.target) continue;
+    const anchor = link.anchor === undefined ? "" : `#${link.anchor}`;
+    out = out.split(link.raw).join(link.raw.replace(`${link.target}${anchor}`, `${wanted}${anchor}`));
+  }
+  const linked = linkMentions(sourcePath, publishedPath, out, mentions, (source) =>
+    publishedSharedPath(source, host, includedSkills),
+  );
+  return rewriteAkCommands(linked.text, host, sourcePath);
+}
+
+/**
+ * Each case resolves a profile against the real schemas, several times over. Under a loaded host
+ * (load average about 100 on 16 CPUs) two cases measured 7.5s and 11.0s against bun's 5s default.
+ * 30s matches the parallel lane's bound, so a hang still fails.
+ */
+const PROFILE_RESOLVE_TIMEOUT_MS = 30_000;
+
+describe("project autonomy default", () => {
+  const source = readFileSync(join(REPO, "tests/fixtures/delegation/valid.project.json"), "utf8").trimEnd();
+  const catalog = loadCatalog(REPO).catalog;
+  function select(setting?: boolean | "yes", explicit?: string) {
+    if (catalog === null) throw new Error("real catalog must load");
+    const record =
+      setting === undefined ? source : `${source.slice(0, -1)}, "autonomy":{"default":${JSON.stringify(setting)}}}`;
+    const root = makeTree({ "project.json": record });
+    return resolveProfile(REPO, catalog, explicit, join(root, "project.json"));
+  }
+  test(
+    "a project opts in while false and absent preserve core and explicit profile wins",
+    () => {
+      expect(select(true).profile).toBe("autonomy");
+      expect(select(false).profile).toBe("core");
+      expect(select().profile).toBe("core");
+      expect(select(true, "core").profile).toBe("core");
+    },
+    PROFILE_RESOLVE_TIMEOUT_MS,
+  );
+  test(
+    "an invalid project setting refuses the default",
+    () => {
+      expect(select("yes").issues.some((issue) => issue.rule === "packaging.project-invalid")).toBe(true);
+    },
+    PROFILE_RESOLVE_TIMEOUT_MS,
+  );
+  test(
+    "validate reports an invalid project record instead of passing it",
+    () => {
+      const ctx = ctxFor({
+        "schemas/common.schema.json": readFileSync(join(REPO, "schemas/common.schema.json"), "utf8"),
+        "schemas/project.schema.json": readFileSync(join(REPO, "schemas/project.schema.json"), "utf8"),
+        "schemas/verification-recipe.schema.json": readFileSync(
+          join(REPO, "schemas/verification-recipe.schema.json"),
+          "utf8",
+        ),
+        "project.json": `${source.slice(0, -1)}, "autonomy":{"default":"yes"}}`,
+      });
+      const issues = checkBundleLinks(ctx, { project: "project.json" });
+      expect(issues.some((issue) => issue.rule === "packaging.project-invalid")).toBe(true);
+      expect(issues.find((issue) => issue.rule === "packaging.project-invalid")?.message).toContain(
+        '"instancePath":"/autonomy/default"',
+      );
+    },
+    PROFILE_RESOLVE_TIMEOUT_MS,
+  );
+  test("an autonomy install includes the invocation policy its runner reads", () => {
+    if (catalog === null) throw new Error("real catalog must load");
+    const plan = planBundle({ root: REPO, catalog }, "codex", { profile: "autonomy" });
+    expect(plan.files.has("policies/invocation.yaml")).toBe(true);
+  });
+});
 
 const CATALOG = `schema_version: 1
 package:
@@ -171,7 +328,21 @@ A human starts the public entrypoint by typing \`/ak:alpha\`. A request in prose
   "evals/alpha/does-not-start-unasked/case.yaml":
     'schema_version: "1.1"\nname: does-not-start-unasked\ntags: [negative]\n',
   "evals/beta/runs-when-asked/case.yaml": 'schema_version: "1.1"\nname: runs-when-asked\ntags: [positive]\n',
-  NOTICE: "agent-kit\nCopyright (c) 2026 A Person\n\nAdapted from MIT-licensed projects.\n",
+  NOTICE: [
+    "agent-kit",
+    "Copyright (c) 2026 A Person",
+    "",
+    "Adapted from MIT-licensed projects.",
+    "LICENSES/ajv.LICENSE",
+    "LICENSES/ajv-formats.LICENSE",
+    "LICENSES/fast-deep-equal.LICENSE",
+    "LICENSES/fast-uri.LICENSE",
+    "LICENSES/json-schema-traverse.LICENSE",
+    "LICENSES/yaml.LICENSE",
+    "provenance/licenses/thedotmack_claude-mem.LICENSE",
+    "provenance/licenses/thedotmack_claude-mem.NOTICE",
+    "",
+  ].join("\n"),
   LICENSE: "MIT License\n\nCopyright (c) 2026 A Person\n\nPermission is hereby granted, free of charge...\n",
   // Stubs for the licence texts bin/ak inlines. The real texts are read from
   // the installed packages; these exist so a fixture can still build.
@@ -183,6 +354,8 @@ A human starts the public entrypoint by typing \`/ak:alpha\`. A request in prose
   "node_modules/yaml/LICENSE": "Copyright Eemeli Aro\n",
   "provenance/licenses/thedotmack_claude-mem.LICENSE": "Apache License\nVersion 2.0, January 2004\n",
   "provenance/licenses/thedotmack_claude-mem.NOTICE": "Claude-Mem\nCopyright 2026 Alex Newman\n",
+  "provenance/upstream.lock.yaml": EMPTY_LOCK,
+  "provenance/adaptations.yaml": EMPTY_ADAPTATIONS,
 };
 
 /**
@@ -190,25 +363,119 @@ A human starts the public entrypoint by typing \`/ak:alpha\`. A request in prose
  * from `node_modules/`: that directory is gitignored and the packager's walk
  * skips it, so a copy there would not be in the distribution.
  */
-const REQUIRED_LICENCES: ReadonlyArray<readonly [string, string]> = [
-  ["NOTICE", "NOTICE"],
-  ["LICENSE", "LICENSE"],
-  ["node_modules/ajv/LICENSE", "LICENSES/ajv.LICENSE"],
-  ["node_modules/ajv-formats/LICENSE", "LICENSES/ajv-formats.LICENSE"],
-  ["node_modules/fast-deep-equal/LICENSE", "LICENSES/fast-deep-equal.LICENSE"],
-  ["node_modules/fast-uri/LICENSE", "LICENSES/fast-uri.LICENSE"],
-  ["node_modules/json-schema-traverse/LICENSE", "LICENSES/json-schema-traverse.LICENSE"],
-  ["node_modules/yaml/LICENSE", "LICENSES/yaml.LICENSE"],
-  ["provenance/licenses/thedotmack_claude-mem.LICENSE", "provenance/licenses/thedotmack_claude-mem.LICENSE"],
-  ["provenance/licenses/thedotmack_claude-mem.NOTICE", "provenance/licenses/thedotmack_claude-mem.NOTICE"],
-];
+function licencePathsIn(text: string): string[] {
+  const cited =
+    /(?:provenance\/licenses\/[A-Za-z0-9_.+-]+\.(?:LICENSE|NOTICE)|LICENSES\/(?:@[A-Za-z0-9_.+-]+\/)?[A-Za-z0-9_.+-]+\.LICENSE)(?![A-Za-z0-9])/g;
+  return [...new Set(text.match(cited) ?? [])].toSorted();
+}
+
+function citedSource(path: string): string {
+  const prefix = "LICENSES/";
+  const suffix = ".LICENSE";
+  if (path.startsWith(prefix) && path.endsWith(suffix)) {
+    const name = path.slice(prefix.length, -suffix.length);
+    return `node_modules/${name}/LICENSE`;
+  }
+  return path;
+}
+
+function obligedPairs(notice: string): ReadonlyArray<readonly [string, string]> {
+  const pairs: Array<readonly [string, string]> = [
+    ["NOTICE", "NOTICE"],
+    ["LICENSE", "LICENSE"],
+  ];
+  for (const path of shippingCitedLicencePaths(notice)) pairs.push([citedSource(path), path]);
+  return pairs;
+}
 
 function ctxFor(overrides: Record<string, string> = {}, drop: string[] = []) {
   const files = Object.fromEntries(Object.entries({ ...BASE, ...overrides }).filter(([key]) => !drop.includes(key)));
   const root = makeTree(files);
+  for (const rel of drop) rmSync(join(root, rel), { force: true });
   const { catalog } = loadCatalog(root);
   if (catalog === null) throw new Error("fixture has no catalog");
   return { root, catalog };
+}
+
+/**
+ * `--out` replaces its target wholesale. These cases are the refuse-only
+ * guard: a miss would `rmSync` `/`, `$HOME`, or the tree under test. HOME and
+ * cwd are temp directories; the real home and this checkout are never the
+ * `--out` argument. packaging.test.ts runs serially (`integration-files.txt`).
+ */
+const OUT_SENTINEL = "ak-out-sentinel.txt";
+const SENTINEL_BODY = "must-not-be-deleted\n";
+
+function isolatedDir(prefix: string): string {
+  return realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+}
+
+function writeSentinel(dir: string): string {
+  mkdirSync(dir, { recursive: true });
+  const path = join(dir, OUT_SENTINEL);
+  writeFileSync(path, SENTINEL_BODY);
+  return path;
+}
+
+function sentinelHolds(path: string): boolean {
+  return existsSync(path) && readFileSync(path, "utf8") === SENTINEL_BODY;
+}
+
+function withHomeAndCwd<T>(home: string, cwd: string, fn: () => T): T {
+  const previousHome = process.env.HOME;
+  const previousCwd = process.cwd();
+  mkdirSync(home, { recursive: true });
+  mkdirSync(cwd, { recursive: true });
+  process.env.HOME = home;
+  process.chdir(cwd);
+  try {
+    return fn();
+  } finally {
+    process.chdir(previousCwd);
+    if (previousHome === undefined) delete process.env.HOME;
+    else process.env.HOME = previousHome;
+  }
+}
+
+function withOutGuard<T>(fn: (env: { sandbox: string; home: string; work: string }) => T): T {
+  const sandbox = isolatedDir("ak-out-");
+  const home = join(sandbox, "home");
+  const work = join(sandbox, "work");
+  mkdirSync(home);
+  mkdirSync(work);
+  try {
+    return withHomeAndCwd(home, work, () => fn({ sandbox, home, work }));
+  } finally {
+    rmSync(sandbox, { recursive: true, force: true });
+  }
+}
+
+function cursorOut(ctx: ReturnType<typeof ctxFor>, out: string) {
+  return writeBundles(ctx, { hosts: ["cursor"], out });
+}
+
+function expectCursorBundle(dir: string) {
+  expect(existsSync(join(dir, ".cursor/skills/alpha/SKILL.md"))).toBe(true);
+  expect(existsSync(join(dir, BUILD_RECORD_FILE.cursor))).toBe(true);
+}
+
+function expectRefused(result: ReturnType<typeof writeBundles>, fragment: string, sentinel: string, target: string) {
+  expectError(result.issues, "packaging.out-refused", fragment);
+  expect(sentinelHolds(sentinel)).toBe(true);
+  expect(existsSync(join(target, ".cursor/skills/alpha/SKILL.md"))).toBe(false);
+}
+
+function nestRepo(parent: string, ctx: ReturnType<typeof ctxFor>): ReturnType<typeof ctxFor> {
+  const repo = join(parent, "repo");
+  cpSync(ctx.root, repo, { recursive: true });
+  return { root: realpathSync(repo), catalog: ctx.catalog };
+}
+
+function recordWithoutOutputs(recordPath: string): JsonValue {
+  const listed = parseJson(readFileSync(recordPath, "utf8"));
+  if (!(listed instanceof Object) || Array.isArray(listed)) throw new Error("build record is not an object");
+  const { outputs: _dropped, ...rest } = listed;
+  return rest;
 }
 
 const gateFixture = (
@@ -241,7 +508,7 @@ function recordOf(plan: ReturnType<typeof planBundle>) {
 }
 
 function packagedSkillText(plan: ReturnType<typeof planBundle>, id: string): string {
-  const text = plan.files.get(`skills/${id}/SKILL.md`)?.contents;
+  const text = plan.files.get(packagedSkillFile(plan.host, id))?.contents;
   if (text === undefined) throw new Error(`${plan.host} did not package ${id}`);
   return text;
 }
@@ -256,7 +523,7 @@ function packagedSkillPaths(plan: ReturnType<typeof planBundle>): string[] {
 
 describe("host capability honesty", () => {
   test("supported hosts are declared and the restriction vocabulary is closed", () => {
-    expect([...HOST_IDS]).toEqual(["claude-code", "codex", "grok", "kimi", "droid"]);
+    expect([...HOST_IDS]).toEqual(["claude-code", "codex", "grok", "kimi", "droid", "cursor"]);
     expect([...RESTRICTIONS]).toContain("no-model-invocation");
     expect([...RESTRICTIONS]).toContain("tool-allowlist-enforced");
   });
@@ -300,6 +567,80 @@ describe("host capability honesty", () => {
  * chosen here.
  */
 describe("the licence files the distribution is obliged to carry", () => {
+  const SHIPPED_PROVENANCE_LICENCES = [
+    "provenance/licenses/BayramAnnakov_claude-reflect.LICENSE",
+    "provenance/licenses/BuilderIO_skills.LICENSE",
+    "provenance/licenses/EveryInc_compound-engineering-plugin.LICENSE",
+    "provenance/licenses/Yeachan-Heo_oh-my-claudecode.LICENSE",
+    "provenance/licenses/Yeachan-Heo_oh-my-codex.LICENSE",
+    "provenance/licenses/addyosmani_agent-skills.LICENSE",
+    "provenance/licenses/cursor_plugins.LICENSE",
+    "provenance/licenses/google_elephant-goldfish-model.LICENSE",
+    "provenance/licenses/mattpocock_skills.LICENSE",
+    "provenance/licenses/mizchi_jev-lint.LICENSE",
+    "provenance/licenses/obra_superpowers.LICENSE",
+    "provenance/licenses/thedotmack_claude-mem.LICENSE",
+    "provenance/licenses/thedotmack_claude-mem.NOTICE",
+    "provenance/licenses/warpdotdev_common-skills.LICENSE",
+  ] as const;
+  const HELD_PROVENANCE_LICENCES = [
+    "provenance/licenses/caveman-ai_blocks.LICENSE",
+    "provenance/licenses/caveman-ai_blocks.NOTICE",
+    "provenance/licenses/tester-army_e2e.LICENSE",
+    "provenance/licenses/tester-army_e2e.NOTICE",
+  ] as const;
+
+  test("every host bundle carries each licence path NOTICE cites", () => {
+    const notice = readFileSync(join(REPO, "NOTICE"), "utf8");
+    expect(notice).toContain(NOT_BUNDLED_HEADING);
+    const cited = shippingCitedLicencePaths(notice);
+    const held = heldCitedLicencePaths(notice);
+    expect(cited.filter((path) => path.startsWith("provenance/licenses/"))).toEqual([...SHIPPED_PROVENANCE_LICENCES]);
+    expect(cited.some((path) => path.includes("eslint-stylistic"))).toBe(false);
+    expect(held).toEqual([...HELD_PROVENANCE_LICENCES]);
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repo catalog did not load");
+    for (const host of HOST_IDS) {
+      const plan = planBundle({ root: REPO, catalog }, host, {});
+      expect(hasErrors(plan.issues)).toBe(false);
+      for (const path of cited) {
+        const published = relocateForHost(host, path);
+        expect(plan.files.get(published)?.contents).toBe(readFileSync(join(REPO, citedSource(path)), "utf8"));
+        if (host === "cursor") expect(plan.files.has(path)).toBe(false);
+      }
+      for (const path of held) {
+        expect(plan.files.has(relocateForHost(host, path)), `${host} shipped held ${path}`).toBe(false);
+        expect(plan.files.has(path)).toBe(false);
+      }
+      for (const file of plan.files.values()) {
+        for (const headerPath of licencePathsIn(fileHeader(file.contents))) {
+          if (held.includes(headerPath)) continue;
+          expect(plan.files.has(relocateForHost(host, headerPath)), `${host} ${file.path} cites ${headerPath}`).toBe(
+            true,
+          );
+        }
+      }
+      expect(plan.files.has("tools/oxlint/anti-slop/vendor/eslint-stylistic/LICENSE")).toBe(false);
+    }
+  }, 120_000);
+
+  test("moving one shipped provenance licence under Not-bundled changes the pinned lists", () => {
+    const notice = readFileSync(join(REPO, "NOTICE"), "utf8");
+    const moved = SHIPPED_PROVENANCE_LICENCES[0];
+    const without = notice.replace(`${moved}\n`, "");
+    expect(without).not.toBe(notice);
+    const heading = `${NOT_BUNDLED_HEADING}\n`;
+    const at = without.indexOf(heading);
+    expect(at).toBeGreaterThan(-1);
+    const scratch = `${without.slice(0, at + heading.length)}\n${moved}\n${without.slice(at + heading.length)}`;
+    expect(shippingCitedLicencePaths(scratch).filter((path) => path.startsWith("provenance/licenses/"))).not.toEqual([
+      ...SHIPPED_PROVENANCE_LICENCES,
+    ]);
+    expect(heldCitedLicencePaths(scratch)).not.toEqual([...HELD_PROVENANCE_LICENCES]);
+    expect(shippingCitedLicencePaths(scratch)).not.toContain(moved);
+    expect(heldCitedLicencePaths(scratch)).toContain(moved);
+  });
+
   test("every host's bundle carries them, byte-identical to the source tree's", () => {
     // Iterated over HOST_IDS rather than written twice. The defect this package
     // has already produced once is two host manifests disagreeing about the
@@ -307,14 +648,17 @@ describe("the licence files the distribution is obliged to carry", () => {
     const ctx = ctxFor();
     for (const host of HOST_IDS) {
       const plan = planBundle(ctx, host, {});
-      for (const [source, path] of REQUIRED_LICENCES) {
-        expect(`${host}:${path}=${plan.files.get(path)?.contents}`).toBe(`${host}:${path}=${BASE[source]}`);
+      for (const [source, path] of obligedPairs(BASE["NOTICE"] ?? "")) {
+        const published = relocateForHost(host, path);
+        expect(`${host}:${published}=${plan.files.get(published)?.contents}`).toBe(
+          `${host}:${published}=${BASE[source]}`,
+        );
       }
     }
   });
 
   test("a bundle missing any inlined component's licence file fails rather than shipping without it", () => {
-    for (const [source, path] of REQUIRED_LICENCES) {
+    for (const [source, path] of obligedPairs(BASE["NOTICE"] ?? "")) {
       if (source === "NOTICE" || source === "LICENSE") continue;
       const plan = planBundle(ctxFor({}, [source]), "claude-code", {});
       const issue = plan.issues.find((i) => i.rule === "packaging.licence-file-missing" && i.file === source);
@@ -399,7 +743,8 @@ describe("the licence files the distribution is obliged to carry", () => {
     const script = planBundle({ root: REPO, catalog }, "claude-code", {}).files.get("bin/ak")?.contents ?? "";
     expect(script.startsWith("#!/usr/bin/env bun\n")).toBe(true);
     const missing: string[] = [];
-    for (const [source, path] of REQUIRED_LICENCES) {
+    const notice = readFileSync(join(REPO, "NOTICE"), "utf8");
+    for (const [source, path] of obligedPairs(notice)) {
       const text = readFileSync(join(REPO, source), "utf8").replace(/\n$/, "");
       if (!script.includes(`// --- ${path} ---`)) missing.push(`${path}: heading`);
       for (const line of text.split("\n")) {
@@ -414,6 +759,51 @@ describe("the licence files the distribution is obliged to carry", () => {
     expect(missing).toEqual([]);
   });
 
+  test("NOTICE citing a licence file that is not on disk fails, omits the path, and leaves it out of the banner", () => {
+    const plan = planBundle(
+      ctxFor({
+        NOTICE: `${BASE["NOTICE"] ?? ""}provenance/licenses/absent.LICENSE\nLICENSES/left-pad.LICENSE\n`,
+        "src/maintenance/cli.ts": 'import pad from "left-pad";\nconsole.log(pad("x"));\n',
+        "node_modules/left-pad/package.json": '{"name":"left-pad","main":"index.js"}\n',
+        "node_modules/left-pad/index.js": "module.exports = (s) => ` ${s}`;\n",
+        "node_modules/left-pad/LICENSE": "WTFPL\n",
+      }),
+      "claude-code",
+      {},
+    );
+    const missing = plan.issues.filter((issue) => issue.rule === "packaging.licence-file-missing");
+    expect(missing.map((issue) => issue.file)).toEqual(["provenance/licenses/absent.LICENSE"]);
+    expect(plan.files.has("provenance/licenses/absent.LICENSE")).toBe(false);
+    expect(plan.files.get("bin/ak")?.contents ?? "").not.toContain("// --- provenance/licenses/absent.LICENSE ---");
+  }, 30_000);
+
+  test("a shipped file header citation ships the licence, and the same path under a markdown heading does not", () => {
+    const text = "header licence\n";
+    const cited = planBundle(
+      ctxFor({
+        "roles/implementer/ROLE.md": "// provenance/licenses/from-header.LICENSE\n\n# Implementer\n",
+        "provenance/licenses/from-header.LICENSE": text,
+      }),
+      "claude-code",
+      {},
+    );
+    expect(cited.files.get("provenance/licenses/from-header.LICENSE")?.contents).toBe(text);
+    expect(cited.issues.filter((issue) => issue.rule === "packaging.licence-file-missing")).toEqual([]);
+
+    const body = planBundle(
+      ctxFor({
+        "roles/implementer/ROLE.md": "# Implementer\n\nprovenance/licenses/from-header.LICENSE\n",
+        "provenance/licenses/from-header.LICENSE": text,
+      }),
+      "claude-code",
+      {},
+    );
+    expect(body.files.has("provenance/licenses/from-header.LICENSE")).toBe(false);
+    expect(
+      body.issues.filter((issue) => issue.rule === "packaging.licence-file-missing").map((issue) => issue.file),
+    ).toEqual(["provenance/licenses/from-header.LICENSE"]);
+  });
+
   test("the failure names the file that is missing, not the pair", () => {
     // Reported per file. One message covering both would leave a reader who
     // has a NOTICE and no LICENSE unable to tell which of the two to write,
@@ -421,6 +811,351 @@ describe("the licence files the distribution is obliged to carry", () => {
     const plan = planBundle(ctxFor({}, ["LICENSE"]), "claude-code", {});
     const missing = plan.issues.filter((i) => i.rule === "packaging.licence-file-missing");
     expect(missing.map((i) => i.file)).toEqual(["LICENSE"]);
+  });
+
+  test("a licence cited only from the gate source header is demanded", () => {
+    const text = "gate header licence\n";
+    const ctx = gateFixture(
+      readFileSync(join(REPO, "schemas/verification.schema.json"), "utf8"),
+      "// provenance/licenses/from-gate.LICENSE\nconst BUNDLED_ADAPTER_IDS: readonly string[] = [];\nconsole.log('gate');\n",
+    );
+    writeFileSync(join(ctx.root, "provenance/licenses/from-gate.LICENSE"), text);
+    const plan = planBundle(ctx, "claude-code", {});
+    expect(plan.files.get("provenance/licenses/from-gate.LICENSE")?.contents).toBe(text);
+    expect(plan.issues.filter((issue) => issue.rule === "packaging.licence-file-missing")).toEqual([]);
+  }, 60_000);
+
+  test("a provenance licence file that no citation demands fails the build and validate", () => {
+    const ctx = ctxFor({ "provenance/licenses/orphan.LICENSE": "orphan text\n" });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find(
+      (row) => row.rule === "packaging.licence-file-missing" && row.file === "provenance/licenses/orphan.LICENSE",
+    );
+    expect(issue?.severity).toBe("error");
+    expect(plan.files.has("provenance/licenses/orphan.LICENSE")).toBe(false);
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/licenses/orphan.LICENSE"),
+    ).toBe(true);
+  });
+
+  test("a package name that starts with a dot is rejected", () => {
+    const plan = planBundle(ctxFor({ NOTICE: `${BASE["NOTICE"] ?? ""}LICENSES/..LICENSE\n` }), "claude-code", {});
+    const issue = plan.issues.find(
+      (row) => row.rule === "packaging.licence-file-missing" && row.file === "LICENSES/..LICENSE",
+    );
+    expect(issue?.severity).toBe("error");
+    expect(plan.files.has("LICENSES/..LICENSE")).toBe(false);
+  });
+
+  test("validate and the build collect a citation from a shipped file outside the deny set", () => {
+    const licence = "Copyright notice\nPricing: $3/1M output\n";
+    const ctx = ctxFor({
+      "vendor/note.md": "// provenance/licenses/outside-deny.LICENSE\n",
+      "provenance/licenses/outside-deny.LICENSE": licence,
+      "skills/alpha/SKILL.md": `${BASE["skills/alpha/SKILL.md"] ?? ""}See [note](../../vendor/note.md).\n`,
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const flagged = checkContent(ctx).some(
+      (row) => row.rule === "content.denylist" && row.file === "provenance/licenses/outside-deny.LICENSE",
+    );
+    expect(plan.files.get("provenance/licenses/outside-deny.LICENSE")?.contents).toBe(licence);
+    expect(flagged).toBe(true);
+  });
+
+  test("a licence listed only under the not-bundled NOTICE heading stays out until a shipped file cites it", () => {
+    const held = "held licence text\n";
+    const notice = `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\nprovenance/licenses/held.LICENSE\n`;
+    const lock = [
+      "donors:",
+      "  - id: held",
+      "    path: .donors/held",
+      "    license_file: provenance/licenses/held.LICENSE",
+      "",
+    ].join("\n");
+    const idle = ctxFor({
+      NOTICE: notice,
+      "provenance/licenses/held.LICENSE": held,
+      "provenance/upstream.lock.yaml": lock,
+    });
+    const idlePlan = planBundle(idle, "claude-code", {});
+    expect(idlePlan.files.has("provenance/licenses/held.LICENSE")).toBe(false);
+    expect(idlePlan.issues.filter((issue) => issue.rule === "packaging.licence-file-missing")).toEqual([]);
+    expect(
+      checkContent(idle).some((row) => row.severity === "error" && row.file === "provenance/licenses/held.LICENSE"),
+    ).toBe(false);
+
+    const cited = planBundle(
+      ctxFor({
+        NOTICE: notice,
+        "provenance/licenses/held.LICENSE": held,
+        "provenance/upstream.lock.yaml": lock,
+        "roles/implementer/ROLE.md": "// provenance/licenses/held.LICENSE\n\n# Implementer\n",
+      }),
+      "claude-code",
+      {},
+    );
+    expect(cited.files.get("provenance/licenses/held.LICENSE")?.contents).toBe(held);
+    expect(cited.issues.filter((issue) => issue.rule === "packaging.licence-file-missing")).toEqual([]);
+  });
+
+  test("moving a shipped donor licence into the not-bundled NOTICE section fails", () => {
+    const licencePath = "provenance/licenses/mizchi_jev-lint.LICENSE";
+    const adaptationPath = "tools/hooks/semantic-lint.ts";
+    const adaptationSource = "jev-lint@af58a3bd20693f828ff6353e3543c0ab5bb7bad4:.jev-lint/hooks/pre-commit";
+    const notice = `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\n${licencePath}\n`;
+    const ctx = ctxFor({
+      NOTICE: notice,
+      [licencePath]: "MIT License\nCopyright (c) 2026 mizchi\n",
+      "provenance/upstream.lock.yaml": [
+        "donors:",
+        "  - id: jev-lint",
+        "    path: .donors/mizchi_jev-lint",
+        `    license_file: ${licencePath}`,
+        "",
+      ].join("\n"),
+      "provenance/adaptations.yaml": [
+        "adaptations:",
+        `  - path: ${adaptationPath}`,
+        `    source: ${adaptationSource}`,
+        "",
+      ].join("\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === licencePath);
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain(adaptationPath);
+    expect(issue?.message).toContain(adaptationSource);
+    expect(plan.files.has(licencePath)).toBe(false);
+    const content = checkContent(ctx).find((row) => row.file === licencePath && row.severity === "error");
+    expect(content?.message).toContain(adaptationPath);
+    expect(content?.message).toContain(adaptationSource);
+  });
+
+  test("a missing upstream lock fails the held-licence guard", () => {
+    const ctx = ctxFor({}, ["provenance/upstream.lock.yaml"]);
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/upstream.lock.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/upstream.lock.yaml"),
+    ).toBe(true);
+  });
+
+  test("a malformed upstream lock fails the held-licence guard", () => {
+    const ctx = ctxFor({ "provenance/upstream.lock.yaml": "donors: [\n" });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/upstream.lock.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/upstream.lock.yaml"),
+    ).toBe(true);
+  });
+
+  test("an upstream lock that fails its schema fails the held-licence guard", () => {
+    const ctx = ctxFor({ "provenance/upstream.lock.yaml": "schema_version: 1\n" });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/upstream.lock.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/upstream.lock.yaml"),
+    ).toBe(true);
+  });
+
+  test("a missing adaptations file fails the held-licence guard", () => {
+    const ctx = ctxFor({}, ["provenance/adaptations.yaml"]);
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/adaptations.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/adaptations.yaml"),
+    ).toBe(true);
+  });
+
+  test("a malformed adaptations file fails the held-licence guard", () => {
+    const ctx = ctxFor({ "provenance/adaptations.yaml": "adaptations: [\n" });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/adaptations.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/adaptations.yaml"),
+    ).toBe(true);
+  });
+
+  test("an adaptations file that fails its schema fails the held-licence guard", () => {
+    const ctx = ctxFor({ "provenance/adaptations.yaml": "schema_version: 1\n" });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/adaptations.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/adaptations.yaml"),
+    ).toBe(true);
+  });
+
+  test("an adaptations row whose source is not a donor pin fails the held-licence guard", () => {
+    const ctx = ctxFor({
+      "provenance/adaptations.yaml": [
+        "adaptations:",
+        "  - path: skills/alpha/SKILL.md",
+        "    source: not-a-donor-pin",
+        "",
+      ].join("\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === "provenance/adaptations.yaml");
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("skills/alpha/SKILL.md");
+    expect(issue?.message).toContain("not-a-donor-pin");
+    expect(
+      checkContent(ctx).some((row) => row.severity === "error" && row.file === "provenance/adaptations.yaml"),
+    ).toBe(true);
+  });
+
+  test("a held NOTICE maps to the donor of its LICENSE after lock paths are normalised", () => {
+    const licencePath = "provenance/licenses/mizchi_jev-lint.LICENSE";
+    const noticePath = "provenance/licenses/mizchi_jev-lint.NOTICE";
+    const adaptationPath = "tools/hooks/semantic-lint.ts";
+    const adaptationSource = "jev-lint@af58a3bd20693f828ff6353e3543c0ab5bb7bad4:.jev-lint/hooks/pre-commit";
+    const ctx = ctxFor({
+      NOTICE: `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\n${noticePath}\n`,
+      [licencePath]: "MIT License\nCopyright (c) 2026 mizchi\n",
+      [noticePath]: "mizchi notice\n",
+      "provenance/upstream.lock.yaml": [
+        "donors:",
+        "  - id: jev-lint",
+        "    path: .donors/mizchi_jev-lint",
+        '    license_file: "./provenance\\\\licenses\\\\mizchi_jev-lint.LICENSE"',
+        "",
+      ].join("\n"),
+      "provenance/adaptations.yaml": [
+        "adaptations:",
+        `  - path: ${adaptationPath}`,
+        `    source: ${adaptationSource}`,
+        "",
+      ].join("\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === noticePath);
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain(adaptationPath);
+    expect(plan.files.has(noticePath)).toBe(false);
+    expect(checkContent(ctx).some((row) => row.severity === "error" && row.file === noticePath)).toBe(true);
+  });
+
+  test("a held licence with no lock donor fails the held-licence guard", () => {
+    const licencePath = "provenance/licenses/orphan-held.LICENSE";
+    const ctx = ctxFor({
+      NOTICE: `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\n${licencePath}\n`,
+      [licencePath]: "MIT License\nCopyright (c) 2026 orphan\n",
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === licencePath);
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("upstream.lock.yaml");
+    expect(plan.files.has(licencePath)).toBe(false);
+    expect(checkContent(ctx).some((row) => row.severity === "error" && row.file === licencePath)).toBe(true);
+  });
+
+  test("a lock license_file in a different case still maps a held licence", () => {
+    const licencePath = "provenance/licenses/orphan-held.LICENSE";
+    const lockPath = "provenance/licenses/ORPHAN-HELD.LICENSE";
+    const adaptationPath = "skills/alpha/SKILL.md";
+    const adaptationSource = "orphan-held@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:LICENSE";
+    const ctx = ctxFor({
+      NOTICE: `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\n${licencePath}\n`,
+      [licencePath]: "MIT License\nCopyright (c) 2026 orphan\n",
+      "provenance/upstream.lock.yaml": [
+        "donors:",
+        "  - id: orphan-held",
+        "    path: .donors/orphan-held",
+        `    license_file: ${lockPath}`,
+        "",
+      ].join("\n"),
+      "provenance/adaptations.yaml": [
+        "adaptations:",
+        `  - path: ${adaptationPath}`,
+        `    source: ${adaptationSource}`,
+        "",
+      ].join("\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === licencePath);
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain(adaptationPath);
+    expect(issue?.message).toContain(adaptationSource);
+    expect(plan.files.has(licencePath)).toBe(false);
+    expect(checkContent(ctx).some((row) => row.severity === "error" && row.file === licencePath)).toBe(true);
+  });
+
+  test("a lock notice_file with a ./ prefix and different case still maps a held notice", () => {
+    const noticePath = "provenance/licenses/orphan-held.NOTICE";
+    const lockPath = "./provenance/licenses/ORPHAN-HELD.NOTICE";
+    const adaptationPath = "skills/alpha/SKILL.md";
+    const adaptationSource = "orphan-held@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:NOTICE";
+    const ctx = ctxFor({
+      NOTICE: `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\n${noticePath}\n`,
+      [noticePath]: "orphan notice\n",
+      "provenance/upstream.lock.yaml": [
+        "donors:",
+        "  - id: orphan-held",
+        "    path: .donors/orphan-held",
+        `    notice_file: "${lockPath}"`,
+        "",
+      ].join("\n"),
+      "provenance/adaptations.yaml": [
+        "adaptations:",
+        `  - path: ${adaptationPath}`,
+        `    source: ${adaptationSource}`,
+        "",
+      ].join("\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === noticePath);
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain(adaptationPath);
+    expect(issue?.message).toContain(adaptationSource);
+    expect(plan.files.has(noticePath)).toBe(false);
+    expect(checkContent(ctx).some((row) => row.severity === "error" && row.file === noticePath)).toBe(true);
+  });
+
+  test("a held licence listed under Not-bundled that is not on disk fails", () => {
+    const licencePath = "provenance/licenses/ghost-held.LICENSE";
+    const ctx = ctxFor({
+      NOTICE: `${BASE["NOTICE"] ?? ""}\n${NOT_BUNDLED_HEADING}\n\n${licencePath}\n`,
+      "provenance/upstream.lock.yaml": [
+        "donors:",
+        "  - id: ghost-held",
+        "    path: .donors/ghost-held",
+        `    license_file: ${licencePath}`,
+        "",
+      ].join("\n"),
+    });
+    const plan = planBundle(ctx, "claude-code", {});
+    const issue = plan.issues.find((row) => row.file === licencePath);
+    expect(issue?.severity).toBe("error");
+    expect(issue?.message).toContain("not on disk");
+    expect(plan.files.has(licencePath)).toBe(false);
+    expect(checkContent(ctx).some((row) => row.severity === "error" && row.file === licencePath)).toBe(true);
+  });
+
+  test("makeTree can omit provenance files so a missing lock fails through the helper", () => {
+    const root = makeTree(
+      {
+        "catalog.yaml": CATALOG,
+        "package.json": packageJson(PACKAGE_JSON),
+        NOTICE: BASE["NOTICE"] ?? "",
+        LICENSE: BASE["LICENSE"] ?? "",
+      },
+      { provenance: false },
+    );
+    const { catalog } = loadCatalog(root);
+    if (catalog === null) throw new Error("fixture has no catalog");
+    const plan = planBundle({ root, catalog }, "claude-code", {});
+    expect(plan.issues.some((row) => row.severity === "error" && row.file === "provenance/upstream.lock.yaml")).toBe(
+      true,
+    );
+    expect(plan.issues.some((row) => row.severity === "error" && row.file === "provenance/adaptations.yaml")).toBe(
+      true,
+    );
   });
 });
 
@@ -491,7 +1226,12 @@ describe("bundle planning", () => {
       "host",
       "install",
       "modes",
+      "outputs",
       "profile",
+    ]);
+    const listed = parseJson(plan.files.get(".claude-plugin/ak.json")?.contents ?? "{}");
+    expect(listed instanceof Object && !Array.isArray(listed) ? listed["outputs"] : null).toEqual([
+      ...plan.files.keys(),
     ]);
   });
 
@@ -520,6 +1260,77 @@ describe("bundle planning", () => {
     expect(plan.files.has("schemas/verification-recipe.schema.json")).toBe(true);
     const absent = planBundle(ctxFor({}, [path]), "claude-code", {});
     expect(absent.files.has(path)).toBe(false);
+  });
+
+  test("a core-profile plan copies every authored role as source bytes and ships every authored reference", () => {
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repository has no catalog");
+    const authoredRefs = catalog.bySection("references").filter((entry) => entry.status === "authored");
+    expect(authoredRefs).toHaveLength(10);
+    const mentions = catalogMentionResolver();
+    const delegationHref = "[`delegation_classes`](../../policies/authority-defaults.yaml)";
+    const mentionGeneratedHref = "[`policies/limits.yaml`](../../policies/limits.yaml)";
+    for (const host of ["claude-code", "codex", "cursor"] as const) {
+      const plan = planBundle({ root: REPO, catalog }, host, { profile: "core" });
+      expect(plan.issues.filter((issue) => issue.severity === "error")).toEqual([]);
+      const includedSkills = new Set<string>();
+      for (const file of plan.files.values()) {
+        const source = file.source;
+        if (source === undefined) continue;
+        const skillDir = /^skills\/([^/]+)\//.exec(source)?.[1];
+        if (skillDir !== undefined) includedSkills.add(skillDir);
+      }
+      const missingRoles: string[] = [];
+      const driftedRoles: string[] = [];
+      for (const entry of catalog.bySection("roles")) {
+        if (entry.status !== "authored") continue;
+        const source = entryBodyPath("roles", entry.id);
+        const published = relocateForHost(host, source);
+        const file = plan.files.get(published);
+        if (file === undefined) missingRoles.push(source);
+        else if (file.contents !== readFileSync(join(REPO, source), "utf8")) driftedRoles.push(source);
+      }
+      expect({ host, missingRoles }).toEqual({ host, missingRoles: [] });
+      expect({ host, driftedRoles }).toEqual({ host, driftedRoles: [] });
+      const missingRefs: string[] = [];
+      const driftedRefs: string[] = [];
+      for (const entry of authoredRefs) {
+        const source = entryBodyPath("references", entry.id);
+        const expected = readFileSync(join(REPO, source), "utf8");
+        const shipped = [...plan.files.values()].filter((file) => file.source === source);
+        if (shipped.length === 0) missingRefs.push(source);
+        for (const file of shipped) {
+          const normalised = expectedShippedReference(source, file.path, expected, host, includedSkills, mentions);
+          if (file.contents !== normalised) driftedRefs.push(source);
+        }
+      }
+      expect({ host, missingRefs }).toEqual({ host, missingRefs: [] });
+      expect({ host, driftedRefs }).toEqual({ host, driftedRefs: [] });
+      const delegation = [...plan.files.values()].find((file) => file.source === "references/delegation/REFERENCE.md");
+      expect({ host, hasDelegationHref: delegation?.contents.includes(delegationHref) }).toEqual({
+        host,
+        hasDelegationHref: true,
+      });
+      const principles = [...plan.files.values()].find(
+        (file) => file.source === "references/engineering-principles/REFERENCE.md",
+      );
+      expect({ host, hasMentionGeneratedHref: principles?.contents.includes(mentionGeneratedHref) }).toEqual({
+        host,
+        hasMentionGeneratedHref: true,
+      });
+    }
+  });
+
+  test("the policies and adapter contracts the skills name travel under the shared root", () => {
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repository has no catalog");
+    const plan = planBundle({ root: REPO, catalog }, "claude-code", {});
+    const skills = [...plan.files.values()].filter((file) => file.path.endsWith("/SKILL.md"));
+    for (const path of ["policies/review.yaml", "adapters/runner-contract/CONTRACT.md"]) {
+      expect(plan.files.has(`references/shared/${path}`)).toBe(true);
+      const link = `[\`${path}\`](../../references/shared/${path})`;
+      expect(skills.some((file) => file.contents.includes(link))).toBe(true);
+    }
   });
 
   test("a link between two shared files needs no rewrite because the layout is preserved", () => {
@@ -566,10 +1377,9 @@ describe("bundle planning", () => {
   });
 
   /**
-   * `package.default_profile` is the only statement in the tree about what a
-   * plain `ak build` installs: catalog.yaml calls core "the default install" and
-   * profiles/core.yaml repeats it. A build that names no profile must therefore
-   * apply that one.
+   * `package.default_profile` governs a build with no explicit profile and no
+   * project record. A validated project record may opt in to autonomy, while
+   * a plain build still applies the package default.
    *
    * The fixture has to carry a skill outside the default for any of this to be
    * visible. In the real catalog every authored skill happens to be in `core`,
@@ -2320,6 +3130,67 @@ describe("a U skill on a host that does not suppress model invocation", () => {
 });
 
 describe("ak build and --check", () => {
+  test.each(["file", "directory"])(
+    "an executable cannot inline a schema symlink outside its source tree (%s)",
+    (kind) => {
+      const ctx = withMaintenance();
+      const marker = "EXTERNAL_SCHEMA_INLINE_SECRET";
+      const outside = makeTree({ "secret.json": JSON.stringify({ $comment: marker }) });
+      mkdirSync(join(ctx.root, "schemas"), { recursive: true });
+      const schema = kind === "file" ? "schemas/handoff-record.schema.json" : "schemas/.work/secret.json";
+      symlinkSync(
+        kind === "file" ? join(outside, "secret.json") : outside,
+        join(ctx.root, kind === "file" ? schema : "schemas/.work"),
+      );
+      writeFileSync(join(ctx.root, "src/maintenance/schema.ts"), `export { default } from "../../${schema}";\n`);
+      writeFileSync(
+        join(ctx.root, "src/maintenance/cli.ts"),
+        'import { parse } from "yaml";\nimport schema from "./schema.ts";\nconsole.log(parse("a: 1"), schema);\n',
+      );
+      const built = writeBundles(ctx, {});
+      for (const host of HOST_IDS) {
+        const scriptPath = join(ctx.root, "dist", host, packagedAkScriptFile(host));
+        expect(existsSync(scriptPath) && readFileSync(scriptPath, "utf8").includes(marker)).toBe(false);
+      }
+      expectError(built.issues, "packaging.maintenance-build-failed", "inlined schema leaves its source tree");
+      expect(existsSync(join(ctx.root, "dist"))).toBe(false);
+    },
+  );
+
+  test.each(["regular", "linked schema", "linked source"])(
+    "an executable can inline an in-tree schema under a %s root",
+    (kind) => {
+      const ctx = withMaintenance();
+      if (kind === "linked source") {
+        const link = join(makeTree({}), "source");
+        symlinkSync(ctx.root, link);
+        ctx.root = link;
+      }
+      const marker = "IN_TREE_SCHEMA_INLINE";
+      const schemas = makeTree({ "local.schema.json": JSON.stringify({ $comment: marker }) });
+      if (kind !== "regular") symlinkSync(schemas, join(ctx.root, "schemas"));
+      else {
+        mkdirSync(join(ctx.root, "schemas"));
+        writeFileSync(join(ctx.root, "schemas/local.schema.json"), JSON.stringify({ $comment: marker }));
+      }
+      symlinkSync("local.schema.json", join(ctx.root, "schemas/alias.schema.json"));
+      const outside = makeTree({ "unused.json": '{"$comment":"UNUSED_EXTERNAL_SCHEMA"}' });
+      symlinkSync(join(outside, "unused.json"), join(ctx.root, "schemas/unused.schema.json"));
+      writeFileSync(
+        join(ctx.root, "src/maintenance/cli.ts"),
+        'import { parse } from "yaml";\nimport schema from "../../schemas/alias.schema.json";\nconsole.log(parse("a: 1"), schema);\n',
+      );
+      const built = writeBundles(ctx, {});
+      expect(built.issues.filter((issue) => issue.severity === "error")).toEqual([]);
+      for (const host of HOST_IDS) {
+        const script = readFileSync(join(ctx.root, "dist", host, packagedAkScriptFile(host)), "utf8");
+        expect(script).toContain(marker);
+        expect(script).not.toContain("UNUSED_EXTERNAL_SCHEMA");
+        expect(existsSync(join(ctx.root, "dist", host, "schemas/unused.schema.json"))).toBe(false);
+      }
+    },
+  );
+
   test("a gate-build failure is reported and leaves every existing host bundle untouched", () => {
     const ctx = gateFixture("{ invalid JSON");
     for (const host of HOST_IDS) {
@@ -2367,6 +3238,304 @@ describe("ak build and --check", () => {
     expect(built.issues.filter((i) => i.severity === "error")).toEqual([]);
     expect(readFileSync(join(ctx.root, "dist/claude-code/.claude-plugin/plugin.json"), "utf8")).toContain("alpha");
     expect(readFileSync(join(ctx.root, "dist/codex/skills/alpha/SKILL.md"), "utf8")).toContain("name: alpha");
+    expect(readFileSync(join(ctx.root, "dist/cursor/.cursor/skills/alpha/SKILL.md"), "utf8")).toContain("name: alpha");
+  });
+
+  test("--out requires exactly one host and replaces that directory, not dist/<host>", () => {
+    const ctx = ctxFor();
+    const many = writeBundles(ctx, { out: join(ctx.root, "bundle-out") });
+    expectError(many.issues, "packaging.out-requires-one-host", "--host");
+    expect(existsSync(join(ctx.root, "bundle-out"))).toBe(false);
+
+    const out = join(ctx.root, "bundle-out");
+    const built = writeBundles(ctx, { hosts: ["cursor"], out });
+    expect(built.issues.filter((i) => i.severity === "error")).toEqual([]);
+    expect(existsSync(join(out, ".cursor/skills/alpha/SKILL.md"))).toBe(true);
+    expect(existsSync(join(ctx.root, "dist/cursor"))).toBe(false);
+    expect(existsSync(join(ctx.root, "dist/claude-code"))).toBe(false);
+  });
+
+  test("--out refuses the filesystem root and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const sentinel = writeSentinel(sandbox);
+      expectRefused(cursorOut(ctx, "/"), "filesystem root", sentinel, "/");
+    });
+  });
+
+  test("--out refuses $HOME and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ home }) => {
+      const sentinel = writeSentinel(home);
+      expectRefused(cursorOut(ctx, home), "$HOME", sentinel, home);
+    });
+  });
+
+  test("--out refuses an ancestor of $HOME and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const wrap = join(sandbox, "homewrap");
+      mkdirSync(wrap);
+      const nestedHome = join(wrap, "nested-home");
+      mkdirSync(nestedHome);
+      const sentinel = writeSentinel(wrap);
+      writeSentinel(nestedHome);
+      withHomeAndCwd(nestedHome, join(sandbox, "work"), () => {
+        expectRefused(cursorOut(ctx, wrap), "$HOME", sentinel, wrap);
+        expect(sentinelHolds(join(nestedHome, OUT_SENTINEL))).toBe(true);
+      });
+    });
+  });
+
+  test("--out refuses the repository root and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(() => {
+      const sentinel = writeSentinel(ctx.root);
+      expectRefused(cursorOut(ctx, ctx.root), "repository root", sentinel, ctx.root);
+    });
+  });
+
+  test("--out refuses an ancestor of the repository root and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const wrap = join(sandbox, "wrap");
+      mkdirSync(wrap);
+      const nested = nestRepo(wrap, ctx);
+      const sentinel = writeSentinel(wrap);
+      writeSentinel(nested.root);
+      expectRefused(cursorOut(nested, wrap), "repository root", sentinel, wrap);
+      expect(sentinelHolds(join(nested.root, OUT_SENTINEL))).toBe(true);
+    });
+  });
+
+  test("--out refuses the current directory ('.') and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ work }) => {
+      const sentinel = writeSentinel(work);
+      expectRefused(cursorOut(ctx, "."), "current directory", sentinel, work);
+    });
+  });
+
+  test("--out refuses '..' (an ancestor of cwd) and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const parent = join(sandbox, "parent");
+      const here = join(parent, "here");
+      mkdirSync(here, { recursive: true });
+      const sentinel = writeSentinel(parent);
+      writeSentinel(here);
+      withHomeAndCwd(join(sandbox, "home"), here, () => {
+        expectRefused(cursorOut(ctx, ".."), "current directory", sentinel, parent);
+        expect(sentinelHolds(join(here, OUT_SENTINEL))).toBe(true);
+      });
+    });
+  });
+
+  test("--out refuses a non-empty directory without a build record and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const occupied = join(sandbox, "occupied");
+      mkdirSync(occupied);
+      const sentinel = writeSentinel(occupied);
+      writeFileSync(join(occupied, "keep.txt"), "keep\n");
+      expectRefused(cursorOut(ctx, occupied), "not a previous agent-kit bundle", sentinel, occupied);
+      expect(readFileSync(join(occupied, "keep.txt"), "utf8")).toBe("keep\n");
+    });
+  });
+
+  test("--out refuses a symlink that resolves into a forbidden directory and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox, home }) => {
+      const sentinel = writeSentinel(home);
+      const link = join(sandbox, "link-to-home");
+      symlinkSync(home, link);
+      expectRefused(cursorOut(ctx, link), "$HOME", sentinel, home);
+      expect(existsSync(link)).toBe(true);
+    });
+  });
+
+  test("--out allows an empty directory", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const empty = join(sandbox, "empty");
+      mkdirSync(empty);
+      const built = cursorOut(ctx, empty);
+      expect(built.issues.filter((i) => i.severity === "error")).toEqual([]);
+      expectCursorBundle(empty);
+    });
+  });
+
+  test("--out allows a clean previous bundle for this host", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "prior");
+      const first = cursorOut(ctx, out);
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      expectCursorBundle(out);
+      const second = cursorOut(ctx, out);
+      expect(second.issues.filter((i) => i.severity === "error")).toEqual([]);
+      expectCursorBundle(out);
+    });
+  });
+
+  test("--out refuses a previous bundle that still holds an extra user file and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "dirty");
+      const first = cursorOut(ctx, out);
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      const sentinel = writeSentinel(out);
+      const second = cursorOut(ctx, out);
+      expectError(second.issues, "packaging.out-refused", "not written by the previous agent-kit bundle");
+      expect(second.issues[0]?.message).toContain(OUT_SENTINEL);
+      expect(sentinelHolds(sentinel)).toBe(true);
+      expectCursorBundle(out);
+    });
+  });
+
+  test("--out treats a self-loop symlink as a leaf extra and finishes quickly", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "looped");
+      const first = cursorOut(ctx, out);
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      symlinkSync(".", join(out, "loop"));
+      const second = cursorOut(ctx, out);
+      expectError(second.issues, "packaging.out-refused", "not written by the previous agent-kit bundle");
+      expect(second.issues[0]?.message).toContain("loop");
+      expectCursorBundle(out);
+    });
+  }, 15_000);
+
+  test("--out treats a symlink to an outside directory as a leaf extra and does not touch it", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "linked");
+      const outside = join(sandbox, "outside");
+      mkdirSync(outside);
+      const sentinel = writeSentinel(outside);
+      const first = cursorOut(ctx, out);
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      symlinkSync(outside, join(out, "link-out"));
+      const second = cursorOut(ctx, out);
+      expectError(second.issues, "packaging.out-refused", "not written by the previous agent-kit bundle");
+      expect(second.issues[0]?.message).toContain("link-out");
+      expect(sentinelHolds(sentinel)).toBe(true);
+      expect(readdirSync(outside)).toEqual([OUT_SENTINEL]);
+      expect(existsSync(join(outside, ".cursor"))).toBe(false);
+      expectCursorBundle(out);
+    });
+  }, 15_000);
+
+  test.skipIf(process.getuid?.() === 0)(
+    "--out refuses when a subdirectory cannot be inspected and deletes nothing",
+    () => {
+      const ctx = ctxFor();
+      withOutGuard(({ sandbox }) => {
+        const out = join(sandbox, "locked");
+        const first = cursorOut(ctx, out);
+        expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+        const locked = join(out, ".cursor/skills");
+        const sentinel = writeSentinel(locked);
+        try {
+          chmodSync(locked, 0o000);
+          const second = cursorOut(ctx, out);
+          expectError(second.issues, "packaging.out-refused", "could not inspect");
+          expect(second.issues[0]?.message).toContain(locked);
+        } finally {
+          chmodSync(locked, 0o755);
+        }
+        expect(sentinelHolds(sentinel)).toBe(true);
+        expectCursorBundle(out);
+      });
+    },
+  );
+
+  test("--out refuses grok over a claude-code bundle that shares the record path and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "shared");
+      const first = writeBundles(ctx, { hosts: ["claude-code"], out });
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      const keep = join(out, "NOTICE");
+      const before = readFileSync(keep, "utf8");
+      const sentinel = writeSentinel(sandbox);
+      const second = writeBundles(ctx, { hosts: ["grok"], out });
+      expectError(second.issues, "packaging.out-refused", "host 'claude-code', not 'grok'");
+      expect(readFileSync(keep, "utf8")).toBe(before);
+      expect(sentinelHolds(sentinel)).toBe(true);
+      expect(existsSync(join(out, ".claude-plugin/plugin.json"))).toBe(true);
+    });
+  });
+
+  test("--out refuses an unreadable build record and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "broken");
+      mkdirSync(join(out, ".cursor-plugin"), { recursive: true });
+      writeFileSync(join(out, BUILD_RECORD_FILE.cursor), "not-json\n");
+      const sentinel = writeSentinel(out);
+      expectRefused(cursorOut(ctx, out), "unreadable build record", sentinel, out);
+    });
+  });
+
+  test("--out allows a legacy record without outputs when top-level names match the plan", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "legacy");
+      const first = cursorOut(ctx, out);
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      const recordPath = join(out, BUILD_RECORD_FILE.cursor);
+      writeFileSync(recordPath, `${JSON.stringify(recordWithoutOutputs(recordPath), null, 2)}\n`);
+      const second = cursorOut(ctx, out);
+      expect(second.issues.filter((i) => i.severity === "error")).toEqual([]);
+      expectCursorBundle(out);
+    });
+  });
+
+  test("--out refuses a legacy record whose directory has an extra top-level file and deletes nothing", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "legacy-extra");
+      const first = cursorOut(ctx, out);
+      expect(first.issues.filter((i) => i.severity === "error")).toEqual([]);
+      const recordPath = join(out, BUILD_RECORD_FILE.cursor);
+      writeFileSync(recordPath, `${JSON.stringify(recordWithoutOutputs(recordPath), null, 2)}\n`);
+      const sentinel = writeSentinel(out);
+      const second = cursorOut(ctx, out);
+      expectError(second.issues, "packaging.out-refused", "legacy build record");
+      expect(sentinelHolds(sentinel)).toBe(true);
+      expectCursorBundle(out);
+    });
+  });
+
+  test("a relative --out is resolved from process.cwd(), not ctx.root", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ work }) => {
+      const built = cursorOut(ctx, "rel-out");
+      expect(built.issues.filter((i) => i.severity === "error")).toEqual([]);
+      expectCursorBundle(join(work, "rel-out"));
+      expect(existsSync(join(ctx.root, "rel-out"))).toBe(false);
+    });
+  });
+
+  test("--check --out verifies that directory rather than dist/<host>", () => {
+    const ctx = ctxFor();
+    withOutGuard(({ sandbox }) => {
+      const out = join(sandbox, "checked");
+      const built = cursorOut(ctx, out);
+      expect(built.issues.filter((i) => i.severity === "error")).toEqual([]);
+      expect(checkBundles(ctx, { hosts: ["cursor"], out }).filter((i) => i.severity === "error")).toEqual([]);
+      expectError(checkBundles(ctx, { hosts: ["cursor"] }), "packaging.dist-missing", "absent from dist/");
+      writeFileSync(join(out, ".cursor/skills/alpha/SKILL.md"), "tampered\n");
+      const stale = expectError(
+        checkBundles(ctx, { hosts: ["cursor"], out }),
+        "packaging.dist-stale",
+        "Content differs",
+      );
+      expect(stale.file).toContain(out);
+      expect(stale.file.startsWith("dist/")).toBe(false);
+    });
   });
 
   test("--check passes immediately after a build", () => {
@@ -2387,9 +3556,34 @@ describe("ak build and --check", () => {
     expect(readFileSync(target, "utf8")).toBe("tampered\n");
   });
 
+  test("--check reports an altered host manifest and writes nothing", () => {
+    const ctx = ctxFor();
+    writeBundles(ctx, {});
+    const target = join(ctx.root, "dist/claude-code/.claude-plugin/plugin.json");
+    const original = readFileSync(target, "utf8");
+    if (!/"version"\s*:\s*"[^"]+"/.test(original)) throw new Error("plugin manifest has no version");
+    writeFileSync(target, original.replace(/"version"\s*:\s*"[^"]+"/, '"version": "9.9.9"'));
+    const issues = checkBundles(ctx, {});
+    expect(expectError(issues, "packaging.dist-stale", "Content differs").file).toBe(
+      "dist/claude-code/.claude-plugin/plugin.json",
+    );
+    expect(JSON.parse(readFileSync(target, "utf8"))).toMatchObject({ version: "9.9.9" });
+  });
+
   test("--check reports a missing generated file", () => {
     const ctx = ctxFor();
     expectError(checkBundles(ctx, {}), "packaging.dist-missing", "absent from dist/");
+  });
+
+  test("--check reports a deleted role and writes nothing", () => {
+    const ctx = ctxFor();
+    writeBundles(ctx, {});
+    const target = join(ctx.root, "dist/claude-code/roles/implementer/ROLE.md");
+    rmSync(target);
+    expect(expectError(checkBundles(ctx, {}), "packaging.dist-missing", "absent from dist/").file).toBe(
+      "dist/claude-code/roles/implementer/ROLE.md",
+    );
+    expect(existsSync(target)).toBe(false);
   });
 
   test("a missing skill body is one problem, not one per bundle that wanted it", () => {
@@ -2638,7 +3832,7 @@ describe("the adapters an install attaches, and what they lift", () => {
     expect(byAdapter).toEqual({
       firstmate: ["firstmate-supervision"],
       knowledgebase: ["kb-write"],
-      "runner-contract": ["independent-context", "runner-grants", "trusted-evidence"],
+      "runner-contract": ["event-delivery", "independent-context", "runner-grants", "trusted-evidence"],
       tracker: ["tracker-access"],
     });
     // adapters/tracker/CONTRACT.md §1: with no backend its refusal is kb-write's.
@@ -2867,4 +4061,208 @@ describe("Kimi native bundle", () => {
       expect(text).not.toContain("disable-model-invocation:");
     }
   });
+});
+
+/**
+ * The executable bit on the programs a bundle runs by path.
+ *
+ * `published` carried `dist/*\/bin/ak` as 100644, so every install's `ak kb check`
+ * failed with Permission denied. The bit has to survive two hops: `ak build`
+ * writing dist/, and the publish job carrying dist/ through a tarball and `cp -R`
+ * into the index it commits (.github/workflows/publish-bundle.yml).
+ */
+const EXEC_BITS = join(REPO, "tools/publish/exec-bits.sh");
+const SHEBANG = "#!/usr/bin/env bun\n";
+
+/** A fixture whose bundles carry bin/ak: it needs an inlined package with a licence row, or the build refuses. */
+function withMaintenance() {
+  return ctxFor({
+    "src/maintenance/cli.ts": 'import { parse } from "yaml";\nconsole.log(parse("a: 1"));\n',
+    "node_modules/yaml/package.json": '{"name":"yaml","main":"index.js"}\n',
+    "node_modules/yaml/index.js": "module.exports = { parse: (s) => s };\n",
+  });
+}
+
+function executable(path: string): boolean {
+  return (statSync(path).mode & 0o111) !== 0;
+}
+
+function sh(cwd: string, script: string) {
+  return spawnSync("sh", ["-c", script], { cwd, encoding: "utf8" });
+}
+
+function run(cwd: string, script: string): string {
+  const result = sh(cwd, script);
+  if (result.status !== 0) throw new Error(`${script}: ${result.stderr}`);
+  return result.stdout;
+}
+
+function shebangPrograms(root: string, host: HostId): string[] {
+  const dir = join(root, "dist", host, dirname(packagedBinFile(host, "ak")));
+  return readdirSync(dir)
+    .map((name) => join(dir, name))
+    .filter((path) => readFileSync(path, "utf8").startsWith("#!"));
+}
+
+function isPackagedBin(path: string): boolean {
+  return path.startsWith("bin/") || path.startsWith(".cursor/bin/");
+}
+
+function packagedBinName(path: string): string {
+  return path.replace(/^(?:\.cursor\/)?bin\//, "");
+}
+
+describe("the executable bit on bin/ programs", () => {
+  test("ak build writes every bin/ file that starts with a shebang executable, in every host bundle", () => {
+    const ctx = withMaintenance();
+    expect(writeBundles(ctx, {}).issues.filter((i) => i.severity === "error")).toEqual([]);
+    for (const host of HOST_IDS) {
+      const programs = shebangPrograms(ctx.root, host);
+      expect(programs.map((path) => path.slice(ctx.root.length + 1))).toContain(
+        `dist/${host}/${packagedBinFile(host, "ak")}`,
+      );
+      for (const path of programs) expect(`${path}:${executable(path)}`).toBe(`${path}:true`);
+    }
+    expect(checkBundles(ctx, {}).filter((i) => i.severity === "error")).toEqual([]);
+  }, 60_000);
+
+  test("--check refuses a bin/ program that lost its executable bit", () => {
+    const ctx = withMaintenance();
+    writeBundles(ctx, {});
+    chmodSync(join(ctx.root, "dist/claude-code/bin/ak"), 0o644);
+    const issue = expectError(checkBundles(ctx, {}), "packaging.dist-not-executable", "Permission denied");
+    expect(issue.file).toBe("dist/claude-code/bin/ak");
+  }, 60_000);
+
+  test("what the publish job commits carries bin/ak as 100755", () => {
+    // The publish job's own hops, in its order: the build job tars dist/, the
+    // publish job untars it, copies it into the published worktree with cp -R,
+    // stages with add -A and runs exec-bits.sh before it commits.
+    const ctx = withMaintenance();
+    writeBundles(ctx, {});
+    run(ctx.root, "tar -czf published-bundle.tar.gz dist");
+    const publish = makeTree({});
+    run(publish, `tar -xzf ${JSON.stringify(join(ctx.root, "published-bundle.tar.gz"))}`);
+    const release = makeTree({});
+    run(release, "git init -q && git config core.fileMode true");
+    run(publish, `cp -R dist ${JSON.stringify(join(release, "dist"))}`);
+    run(release, "git add -A");
+    expect(sh(REPO, `${EXEC_BITS} ${JSON.stringify(release)}`).status).toBe(0);
+    for (const host of HOST_IDS) {
+      expect(run(release, `git ls-files -s dist/${host}/${packagedBinFile(host, "ak")}`).split(" ")[0]).toBe("100755");
+    }
+  }, 60_000);
+
+  test("exec-bits.sh refuses a staged bin/ program without the bit and passes the files that need none", () => {
+    const release = makeTree({
+      "dist/claude-code/bin/ak": `${SHEBANG}console.log("ak");\n`,
+      // Run as `node bin/ak-gate.mjs`: no shebang, so 100644 is correct.
+      "dist/claude-code/bin/ak-gate.mjs": 'console.log("gate");\n',
+      // A shebang below an eval fixture's own bin/ is not a bundle program.
+      "dist/claude-code/evals/x/_fixtures/repo/bin/tool.js": "#!/usr/bin/env node\n",
+    });
+    run(release, "git init -q && git config core.fileMode true");
+    chmodSync(join(release, "dist/claude-code/bin/ak"), 0o644);
+    run(release, "git add -A");
+    const refused = sh(REPO, `${EXEC_BITS} ${JSON.stringify(release)}`);
+    expect(refused.status).toBe(1);
+    expect(refused.stderr.trim()).toBe(
+      "refused: dist/claude-code/bin/ak starts with a shebang and is staged as 100644, not 100755",
+    );
+    chmodSync(join(release, "dist/claude-code/bin/ak"), 0o755);
+    run(release, "git add -A");
+    expect(sh(REPO, `${EXEC_BITS} ${JSON.stringify(release)}`).status).toBe(0);
+  });
+
+  test("the publish job runs exec-bits.sh on the staged release before it commits", () => {
+    const workflow = readFileSync(join(REPO, ".github/workflows/publish-bundle.yml"), "utf8");
+    const lines = workflow.split("\n").map((line) => line.trim());
+    const added = lines.indexOf('git -C "$release_dir" add -A');
+    const checked = lines.indexOf('tools/publish/exec-bits.sh "$release_dir"');
+    const committed = lines.findIndex((line) => line.includes("commit -m"));
+    expect(added).toBeGreaterThanOrEqual(0);
+    expect(checked).toBeGreaterThan(added);
+    expect(committed).toBeGreaterThan(checked);
+  });
+
+  test("every bin/ file the shipped text runs by name or path is one the build makes executable", () => {
+    // A skill runs `ak …`, which resolves to the installed bin/ak; one that ran
+    // `<bundle>/bin/<name>` with no interpreter in front would need the bit too.
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repository has no catalog");
+    for (const host of HOST_IDS) {
+      const plan = planBundle({ root: REPO, catalog }, host, {});
+      const programs = [...plan.files.values()].filter((file) => isPackagedBin(file.path));
+      const commands: string[] = [];
+      for (const file of plan.files.values()) {
+        if (file.path.startsWith("evals/") || !/\.(md|json|ya?ml)$/.test(file.path)) continue;
+        // A description names `ak-gate.mjs bypass check` for routing, and so does a policy row;
+        // the bodies that run it run it with node.
+        if (/^(?:\.cursor\/)?(?:references\/shared\/)?policies\//.test(file.path)) continue;
+        const text = file.path.endsWith(".md") ? parseFrontmatter(file.contents).body : file.contents;
+        for (const span of text.matchAll(/`([^`\n]+)`/g)) commands.push(span[1] ?? "");
+        for (const hook of file.contents.matchAll(/"command"\s*:\s*"([^"]+)"/g)) commands.push(hook[1] ?? "");
+      }
+      const runs = (name: string) =>
+        commands.some((command) => {
+          const head = command.trim().split(/\s+/)[0] ?? "";
+          return head === name || head === `bin/${name}` || head.endsWith(`/bin/${name}`);
+        });
+      const direct = programs.filter((file) => runs(packagedBinName(file.path)));
+      expect(direct.map((file) => `${host}:${file.path}`)).toContain(`${host}:${packagedBinFile(host, "ak")}`);
+      for (const file of direct) expect(`${host}:${file.path}:${isExecutable(file)}`).toBe(`${host}:${file.path}:true`);
+    }
+  }, 120_000);
+});
+
+/** The bundle hooks file for one Stop command, as the packager writes it. */
+function stopHookFile(command: string): string {
+  return `${JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: "command", command, timeout: 30 }] }] } }, null, 2)}\n`;
+}
+
+describe("semantic lint Stop hook in the plugin bundles", () => {
+  test("only the Claude Code and Codex bundles carry the Stop hook, each in its host's form", () => {
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repo catalog did not load");
+    const hooks = Object.fromEntries(
+      HOST_IDS.map((host) => [
+        host,
+        planBundle({ root: REPO, catalog }, host, {}).files.get("hooks/hooks.json")?.contents,
+      ]),
+    );
+    expect(hooks).toEqual({
+      "claude-code": stopHookFile('"${CLAUDE_PLUGIN_ROOT}/bin/ak" semantic-lint hook'),
+      codex: stopHookFile('"${PLUGIN_ROOT}/bin/ak" semantic-lint hook --host codex'),
+      grok: undefined,
+      kimi: undefined,
+      droid: undefined,
+      cursor: undefined,
+    });
+  }, 60_000);
+
+  test("the bundled bin/ak runs the Stop hook disabled and stays quiet", () => {
+    const { catalog } = loadCatalog(REPO);
+    if (catalog === null) throw new Error("repo catalog did not load");
+    const script = planBundle({ root: REPO, catalog }, "claude-code", {}).files.get("bin/ak")?.contents ?? "";
+    const home = makeTree({});
+    writeFileSync(join(home, "ak"), script);
+    const hook = (args: string[]) =>
+      spawnSync(process.execPath, [join(home, "ak"), "semantic-lint", "hook", ...args], {
+        cwd: home,
+        env: { PATH: process.env.PATH, HOME: home },
+        encoding: "utf8",
+      });
+    const claude = hook([]);
+    expect(claude.status).toBe(0);
+    expect(claude.stderr).toBe("");
+    expect(JSON.parse(claude.stdout)).toEqual({
+      status: "skipped",
+      reason: "disabled",
+      findings: [],
+      advisory: true,
+      excluded: [],
+      excludedOmitted: 0,
+    });
+    expect(JSON.parse(hook(["--host", "codex"]).stdout)).toEqual({});
+  }, 60_000);
 });

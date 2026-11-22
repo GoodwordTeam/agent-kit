@@ -1,7 +1,7 @@
 # agent-kit — maintainer guide
 
 This repository is a **catalog of engineering instructions**, not an application. It amalgamates
-ten donors — nine MIT, one Apache-2.0 (claude-mem, which feeds only the opt-in learning runtime) —
+eleven donors — ten MIT, one Apache-2.0 (claude-mem, which feeds only the opt-in learning runtime) —
 into *one* lifecycle rather than shipping four plugins that fight over activation descriptions.
 Read this file before changing anything under `skills/`, `packs/`, `protocols/`, `roles/` or
 `references/`.
@@ -28,20 +28,30 @@ alone. `ak validate` checks the invocation graph and the first-step authority ga
 **How "only a human starts these" is held** changed in `docs/decisions/0003-model-invocation.md`. The packager no
 longer emits `disable-model-invocation`, so the model can load any skill. A U skill keeps its class:
 its description carries the non-trigger clause, its first workflow step is the authority check, and
-started without an explicit request or a validated grant it stops and says so.
+started without an explicit request, a validated grant or, for align, bound and ship, an opt-in to the
+unattended policy with `ak-gate.mjs unattended check` exiting 0, it stops and says so.
 
 **Standing-start amendment (ADR-0007):** Firstmate may start `autopilot` for a crewmate only after
 the runner validates a standing grant for autopilot.start against a captain-approved immutable
 charter. The worker's brief, a prompt naming autopilot, and a phase grant do not start it. Every
 other U public entrypoint remains human-started by its slash command, save under the bypass grant
-below. Sensitive grants, merge,
-deploy and anything outside the charter remain human decisions.
+below and, for align, bound and ship, the opt-in unattended policy (ADR-0014). Sensitive grants,
+merge, deploy and anything outside the charter remain human decisions.
 
 **A second standing exception to "only a human starts these"** is the bypass grant
 (`docs/decisions/0008-bypass-start-grant.md`, `policies/invocation.yaml` `bypass`). A supervisor
 writes it from outside the repository for one task, and it stands in for the typed command of
 super-align, super-bound, super-review `full` and `readiness`, and super-ship. It starts phases
 only: every approval inside them still goes to the supervisor, and merge and deploy are never on it.
+
+**Model start for review** (`docs/decisions/0013-model-starts-super-review.md`): `super-review`
+`full` and `readiness` are model-invoked. The agent doing the work starts them when a change needs
+judgment. No slash command and no human act is required. `delta` stays inside an open review run.
+The phase operations `review.full` and `review.readiness` remain delegated-grant paths for a
+controller that already holds one. Starting the review is not approval: the author does not sit a
+seat and does not close a finding. Align, bound, ship, wayfind and compound stay human-started,
+save that align, bound and ship need no start under the opt-in unattended policy
+(`docs/decisions/0014-unattended-lifecycle-policy.md`).
 
 Source: `G:L1672–1676`. The elision in the fourth bullet drops a model-routing illustration that the
 content denylist forbids in this file; the unedited text is at
@@ -71,16 +81,21 @@ skills, which the law forbids. The resolution (ruling `entrypoint-phase-operatio
 
 | Layer | Who may start it | Example |
 |---|---|---|
-| Public entrypoint | A human by slash command; autopilot also Firstmate under a runner-validated standing grant | `/ak:super-review` |
+| Public entrypoint | A human by slash command; autopilot also Firstmate under a runner-validated standing grant; align, bound and ship also the agent under the opt-in unattended policy (ADR-0014) | `/ak:super-ship` |
 | Phase operation | A delegated controller, **only** under a runner-validated grant | `review.delta` |
 
-A human invokes a public entrypoint, or Firstmate starts autopilot under the standing-start amendment.
+A human invokes a public entrypoint, or Firstmate starts autopilot under the standing-start amendment,
+or the agent starts align, bound and ship under the opt-in unattended policy once
+`ak-gate.mjs unattended check` exits 0 (ADR-0014).
 A controller invokes a phase operation only when the runner validates a grant that covers it.
-**Ordinary workers cannot manufacture a grant or start a new gated
-phase**, and public wrappers and the supervisor pair run the same protocol, so there is no second
-pipeline. Where a host cannot validate a grant, the skill **stops for explicit invocation** rather
-than reproducing a forbidden command's effect through a side door (ruling
-`entrypoint-phase-operation-split`).
+**Ordinary workers cannot manufacture a grant or start a new human-started
+phase**, save align, bound and ship under that opt-in policy. `super-review` `full` and
+`readiness` are not in that set: the agent doing the work starts
+them (`docs/decisions/0013-model-starts-super-review.md`). Public wrappers and the supervisor pair
+run the same protocol, so there is no second pipeline. Where a host cannot validate a grant, a
+controller **stops** rather than reproducing a forbidden command's effect through a side door
+(ruling `entrypoint-phase-operation-split`). An agent start of `super-review` does not need that
+grant.
 
 `authority` values live in `schemas/common.schema.json#/$defs/authority`:
 `explicit`, `explicit-or-standing`, `explicit-or-delegated`, `delegated-grant`, `active-review-run`, `model`.
@@ -107,7 +122,8 @@ that cannot be filled independently is **unavailable**, and unavailability block
 is never backfilled — not by the implementer, not by the author, not by the spec approver, and not by
 a seat already sitting on the panel (ruling `missing-supervisor-never-implementer`).
 
-Worker-attested evidence never lifts an autonomy ceiling. The evidence-consuming autonomous form
+Worker-attested evidence never lifts an autonomy ceiling, save under the opt-in unattended policy, whose
+boundary is a live-checked merge gate (ADR-0014). The evidence-consuming autonomous form
 requires `trusted-evidence`, supplied fail-closed by the runner contract; host permissions are not
 evidence provenance and never imply that capability.
 
@@ -138,10 +154,13 @@ as authoritative. Every row below is a claim about the tree, checkable against i
 | `provenance/` | `upstream.lock.yaml`, `adaptations.yaml`, `conversation-map.yaml`, licenses | yes |
 | `research/` | Design sources and the donor dossiers. **Denylist-exempt** | yes |
 | `src/`, `tests/` | The `ak` CLI and its tests | yes |
+| `.cursor/` | Cloud Agent overlay vendored from `ak build --host cursor`, plus `environment.json`. Drift-checked by `tools/cursor/self-host.sh --check`. Does not replace root `AGENTS.md` | yes |
 | `dist/` | Generated by `ak build`. Never hand-edited; absent from source branches, published by CI on `published` | **no on `main`** |
 | `.donors/` | Full donor clones, reproducible from `upstream.lock.yaml` | **no** |
 | `.work/` | Scratch | **no** |
 | `ak.install.yaml` | Per-install adapter attachment | **no** |
+
+A PR that changes the Cursor bundle must re-vendor `.cursor/` with `tools/cursor/self-host.sh --vendor`.
 
 ---
 

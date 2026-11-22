@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { processScratch } from "./helpers/process-tmp.ts";
 
 const root = join(import.meta.dir, "..");
 const files = [...new Bun.Glob("**/*.test.ts").scanSync({ cwd: join(root, "tests") })]
@@ -28,11 +28,24 @@ const heavy = [
 describe("configured test lanes", () => {
   for (const childStatus of [0, 7]) {
     test(`every file runs once, even when child commands exit ${childStatus}`, () => {
-      const scratch = mkdtempSync(join(tmpdir(), "ak-test-lanes-"));
+      const scratch = processScratch("ak-test-lanes-");
       try {
-        const bin = join(scratch, "bin");
+        // A separate package keeps the checkout's dependency binaries from shadowing the recorder.
+        const project = join(scratch, "project");
+        for (const file of [
+          "package.json",
+          "tools/test/run.sh",
+          "tools/test/integration-files.txt",
+          "tools/publish/fetch-catalog-history.sh",
+          ...heavy,
+        ]) {
+          const target = join(project, file);
+          mkdirSync(dirname(target), { recursive: true });
+          copyFileSync(join(root, file), target);
+        }
+        const bin = join(project, "node_modules", ".bin");
         const log = join(scratch, "calls");
-        mkdirSync(bin);
+        mkdirSync(bin, { recursive: true });
         // Capture the executable interface, without recursively running the suite.
         writeFileSync(
           join(bin, "bun"),
@@ -40,7 +53,7 @@ describe("configured test lanes", () => {
           { mode: 0o755 },
         );
         const run = spawnSync(process.execPath, ["run", "test"], {
-          cwd: root,
+          cwd: project,
           env: {
             ...process.env,
             PATH: `${bin}:${process.env.PATH ?? ""}`,
@@ -60,14 +73,59 @@ describe("configured test lanes", () => {
         const ignored = (ordinary ?? []).filter((_, index) => ordinary?.[index - 1] === "--path-ignore-patterns");
         const ordinaryFiles = files.filter((file) => !ignored.some((pattern) => new Bun.Glob(pattern).match(file)));
         const integrationFiles = integration.map((call) => {
-          expect(call.slice(0, 2)).toEqual(["test", "--max-concurrency=1"]);
-          expect(call).toHaveLength(3);
-          return call[2]?.replace(/^\.\//, "");
+          expect(call.slice(0, 3)).toEqual(["test", "--max-concurrency=1", "--timeout=30000"]);
+          expect(call).toHaveLength(4);
+          return call[3]?.replace(/^\.\//, "");
         });
         expect(integrationFiles).toEqual(heavy);
         expect(
           [...ordinaryFiles, ...integrationFiles].toSorted((a = "", b = "") => (a < b ? -1 : a > b ? 1 : 0)),
         ).toEqual(files);
+      } finally {
+        rmSync(scratch, { recursive: true, force: true });
+      }
+    });
+  }
+
+  // Linux runners ship gawk, which reserves `load`; BSD awk on macOS does not. Run the worker-count
+  // awk under each awk the machine has, so a reserved name fails here and not only in CI.
+  const awks = ["/usr/bin/awk", Bun.which("gawk")].filter((path): path is string => Boolean(path));
+  for (const awk of awks) {
+    test(`worker count rule runs under ${awk}`, () => {
+      const scratch = processScratch("ak-test-awk-");
+      try {
+        const project = join(scratch, "project");
+        for (const file of [
+          "package.json",
+          "tools/test/run.sh",
+          "tools/test/integration-files.txt",
+          "tools/publish/fetch-catalog-history.sh",
+          ...heavy,
+        ]) {
+          const target = join(project, file);
+          mkdirSync(dirname(target), { recursive: true });
+          copyFileSync(join(root, file), target);
+        }
+        const bin = join(project, "node_modules", ".bin");
+        const log = join(scratch, "calls");
+        mkdirSync(bin, { recursive: true });
+        writeFileSync(
+          join(bin, "bun"),
+          '#!/bin/sh\nif [ "$1" = -e ]; then exit 0; fi\nprintf "%s\\n" "$@" >> "$TEST_LANE_LOG"\nexit 0\n',
+          {
+            mode: 0o755,
+          },
+        );
+        symlinkSync(awk, join(bin, "awk"));
+        const { AK_TEST_PARALLEL: _unset, ...inherited } = process.env;
+        const env = { ...inherited, TEST_LANE_LOG: log, PATH: `${bin}:${process.env.PATH ?? ""}` };
+        const run = spawnSync("sh", [join(project, "tools/test/run.sh")], { cwd: project, env, encoding: "utf8" });
+        expect(run.stderr).toBe("");
+        expect(run.status).toBe(0);
+        const parallel = readFileSync(log, "utf8")
+          .split("\n")
+          .find((line) => line.startsWith("--parallel="));
+        expect(["--parallel=1", "--parallel=2", "--parallel=4"]).toContain(parallel ?? "");
       } finally {
         rmSync(scratch, { recursive: true, force: true });
       }

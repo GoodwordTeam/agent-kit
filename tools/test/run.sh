@@ -11,7 +11,8 @@ while IFS= read -r file; do
   fi
 done < tools/test/integration-files.txt
 
-# Fixtures write scratch under one private root that is removed at exit. Bun lists every directory
+# Fixtures using TMPDIR share this private root, removed at exit. Process-scoped fixture helpers
+# manage their own root (tests/helpers/process-tmp.ts). Bun lists every directory
 # above its cwd and script on start, so a crowded macOS $TMPDIR costs each bun child about 250ms.
 TMPDIR=$(mktemp -d /tmp/ak-test-XXXXXX) || exit 1
 trap 'rm -rf "$TMPDIR"' EXIT
@@ -37,9 +38,41 @@ set --
 while IFS= read -r file; do
   set -- "$@" --path-ignore-patterns "$file"
 done < tools/test/integration-files.txt
-bun test --parallel="${AK_TEST_PARALLEL:-4}" "$@" || status=1
+# The ordinary lane runs files in parallel, so a per-test wall clock stretches with load. Both lanes
+# use --timeout=30000 because the 5s per-test timeout is the harness default, not a product deadline.
+# Explicit per-test timeouts still win.
+# AK_TEST_PARALLEL is the explicit override. Unset, the worker count follows the one-minute load
+# average per CPU: 4 below 2, 2 from 2 up to 4, and 1 at 4 or above. A reading that cannot be taken
+# stays at 4, the count this lane used before the load rule.
+ordinary_parallel() {
+  if [ -n "${AK_TEST_PARALLEL:-}" ]; then
+    printf '%s\n' "$AK_TEST_PARALLEL"
+    return
+  fi
+  cpus=$(getconf _NPROCESSORS_ONLN 2>/dev/null || printf '1\n')
+  load=
+  if [ -r /proc/loadavg ]; then
+    load=$(awk '{print $1; exit}' /proc/loadavg 2>/dev/null || true)
+  fi
+  if [ -z "$load" ]; then
+    load=$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2; exit}' || true)
+  fi
+  awk -v loadavg="$load" -v cpus="$cpus" 'BEGIN {
+    c = cpus + 0
+    if (c < 1 || loadavg == "") { print 4; exit }
+    per = (loadavg + 0) / c
+    if (per >= 4) print 1
+    else if (per >= 2) print 2
+    else print 4
+  }'
+}
+parallel=$(ordinary_parallel) || parallel=4
+if [ -z "$parallel" ]; then
+  parallel=4
+fi
+bun test --parallel="$parallel" --timeout=30000 "$@" || status=1
 
 while IFS= read -r file; do
-  bun test --max-concurrency=1 "./$file" || status=1
+  bun test --max-concurrency=1 --timeout=30000 "./$file" || status=1
 done < tools/test/integration-files.txt
 exit "$status"

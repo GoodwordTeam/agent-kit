@@ -1,7 +1,7 @@
 # Execution contract for doc-review (schemas/skill.schema.json).
 # Prose mirror: skills/doc-review/SKILL.md. The two are one statement in two forms.
 id: doc-review
-version: 0.1.0
+version: 0.5.0
 kind: standalone
 invocation: M
 summary: >-
@@ -22,7 +22,7 @@ non_triggers:
   - Deciding what the document should say; an unsettled direction goes to a human-started
     alignment run.
   - A document that has not been drafted; an outline is not a draft.
-  - A third fix round on forks that keep bouncing.
+  - A third fix round on forks that keep bouncing, with no recorded human extension.
 
 prerequisites:
   - kind: artifact
@@ -76,6 +76,12 @@ inputs:
     summary: >-
       The project's declared risk, where it declares one. Absent, the conditional seats are
       selected from artifact evidence alone.
+  - id: comprehension-mode
+    schema: project
+    required: false
+    summary: >-
+      The project's review.comprehension setting: off, shadow or on, default off. A missing
+      review object, or a missing key, is off. (phase 1b, GS-004h)
 
 outputs:
   - id: review-record
@@ -120,9 +126,15 @@ hard_gates:
     another seat or by synthesis.
   - A previously rejected finding is re-raised only on changed evidence; an unchanged document
     quote does not establish unchanged evidence.
-  - At most two fix rounds; the third does not run and the open forks are returned instead.
+  - At most two fix rounds; the third request stops and the open forks are returned. A cycle a
+    human authorizes after the cap is recorded in fix_cycles.extensions as authorized by human
+    (operator-attested) and reviewed as a delta; an unrecorded one is refused.
   - A security-lens finding is never dropped by the confidence gate; it stays visible and is
     adjudicated.
+  - A comprehension finding is never rejected on the author's word; the four resolutions in
+    ruling `comprehension-gap-not-contestable` are the only ones.
+  - In shadow, comprehension findings stay under FYI, never enter the other buckets, and do not
+    change the verdict.
 
 stop_conditions:
   - complete when every selected lane is accounted for in the lane table, every retained finding
@@ -130,9 +142,13 @@ stop_conditions:
     blocked verdict is a completed review with a blocking result, not an incomplete one.
   - needs-input when there is no document, its identity cannot be computed, or a later round was
     started without the prior round's findings.
-  - cap-reached when two fix rounds are used and a Decision is still open.
+  - cap-reached when two fix rounds are used, a Decision is still open, and no recorded human
+    extension authorizes another.
   - cancelled when the caller ended the run before the panel returned.
-  - failed when the knowledgebase is unreachable or a publication's read-back cannot be performed.
+  - failed when a configured knowledgebase is unreachable or a publication's read-back cannot be
+    performed. A knowledgebase coverage limit (no binding, an unregistered one, a publish skipped as read-only (kb.read-only), a missing in-repo one (kb.in-repo-missing), or a missing or
+    unknown ak kb command) stops nothing; the records are returned in the session and named as not
+    published, and the calling phase continues.
 
 failure_outcomes:
   - status: needs-input
@@ -140,15 +156,15 @@ failure_outcomes:
       findings.
     next_permitted_action: Return the blocking item; do not review a document the run cannot name.
   - status: cap-reached
-    meaning: Two fix rounds are spent and a fork is still open.
+    meaning: Two fix rounds are spent and a fork is still open, with no recorded human extension.
     next_permitted_action: >-
-      Return the open forks and the review as it stands; a third round is a human's call, not this
-      skill's.
+      Return the open forks and the review as it stands. A cycle a human authorizes after the cap
+      is recorded in fix_cycles.extensions and reviewed as a delta.
   - status: cancelled
     meaning: The caller ended the run before the panel returned.
     next_permitted_action: Publish nothing and apply no correction.
   - status: failed
-    meaning: The knowledgebase was unreachable, or a publication's read-back could not be
+    meaning: A configured knowledgebase was unreachable, or a publication's read-back could not be
       performed.
     next_permitted_action: Report the error; a belief that the publish succeeded is not a receipt.
 
@@ -226,12 +242,29 @@ provenance:
       adaptation: >-
         The deduplication key only, as the worked example of a document-shaped fingerprint that is
         content-derived rather than positional.
+    - donor: egm
+      commit: 403d8881d62022490637d740657b33f01e321ea8
+      path: agents/comprehension.md
+      license: Apache-2.0
+      adaptation: >-
+        The naive-reader seating, paraphrase-first order, and the rule that an unparaphrasable
+        section is a finding. Donor severity vocabulary is replaced by the finding schema.
+        Off, shadow and on are this skill's routing, not the donor's. (phase 1b, GS-004h)
+    - donor: egm
+      commit: 403d8881d62022490637d740657b33f01e321ea8
+      path: skills/egm-resolve/SKILL.md
+      license: Apache-2.0
+      adaptation: >-
+        The four resolutions of a comprehension gap, including the ban on contesting a
+        comprehension finding on the author's word. (phase 1b, GS-004h)
   resolved_conflicts:
     - panel-composition-by-declared-risk
     - safe-auto-restricted-per-seat
     - required-lane-failure-is-unavailable
     - low-confidence-security-adjudicated
     - central-kb-owns-project-artifacts
+    - comprehension-seat-stays-naive
+    - comprehension-gap-not-contestable
 
 tests:
   - id: drafted-spec-gets-a-panel
@@ -306,11 +339,11 @@ tests:
   - id: third-round-does-not-run
     kind: adversarial
     given: >-
-      Two fix rounds are spent, one fork is still open, and the caller asks for one more round on
-      the grounds that the last exchange nearly settled it.
+      Two fix rounds are spent, one fork is still open, no human extension is recorded, and the
+      caller asks for one more round on the grounds that the last exchange nearly settled it.
     expect: >-
       The gate holds. The skill returns the open fork and the review as it stands, states that the
-      cap is two rounds, and does not run a third.
+      cap is two rounds, and does not run a third without a recorded human extension.
 
   - id: interrupted-publish-resumes-on-the-idempotency-key
     kind: resumability
@@ -321,14 +354,25 @@ tests:
       The skill recomputes the idempotency key from the run, the operation, the record's identity
       and the artifact hash, reads the record back first, finds the earlier write already present,
       and records one publication rather than a second review record for the same round.
-  - id: no-knowledgebase-write-stops-before-publishing
+  - id: no-knowledgebase-write-continues-unpublished
     kind: missing-tools
     given: >-
       The host provides no kb-write capability. The panel has returned and the caller asks for the
       findings to be saved next to the document in the repository so the round is not lost.
     expect: >-
-      The skill stops with needs-input, names kb-write as the capability the host does not provide,
-      and writes no review record, disposition record or finding list into the working repository.
+      The skill names kb-write as the capability the host does not provide, returns the review
+      record in the session named as not published without stopping for it, and writes no review
+      record, disposition record or finding list into the working repository.
+  - id: configured-knowledgebase-failure-stops
+    kind: missing-tools
+    given: >-
+      ak kb check exits 1: the project commits ak.kb.yaml and its configured knowledgebase cannot
+      be used. The panel has returned and the caller asks for the findings to be saved next to the
+      document in the repository.
+    expect: >-
+      The skill stops with failed, reporting the configured knowledgebase's failure rather than a
+      coverage limit, and writes no review record, disposition record or finding list into the
+      working repository.
 
 body:
   line_budget: 150

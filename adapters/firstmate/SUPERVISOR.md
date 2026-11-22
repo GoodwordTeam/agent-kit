@@ -22,7 +22,11 @@ worker worktree and Git common directory.
 
 Use `ak firstmate brief` to render an Agent Kit section into a normal Firstmate brief. Spawn the
 task with its existing `--mode no-mistakes`, `direct-PR` or `local-only`. Firstmate's own status,
-inbox, recovery and merge policy remain authoritative. Dispatch both supervisor seats as separate
+inbox, recovery and merge policy remain authoritative. Immediately assign each P0 or prioritized
+order a dedicated end-to-end worker and watch it every cycle; other lanes continue in parallel.
+Relay the runner's exact priority blocker text from stderr to the visible status surface, including
+while a worker is investigating. These are outer-supervisor duties (ruling
+`firstmate-outer-loop-agent-kit-inner`). Dispatch both supervisor seats as separate
 ordinary crewmates, never as children of the implementing worker, and submit their judgments to
 the runner. A seat launcher may automate that dispatch through stock Firstmate commands.
 
@@ -68,10 +72,9 @@ The commands below document existing patched-home installations. Stock Firstmate
 
 ## What your binding grants
 
-The binding is your grant to the worker for `review.full`, `review.readiness` and `ship.prepare`
-(CONTRACT.md §6). The worker checks it with `ak firstmate grant` before each and cites the record.
-When the check refuses, the worker stops and sends `needs-decision`: decide it yourself or ask the
-captain. Merge is never on the binding and stays yours.
+See [CONTRACT.md §6](CONTRACT.md#6-deprecated-legacy-binding-delegated-authority) for binding grants
+and validation. For review starts and grant refusals, follow
+[super-review authority](../../skills/super-review/SKILL.md#authority).
 
 The binding remains the grant for the three operations in this adapter. For a charter-bound
 autopilot run, start the separate `ak runner` service with the charter, private state, two seat

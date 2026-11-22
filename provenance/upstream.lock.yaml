@@ -3,6 +3,16 @@
 schema_version: 1
 pinned_at: "2026-09-18"
 donors:
+  # Optional semantic hook only. No donor skill or global hook is installed.
+  - id: jev-lint
+    repo: mizchi/jev-lint
+    url: https://github.com/mizchi/jev-lint
+    path: .donors/mizchi_jev-lint
+    commit: af58a3bd20693f828ff6353e3543c0ab5bb7bad4
+    commit_date: "2026-10-02T04:27:16Z"
+    license: MIT
+    copyright: "Copyright (c) 2026 mizchi<Kotaro Chikuba>"
+    license_file: provenance/licenses/mizchi_jev-lint.LICENSE
   - id: compound-engineering
     repo: EveryInc/compound-engineering-plugin
     url: https://github.com/EveryInc/compound-engineering-plugin
@@ -124,6 +134,27 @@ donors:
     license: MIT
     copyright: "Copyright (c) 2025 Bayram Annakov"
     license_file: provenance/licenses/BayramAnnakov_claude-reflect.LICENSE
+  # The skill-doctor collector, rubrics, scoring and report feed `ak learn doctor` only.
+  - id: common-skills
+    repo: warpdotdev/common-skills
+    url: https://github.com/warpdotdev/common-skills
+    path: .donors/warpdotdev_common-skills
+    commit: 8792394ff1b655e0af451b8fabb68ef0cfcbd208
+    commit_date: "2026-10-20T17:07:08-04:00"
+    license: MIT
+    copyright: "Copyright (c) 2026 Denver Technologies, Inc."
+    license_file: provenance/licenses/warpdotdev_common-skills.LICENSE
+  # Research pin. The review-isolation probe adapts child-session joining from
+  # tests/integration/test_claude.py and test_codex.py; no EGM plugin ships.
+  - id: egm
+    repo: google/elephant-goldfish-model
+    url: https://github.com/google/elephant-goldfish-model
+    path: .donors/google_elephant-goldfish-model
+    commit: 403d8881d62022490637d740657b33f01e321ea8
+    commit_date: "2026-10-30T08:43:28Z"
+    license: Apache-2.0
+    copyright: "Copyright 2026 Google LLC"
+    license_file: provenance/licenses/google_elephant-goldfish-model.LICENSE
 # ---------------------------------------------------------------------------
 # Local sources: third-party or design material held in-repo rather than at a
 # donor pin. This block is the register that says what these files are, who owns
@@ -378,4 +409,28 @@ local_sources:
     copyright: "Copyright (c) 2026 Eduardo Picazo"
     # protocols/work-trail/PROTOCOL.md cites its decision trail section (lines 224-227) through
     # an anchored `local:` row.
+    cited_in_adaptations: true
+  - id: review-routing-owner-ask-2026-11-10
+    description: >-
+      The owner's ask of 2026-11-10 that review depth follow the red, yellow and green delegation
+      class, captured verbatim under a two-line header. The quoted block equals section 1 of the
+      review-routing specification byte-for-byte. docs/decisions/0017-review-depth-follows-delegation-class.md
+      records the decision it raised.
+    original_path: ~/orca/workspaces/firstmate/agent-kit-mate/data/ak-review-routing-plan/spec.md
+    working_copy: research/sources/review-routing-owner-ask-2026-11-10.md
+    sha256: 468cbcc7b448e36805874c3ca8e5c36784d0f1680f37e5f965e1e765d7695ad6
+    lines: 22
+    license: MIT
+    copyright: "Copyright (c) 2026 Eduardo Picazo"
+    # policies/review.yaml cites the three semaphore bullets (lines 19-22) through an anchored
+    # `local:` row.
+    cited_in_adaptations: true
+  - id: gs017-behavior-verification-prd
+    description: GS-017 behavior-verification PRD. The T01 contract, intent, and policy-binding requirements.
+    original_path: agent-kit-behavior-verification-prd.md
+    working_copy: research/sources/gs017-behavior-verification-prd.md
+    sha256: 9c843c69257eda35eb52066b1a4c7a2b6f6f5d3cd37390c85c580948339fdcc3
+    lines: 550
+    license: MIT
+    copyright: "Copyright (c) 2026 Eduardo Picazo"
     cited_in_adaptations: true

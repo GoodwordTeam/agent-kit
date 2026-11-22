@@ -11,8 +11,7 @@
  * It is planned for the default install: `ak.install.yaml` changes the generated frontmatter, so
  * the planner reads a root that links every top-level entry of the tree except that file.
  */
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { entryBodyPath } from "../../src/catalog/layout.ts";
@@ -28,6 +27,8 @@ import { outputContract as reflectorContract } from "../../src/learn/memory/refl
 import { sessionStartBlock } from "../../src/learn/memory/session-context.ts";
 import { reviewLedgerDir } from "../../src/learn/review/ledger.ts";
 import { MAINTAINER_CONTRACT } from "../../src/learn/review/maintain.ts";
+import { SESSION_SCORER_CONTRACT } from "../../src/learn/doctor/score.ts";
+import { SKILL_DOCTOR_CONTRACT } from "../../src/learn/doctor/suggest.ts";
 import { SKILL_SCOUT_CONTRACT } from "../../src/learn/skills/learn.ts";
 import { rosterSection } from "../../src/learn/skills/roster.ts";
 import { distillPrompt } from "../../src/learn/sources/tool-distill.ts";
@@ -35,6 +36,8 @@ import { HOST_IDS } from "../../src/packaging/hosts.ts";
 import { INSTALL_FILE } from "../../src/packaging/install.ts";
 import { planBundle } from "../../src/packaging/plan.ts";
 import { parseFrontmatter } from "../../src/util/frontmatter.ts";
+import { processScratch } from "../../tests/helpers/process-tmp.ts";
+import { requestFor } from "../../src/semantic-lint/client.ts";
 
 export interface Surface {
   /** Stable key in the baseline. */
@@ -58,7 +61,7 @@ const FIRSTMATE_TEXTS = [
 const BUNDLE_PROFILE = "all";
 
 /** Bundle paths an agent reads: skill entry text, the references behind it and the shared material. */
-const AGENT_FACING = /^(skills|references)\//;
+const AGENT_FACING = /^(?:\.cursor\/)?(skills|references)\//;
 
 function read(root: string, file: string): string {
   return readFileSync(join(root, file), "utf8");
@@ -66,7 +69,7 @@ function read(root: string, file: string): string {
 
 /** A root holding every top-level entry of `root` but the install file, so planning sees the default install. */
 export function withDefaultInstall<T>(root: string, use: (planRoot: string) => T): T {
-  const farm = mkdtempSync(join(tmpdir(), "ak-budget-"));
+  const farm = processScratch("ak-budget-");
   try {
     for (const name of readdirSync(root)) if (name !== INSTALL_FILE) symlinkSync(join(root, name), join(farm, name));
     return use(farm);
@@ -87,7 +90,7 @@ function bundleSurfaces(root: string): Surface[] {
       const listing: string[] = [];
       for (const file of files) {
         out.push({ id: `bundle/${host}:${file.path}`, file: file.source ?? file.path, text: file.contents });
-        if (/^skills\/[^/]+\/SKILL\.md$/.test(file.path)) {
+        if (/^(?:\.cursor\/)?skills\/[^/]+\/SKILL\.md$/.test(file.path)) {
           const { data } = parseFrontmatter(file.contents);
           listing.push(`- ${String(data["name"])}: ${String(data["description"])}\n`);
         }
@@ -111,7 +114,7 @@ function roleSurfaces(root: string, catalog: Catalog): Surface[] {
 
 /** The learning hook's session-start block, outside a repository and for an invented project. */
 function hookSurfaces(root: string): Surface[] {
-  const base = mkdtempSync(join(tmpdir(), "ak-budget-"));
+  const base = processScratch("ak-budget-");
   try {
     const env: NodeJS.ProcessEnv = {
       CLAUDE_CONFIG_DIR: join(base, "config"),
@@ -178,6 +181,8 @@ function judgeSurfaces(root: string): Surface[] {
     ["consolidator", "src/learn/memory/consolidate.ts", CONSOLIDATOR_CONTRACT],
     ["lesson-merger", "src/learn/memory/deep.ts", LESSON_MERGER_CONTRACT],
     ["skill-scout", "src/learn/skills/learn.ts", SKILL_SCOUT_CONTRACT],
+    ["session-scorer", "src/learn/doctor/score.ts", SESSION_SCORER_CONTRACT],
+    ["skill-doctor", "src/learn/doctor/suggest.ts", SKILL_DOCTOR_CONTRACT],
   ];
   return judges.map(([role, file, contract]) => ({
     id: `judge:${role}`,
@@ -220,6 +225,19 @@ export function collectSurfaces(root: string): Surface[] {
     ...hookSurfaces(root),
     ...judgeSurfaces(root),
     DISTILL_SURFACE,
+    {
+      id: "hook:semantic-lint-questions",
+      file: "src/semantic-lint/client.ts",
+      text: JSON.stringify(
+        requestFor({
+          files: [
+            { path: "example.ts", content: "export const ready = true;" },
+            { path: "README.md", content: "The module is ready." },
+          ],
+          excluded: [],
+        }).request.questions,
+      ),
+    },
     ...firstmateSurfaces(root),
   ];
 }

@@ -28,6 +28,12 @@ never publishes. Publication is the separate row above.
 
 A checkpoint category the charter does not list is not granted. It escalates.
 
+Before `ship.prepare`, the runner records the reviewed head and stable patch-id of the complete
+change. Verification records the trunk tip. The merge-tree must be clean. On a
+later head, identical patch-id preserves the verdict only if trunk CI configuration paths did not
+change; otherwise verification resumes before another ship card. The runner re-reads this file
+and the skill body at the bundle version recorded when the run started on every audit tick.
+
 ## Cards that always escalate
 
 These escalate whether or not the two seats agree, because they are decisions dressed as
@@ -46,6 +52,21 @@ checkpoints:
 - A runner cap is hit.
 - The work source is missing.
 - The acceptance criterion is what a person experiences.
+
+## Prioritized questions
+
+Before investigating a question on a P0 or prioritized order, register its id and exact blocker
+text with `ak runner call question` (request fields: `run`, `id`, `source`). Reuse that id while
+investigating; registration starts the ten-minute clock. Check the order, code and authorized
+evidence already in hand. When answered, repeat with `rationale` (the answer), `kind` (`order`,
+`code` or `evidence`) and `evidence` (its source reference), without waiting for the supervisor.
+`continue` returns the answer and reference instead of parking the question;
+`investigate` permits further read-only investigation. Neither result grants checkpoint authority
+or lifts an existing stop. An unresolved question returns `blocked` at ten minutes, and the live
+runner emits the exact blocker text on stderr even if the worker never calls again. Firstmate
+keeps that output visible and owns dispatch and every-cycle monitoring, with other lanes running
+in parallel (ruling `firstmate-outer-loop-agent-kit-inner`). Existing approval cards still follow
+the escalation rules below.
 
 ## The escalation
 

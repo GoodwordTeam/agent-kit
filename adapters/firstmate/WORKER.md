@@ -30,7 +30,7 @@ brief's hash on your first receipt.
 
 Read skills from the pinned bundle and nowhere else. Run the lifecycle in order and let each skill's own
 gates decide when it is done: scout and bound the task, align on the plan, build, verify, review with
-the full panel, fix, verify again, review the fix with `super-review delta`, and ship with `super-ship`.
+`super-review full`, fix, verify again, review the fix with `super-review delta`, and ship with `super-ship`.
 
 A receipt or a verdict is evidence only for the revision and diff hash it names. When either moves, it
 is stale and the gate runs again. The fix-cycle cap is the lifecycle's; at the cap you stop and report,
@@ -45,7 +45,8 @@ branch.
 Each phase leaves a gate record when its own gates pass. Record it with
 `{{gate_cmd}} record --dir {{evidence_dir}} --gate <gate>`: `build-checks` after
 super-build, `verify` after super-verify, `review-full`, `review-delta` and `review-readiness` after
-the matching super-review mode, and `ship-preflight` after super-ship's preconditions hold. Before it
+the matching super-review mode (a full review that requested changes records
+`--verdict changes-requested`), and `ship-preflight` after super-ship's preconditions hold. Before it
 ships, super-ship runs `{{gate_cmd}} check --dir {{evidence_dir}}`; a refusal names
 the phase you skipped or whose evidence went stale, and you go back and run it. Skipping a phase is
 not a shortcut: `done` is refused without its record.
@@ -68,10 +69,14 @@ You own every child's outcome. If you cannot say what a child did, you are not d
 
 ## Your authority
 
-Firstmate is your delegated controller, and this binding is the grant it gives you. Before
-`super-review full`, `super-review readiness` and `super-ship`, run
-`ak firstmate grant --binding {{binding_path}} --operation review.full|review.readiness|ship.prepare`.
-Exit 0 prints a grant record; cite it on the review or the ship record. A refusal means stop and report
+Firstmate is your delegated controller, and this binding is the grant it gives you. Start
+`super-review full` and `super-review readiness` yourself when the lifecycle reaches them. No person
+has to type a command (ADR-0013). When this binding is present, run
+`ak firstmate grant --binding {{binding_path}} --operation review.full|review.readiness` and cite the
+record when it exits 0. A refusal means the binding does not cover the delegated operation. It does
+not stop the model start. Before `super-ship`, run
+`ak firstmate grant --binding {{binding_path}} --operation ship.prepare`.
+Exit 0 prints a grant record; cite it on the ship record. A refusal there means stop and report
 `needs-decision`. Nothing outside the binding is granted, merge included.
 
 The binding grant alone does not carry autonomous ship through. If Firstmate supplied a live runner

@@ -1,19 +1,18 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   closeSync,
   constants,
   cpSync,
   existsSync,
   mkdirSync,
-  mkdtempSync,
   openSync,
+  readFileSync,
   readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
 
@@ -21,6 +20,7 @@ import commonSchema from "../schemas/common.schema.json" with { type: "json" };
 import charterExample from "../templates/charter.example.json" with { type: "json" };
 import decisionExample from "../templates/decision.example.json" with { type: "json" };
 import reviewExample from "../templates/review.example.json" with { type: "json" };
+import trailExample from "../templates/trail.example.json" with { type: "json" };
 import { runCli } from "../src/cli.ts";
 import { ARTIFACT_SCHEMA_IDS, checkRunArtifact } from "../src/kb/artifacts.ts";
 import {
@@ -33,8 +33,10 @@ import {
   resolveKnowledgebase,
 } from "../src/kb/binding.ts";
 import { EXIT_UNAVAILABLE, runKb } from "../src/kb/cli.ts";
+import { git as kbGit } from "../src/kb/git.ts";
 import { KB_KINDS } from "../src/kb/local-git.ts";
 import { checkKnowledgebase } from "../src/maintenance/cli.ts";
+import { processScratch } from "./helpers/process-tmp.ts";
 
 /**
  * adapters/knowledgebase/CONTRACT.md §6 and §7, ruling `kb-binding-is-a-locator`.
@@ -60,12 +62,28 @@ const PAGE = "# Queue the exports\n\nExports run on a queue, because a request c
 
 function git(dir: string, ...args: string[]): string {
   const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
-  return execFileSync("git", ["-C", dir, ...args], { encoding: "utf8", env });
+  const run = spawnSync("git", ["-C", dir, "-c", "commit.gpgsign=false", ...args], {
+    encoding: "utf8",
+    env,
+    maxBuffer: Infinity,
+  });
+  if (run.error !== undefined || run.status !== 0) {
+    throw new Error(`Command failed: git -C ${dir} ${args.join(" ")}\n${run.stderr ?? run.error?.message ?? ""}`);
+  }
+  return run.stdout ?? "";
+}
+
+function lsTreeFailsForSrc(root: string, args: readonly string[], input?: string) {
+  if (args[0] === "ls-tree") {
+    const path = args[args.length - 1] ?? "";
+    if (path.includes("src/")) return { status: 1, stdout: "", stderr: "fixture nested ls-tree failure" };
+  }
+  return kbGit(root, args, input);
 }
 
 /** A repository whose commits need nothing from the operator's own git configuration. */
 function repoTemplate(): string {
-  const dir = mkdtempSync(join(tmpdir(), "ak-kb-template-"));
+  const dir = processScratch("ak-kb-template-");
   mkdirSync(dir, { recursive: true });
   git(dir, "init", "-q", "-b", "main");
   git(dir, "config", "user.name", "fixture");
@@ -93,8 +111,8 @@ interface Fixture {
   scratch: string;
 }
 
-function fixture(binding: string | null = BINDING, parent = tmpdir()): Fixture {
-  const scratch = realpathSync(mkdtempSync(join(parent, "ak-kb-")));
+function fixture(binding: string | null = BINDING): Fixture {
+  const scratch = processScratch("ak-kb-");
   const project = initRepo(join(scratch, "project"));
   writeFileSync(join(project, "README.md"), "# example\n");
   if (binding !== null) writeFileSync(join(project, BINDING_FILE), binding);
@@ -216,6 +234,26 @@ function refusal(run: Run): Refusal {
   return value;
 }
 
+/** Where the knowledgebase keeps every run artifact of the fixture's project. */
+const ARTIFACTS = "projects/example-project/runs/artifacts.jsonl";
+
+/** The last record the artifacts file holds for `ref` at `revision`, as the knowledgebase stored it. */
+function storedAt(fx: Fixture, ref: string, revision = "HEAD"): StoredArtifact {
+  let found: StoredArtifact | undefined;
+  for (const line of git(fx.kb, "show", `${revision}:${ARTIFACTS}`).split("\n")) {
+    if (line === "") continue;
+    const value: unknown = JSON.parse(line);
+    if (isStored(value) && value.record.ref === ref) found = value;
+  }
+  if (found === undefined) throw new Error(`${ARTIFACTS} at ${revision} holds no record for ${ref}`);
+  return found;
+}
+
+/** The files one knowledgebase commit touches. */
+function touched(fx: Fixture, revision: string): string[] {
+  return git(fx.kb, "show", "--name-only", "--format=", revision).trim().split("\n");
+}
+
 function readResult(run: Run): ReadResult {
   const value: unknown = JSON.parse(run.out);
   if (!isRead(value)) throw new Error(`not a read result: ${run.out}`);
@@ -333,6 +371,88 @@ describe("no knowledgebase configured", () => {
     expect(read.code).toBe(EXIT_UNAVAILABLE);
     expect(refusal(read).status).toBe("unavailable");
     expect(refusal(publishPage(fx, fx.project, page(fx))).status).toBe("refused");
+  });
+});
+
+describe("ak kb check reads the working binding", () => {
+  test("ak kb check reads an uncommitted ak.kb.yaml edit", () => {
+    const fx = registered();
+    writeFileSync(
+      join(fx.project, BINDING_FILE),
+      "backend: local-git\nproject: edited-project\nlocator:\n  knowledgebase: fixture-kb\n",
+    );
+    const loaded = loadKbBinding(fx.project);
+    expect(loaded.binding?.project).toBe("edited-project");
+    const check = kb(fx, fx.project, "check");
+    expect(check.code).toBe(0);
+    expect(check.out).toContain("project 'edited-project'");
+  });
+});
+
+describe("an explicit revision never falls back to the working binding", () => {
+  test("a missing committed binding remains unbound", () => {
+    const fx = fixture(null);
+    writeFileSync(join(fx.project, BINDING_FILE), BINDING);
+    const loaded = loadKbBinding(fx.project, "HEAD", kbGit, false);
+    expect(loaded.binding).toBeNull();
+    expect(loaded.issues.map((issue) => issue.rule)).toEqual(["kb.unbound"]);
+  });
+
+  test("an unreadable nested binding is found and never falls back to the working file", () => {
+    const fx = fixture();
+    const nested = join(fx.project, "app");
+    mkdirSync(nested);
+    writeFileSync(join(nested, BINDING_FILE), BINDING.replace("example-project", "nested-project"));
+    git(fx.project, "add", "app/ak.kb.yaml");
+    git(fx.project, "commit", "-qm", "nested binding");
+    expect(loadKbBinding(nested, "HEAD", kbGit).binding?.project).toBe("nested-project");
+    const oid = git(fx.project, "rev-parse", "HEAD:app/ak.kb.yaml").trim();
+    rmSync(join(fx.project, ".git", "objects", oid.slice(0, 2), oid.slice(2)));
+    const deeper = join(nested, "src");
+    mkdirSync(deeper);
+    expect(findKbProjectRoot(deeper, "HEAD", kbGit)).toBe(nested);
+    for (const workingFile of [false, true]) {
+      const loaded = loadKbBinding(nested, "HEAD", kbGit, workingFile);
+      expect(loaded.binding).toBeNull();
+      expect(loaded.issues.map((issue) => issue.rule)).toEqual(["kb.binding-unreadable"]);
+    }
+  });
+
+  for (const command of ["ls-tree", "rev-parse"])
+    test(`a failed binding ${command} read is an error`, () => {
+      const fx = fixture();
+      const loaded = loadKbBinding(fx.project, "HEAD", (root, args, input) => {
+        if (args[0] === command && !args.includes("--verify"))
+          return { status: 1, stdout: "", stderr: "fixture read failure" };
+        return kbGit(root, args, input);
+      });
+      expect(loaded.binding).toBeNull();
+      expect(loaded.issues.map((issue) => issue.rule)).toEqual(["kb.binding-unreadable"]);
+    });
+
+  test("a failed nested ls-tree is unreadable, not a binding hit", () => {
+    const fx = fixture();
+    const nested = join(fx.project, "src", "deep");
+    mkdirSync(nested, { recursive: true });
+    expect(() => findKbProjectRoot(nested, "HEAD", lsTreeFailsForSrc)).toThrow(
+      "cannot locate committed knowledgebase binding",
+    );
+    const loaded = loadKbBinding(nested, "HEAD", lsTreeFailsForSrc);
+    expect(loaded.binding).toBeNull();
+    expect(loaded.issues.map((issue) => issue.rule)).toEqual(["kb.binding-unreadable"]);
+  });
+
+  test("an explicit revision that cannot be resolved is an error, not a working-file fallback", () => {
+    const fx = fixture();
+    writeFileSync(join(fx.project, BINDING_FILE), "backend: wiki\nproject: example-project\nlocator:\n  space: eng\n");
+    const loaded = loadKbBinding(fx.project, "not-a-commit", kbGit);
+    expect(loaded.binding).toBe(null);
+    expect(loaded.issues.map((issue) => issue.rule)).toEqual(["kb.revision-unresolved"]);
+  });
+
+  test("an explicit revision requires a git function", () => {
+    const fx = fixture();
+    expect(() => loadKbBinding(fx.project, "HEAD")).toThrow("an explicit revision requires a git function");
   });
 });
 
@@ -659,16 +779,19 @@ describe("readContext", () => {
     expect(read.coverage.scopes).toEqual(["billing/exports", "billing", "project"]);
     expect(read.coverage.kinds).toEqual(["concept", "adr"]);
     expect(read.coverage.run_artifact_links).toBe("not-selected");
-  });
+    // Publishes four pages through git and the CLI; a loaded host can pass the 5s default.
+  }, 30_000);
 
   test("reads what is committed, never an uncommitted file in the checkout", () => {
     const fx = registered();
-    publishPage(fx, fx.project, page(fx));
+    const publishedPage = publishPage(fx, fx.project, page(fx));
+    expect(publishedPage.code, `${publishedPage.out}\n${publishedPage.err}`).toBe(0);
     const dir = join(fx.kb, "projects", "example-project", "documents", "billing", "exports", "adr");
     writeFileSync(join(dir, "draft.md"), "---\nref: doc:x\n---\n\nnot committed\n");
     const read = readResult(kb(fx, fx.project, "read", "--kind", "adr", "--scope", "billing/exports"));
     expect(read.documents).toHaveLength(1);
-  });
+    // Builds git fixtures and publishes through the CLI; a loaded host can pass the 5s default.
+  }, 30_000);
 
   test("a committed page that is not a record is named, not silently dropped", () => {
     const fx = registered();
@@ -680,7 +803,8 @@ describe("readContext", () => {
     const read = readResult(kb(fx, fx.project, "read", "--kind", "adr", "--scope", "billing/exports"));
     expect(read.documents).toHaveLength(1);
     expect(read.coverage.unreadable).toEqual([rel]);
-  });
+    // Builds git fixtures, publishes and commits through the CLI; a loaded host can pass the 5s default.
+  }, 30_000);
 
   test("a committed page whose file name is not ASCII is named too", () => {
     const fx = registered();
@@ -717,7 +841,8 @@ describe("readContext", () => {
     );
     for (const scope of ["billing/exports", "billing", "project"])
       expect(kb(fx, fx.project, "read", "--kind", "adr", "--scope", scope).err).toBe("");
-  });
+    // Runs six CLI reads over git fixtures; a loaded host can pass the 5s default.
+  }, 30_000);
 
   test("a mistyped kind names the kind it was probably meant to be", () => {
     const fx = registered();
@@ -730,6 +855,54 @@ describe("readContext", () => {
 });
 
 describe("ak kb usage", () => {
+  test("an empty trail-attempts path is a usage error", () => {
+    const fx = registered();
+    const file = join(fx.scratch, "trail.json");
+    writeFileSync(file, JSON.stringify(trailExample));
+    const run = kb(
+      fx,
+      fx.project,
+      "publish",
+      "artifact",
+      "--file",
+      file,
+      "--run",
+      trailExample.run_id,
+      "--trail-attempts",
+      "",
+    );
+    expect(run.code).toBe(2);
+    expect(run.err.split("\n")[0]).toBe("ak kb: --trail-attempts is not a flag this command takes, or has no value");
+  });
+
+  test("trail publication resolves its attempt directory relative to the project cwd", () => {
+    const fx = registered();
+    const file = join(fx.scratch, "trail.json");
+    writeFileSync(file, JSON.stringify(trailExample));
+    mkdirSync(join(fx.project, "attempts"));
+    const run = kb(
+      fx,
+      fx.project,
+      "publish",
+      "artifact",
+      "--file",
+      file,
+      "--run",
+      trailExample.run_id,
+      "--trail-attempts",
+      "attempts",
+    );
+    expect(run.code).toBe(0);
+    expect(JSON.parse(run.out)).toMatchObject({ status: "complete", effect: "published" });
+    const marks = readdirSync(join(fx.project, "attempts"));
+    expect(marks).toHaveLength(1);
+    const mark = marks[0];
+    if (mark === undefined) throw new Error("the published trail has no attempt mark");
+    expect(readFileSync(join(fx.project, "attempts", mark), "utf8")).toBe(
+      `fixture-kb/example-project/run:${trailExample.run_id}/trail/${trailExample.id}\n`,
+    );
+  });
+
   test("an unknown subcommand names the one it was probably meant to be", () => {
     const run = kb(fixture(), REPO, "raed");
     expect(run.code).toBe(2);
@@ -750,7 +923,7 @@ describe("publishArtifact, run-artifact placement", () => {
     const children: ReturnType<typeof Bun.spawn>[] = [];
 
     beforeAll(async () => {
-      bundledCliDir = realpathSync(mkdtempSync(join("/tmp", "ak-kb-cli-")));
+      bundledCliDir = processScratch("ak-kb-cli-");
       bundledCli = join(bundledCliDir, "ak");
       const build = await Bun.build({
         entrypoints: [join(REPO, "src/maintenance/cli.ts")],
@@ -762,7 +935,7 @@ describe("publishArtifact, run-artifact placement", () => {
     });
 
     beforeAll(() => {
-      fx = fixture(BINDING, "/tmp");
+      fx = fixture(BINDING);
       home = join(fx.scratch, "home");
       mkdirSync(home);
       const run = spawnSync(process.execPath, [bundledCli, "kb", "register", "fixture-kb", fx.kb], {
@@ -783,12 +956,13 @@ describe("publishArtifact, run-artifact placement", () => {
       invalidPublish = await preparePublish("malformed-review.json");
     });
 
-    afterAll(() => {
+    afterAll(async () => {
       for (const pending of [publish, invalidPublish]) {
         if (!pending) continue;
         if (!pending.sent) closeSync(pending.input);
       }
-      for (const child of children) if (child.exitCode === null) child.kill();
+      for (const child of children) if (child.exitCode === null) child.kill("SIGKILL");
+      await Promise.allSettled(children.map((child) => child.exited));
       if (bundledCliDir) rmSync(bundledCliDir, { recursive: true, force: true });
       if (fx?.scratch) rmSync(fx.scratch, { recursive: true, force: true });
     });
@@ -852,9 +1026,7 @@ describe("publishArtifact, run-artifact placement", () => {
       expect(sent.code).toBe(0);
       const record = published(sent);
       expect(record.ref).toBe("run:example-run-1/review/example-review-1");
-      const path = "projects/example-project/runs/example-run-1/review/example-review-1.json";
-      const stored: unknown = JSON.parse(git(fx.kb, "show", `HEAD:${path}`));
-      expect(stored).toMatchObject({
+      expect(storedAt(fx, record.ref)).toMatchObject({
         record: { ref: record.ref, content_hash: record.content_hash },
         artifact: reviewExample,
       });
@@ -888,7 +1060,7 @@ describe("publishArtifact, run-artifact placement", () => {
     expect(checked.problem).toContain("must have required property 'rationale'");
   });
 
-  test("a schema-valid artifact is stored under its run and linked from a record", () => {
+  test("a schema-valid artifact is stored in the run artifacts file and linked from a record", () => {
     const fx = registered();
     const doc = published(publishPage(fx, fx.project, page(fx)));
     const sent = kb(
@@ -905,12 +1077,12 @@ describe("publishArtifact, run-artifact placement", () => {
     );
     expect(sent.code).toBe(0);
     expect(published(sent).ref).toBe("run:example-run-1/decision/example-decision-1");
-    const stored: unknown = JSON.parse(
-      git(fx.kb, "show", "HEAD:projects/example-project/runs/example-run-1/decision/example-decision-1.json"),
-    );
-    expect(stored).toMatchObject({ record: { links: [doc.ref], content_hash: published(sent).content_hash } });
+    expect(storedAt(fx, published(sent).ref)).toMatchObject({
+      record: { links: [doc.ref], content_hash: published(sent).content_hash },
+    });
     expect(git(fx.project, "status", "--porcelain")).toBe("");
-  });
+    // Publishes a page and an artifact through git and the CLI; a loaded host can pass the 5s default.
+  }, 30_000);
 
   test("an artifact failing its own schema is refused before any write", () => {
     const fx = registered();
@@ -977,10 +1149,7 @@ describe("publishArtifact, run-artifact placement", () => {
     expect(relinked.code).toBe(1);
     expect(refusal(relinked).code).toBe("kb.changed-under-reused-record");
     expect(commits(fx.kb)).toBe(2);
-    const stored: unknown = JSON.parse(
-      git(fx.kb, "show", "HEAD:projects/example-project/runs/example-run-1/decision/example-decision-1.json"),
-    );
-    expect(stored).toMatchObject({ record: { links: [] } });
+    expect(storedAt(fx, "run:example-run-1/decision/example-decision-1")).toMatchObject({ record: { links: [] } });
   });
 
   test("an approved copy published after its draft is stored on the same record", () => {
@@ -992,12 +1161,7 @@ describe("publishArtifact, run-artifact placement", () => {
       return file;
     };
     const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
-    const path = "projects/example-project/runs/example-run-1/charter/example-charter-1.json";
-    const stored = (): StoredArtifact => {
-      const value: unknown = JSON.parse(git(fx.kb, "show", `HEAD:${path}`));
-      if (!isStored(value)) throw new Error(`not a stored artifact: ${path}`);
-      return value;
-    };
+    const stored = (): StoredArtifact => storedAt(fx, "run:example-run-1/charter/example-charter-1");
 
     const draft = published(kb(fx, fx.project, ...args, write("draft.json", unapproved)));
     expect(draft.effect).toBe("published");
@@ -1045,6 +1209,178 @@ describe("publishArtifact, run-artifact placement", () => {
 
   test("every envelope schema can be carried", () => {
     expect(ARTIFACT_SCHEMA_IDS.toSorted()).toEqual(commonSchema.$defs.schema_id.enum.toSorted());
+  });
+});
+
+describe("the store: pages stay files, run artifacts share one file", () => {
+  test("a document of each of the nine kinds is one markdown file, and its commit touches only that file", () => {
+    const fx = registered();
+    for (const kind of KB_KINDS) {
+      const sent = kb(
+        fx,
+        fx.project,
+        "publish",
+        "document",
+        "--kind",
+        kind,
+        "--scope",
+        "billing",
+        "--id",
+        `one-${kind}`,
+        "--title",
+        `One ${kind}`,
+        "--file",
+        page(fx),
+      );
+      const path = `projects/example-project/documents/billing/${kind}/one-${kind}.md`;
+      expect(published(sent).ref).toBe(`doc:billing/${kind}/one-${kind}`);
+      expect(touched(fx, published(sent).revision)).toEqual([path]);
+      expect(git(fx.kb, "show", `HEAD:${path}`)).toEndWith(PAGE);
+    }
+    const files = git(fx.kb, "ls-tree", "-r", "--name-only", "HEAD").trim().split("\n");
+    expect(files).toHaveLength(9);
+    expect(files.every((file) => file.endsWith(".md"))).toBe(true);
+    const read = readResult(kb(fx, fx.project, "read", "--kind", KB_KINDS.join(","), "--scope", "billing"));
+    expect(read.documents.map((document) => document.kind).toSorted()).toEqual(KB_KINDS.toSorted());
+  }, 30_000);
+
+  test("a run artifact publish appends one record to artifacts.jsonl and its commit touches only that file", () => {
+    const fx = registered();
+    const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
+    const first = published(kb(fx, fx.project, ...args, decision(fx)));
+    expect(touched(fx, first.revision)).toEqual([ARTIFACTS]);
+    const before = git(fx.kb, "show", `HEAD:${ARTIFACTS}`);
+    expect(before.split("\n").filter((line) => line !== "")).toHaveLength(1);
+
+    const file = join(fx.scratch, "review.json");
+    writeFileSync(file, JSON.stringify(reviewExample));
+    const second = published(kb(fx, fx.project, ...args, file));
+    expect(touched(fx, second.revision)).toEqual([ARTIFACTS]);
+    const after = git(fx.kb, "show", `HEAD:${ARTIFACTS}`);
+    expect(after.startsWith(before)).toBe(true);
+    expect(
+      after
+        .slice(before.length)
+        .split("\n")
+        .filter((line) => line !== ""),
+    ).toHaveLength(1);
+    expect(git(fx.kb, "ls-tree", "-r", "--name-only", "HEAD").trim()).toBe(ARTIFACTS);
+    expect(git(fx.kb, "status", "--porcelain")).toBe("");
+  }, 30_000);
+
+  test("a read of the artifact returns the body stored in the commit that published it", () => {
+    const fx = registered();
+    const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
+    const first = published(kb(fx, fx.project, ...args, decision(fx)));
+    const file = join(fx.scratch, "review.json");
+    writeFileSync(file, JSON.stringify(reviewExample));
+    published(kb(fx, fx.project, ...args, file));
+
+    const stored = storedAt(fx, first.ref, first.revision);
+    const body: unknown = stored.artifact;
+    expect(body).toEqual(decisionExample);
+    expect(stored.record).toMatchObject({ content_hash: first.content_hash, idempotency_key: first.idempotency_key });
+    expect(storedAt(fx, first.ref)).toEqual(stored);
+
+    const again = published(kb(fx, fx.project, ...args, decision(fx)));
+    expect(again.effect).toBe("none");
+    expect(again.revision).toBe(first.revision);
+  });
+
+  test("refs keep their shape, and a run artifact ref resolves as a link", () => {
+    const fx = registered();
+    const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
+    const first = published(kb(fx, fx.project, ...args, decision(fx)));
+    expect(first.ref).toBe("run:example-run-1/decision/example-decision-1");
+    const file = join(fx.scratch, "review.json");
+    writeFileSync(file, JSON.stringify(reviewExample));
+    const linked = published(kb(fx, fx.project, ...args, file, "--link", first.ref));
+    expect(linked.ref).toBe("run:example-run-1/review/example-review-1");
+    expect(storedAt(fx, linked.ref)).toMatchObject({ record: { links: [first.ref] } });
+    const dangling = kb(fx, fx.project, ...args, file, "--link", "run:example-run-1/decision/never-published");
+    expect(refusal(dangling).code).toBe("kb.link-unresolved");
+  });
+
+  test("an uncommitted edit to the artifacts file is not written over", () => {
+    const fx = registered();
+    const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
+    published(kb(fx, fx.project, ...args, decision(fx)));
+    const edited = `${git(fx.kb, "show", `HEAD:${ARTIFACTS}`)}{"a human's": "line"}\n`;
+    writeFileSync(join(fx.kb, ARTIFACTS), edited);
+    const file = join(fx.scratch, "review.json");
+    writeFileSync(file, JSON.stringify(reviewExample));
+    const sent = kb(fx, fx.project, ...args, file);
+    expect(sent.code).toBe(1);
+    expect(refusal(sent).code).toBe("kb.uncommitted-record");
+    expect(commits(fx.kb)).toBe(1);
+  });
+
+  test("publication, republishing and run links survive an artifacts file growing past 64 MiB", () => {
+    const fx = registered();
+    const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
+    const first = published(kb(fx, fx.project, ...args, decision(fx, { question: "q".repeat(1024 * 1024) })));
+    const line = git(fx.kb, "show", `HEAD:${ARTIFACTS}`);
+    writeFileSync(join(fx.kb, ARTIFACTS), line.repeat(63));
+    git(fx.kb, "add", "--", ARTIFACTS);
+    git(fx.kb, "commit", "-q", "-m", "fixture: seed accumulated artifact copies");
+    expect(Number(git(fx.kb, "cat-file", "-s", `HEAD:${ARTIFACTS}`))).toBeLessThan(64 * 1024 * 1024);
+
+    const file = decision(fx, { id: "crossing-limit", question: "r".repeat(1024 * 1024) });
+    const crossing = kb(fx, fx.project, ...args, file);
+    expect(crossing.code).toBe(0);
+    const second = published(crossing);
+    expect(second.effect).toBe("published");
+    expect(Number(git(fx.kb, "cat-file", "-s", `${second.revision}:${ARTIFACTS}`))).toBeGreaterThan(64 * 1024 * 1024);
+    expect(storedAt(fx, second.ref, second.revision).artifact).toEqual(JSON.parse(readFileSync(file, "utf8")));
+    expect(touched(fx, second.revision)).toEqual([ARTIFACTS]);
+
+    const linked = kb(fx, fx.project, ...args, decision(fx, { id: "after-limit" }), "--link", first.ref);
+    expect(linked.code).toBe(0);
+    expect(published(linked).effect).toBe("published");
+    const again = kb(fx, fx.project, ...args, file);
+    expect(again.code).toBe(0);
+    expect(published(again)).toMatchObject({ effect: "none", revision: second.revision });
+    expect(git(fx.kb, "status", "--porcelain")).toBe("");
+  }, 30_000);
+
+  test("an unreadable committed artifact blob fails both publication and run-link resolution", () => {
+    const fx = registered();
+    const args = ["publish", "artifact", "--run", "example-run-1", "--file"];
+    const file = decision(fx);
+    const first = published(kb(fx, fx.project, ...args, file));
+    const oid = git(fx.kb, "rev-parse", `HEAD:${ARTIFACTS}`).trim();
+    const contents = readFileSync(join(fx.kb, ARTIFACTS), "utf8");
+    rmSync(join(fx.kb, ".git", "objects", oid.slice(0, 2), oid.slice(2)));
+
+    for (const request of [[file], [decision(fx, { id: "new-record" })], [file, "--link", first.ref]]) {
+      const sent = kb(fx, fx.project, ...args, ...request);
+      expect(sent.code).toBe(1);
+      expect(refusal(sent)).toMatchObject({ status: "failed", code: "kb.unreadable" });
+    }
+    expect(git(fx.kb, "rev-parse", "HEAD").trim()).toBe(first.revision);
+    expect(readFileSync(join(fx.kb, ARTIFACTS), "utf8")).toBe(contents);
+  });
+
+  test("an unreadable committed page blob fails reads, republishing and document-link resolution", () => {
+    const fx = registered();
+    const file = page(fx);
+    const first = published(publishPage(fx, fx.project, file));
+    const path = "projects/example-project/documents/billing/exports/adr/queue-the-exports.md";
+    const oid = git(fx.kb, "rev-parse", `HEAD:${path}`).trim();
+    const contents = readFileSync(join(fx.kb, path), "utf8");
+    rmSync(join(fx.kb, ".git", "objects", oid.slice(0, 2), oid.slice(2)));
+
+    const results = [
+      kb(fx, fx.project, "read", "--kind", "adr", "--scope", "billing/exports"),
+      publishPage(fx, fx.project, file),
+      kb(fx, fx.project, "publish", "artifact", "--run", "example-run-1", "--file", decision(fx), "--link", first.ref),
+    ];
+    for (const sent of results) {
+      expect(sent.code).toBe(1);
+      expect(refusal(sent)).toMatchObject({ status: "failed", code: "kb.unreadable" });
+    }
+    expect(git(fx.kb, "rev-parse", "HEAD").trim()).toBe(first.revision);
+    expect(readFileSync(join(fx.kb, path), "utf8")).toBe(contents);
   });
 });
 
@@ -1096,5 +1432,6 @@ describe("ak doctor", () => {
     expect(checkKnowledgebase(fx.project, fx.registry).level).toBe("PASS");
     writeFileSync(fx.registry, "{");
     expect(checkKnowledgebase(fx.project, fx.registry).level).toBe("FAIL");
-  });
+    // Builds two git fixtures and runs `ak kb register`; a loaded host can pass the 5s default.
+  }, 30_000);
 });

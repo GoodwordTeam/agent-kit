@@ -1,3 +1,4 @@
+import { Database } from "bun:sqlite";
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -7,6 +8,7 @@ import {
   commandJudge,
   declaredUnavailable,
   extractJson,
+  JUDGE_BODIES_FILE,
   judgeRows,
   judgeTraceSummary,
   type JudgeTraceRow,
@@ -195,6 +197,7 @@ describe("judge call trace", () => {
         is_error: false,
       });
       expect(existsSync(join(config.runtimeDir, "judge-bodies"))).toBe(false);
+      expect(existsSync(join(config.runtimeDir, JUDGE_BODIES_FILE))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -308,14 +311,24 @@ describe("judge call trace", () => {
         }),
       ).toEqual({ answer: "kept" });
 
-      const row = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"))[0];
-      if (row === undefined) throw new Error("expected a judge trace row");
-      expect(readFileSync(join(config.runtimeDir, "judge-bodies", `${row.call_id}.prompt`), "utf8")).toBe(
-        "private prompt",
-      );
-      expect(readFileSync(join(config.runtimeDir, "judge-bodies", `${row.call_id}.reply`), "utf8")).toBe(
-        '{"answer":"kept"}',
-      );
+      const rows = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"));
+      const traced = rows.map((entry) => `${entry.attempt} ${entry.outcome} exit=${entry.exit_code}`).join("\n");
+      // An empty first spawn is retried. The body belongs to the attempt that returned the answer.
+      const row = rows.findLast((entry) => entry.outcome === "ok");
+      if (row === undefined) throw new Error(`no successful judge attempt\n${traced}`);
+      const db = new Database(join(config.runtimeDir, JUDGE_BODIES_FILE), { readonly: true });
+      try {
+        expect(
+          db
+            .query<{ prompt: string; reply: string }, [string]>(
+              "SELECT prompt, reply FROM judge_bodies WHERE call_id = ?1",
+            )
+            .get(row.call_id),
+          traced,
+        ).toEqual({ prompt: "private prompt", reply: '{"answer":"kept"}' });
+      } finally {
+        db.close();
+      }
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -418,15 +431,26 @@ describe("judge body retention", () => {
       };
       const judge = commandJudge(config);
       const context = { loop: "review", role: "pattern-maintainer", project: "shop", runId: null } as const;
-      for (const prompt of ["first", "second", "third"]) expect(judge(prompt, context)).toEqual({ answer: "kept" });
+      for (const prompt of ["first", "second", "third"]) {
+        const reply = judge(prompt, context);
+        const traced = readJsonl<JudgeTraceRow>(join(config.runtimeDir, "judge-calls.jsonl"))
+          .map((entry) => `${entry.prompt_chars} ${entry.attempt} ${entry.outcome} exit=${entry.exit_code}`)
+          .join("\n");
+        expect(reply, traced).toEqual({ answer: "kept" });
+      }
 
       const retained = ["judge-calls.1.jsonl", "judge-calls.jsonl"].flatMap((name) =>
         readJsonl<JudgeTraceRow>(join(config.runtimeDir, name)).map((row) => row.call_id),
       );
       expect(retained).toHaveLength(2);
-      expect(readdirSync(join(config.runtimeDir, "judge-bodies")).toSorted()).toEqual(
-        retained.flatMap((id) => [`${id}.prompt`, `${id}.reply`]).toSorted(),
-      );
+      const db = new Database(join(config.runtimeDir, JUDGE_BODIES_FILE), { readonly: true });
+      try {
+        const bodies = db.query<{ prompt: string }, [string]>("SELECT prompt FROM judge_bodies WHERE call_id = ?1");
+        expect(retained.map((id) => bodies.get(id)?.prompt)).toEqual(["second", "third"]);
+      } finally {
+        db.close();
+      }
+      expect(existsSync(join(config.runtimeDir, "judge-bodies"))).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

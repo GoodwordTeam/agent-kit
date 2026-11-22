@@ -57,6 +57,8 @@
         "dossier",
         "finding",
         "review",
+        "cold-read",
+        "behavior-contract",
         "verification",
         "verification-recipe",
         "charter",

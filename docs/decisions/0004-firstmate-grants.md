@@ -1,6 +1,7 @@
 # ADR-0004 — Under Firstmate, the binding is the delegated grant
 
-**Status:** Accepted.
+**Status:** Accepted. Review-start requirements are superseded by
+[ADR-0013](0013-model-starts-super-review.md).
 **Date:** 2026-09-24.
 **Authority:** the maintainer's decision, 2026-09-24 ("Firstmate acts as the person"). Amends the
 consequence in ADR-0003 that a Firstmate binding is not a grant, and the "Runner" row of ADR-0002's
@@ -84,3 +85,14 @@ table. super-ship's Authority section states the further limit the amendment bel
 **Amendment, 2026-09-30.** The grant remains the authorization record, but it no longer suffices for
 the autonomous form of `ship.prepare`. That form also requires the `trusted-evidence` capability,
 which this host does not provide.
+
+**Amendment, 2026-11-10.** A Firstmate-bound `ship.prepare` grant is not a skip of
+`lifecycle record --gate ship-preflight`. That gate is judged unless one of these exemptions holds:
+a validated parent (a `standing-grant` start_authority with its grant, Runner.start's explicit
+human authority on the recomputed hash, an active charter, a standing `autopilot.start` grant, the
+child bound against that parent on the same ticket hash, and a parent run that is not cancelled,
+failed or cap-reached), no task-bound record, or a ticket with no criteria and no named verification.
+The grant remains the authorization record; ship-preflight still refuses a host-unattested verifier
+on that path. Parent-run trust rests on host write isolation of the evidence store. Runner.start's
+merge-base for the knowledgebase binding trusts the charter base ref the same way, so it rests on
+host write isolation of `.git`. A home-ledger check, and pinning a base SHA, are follow-ups.

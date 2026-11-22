@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import { checkSchemas } from "../src/validation/schemas.ts";
@@ -10,8 +10,10 @@ import {
   evidenceDigest,
   indexDocuments,
 } from "../src/validation/docrules.ts";
+import { resolveFindingSectionIdentity } from "../src/validation/headings.ts";
 import { artifactHash } from "../src/util/hash.ts";
 import { loadCatalog } from "../src/catalog/load.ts";
+import type { CheckContext } from "../src/validation/context.ts";
 import { parseJson, updated, type JsonValue, type Path } from "./helpers/json.ts";
 import { makeTree } from "./helpers/tree.ts";
 
@@ -60,12 +62,20 @@ function rulesOf(issues: Array<{ rule: string }>): string[] {
   return issues.map((i) => i.rule);
 }
 
-function run(doc: Record<string, unknown>, others: Record<string, unknown>[] = []) {
+function run(doc: Record<string, unknown>, others: Record<string, unknown>[] = [], ctx?: CheckContext) {
   const all = [
     { file: "templates/doc.json", doc },
     ...others.map((d, i) => ({ file: `templates/other-${i}.json`, doc: d })),
   ];
-  return checkDocument("templates/doc.json", doc, indexDocuments(all));
+  return checkDocument("templates/doc.json", doc, indexDocuments(all), ctx);
+}
+
+const REPO = join(import.meta.dir, "..");
+
+function repoCtx(root: string): CheckContext {
+  const { catalog } = loadCatalog(REPO);
+  if (catalog === null) throw new Error("no catalog");
+  return { root, catalog };
 }
 
 // ---------------------------------------------------------------- charter ---
@@ -397,6 +407,20 @@ describe("decision rules", () => {
     (doc["authority_check"] as Record<string, unknown>)["result"] = "fail";
     expect(rulesOf(run(doc))).toContain("decision.ruling-requires-a-passed-authority-check-not-mere-agreement");
   });
+
+  test("a blocked decision accepts conservative independence evidence", () => {
+    const doc = decision({
+      status: "blocked",
+      authority_check: {
+        ...AUTHORITY_CHECK,
+        seats_independent: false,
+        result: "fail",
+        failed_checks: ["seats_independent"],
+      },
+      ruling: { outcome: "blocked", chosen_option: null, at: "2026-09-19T00:00:00Z", recorded_by: "runner" },
+    });
+    expect(run(doc)).toEqual([]);
+  });
 });
 
 const DECISION_SEAT_A = { id: "seat-a", filled_by: "reviewer-a", independent: true, may_implement: false };
@@ -459,9 +483,14 @@ describe("decision rules, one defect per row", () => {
       "both_judgments_returned is true with 1 judgment(s) recorded",
     ],
     [
-      "seats claimed dependent against the recorded seating",
+      "a decided ruling with conservative independence evidence",
       () => decision({ authority_check: { ...AUTHORITY_CHECK, seats_independent: false, result: "fail" } }),
-      "seats_independent is false but the recorded seating gives true",
+      "ruling is decided without a passed deterministic authority check",
+    ],
+    [
+      "a passing result with conservative independence evidence",
+      () => decision({ authority_check: { ...AUTHORITY_CHECK, seats_independent: false } }),
+      "authority_check.result is pass while its components give fail",
     ],
     [
       "a failing result whose components all pass",
@@ -715,6 +744,57 @@ describe("finding rules", () => {
       conflicting_evidence: [{ ref: "receipt-2", kind: "receipt" }],
     });
     expect(rulesOf(run(doc))).not.toContain("finding.low-confidence-security-is-adjudicated-not-filtered");
+  });
+
+  test("two findings against duplicate headings with different evidence cannot share a fingerprint value", () => {
+    const duplicates = [
+      "# Spec",
+      "",
+      "## Requirements",
+      "Auth must reject expired tokens.",
+      "",
+      "## Requirements",
+      "Payments must bound retries.",
+      "",
+    ].join("\n");
+    const refused = resolveFindingSectionIdentity(duplicates, "Requirements");
+    expect(refused.ok).toBe(false);
+    if (refused.ok) throw new Error("duplicate headings must not produce an identity");
+    expect(refused.reason).toBe("ambiguous");
+
+    const unique = ["# Spec", "", "## Auth", "Reject expired tokens.", "", "## Payments", "Bound retries.", ""].join(
+      "\n",
+    );
+    const auth = resolveFindingSectionIdentity(unique, "Auth");
+    const payments = resolveFindingSectionIdentity(unique, "Payments");
+    expect(auth.ok).toBe(true);
+    expect(payments.ok).toBe(true);
+    if (!auth.ok || !payments.ok) throw new Error("unique headings must resolve");
+    const shared = `sha256:${"f".repeat(64)}`;
+    const a = finding({
+      fingerprint: {
+        value: shared,
+        inputs: {
+          rule: auth.identity,
+          symbol_or_path: "spec.md",
+          evidence_digest: `sha256:${"1".repeat(64)}`,
+        },
+      },
+      evidence: [{ location: { revision: "a".repeat(40), path: "spec.md" }, observation: auth.body.trim() }],
+    });
+    const b = finding({
+      id: "finding-2",
+      fingerprint: {
+        value: shared,
+        inputs: {
+          rule: payments.identity,
+          symbol_or_path: "spec.md",
+          evidence_digest: `sha256:${"2".repeat(64)}`,
+        },
+      },
+      evidence: [{ location: { revision: "a".repeat(40), path: "spec.md" }, observation: payments.body.trim() }],
+    });
+    expect(rulesOf(run(a, [b]))).toContain("finding.fingerprint-stable-across-line-moves");
   });
 });
 
@@ -1122,7 +1202,89 @@ function review(extra: Record<string, unknown> = {}): Record<string, unknown> {
   });
 }
 
+function postCapDelta(extensions: JsonValue[]): Doc {
+  return review({
+    mode: "delta",
+    last_head_verified: { repo: "app", revision: "c".repeat(40) },
+    delta_scope: { boundary: "affected-behavior", affected_behavior: ["login"] },
+    fix_cycles: { allowed: 2, used: 3, exhausted_action: "replan", extensions },
+  });
+}
+
+function findingRef(id: string) {
+  return { id, hash: `sha256:${"a".repeat(64)}` };
+}
+
+function mergeAtCap(followUps: string[]): Doc {
+  return review({
+    findings: [findingRef("finding-1"), findingRef("finding-2")],
+    fix_cycles: {
+      allowed: 2,
+      used: 2,
+      exhausted_action: "merge-with-follow-ups",
+      follow_ups: followUps.map(findingRef),
+    },
+  });
+}
+
 describe("review rules", () => {
+  test("review.third-fix-cycle-stops lets a cap with only listed P3 follow-ups open approve", () => {
+    const docs = [finding({ severity: "P3" }), finding({ id: "finding-2", severity: "P3" })];
+    const issues = run(mergeAtCap(["finding-1", "finding-2"]), docs);
+    expect(messagesOf(issues).filter((m) => m.includes("fix_cycles") || m.includes("fix cycle"))).toEqual([]);
+    expect(rulesOf(issues)).not.toContain("review.third-fix-cycle-stops");
+  });
+
+  test("review.third-fix-cycle-stops ignores a closed finding at the cap", () => {
+    const docs = [finding({ severity: "P1", status: "resolved" }), finding({ id: "finding-2", severity: "P3" })];
+    expect(rulesOf(run(mergeAtCap(["finding-2"]), docs))).not.toContain("review.third-fix-cycle-stops");
+  });
+
+  test("review.third-fix-cycle-stops refuses a merge past an open P2", () => {
+    const docs = [finding({ severity: "P2" }), finding({ id: "finding-2", severity: "P3" })];
+    expect(messagesOf(run(mergeAtCap(["finding-1", "finding-2"]), docs))).toContainEqual(
+      expect.stringContaining(
+        "recommends merge past finding(s) finding-1 that are not P3 findings listed in follow_ups",
+      ),
+    );
+  });
+
+  test("review.third-fix-cycle-stops refuses a merge past an open P2 carried only in the delta packet", () => {
+    const doc = mergeAtCap(["finding-2"]);
+    doc["findings"] = [findingRef("finding-2")];
+    doc["packet"] = {
+      prior_review: findingRef("review-0"),
+      original_findings: [findingRef("finding-1")],
+      fix_diff: `sha256:${"b".repeat(64)}`,
+    };
+    const docs = [finding({ severity: "P2" }), finding({ id: "finding-2", severity: "P3" })];
+    expect(messagesOf(run(doc, docs))).toContainEqual(
+      expect.stringContaining(
+        "recommends merge past finding(s) finding-1 that are not P3 findings listed in follow_ups",
+      ),
+    );
+  });
+
+  test("review.third-fix-cycle-stops refuses a merge recommendation past an open P1 without approving", () => {
+    const doc = mergeAtCap(["finding-2"]);
+    doc["verdict"] = "changes-requested";
+    const docs = [finding({ severity: "P1" }), finding({ id: "finding-2", severity: "P3" })];
+    expect(messagesOf(run(doc, docs))).toContainEqual(
+      expect.stringContaining(
+        "recommends merge past finding(s) finding-1 that are not P3 findings listed in follow_ups",
+      ),
+    );
+  });
+
+  test("review.third-fix-cycle-stops refuses a merge past a P3 not listed as a follow-up", () => {
+    const docs = [finding({ severity: "P3" }), finding({ id: "finding-2", severity: "P3" })];
+    expect(messagesOf(run(mergeAtCap(["finding-1"]), docs))).toContainEqual(
+      expect.stringContaining(
+        "recommends merge past finding(s) finding-2 that are not P3 findings listed in follow_ups",
+      ),
+    );
+  });
+
   test("a well-formed review produces no review issues", () => {
     expect(rulesOf(run(review())).filter((r) => r.startsWith("review."))).toEqual([]);
   });
@@ -1148,6 +1310,93 @@ describe("review rules", () => {
     expect(rulesOf(run(doc))).toContain("review.unavailable-required-lane-blocks-approval");
   });
 
+  test.each(["timeout", "timed out", "lane timed out waiting for a seat"])(
+    "regression: review.unavailable-required-lane-blocks-approval still treats required-lane state unavailable with reason %s as blocking",
+    (reason) => {
+      const doc = review({
+        lanes: [
+          {
+            role: "code-review/correctness",
+            required: true,
+            state: "covered",
+            verdict: "approve",
+            seat: { filled_by: "reviewer-a", independent_of_author: true },
+          },
+          {
+            role: "code-review/security",
+            required: true,
+            state: "unavailable",
+            verdict: "no-opinion",
+            reason,
+            seat: { filled_by: "reviewer-b", independent_of_author: true },
+          },
+        ],
+      });
+      expect(rulesOf(run(doc))).toContain("review.unavailable-required-lane-blocks-approval");
+    },
+  );
+
+  test.each(["covered", "skipped"] as const)(
+    "review.unavailable-required-lane-blocks-approval refuses a required timeout recorded as %s without coverage evidence",
+    (state) => {
+      const timedOut =
+        state === "covered"
+          ? {
+              role: "code-review/security",
+              required: true,
+              state,
+              verdict: "approve",
+              reason: "timeout",
+              seat: { filled_by: "reviewer-b", independent_of_author: true },
+            }
+          : {
+              role: "code-review/security",
+              required: true,
+              state,
+              verdict: "no-opinion",
+              reason: "timeout",
+              seat: { filled_by: "reviewer-b", independent_of_author: true },
+            };
+      const doc = review({
+        lanes: [
+          {
+            role: "code-review/correctness",
+            required: true,
+            state: "covered",
+            verdict: "approve",
+            seat: { filled_by: "reviewer-a", independent_of_author: true },
+          },
+          timedOut,
+        ],
+      });
+      expect(rulesOf(run(doc))).toContain("review.unavailable-required-lane-blocks-approval");
+    },
+  );
+
+  test("a covered lane with raw_output and a reason that mentions timeouts still approves", () => {
+    const doc = review({
+      lanes: [
+        {
+          role: "code-review/correctness",
+          required: true,
+          state: "covered",
+          verdict: "approve",
+          seat: { filled_by: "reviewer-a", independent_of_author: true },
+        },
+        {
+          role: "code-review/security",
+          required: true,
+          state: "covered",
+          verdict: "approve",
+          reason: "no retries or timeouts in this diff",
+          seat: { filled_by: "reviewer-b", independent_of_author: true },
+          raw_output: { id: "raw-security", hash: `sha256:${"a".repeat(64)}` },
+        },
+      ],
+    });
+    expect(rulesOf(run(doc))).not.toContain("review.unavailable-required-lane-blocks-approval");
+  });
+
   test("review.third-fix-cycle-stops catches a third cycle", () => {
     expect(rulesOf(run(review({ fix_cycles: { allowed: 2, used: 3 } })))).toContain("review.third-fix-cycle-stops");
   });
@@ -1155,6 +1404,41 @@ describe("review rules", () => {
   test("review.third-fix-cycle-stops catches an exhausted run that still approves", () => {
     const doc = review({ fix_cycles: { allowed: 2, used: 2 } });
     expect(rulesOf(run(doc))).toContain("review.third-fix-cycle-stops");
+  });
+
+  test("review.third-fix-cycle-stops lets a human-authorized post-cap delta approve", () => {
+    const doc = postCapDelta([{ authorized_by: "human", authorized_at: "2026-01-01T00:00:00Z" }]);
+    expect(rulesOf(run(doc)).filter((r) => r.startsWith("review."))).toEqual([]);
+  });
+
+  test.each(["runner", "orchestrator", "reviewer-spec"])(
+    "review.third-fix-cycle-stops refuses a post-cap extension authorized by %s",
+    (by) => {
+      const doc = postCapDelta([{ authorized_by: by, authorized_at: "2026-01-01T00:00:00Z" }]);
+      const messages = messagesOf(run(doc));
+      expect(messages).toContainEqual(expect.stringContaining(`a fix_cycles extension is authorized by ${by}`));
+      expect(messages).toContainEqual(expect.stringContaining("the run still approves"));
+    },
+  );
+
+  test("review.third-fix-cycle-stops refuses a post-cap extension with no authorized_at", () => {
+    expect(messagesOf(run(postCapDelta([{ authorized_by: "human" }])))).toContainEqual(
+      expect.stringContaining("a fix_cycles extension names no authorized_by or no authorized_at"),
+    );
+  });
+
+  test("review.third-fix-cycle-stops refuses a post-cap delta no human authorized", () => {
+    expect(messagesOf(run(postCapDelta([])))).toContainEqual(
+      expect.stringContaining("fix_cycles.used 3 exceeds allowed 2 with 0 authorized extension(s)"),
+    );
+  });
+
+  test("review.third-fix-cycle-stops refuses an authorized post-cap cycle reviewed as a new full scope", () => {
+    const doc = postCapDelta([{ authorized_by: "human", authorized_at: "2026-01-01T00:00:00Z" }]);
+    doc["mode"] = "full";
+    expect(messagesOf(run(doc))).toContainEqual(
+      expect.stringContaining("a cycle authorized past the cap is reviewed as a delta, never as a new full scope"),
+    );
   });
 
   test("review.delta-scope-bounded-by-affected-behavior catches a delta with no affected behavior", () => {
@@ -1225,17 +1509,26 @@ describe("review rules, one defect per row", () => {
     [
       "more cycles used than allowed",
       () => review({ fix_cycles: { allowed: 2, used: 3, exhausted_action: "blocked" }, verdict: "blocked" }),
-      "fix_cycles.used 3 exceeds allowed 2; the third cycle stops",
+      "fix_cycles.used 3 exceeds allowed 2 with 0 authorized extension(s); the third cycle stops",
     ],
     [
       "an exhausted budget that still approves",
       () => review({ fix_cycles: { allowed: 2, used: 2, exhausted_action: "blocked" } }),
-      "the fix cycle budget is exhausted (2/2) and the run still approves",
+      "the fix cycle budget is exhausted (2/2) and the run still approves without an extension",
     ],
     [
       "an exhausted budget with no exhausted_action",
       () => review({ fix_cycles: { allowed: 2, used: 2 }, verdict: "blocked" }),
       "the fix cycle budget is exhausted (2/2) with no exhausted_action recorded",
+    ],
+    [
+      "a merge recommendation at the cap with no follow-ups",
+      () =>
+        review({
+          fix_cycles: { allowed: 2, used: 2, exhausted_action: "merge-with-follow-ups" },
+          verdict: "changes-requested",
+        }),
+      "exhausted_action merge-with-follow-ups lists no follow_ups",
     ],
     [
       "a delta scope bounded by changed lines",
@@ -1421,5 +1714,802 @@ describe("verification rules", () => {
       },
     });
     expect(rulesOf(run(receipt, [rev]))).toContain("verification.receipt-stale-when-revision-differs-from-head");
+  });
+});
+
+// ---------------------------------------------------------- EGM 1b review ---
+
+const HASH = `sha256:${"a".repeat(64)}`;
+const RULE_COLD_REF = "ticket.cold-read-ref-required-when-on";
+const RULE_PARAPHRASE = "review.comprehension-paraphrase-stored-by-hash";
+const RULE_SHADOW = "review.comprehension-shadow-findings-stay-fyi";
+const RULE_PROPOSED = "cold-read.proposed-absent-is-not-a-finding";
+
+function ticket(extra: Doc = {}): Doc {
+  return envelope("ticket", "ticket-1", {
+    type: "implementation",
+    ...extra,
+  });
+}
+
+function onProject(extra: Doc = {}): Doc {
+  return project({ review: { cold_read: "on" }, ...extra });
+}
+
+function citedRead(forTicket: Doc, extra: Doc = {}) {
+  const subject = { ...forTicket };
+  delete subject.cold_read_ref;
+  const read = coldRead({
+    ticket: { id: subject["id"], schema: "ticket", hash: artifactHash(subject) },
+    run_id: "run-1",
+    ...extra,
+  });
+  return {
+    read,
+    ref: { id: String(read["id"]), schema: "cold-read", hash: artifactHash(read) },
+  };
+}
+
+function lightRouteApproval(): Doc {
+  return {
+    artifact_hash: HASH,
+    by: "human",
+    authority: "explicit",
+    at: "2026-09-19T00:00:00Z",
+    note: "The light route was taken. Per-path claim: README.md changes no required behaviour.",
+  };
+}
+
+function planSource(): Doc {
+  return { kind: "plan", ref: { id: "plan-1", schema: "plan-record", hash: HASH } };
+}
+
+function textOnlyTicket(extra: Doc = {}): Doc {
+  return ticket({
+    work_source: planSource(),
+    allowed_changes: { files: ["README.md"] },
+    ...extra,
+  });
+}
+
+function coveredComprehension(extra: Doc = {}): Doc {
+  return {
+    role: "doc-review/comprehension",
+    required: true,
+    state: "covered",
+    verdict: "approve",
+    seat: { filled_by: "reader-a", independent_of_author: true },
+    paraphrase: {
+      proposes: "The loader reads every configured directory.",
+      existing_system: "The loader reads only the first configured directory.",
+    },
+    raw_output: { id: "raw-comprehension", hash: HASH },
+    ...extra,
+  };
+}
+
+function shadowProject(): Doc {
+  return project({ review: { comprehension: "shadow" } });
+}
+
+function onCompProject(): Doc {
+  return project({ review: { comprehension: "on" } });
+}
+
+function comprehensionFinding(extra: Doc = {}): Doc {
+  return finding({
+    id: "finding-comp",
+    lane: "doc-review/comprehension",
+    autofix_class: "advisory",
+    title: "undefined project term",
+    ...extra,
+  });
+}
+
+function withComprehension(extra: Doc = {}, laneExtra: Doc = {}): Doc {
+  const lanes = reviewLanes(review());
+  return review({
+    lanes: [lanes[0], lanes[1], coveredComprehension({ required: false, ...laneExtra })],
+    ...extra,
+  });
+}
+
+function reviewLanes(doc: Doc): unknown[] {
+  const lanes = doc["lanes"];
+  return Array.isArray(lanes) ? lanes : [];
+}
+
+function coldRead(extra: Doc = {}): Doc {
+  return envelope("cold-read", "cold-read-1", {
+    status: "complete",
+    ticket: { id: "ticket-1", schema: "ticket", hash: HASH },
+    paraphrase: "Load every configured artifact directory.",
+    decisions: [],
+    unresolved_terms: [],
+    claims: [
+      { id: "existing-loader", target: "src/loader/artifacts.ts", kind: "exists", observed: "present" },
+      { id: "new-walk", target: "src/loader/walk.ts", kind: "proposed", observed: "absent" },
+    ],
+    readiness: {
+      acceptance_criteria: { found: true, where: "AC-1" },
+      interfaces: { found: true, where: "loadArtifacts" },
+      examples: { found: false },
+      non_goals: { found: true, where: "ticket non_goals" },
+      existing_pattern: { found: true, where: "src/loader/artifacts.ts" },
+      verification_path: { found: true, where: "loader-suite" },
+    },
+    state: "covered",
+    ...extra,
+  });
+}
+
+describe("ticket.behavior-property-id-has-type", () => {
+  test("a property_id without a property_types entry is an error", () => {
+    const doc = ticket({
+      verification: [
+        {
+          id: "project-check",
+          check: "Run the project check.",
+          kind: "command",
+          supports: ["AC-1"],
+          behavior: {
+            evidence_layer: "implementation",
+            property_ids: ["every-configured-directory-is-read"],
+          },
+        },
+      ],
+    });
+    expect(rulesOf(run(doc))).toContain("ticket.behavior-property-id-has-type");
+  });
+
+  test("a matching property_types entry is not that error", () => {
+    const doc = ticket({
+      verification: [
+        {
+          id: "project-check",
+          check: "Run the project check.",
+          kind: "command",
+          supports: ["AC-1"],
+          behavior: {
+            evidence_layer: "implementation",
+            property_ids: ["every-configured-directory-is-read"],
+            property_types: { "every-configured-directory-is-read": "safety" },
+          },
+        },
+      ],
+    });
+    expect(rulesOf(run(doc))).not.toContain("ticket.behavior-property-id-has-type");
+  });
+});
+
+describe("ticket.cold-read-ref-required-when-on", () => {
+  test("a missing review object equals off and does not require cold_read_ref", () => {
+    expect(rulesOf(run(ticket(), [project()]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test.each(["off", "shadow"] as const)("review.cold_read %s does not require cold_read_ref", (mode) => {
+    expect(rulesOf(run(ticket(), [project({ review: { cold_read: mode } })]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("an implementation ticket requires cold_read_ref when review.cold_read is on", () => {
+    expect(rulesOf(run(ticket(), [onProject()]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a matching indexed cold-read for this ticket satisfies review.cold_read on", () => {
+    const { read, ref } = citedRead(ticket());
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a hand-written cold-read with no producing run is refused when on", () => {
+    const { read, ref } = citedRead(ticket(), { run_id: null });
+    const issues = run(ticket({ cold_read_ref: ref }), [onProject(), read]);
+    expect(rulesOf(issues)).toContain(RULE_COLD_REF);
+    expect(issues.some((issue) => issue.rule === RULE_COLD_REF && issue.message.includes("producing run"))).toBe(true);
+  });
+
+  test("an unavailable hand-written cold-read with no producing run is refused when on", () => {
+    const { read, ref } = citedRead(ticket(), {
+      run_id: null,
+      status: "unavailable",
+      state: "unavailable",
+      reason: "The host could not start a separate reader context.",
+    });
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).toContain(RULE_COLD_REF);
+  });
+
+  test.each(["off", "shadow"] as const)(
+    "review.cold_read %s still accepts a hand-written cold-read with no producing run",
+    (mode) => {
+      const { read, ref } = citedRead(ticket(), { run_id: null });
+      expect(
+        rulesOf(run(ticket({ cold_read_ref: ref }), [project({ review: { cold_read: mode } }), read])),
+      ).not.toContain(RULE_COLD_REF);
+    },
+  );
+
+  test("a placeholder cold_read_ref with no indexed document is refused when on", () => {
+    expect(
+      rulesOf(run(ticket({ cold_read_ref: { id: "cold-read-1", schema: "cold-read", hash: HASH } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a cold_read_ref without a hash is refused when on", () => {
+    expect(
+      rulesOf(run(ticket({ cold_read_ref: { id: "cold-read-1", schema: "cold-read" } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a fabricated cold_read_ref hash is refused when on", () => {
+    const { read } = citedRead(ticket());
+    expect(
+      rulesOf(
+        run(ticket({ cold_read_ref: { id: String(read["id"]), schema: "cold-read", hash: HASH } }), [
+          onProject(),
+          read,
+        ]),
+      ),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("another ticket's cold-read is refused when on", () => {
+    const { read, ref } = citedRead(ticket({ id: "ticket-2" }));
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a cold_read_ref whose indexed document is not a cold-read is refused when on", () => {
+    const decoy = review({ id: "decoy-1" });
+    expect(
+      rulesOf(
+        run(ticket({ cold_read_ref: { id: "decoy-1", schema: "cold-read", hash: artifactHash(decoy) } }), [
+          onProject(),
+          decoy,
+        ]),
+      ),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("an unknown review.cold_read value is treated as off at rule level", () => {
+    expect(rulesOf(run(ticket(), [project({ review: { cold_read: "blocking" } })]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a ticket that does not match the project's identity.id still requires cold_read_ref when that indexed record is on", () => {
+    const other = project({
+      identity: {
+        id: "other-project",
+        name: "Other",
+        repos: [
+          { repo: "app", role: "application", default_branch: "main" },
+          { repo: "kb", role: "knowledgebase", default_branch: "main" },
+        ],
+      },
+      review: { cold_read: "on" },
+    });
+    expect(rulesOf(run(ticket(), [other]))).toContain(RULE_COLD_REF);
+  });
+
+  test("two project records with the same identity.id fail when review.cold_read is on", () => {
+    const { read, ref } = citedRead(ticket());
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), onProject({ id: "project-2" }), read]))).toContain(
+      RULE_COLD_REF,
+    );
+  });
+
+  test("duplicate identity.id project records stay off when none is on", () => {
+    expect(rulesOf(run(ticket(), [project(), project({ id: "project-2" })]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("an unavailable indexed cold-read still satisfies on", () => {
+    const { read, ref } = citedRead(ticket(), {
+      status: "unavailable",
+      state: "unavailable",
+      reason: "The host could not start a separate reader context.",
+    });
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a cited draft cold-read is refused when on", () => {
+    const { read, ref } = citedRead(ticket(), { status: "draft" });
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a cited cold-read with no status is refused when on", () => {
+    const { read } = citedRead(ticket());
+    delete read.status;
+    const ref = { id: String(read["id"]), schema: "cold-read", hash: artifactHash(read) };
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a read that records no ticket.hash is refused when on", () => {
+    const { read, ref } = citedRead(ticket(), { ticket: { id: "ticket-1", schema: "ticket" } });
+    expect(rulesOf(run(ticket({ cold_read_ref: ref }), [onProject(), read]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a read whose ticket.hash is from an older ticket body is refused when on", () => {
+    const older = ticket({ title: "older body" });
+    const read = coldRead({
+      ticket: { id: "ticket-1", schema: "ticket", hash: artifactHash(older) },
+      run_id: "run-1",
+    });
+    const ref = { id: String(read["id"]), schema: "cold-read", hash: artifactHash(read) };
+    const issues = run(ticket({ title: "newer body", cold_read_ref: ref }), [onProject(), read]);
+    expect(rulesOf(issues)).toContain(RULE_COLD_REF);
+    expect(issues.some((issue) => issue.rule === RULE_COLD_REF && issue.message.includes("records ticket hash"))).toBe(
+      true,
+    );
+  });
+
+  test("a ticket that names no project still requires cold_read_ref when the checkout project is on", () => {
+    const doc = ticket();
+    delete doc.project;
+    expect(rulesOf(run(doc, [onProject()]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a ticket whose project field names no indexed record still requires cold_read_ref when the checkout project is on", () => {
+    expect(rulesOf(run(ticket({ project: "forged" }), [onProject()]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a matching indexed cold-read satisfies on even when the ticket names a forged project", () => {
+    const subject = ticket({ project: "forged" });
+    const { read, ref } = citedRead(subject);
+    expect(rulesOf(run({ ...subject, cold_read_ref: ref }, [onProject(), read]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a ticket that names no project stays off when the checkout project is off", () => {
+    const doc = ticket();
+    delete doc.project;
+    expect(rulesOf(run(doc, [project({ review: { cold_read: "off" } })]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a ticket whose project field is forged stays off when the checkout project is off", () => {
+    expect(rulesOf(run(ticket({ project: "forged" }), [project({ review: { cold_read: "off" } })]))).not.toContain(
+      RULE_COLD_REF,
+    );
+  });
+
+  test("a ticket whose project field is forged stays off when the checkout project has no review object", () => {
+    expect(rulesOf(run(ticket({ project: "forged" }), [project()]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a decision ticket does not require cold_read_ref when review.cold_read is on", () => {
+    expect(rulesOf(run(ticket({ type: "decision" }), [project({ review: { cold_read: "on" } })]))).not.toContain(
+      RULE_COLD_REF,
+    );
+  });
+
+  test("an implementation ticket whose approval note says the light route was taken still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(ticket({ approvals: [lightRouteApproval()] }), [project({ review: { cold_read: "on" } })])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a forged light-route claim on a code ticket still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(
+        run(
+          textOnlyTicket({
+            allowed_changes: { files: ["src/loader.ts"] },
+            approvals: [lightRouteApproval()],
+          }),
+          [onProject()],
+        ),
+      ),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a code change on a light ticket still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["README.md", "src/loader.ts"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a multi-slice ticket still requires cold_read_ref when on", () => {
+    const peer = textOnlyTicket({ id: "ticket-2" });
+    expect(rulesOf(run(textOnlyTicket(), [onProject(), peer]))).toContain(RULE_COLD_REF);
+  });
+
+  test("README.md plus generated_artifacts src/** still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(
+        run(
+          textOnlyTicket({
+            write_ownership: {
+              paths: ["README.md"],
+              generated_artifacts: ["src/**"],
+              migration_sequence: null,
+              interfaces: [],
+            },
+          }),
+          [onProject()],
+        ),
+      ),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("README.md plus write_ownership.paths src/** still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(
+        run(
+          textOnlyTicket({
+            write_ownership: {
+              paths: ["src/**"],
+              generated_artifacts: [],
+              migration_sequence: null,
+              interfaces: [],
+            },
+          }),
+          [onProject()],
+        ),
+      ),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("README.md plus a non-empty symbols list still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(
+        run(textOnlyTicket({ allowed_changes: { files: ["README.md"], symbols: ["someSymbol"] } }), [onProject()]),
+      ),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a README.md ticket with no work_source still requires cold_read_ref when on", () => {
+    expect(rulesOf(run(ticket({ allowed_changes: { files: ["README.md"] } }), [onProject()]))).toContain(RULE_COLD_REF);
+  });
+
+  test("a docs/*.txt glob still requires cold_read_ref when on", () => {
+    expect(rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/notes.txt"] } }), [onProject()]))).toContain(
+      RULE_COLD_REF,
+    );
+  });
+
+  test("a skills/**/*.md glob still requires cold_read_ref when on", () => {
+    expect(rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["skills/**/*.md"] } }), [onProject()]))).toContain(
+      RULE_COLD_REF,
+    );
+  });
+
+  test("a references/**/*.md glob still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["references/**/*.md"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a decision ticket on the same work_source still requires cold_read_ref when on", () => {
+    const peer = ticket({ id: "ticket-2", type: "decision", work_source: planSource() });
+    expect(rulesOf(run(textOnlyTicket(), [onProject(), peer]))).toContain(RULE_COLD_REF);
+  });
+
+  test("docs/** still requires cold_read_ref when on", () => {
+    expect(rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/**"] } }), [onProject()]))).toContain(
+      RULE_COLD_REF,
+    );
+  });
+
+  test("a schema-valid docs/{../skills}/**/*.md glob still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/{../skills}/**/*.md"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a schema-invalid docs/../skills/SKILL.md glob still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/../skills/SKILL.md"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a schema-valid docs/{foo.ts,bar.md} glob still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/{foo.ts,bar.md}"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a schema-valid docs/{foo.ts,bar.md}/*.md glob still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/{foo.ts,bar.md}/*.md"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a schema-valid docs/{guide,intro}/*.md glob still requires cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/{guide,intro}/*.md"] } }), [onProject()])),
+    ).toContain(RULE_COLD_REF);
+  });
+
+  test("a declared glob that resolves through a symlink still requires cold_read_ref when on", () => {
+    const root = makeTree({ "src/loader.ts": "export {}\n" }, { provenance: false });
+    symlinkSync(join(root, "src/loader.ts"), join(root, "README.md"));
+    expect(rulesOf(run(textOnlyTicket(), [onProject()], repoCtx(root)))).toContain(RULE_COLD_REF);
+  });
+
+  test("a text-only single-slice ticket does not require cold_read_ref when on", () => {
+    expect(rulesOf(run(textOnlyTicket(), [onProject()]))).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a docs/ markdown ticket does not require cold_read_ref when on", () => {
+    expect(
+      rulesOf(run(textOnlyTicket({ allowed_changes: { files: ["docs/guide.md"] } }), [onProject()])),
+    ).not.toContain(RULE_COLD_REF);
+  });
+
+  test("a ticket with no project document in the index is treated as off", () => {
+    expect(rulesOf(run(ticket()))).not.toContain(RULE_COLD_REF);
+  });
+});
+
+describe("review.comprehension-paraphrase-stored-by-hash", () => {
+  test("a covered comprehension lane without paraphrase or raw_output.hash is refused", () => {
+    const lanes = reviewLanes(review());
+    const missing = review({
+      lanes: [
+        lanes[0],
+        lanes[1],
+        { role: "doc-review/comprehension", required: true, state: "covered", verdict: "approve" },
+      ],
+    });
+    expect(rulesOf(run(missing))).toContain(RULE_PARAPHRASE);
+  });
+
+  test("a covered comprehension lane with paraphrase and no raw_output.hash is refused", () => {
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [lanes[0], lanes[1], coveredComprehension({ raw_output: { id: "raw-comprehension" } })],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PARAPHRASE);
+  });
+
+  test("a covered comprehension lane with raw_output.hash and only paraphrase.proposes is refused", () => {
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [
+        lanes[0],
+        lanes[1],
+        coveredComprehension({ paraphrase: { proposes: "The loader reads every configured directory." } }),
+      ],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PARAPHRASE);
+  });
+
+  test("empty paraphrase.proposes is refused", () => {
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [
+        lanes[0],
+        lanes[1],
+        coveredComprehension({
+          paraphrase: {
+            proposes: "",
+            existing_system: "The loader reads only the first configured directory.",
+          },
+        }),
+      ],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PARAPHRASE);
+  });
+
+  test("a skipped comprehension lane with no paraphrase is not refused", () => {
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [
+        lanes[0],
+        lanes[1],
+        {
+          role: "doc-review/comprehension",
+          required: true,
+          state: "skipped",
+          reason: "the seat did not run",
+          verdict: "no-opinion",
+        },
+      ],
+    });
+    expect(rulesOf(run(doc))).not.toContain(RULE_PARAPHRASE);
+  });
+
+  test("a covered comprehension lane stores paraphrase by hash", () => {
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [lanes[0], lanes[1], coveredComprehension()],
+    });
+    expect(rulesOf(run(doc)).filter((r) => r.startsWith("review."))).toEqual([]);
+  });
+
+  test("an existing review without a comprehension lane stays valid", () => {
+    expect(rulesOf(run(review())).filter((r) => r.startsWith("review."))).toEqual([]);
+  });
+});
+
+describe("review.comprehension-shadow-findings-stay-fyi", () => {
+  test("a stock review plus a project with no review object does not fire the shadow rule", () => {
+    expect(rulesOf(run(review(), [project()]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("a stock review under shadow with no comprehension lane stays valid", () => {
+    expect(rulesOf(run(review(), [shadowProject()]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("shadow plus advisory plus no-opinion plus approved passes", () => {
+    const item = comprehensionFinding();
+    const doc = withComprehension(
+      {
+        findings: [{ id: String(item["id"]), hash: artifactHash(item) }],
+        verdict: "approved",
+      },
+      { verdict: "no-opinion" },
+    );
+    expect(rulesOf(run(doc, [shadowProject(), item]))).not.toContain(RULE_SHADOW);
+  });
+
+  test.each(["manual", "gated_auto", "safe_auto"] as const)("shadow plus autofix_class %s is refused", (cls) => {
+    const item = comprehensionFinding({ autofix_class: cls });
+    const doc = withComprehension({
+      findings: [{ id: String(item["id"]), hash: artifactHash(item) }],
+    });
+    expect(rulesOf(run(doc, [shadowProject(), item]))).toContain(RULE_SHADOW);
+  });
+
+  test("shadow plus unresolved_blockers membership is refused", () => {
+    const item = comprehensionFinding();
+    const ref = { id: String(item["id"]), hash: artifactHash(item) };
+    const doc = withComprehension({
+      findings: [ref],
+      unresolved_blockers: [ref],
+      verdict: "blocked",
+    });
+    expect(rulesOf(run(doc, [shadowProject(), item]))).toContain(RULE_SHADOW);
+  });
+
+  test.each(["block", "request-changes"] as const)("shadow plus lane verdict %s is refused", (verdict) => {
+    const doc = withComprehension({}, { verdict });
+    expect(rulesOf(run(doc, [shadowProject()]))).toContain(RULE_SHADOW);
+  });
+
+  test("on plus manual plus request-changes passes the shadow rule", () => {
+    const item = comprehensionFinding({ autofix_class: "manual" });
+    const ref = { id: String(item["id"]), hash: artifactHash(item) };
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [lanes[0], lanes[1], coveredComprehension({ verdict: "request-changes" })],
+      findings: [ref],
+      unresolved_blockers: [ref],
+      verdict: "changes-requested",
+    });
+    expect(rulesOf(run(doc, [onCompProject(), item]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("no project plus manual plus request-changes passes the shadow rule", () => {
+    const item = comprehensionFinding({ autofix_class: "manual" });
+    const ref = { id: String(item["id"]), hash: artifactHash(item) };
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [lanes[0], lanes[1], coveredComprehension({ verdict: "request-changes" })],
+      findings: [ref],
+      unresolved_blockers: [ref],
+      verdict: "changes-requested",
+    });
+    expect(rulesOf(run(doc, [item]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("a coherence blocker still blocks under shadow", () => {
+    const gap = comprehensionFinding();
+    const blocker = finding({
+      id: "finding-coh",
+      lane: "doc-review/coherence",
+      autofix_class: "manual",
+      title: "two passages disagree",
+    });
+    const gapRef = { id: String(gap["id"]), hash: artifactHash(gap) };
+    const blockRef = { id: String(blocker["id"]), hash: artifactHash(blocker) };
+    const doc = withComprehension(
+      {
+        findings: [gapRef, blockRef],
+        unresolved_blockers: [blockRef],
+        verdict: "changes-requested",
+      },
+      { verdict: "approve" },
+    );
+    expect(rulesOf(run(doc, [shadowProject(), gap, blocker]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("a required comprehension lane under shadow is refused", () => {
+    const doc = withComprehension({}, { required: true });
+    expect(rulesOf(run(doc, [shadowProject()]))).toContain(RULE_SHADOW);
+  });
+
+  test("off plus a covered comprehension lane does not fire the shadow rule", () => {
+    const item = comprehensionFinding({ autofix_class: "manual" });
+    const lanes = reviewLanes(review());
+    const doc = review({
+      lanes: [lanes[0], lanes[1], coveredComprehension({ verdict: "request-changes" })],
+      findings: [{ id: String(item["id"]), hash: artifactHash(item) }],
+    });
+    expect(rulesOf(run(doc, [project({ review: { comprehension: "off" } }), item]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("duplicate project records with mixed shadow and on are refused", () => {
+    expect(
+      rulesOf(run(review(), [shadowProject(), project({ id: "project-2", review: { comprehension: "on" } })])),
+    ).toContain(RULE_SHADOW);
+  });
+
+  test("an unknown comprehension mode is refused", () => {
+    expect(rulesOf(run(review(), [project({ review: { comprehension: "maybe" } })]))).toContain(RULE_SHADOW);
+  });
+
+  test("a non-string comprehension mode is refused", () => {
+    expect(rulesOf(run(review(), [project({ review: { comprehension: true } })]))).toContain(RULE_SHADOW);
+  });
+
+  test("duplicate records where one project is missing the comprehension key and the other is on are refused", () => {
+    expect(
+      rulesOf(run(review(), [project(), project({ id: "project-2", review: { comprehension: "on" } })])),
+    ).toContain(RULE_SHADOW);
+  });
+
+  test("duplicate project records that are all off stay valid", () => {
+    expect(
+      rulesOf(
+        run(review(), [
+          project({ review: { comprehension: "off" } }),
+          project({ id: "project-2", review: { comprehension: "off" } }),
+        ]),
+      ),
+    ).not.toContain(RULE_SHADOW);
+  });
+
+  test("duplicate project records that all omit the comprehension key stay valid", () => {
+    expect(rulesOf(run(review(), [project(), project({ id: "project-2" })]))).not.toContain(RULE_SHADOW);
+  });
+
+  test("a comprehension finding filed under another lane value is still refused in shadow", () => {
+    const item = comprehensionFinding({ lane: "doc-review/coherence", autofix_class: "manual" });
+    const ref = { id: String(item["id"]), hash: artifactHash(item) };
+    const doc = withComprehension({ findings: [ref] }, { findings: [ref] });
+    expect(rulesOf(run(doc, [shadowProject(), item]))).toContain(RULE_SHADOW);
+  });
+});
+
+describe("cold-read.proposed-absent-is-not-a-finding", () => {
+  test("a proposed claim that is absent is not a finding", () => {
+    expect(rulesOf(run(coldRead())).filter((r) => r.startsWith("cold-read."))).toEqual([]);
+  });
+
+  test("recording proposed-absent as an absence decision is refused", () => {
+    const doc = coldRead({
+      decisions: [{ text: "walk.ts is missing", claim: "new-walk", kind: "absent" }],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PROPOSED);
+  });
+
+  test("an exists claim that is absent may be recorded as a decision", () => {
+    const doc = coldRead({
+      claims: [
+        { id: "existing-helper", target: "src/loader/missing.ts", kind: "exists", observed: "absent" },
+        { id: "new-walk", target: "src/loader/walk.ts", kind: "proposed", observed: "absent" },
+      ],
+      decisions: [{ text: "the named helper is not in the tree", claim: "existing-helper", kind: "absent" }],
+    });
+    expect(rulesOf(run(doc))).not.toContain(RULE_PROPOSED);
+  });
+
+  test("an absent decision without a claim is refused", () => {
+    const doc = coldRead({
+      decisions: [{ text: "walk.ts is missing", kind: "absent" }],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PROPOSED);
+  });
+
+  test("an absent decision whose claim id matches no claim is refused", () => {
+    const doc = coldRead({
+      decisions: [{ text: "walk.ts is missing", claim: "no-such-claim", kind: "absent" }],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PROPOSED);
+  });
+
+  test("duplicate claim ids are refused", () => {
+    const doc = coldRead({
+      claims: [
+        { id: "existing-loader", target: "src/loader/artifacts.ts", kind: "exists", observed: "present" },
+        { id: "existing-loader", target: "src/loader/walk.ts", kind: "proposed", observed: "absent" },
+      ],
+    });
+    expect(rulesOf(run(doc))).toContain(RULE_PROPOSED);
   });
 });

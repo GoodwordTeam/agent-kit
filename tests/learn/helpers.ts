@@ -5,7 +5,6 @@
  */
 import { Database } from "bun:sqlite";
 import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "../../src/learn/core/config.ts";
 import type { LearnContext } from "../../src/learn/core/context.ts";
@@ -13,10 +12,11 @@ import type { JudgeCallContext, JudgeFn } from "../../src/learn/core/judge.ts";
 import { run } from "../../src/learn/core/proc.ts";
 import { ensureMemoryLedger, SECTIONS } from "../../src/learn/memory/ledger.ts";
 import type { ReflectReply } from "../../src/learn/memory/reflect.ts";
+import { processScratch } from "../helpers/process-tmp.ts";
 
-/** A fresh directory with one canonical spelling (macOS `/var` is a symlink). */
+/** A fresh directory inside the process temporary directory, with one canonical spelling. */
 export function scratch(prefix = "ak-learn-"): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  return processScratch(prefix);
 }
 
 /** Run a probe from `dir` without git discovering a repository above that scratch directory. */
@@ -55,14 +55,21 @@ export async function inOutsideRepoAsync<T>(probe: (cwd: string) => Promise<T>):
 }
 
 const projectScratches: string[] = [];
+const projectScratchBase =
+  process.platform === "darwin"
+    ? run(["getconf", "DARWIN_USER_TEMP_DIR"]).stdout.trim()
+    : process.platform === "linux"
+      ? "/dev/shm"
+      : join(import.meta.dir, "..", "..", ".work");
 
 /**
- * A fresh directory for a fixture project that discovery must find. It sits
- * under the repository's `.work/`, not `tmpdir()`: on Linux that is `/tmp`,
- * which discovery skips as scratch space. Remove with `removeProjectScratch`.
+ * A fixture project that discovery must find. On macOS use the native user
+ * temporary directory, outside managed gate paths even when TMPDIR is /tmp.
+ * On Linux use shared-memory scratch: discovery skips /tmp and managed
+ * worktrees. Other platforms use `.work/`. Remove with `removeProjectScratch`.
  */
 export function projectScratch(): string {
-  const base = join(import.meta.dir, "..", "..", ".work");
+  const base = projectScratchBase;
   mkdirSync(base, { recursive: true });
   const dir = realpathSync(mkdtempSync(join(base, "ak-learn-")));
   projectScratches.push(dir);
@@ -77,13 +84,12 @@ const startScratches: string[] = [];
 
 /**
  * A fresh directory for a script a test starts with bun, and for that run's
- * HOME. It sits under `/tmp`, not `tmpdir()`: bun lists every directory above
- * a script it starts, and a per-user temporary directory that has collected
- * many entries (macOS `$TMPDIR`) turns each start into tens of seconds. `/tmp`
- * is outside any checkout on every runner. Remove with `removeStartScratch`.
+ * HOME. It uses processScratch; see `../helpers/process-tmp.ts` for the path
+ * policy and Bun startup constraint. Remove early with `removeStartScratch`;
+ * otherwise the process directory's cleanup removes it.
  */
 export function startScratch(prefix = "ak-learn-"): string {
-  const dir = realpathSync(mkdtempSync(join("/tmp", prefix)));
+  const dir = processScratch(prefix);
   startScratches.push(dir);
   return dir;
 }
@@ -92,7 +98,15 @@ export function removeStartScratch(): void {
   for (const dir of startScratches.splice(0)) rmSync(dir, { recursive: true, force: true });
 }
 
-export const ROLE_IDS = ["pattern-maintainer", "reflector", "consolidator", "lesson-merger", "skill-scout"] as const;
+export const ROLE_IDS = [
+  "pattern-maintainer",
+  "reflector",
+  "consolidator",
+  "lesson-merger",
+  "skill-scout",
+  "session-scorer",
+  "skill-doctor",
+] as const;
 
 /** A roles directory whose ROLE.md files are one line each, so tests never depend on catalog prose. */
 export function stubRoles(dir: string): string {
@@ -107,9 +121,11 @@ function projectTemplate(): string {
   const dir = scratch("ak-learn-template-");
   mkdirSync(dir, { recursive: true });
   run(["git", "init", "-q"], { cwd: dir });
+  run(["git", "config", "user.name", "t"], { cwd: dir });
+  run(["git", "config", "user.email", "t@t"], { cwd: dir });
   writeFileSync(join(dir, "README.md"), "fixture\n");
   run(["git", "add", "-A"], { cwd: dir });
-  run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init", "--no-gpg-sign"], { cwd: dir });
+  run(["git", "commit", "-qm", "init", "--no-gpg-sign"], { cwd: dir });
   return dir;
 }
 

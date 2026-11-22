@@ -71,6 +71,7 @@ dist/codex/
 ├── .codex-plugin/plugin.json   # identity, skill registration, no interface block
 ├── skills/<id>/SKILL.md        # generated keys plus Codex-native U explicit-start markers
 ├── skills/<id>/references/     # U explicit-start markers rendered here and in references/shared/
+├── hooks/hooks.json            # the semantic lint Stop hook (§6)
 ├── LICENSES/                   # licence texts of packages in bin/ak and bin/ak-gate.mjs (NOTICE)
 ├── provenance/licenses/        # claude-mem licence and NOTICE
 └── NOTICE, LICENSE
@@ -93,7 +94,14 @@ omitted (`isolated-worktree`, `isolated-review-context`, `independent-context`) 
 status on this host at all until a parse of the table went looking for them.
 
 What differs on this host is not which capabilities are supplied but which **restrictions** the
-host can enforce. None of the rows below is a `capability` value:
+host can enforce. None of the rows below is a `capability` value.
+
+The review-session guard (`templates/guard/review-session.policy.json`, for
+`ak guard hook pre-tool-use`) denies reads of Claude Code's session store. Codex guard support
+is deferred to CS-12 (`research/briefs/constitution-support-plan.md`), so on this host the
+transcript-on-disk channel stays uncovered: a review seat can still read the parent's session
+transcript, and no package hook denies it. The guard is feedback, not a security boundary on
+either host; a missing or crashing hook lets the call through.
 
 Native child sessions are useful fresh execution contexts but do not attest what the child saw or
 its excluded lineage. The inherited `independent-context: not-provided` status means host-only
@@ -262,9 +270,17 @@ with a message when it does not: `ak learn hook session-start --source codex` on
 whose roster names human-only commands as `$ak:<id>` (ADR-0011),
 `ak learn hook prompt` on `UserPromptSubmit`, which captures user corrections, and
 `ak learn hook stop --source codex` on `Stop`. As on claude-code
-(`adapters/claude-code/CONTRACT.md` §7), no skill requires a hook, the bundle ships none, and the
+(`adapters/claude-code/CONTRACT.md` §7), no skill requires a hook, the bundle ships none of them, and the
 runtime's ledgers never live inside a project repository (ruling
 `learning-runtime-is-host-adapter`).
+
+The bundle's one hook is the advisory semantic lint. `hooks/hooks.json` runs
+`"${PLUGIN_ROOT}/bin/ak" semantic-lint hook --host codex` on `Stop` with a 30-second timeout, which
+prints only `{ "systemMessage": … }` or `{}` (`docs/semantic-lint.md`). It is off unless
+`AK_JEV_ENABLED=1` in the hook process. Codex skips this hook until
+the operator trusts it in `/hooks`, as point 1 below says of every non-managed hook. agent-kit
+records no trust, writes no Codex settings and never passes `--dangerously-bypass-hook-trust`. The
+bundle holds no key and sets no switch.
 
 What the host does with those hooks, verified (receipt) at `codex-cli 0.153.4`:
 

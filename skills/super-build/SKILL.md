@@ -57,7 +57,7 @@ No grant covers delegation, because no phase operation exposes this skill —
 `policies/invocation.yaml` records model-invoked skills as exposing none by construction. What
 authority governs here is the ticket rather than the caller: the approval the ticket carries, and the
 charter checkpoint the run took before its build phase opened. A skill that cannot see either stops
-rather than treating its own invocation as the approval.
+rather than treating its own invocation as the approval. Under the unattended policy (ADR-0014) that approval is a recorded unattended advance, a ticket whose class makes a human the author is built by the agent with its true class recorded (an exception to ruling `delegation-class-is-authority-not-finding`), and each gate is recorded with its evidence command, as [the unattended-lifecycle reference](../../references/unattended-lifecycle/REFERENCE.md) says. An unscored ticket (the delegation reference's coverage limit) is built the same way with no class recorded and its implementer seat still declared.
 
 ## Inputs
 
@@ -147,18 +147,18 @@ absence is recorded (`policies/limits.yaml`).
     When a runner assigned the implementer seat, declare it by appending
     `--class <delegation class> --author-kind <human|agent> --host <host adapter id> --seat-id <implementer seat>`;
     the seat is recorded on this gate, not on a receipt, and stays declared for commits descended
-    from the recorded one. After an amend or rebase, pass the flags again.
+    from the recorded one. After an amend or rebase, pass the flags again. An unscored ticket has no class to pass: declare the seat with `--author-kind <human|agent> --host <host adapter id> --seat-id <implementer seat>` and no `--class`, never a derived one or a seeded default, so a receipt that seat wrote is still refused.
     Run it from the project checkout; the run defaults to the branch's opened-run pointer (or the
     branch-named v1 run when none was opened) and records default to the repository's git directory.
     A binding's brief supplies `--dir` for the run opened with it.
-14. A committed ticket then runs the trail, steps 14 to 16; steps 12 and 13 never wait on it (ruling
+14. A committed ticket then runs the trail, steps 14 to 16, a resumed run by the work-trail
+    protocol's resume rule; steps 12 and 13 never wait on it (ruling
     `work-trail-is-account-not-evidence`). One stopped before its commit gets no audit or published
-    stretch, as the report says; a failed receipt publish stops the build as before, short of the
-    trail. The build handles a prepared stretch by location, hash, kind and id alone, never opening
-    its entries or rewriting it: one gone or at its prepared hash is missing, one not naming its
-    given kind and id is unpublished, and neither is sent; any other is sent as written, published
-    if taken, unpublished if not. A refused or failed publish in the trail fails no build and is
-    never repaired or resent; the trail writes no gate record and `complete` does not depend on it.
+    stretch, as the report says; a configured knowledgebase (exit 1) failing a receipt publish stops the build short of the
+    trail, while under a knowledgebase coverage limit the receipts are named as not published and the build goes on. Each prepared stretch is handled and sent as the work-trail protocol's build steps say;
+    none it holds back is sent. A refused or failed trail publish is never repaired or resent and is
+    not itself a build gate; the protocol's stop conditions describe shared-file failures that
+    can block later required receipts. The trail writes no gate record; `complete` does not depend on it.
 15. Seat [the trail auditor](../../roles/trail-auditor/ROLE.md) once, even for an empty or missing
     stretch, in a context that filled no other seat on the ticket and is not the build's own; hand
     it its packet, each unpublished stretch named so, from its location. The audit is unavailable
@@ -257,8 +257,9 @@ This skill names no repository path for project-derived content. Each implemente
 
 `kb-publish` is a remote effect: the idempotency key is derived from the content hash of the
 published set per `adapters/runner-contract/CONTRACT.md` §5, and the returned record reference is
-read back before the ticket reports. Republishing an unchanged set after an interruption is a no-op
-success rather than a second record.
+read back before the ticket reports. Republishing unchanged receipts, ticket results and check
+results after an interruption is a no-op success. Trail and trail-audit records instead follow the
+attempt-mark and resume rules in [the work trail protocol](../../protocols/work-trail/PROTOCOL.md).
 
 No `remote-push`, no `pr-open`: a commit on an owned branch is where this lane ends.
 
@@ -274,8 +275,8 @@ stands, and every open finding with its adjudication. It is not a pass and the t
 or a check seat that cannot be filled independently. Returns what is missing and the lane that owns
 it, never a narrowed version of the work.
 
-`failed`: no writable worktree, the branch is checked out elsewhere, or the knowledgebase refuses the
-write. The worktree and the ledger are left intact for the resume.
+`failed`: no writable worktree, the branch is checked out elsewhere, or a configured knowledgebase refuses a
+receipt, ticket result or check result. The worktree and the ledger are left intact for the resume. A knowledgebase coverage limit — `ak kb check` exit 3 (kb.unbound, kb.unregistered), a publish exit 3 (kb.read-only), kb.in-repo-missing, or a missing or unknown `ak kb` command — never stops this phase under any policy: reads are unavailable, each skipped publish is named in the result as not published, and only exit 1 stops.
 
 `cancelled`: the caller withdrew the ticket mid-run. The branch, the worktree and the recorded
 rulings are kept rather than cleaned up, because the next run reads them instead of re-deriving them.
@@ -293,8 +294,7 @@ Parallel tickets: a bounded batch rather than every independent ticket at once (
 small to outweigh its own dispatch runs inline or batched with related units; the runner's ticket
 budget is the only cap this skill enforces on how many start.
 
-Changed-line target and test-pyramid shape: guidance, configurable per project and carried in the
-project record (`schemas/project.schema.json`). Neither is validated or enforced here and neither is
-grounds for a finding on its own; a ticket that exceeds the configured target records the exception
-rather than answering it with an artificial file split or a meaningless test (ruling
-`numeric-heuristics-are-guidance`).
+Changed-line target and test-pyramid shape: guidance, not a gate; configurable per project, neither
+validated nor enforced, not on its own grounds for a finding, an exception recorded rather than an artificial
+split or a meaningless test. [The reference loaded at step 5](../../references/engineering-principles/REFERENCE.md)
+states each (ruling `numeric-heuristics-are-guidance`). Reads of the calling agent: [read-economy](../../references/read-economy/REFERENCE.md).

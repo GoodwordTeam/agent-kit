@@ -84,6 +84,9 @@ scenario 21, and it is the single most common way a donor's behavior survives wh
 **Configured** means two things, both stated in §7: the project folder commits a binding,
 `ak.kb.yaml`, and the machine has registered where that knowledgebase is checked out. Either one
 missing is the unconfigured case, and the result says which and names the step that supplies it.
+A read-only binding (§7, `in-repo`) needs no registration. A missing in-repo knowledgebase
+(`kb.in-repo-missing`) and a publish to a read-only one (`kb.read-only`) are unconfigured too: the
+result names the cause, nothing is written, and the run continues (ruling `kb-binding-is-a-locator`).
 `ak.install.yaml` is neither: it decides which adapters an install *attaches*, which sets packaged
 mode ceilings (the table below), and it never makes a knowledgebase reachable. A checkout with no
 `ak.install.yaml` is the default install, not a broken one.
@@ -188,7 +191,8 @@ Placement = { class: "kb-document", kind: KBDocumentType, scope: Scope }
   skill does not hold, which is the same principle as this package's review independence and its rule
   that an author may not close their own finding.
 - **Side effects** — `kb-publish`. Idempotency key derived per runner-contract §5 from the artifact
-  hash, so republishing an unchanged artifact after a restart is a no-op success.
+  hash. Publication admission and read-back follow the binding's idempotency rules; for `local-git`,
+  see [publishArtifact](backends/local-git.md#5-publishartifact).
 
 ### `linkCodeEvidence`
 
@@ -276,10 +280,14 @@ published to the KB afterwards.
 `ak validate` fails a skill whose outputs name a repository path where a KB operation belongs; the
 corresponding eval case asserts that no application-local docs tree appears.
 
-The KB locator is the binding file of §7 and holds no project knowledge. A binding whose
-knowledgebase resolves to the application repository — its checkout, any of its work trees, or a
-directory inside its tree — is refused on every operation, because a publish through it would be
-the write this section forbids.
+The KB locator is the binding file of §7 and holds no project knowledge. A knowledgebase that can be
+written never resolves to the application repository: a writable binding whose knowledgebase is its
+checkout, any of its work trees, or a directory inside its tree is refused on every operation,
+because a publish through it would be the write this section forbids. A read-only binding (backend
+`in-repo`) may name a directory the project already commits, because it carries no publish: every
+publish to it is skipped (`kb.read-only`) and nothing is written anywhere, so no operation here
+creates or extends a documentation tree in the application repository (ruling
+`kb-binding-is-a-locator`).
 
 ---
 
@@ -375,11 +383,24 @@ locator: { <key>: <value> }      # how the backend finds the knowledgebase; the 
 
 **The binding file is committed and holds neither a secret nor a machine path.** It is committed so
 that every checkout of the project binds the same knowledgebase: a task copy made as a git work
-tree carries the file because it carries the commit, and needs no setup of its own. The **project
-folder** is the nearest directory at or above the working directory that holds `ak.kb.yaml`,
-searching no higher than the repository's top level; with none there, the folder is unbound and §1's
-unconfigured case applies. A `backend` with no document under `backends/` is refused, since nothing
-states how to reach it.
+tree carries the file because it carries the commit, and needs no setup of its own. Runner.start
+resolves that committed file at the merge-base of the validated start revision and the charter's
+`repos[0].base_branch`, using the full ref `refs/remotes/origin/<branch>` when that exists, else
+`refs/heads/<branch>`. The committed binding at that explicit revision wins over the working file.
+Ticket charters never fall back to the working file. They refuse when the resolved base tip has
+the binding and the merge-base does not. Fall back to the working file only when a non-ticket
+start's revision has no committed `ak.kb.yaml`. A committed `ak.kb.yaml` that git lists but
+cannot read is `kb.binding-unreadable`, which is failed, not unbound, and the working file is
+not read. When the merge-base cannot be computed, the base
+branch is missing, or the base ref cannot be resolved, and the charter cites no ticket, start is
+allowed as unbound; the working `ak.kb.yaml` is not read. When the charter cites a ticket, those
+cases are refused. That merge-base trusts the base ref, so it rests on host write isolation of `.git`. An
+`in-repo` backend's own availability check is separate: it reads pages at the merge-base of `HEAD`
+and `refs/remotes/origin/HEAD`. `ak kb check`, `read`, `publish`, and `lifecycle open` do not pass
+a revision and read the working `ak.kb.yaml`. The **project folder** is the nearest directory at or
+above the working directory that holds `ak.kb.yaml`, searching no higher than the repository's top
+level; with none there, the folder is unbound and §1's unconfigured case applies. A `backend` with
+no document under `backends/` is refused, since nothing states how to reach it.
 
 ### The registration
 
@@ -406,6 +427,8 @@ machine has not been told where the knowledgebase is.
 | `recordDecision`, `linkCodeEvidence`, `requestImpactAnalysis`, `linkPullRequests`, `proposeLesson` | `ak kb record-decision` and its four siblings | no: each refuses and writes nothing |
 
 `ak kb check [<project-dir>]` reports the binding, the registration and which of these can run.
+The [local-git binding](backends/local-git.md#5-publishartifact) owns the additional publication
+options and requirements for trail records.
 `read`, `publish` and the five refusing commands print one JSON result; `check` and `register` print
 lines for a person. Every command exits 0 when the operation completed, 1 when it failed or
 was refused, 2 on a usage error and 3 when no knowledgebase is configured, so a caller can tell an
@@ -422,6 +445,7 @@ unmet.
 | Binding id | The knowledgebase is | Document |
 |---|---|---|
 | `local-git` | a git repository of files on this machine | `adapters/knowledgebase/backends/local-git.md` |
+| `in-repo` | a directory of pages the project itself commits, read only | `adapters/knowledgebase/backends/in-repo.md` |
 
 A binding is additive: a document under `backends/`, a row here, a schema at
 `schemas/kb-backends/<id>.schema.json` and the code that carries its operations under `src/kb/`.

@@ -7,6 +7,26 @@ export interface GitRun {
   stderr: string;
 }
 
+/** A git invocation. Runner.start passes its isolated git; other callers use `git`. */
+export type GitFn = (root: string, args: readonly string[], input?: string) => GitRun;
+
+function gitEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  return {
+    ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_"))),
+    ...extra,
+  };
+}
+
+function runGit(root: string, args: readonly string[], env: NodeJS.ProcessEnv, input?: string): GitRun {
+  const run = spawnSync("git", ["--literal-pathspecs", "-C", root, ...args], {
+    encoding: "utf8",
+    env,
+    input,
+    maxBuffer: Infinity,
+  });
+  return { status: run.status ?? 1, stdout: run.stdout ?? "", stderr: run.stderr ?? "" };
+}
+
 /**
  * Git as the knowledgebase adapter needs it: pathspecs taken literally, and no
  * `GIT_*` variable from the caller -- `GIT_DIR` or `GIT_WORK_TREE` set by a
@@ -14,14 +34,16 @@ export interface GitRun {
  * the one place it must never land (adapters/knowledgebase/CONTRACT.md §3).
  */
 export function git(root: string, args: readonly string[], input?: string): GitRun {
-  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_")));
-  const run = spawnSync("git", ["--literal-pathspecs", "-C", root, ...args], {
-    encoding: "utf8",
-    env,
-    input,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  return { status: run.status ?? 1, stdout: run.stdout ?? "", stderr: run.stderr ?? "" };
+  return runGit(root, args, gitEnv(), input);
+}
+
+/** The caller's git; an explicit revision requires one. */
+export function gitForRevision(revision: string | undefined, gitFn?: GitFn): GitFn {
+  if (revision !== undefined && revision !== "") {
+    if (gitFn === undefined) throw new Error("an explicit revision requires a git function");
+    return gitFn;
+  }
+  return gitFn ?? git;
 }
 
 /** The top of the work tree `dir` is in, by real path; null outside a repository. */

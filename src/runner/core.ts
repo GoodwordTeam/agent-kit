@@ -5,24 +5,57 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import { parse as parseYaml } from "yaml";
 import type { ValidateFunction } from "ajv";
 
-import { artifactHash, sha256Hex } from "../util/hash.ts";
+import { artifactHash, canonicalJson, sha256Hex } from "../util/hash.ts";
 import { unknownSelector } from "../util/suggest.ts";
+import { isDesignReport } from "../lifecycle/design-report.ts";
 import type { Snapshot } from "../lifecycle/gate.ts";
+import { persistFrozenRun } from "../lifecycle/persist-run.ts";
+import { findKbProjectRoot, loadKbBinding, registryPath, resolveKnowledgebase } from "../kb/binding.ts";
+import type { GitFn } from "../kb/git.ts";
+import { lookupCommittedArtifact, lookupPublishedProject } from "../kb/local-git.ts";
+import {
+  asJson,
+  asJsonObject,
+  bindBehaviorPolicy,
+  parseBehaviorBinding,
+  projectHashOf,
+  reviewMode,
+  RUN_SCHEMA_VERSION,
+  type FrozenBehaviorCheck,
+  type JsonObject,
+} from "../lifecycle/behavior-policy.ts";
+import { charterAllowsProtectedStart } from "../lifecycle/protected-start.ts";
 import { compileSchemas } from "../validation/schemas.ts";
 import { PrivateFileEvidenceStore } from "./evidence.ts";
-import { resolveRunnerGit, runnerGit, takeRunnerSnapshot, type RunnerGitContext } from "./snapshot.ts";
+import { sharesLineage } from "./lineage.ts";
+import { vetoRefusal, type VetoRecord } from "../council/rule.ts";
+import { isVersionManifest } from "./wire.ts";
+import {
+  ciConfigDrift,
+  cleanCommittedTree,
+  mergeTreeClean,
+  patchIdentity,
+  resolveRunnerGit,
+  runnerGit,
+  takeRunnerSnapshot,
+  type RunnerGitContext,
+} from "./snapshot.ts";
 import type {
   Card,
   CardInput,
   Charter,
   Decision,
+  Delegate,
   Effect,
   Evidence,
   InvocationPolicy,
   OperationResult,
+  PatchVerdict,
+  ProcedureIdentity,
   Run,
   RunLedger,
   StandingGrant,
+  VerdictInvalidation,
 } from "./types.ts";
 
 interface StageStep {
@@ -50,11 +83,27 @@ const LIMIT_NAME = new Map([
   ["tickets", "tickets"],
   ["review_rounds", "review-rounds"],
 ]);
+/** The charter, decision and run-ledger schemas the runner validates against, with the one they reference. */
+const RUNNER_SCHEMA_IDS = ["common", "charter", "decision", "run-ledger"] as const;
 const HASH = /^sha256:[a-f0-9]{64}$/;
 const REVISION = /^[a-f0-9]{40}([a-f0-9]{24})?$/;
-const ID = /^[a-z0-9][a-z0-9-]*$/;
+const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const EVENT_KEY = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/;
+const PRIORITY_QUESTION_MS = 600_000;
 const HUMAN_REFUSAL = "no";
 const HUMAN_RETRY = "retry";
+
+function isJsonText(value: unknown): value is string {
+  return Object.prototype.toString.call(value) === "[object String]";
+}
+
+function isDesignReportBytes(bytes: Buffer): boolean {
+  try {
+    return isDesignReport(JSON.parse(bytes.toString()));
+  } catch {
+    return false;
+  }
+}
 const EFFECTS = new Set([
   "remote-push",
   "pr-open",
@@ -76,6 +125,10 @@ const EFFECT_ACTION = new Map([
   ["branch-create", "local-commit"],
 ]);
 const STOPPED = new Set(["needs-input", "cap-reached", "failed", "cancelled", "complete"]);
+const TERMINAL = new Set(["cap-reached", "failed", "cancelled", "complete"]);
+function isProgressKind(kind: string): kind is Delegate["progress"][number]["kind"] {
+  return kind === "commit" || kind === "push" || kind === "pr" || kind === "check" || kind === "store-report";
+}
 const RUNTIME_SCRATCH_DIRS = [".omc", ".omx"] as const;
 const ACTION_FOR = new Map([
   ["spec-approval", "approve-spec"],
@@ -103,6 +156,13 @@ function canonicalFuturePath(path: string): string {
 
 function digest(bytes: Buffer): string {
   return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+/** A card as `prepare` freezes it: judgments and the veto arrive only through their own operations. */
+function unjudged(card: CardInput): Card {
+  const frozen: Card = { ...card, judgments: [] };
+  delete frozen.veto;
+  return frozen;
 }
 
 function approved(decision: Decision): boolean {
@@ -146,6 +206,7 @@ function charterDigest(charter: Charter): string {
 export class Runner {
   readonly stateDir: string;
   readonly workerRoot: string;
+  private readonly kitRoot: string;
   private readonly covers: Map<string, { authority: string; covers: string }>;
   private readonly decisionSchema: ValidateFunction<object>;
   private readonly ledgerSchema: ValidateFunction<RunLedger>;
@@ -159,6 +220,8 @@ export class Runner {
   constructor(stateDir: string, workerRoot: string, kitRoot: string, enforceSnapshot = false) {
     const requestedStateDir = canonicalFuturePath(stateDir);
     this.workerRoot = realpathSync(workerRoot);
+    this.kitRoot = realpathSync(kitRoot);
+    if (inside(this.kitRoot, this.workerRoot)) throw new Error("runner bundle is worker-writable");
     this.enforceSnapshot = enforceSnapshot;
     if (inside(requestedStateDir, this.workerRoot)) throw new Error("runner state is worker-writable");
     const gitContext = resolveRunnerGit(this.workerRoot);
@@ -167,6 +230,8 @@ export class Runner {
       commonDir.code === 0
         ? realpathSync(isAbsolute(commonDir.text) ? commonDir.text : join(this.workerRoot, commonDir.text))
         : null;
+    if (this.sharedGitDir !== null && inside(this.kitRoot, this.sharedGitDir))
+      throw new Error("runner bundle cannot use the shared git common directory");
     if (this.sharedGitDir !== null && inside(requestedStateDir, this.sharedGitDir))
       throw new Error("runner state cannot use the shared git common directory");
     mkdirSync(requestedStateDir, { recursive: true, mode: 0o700 });
@@ -176,7 +241,8 @@ export class Runner {
       throw new Error("runner state resolves into the shared git common directory");
     this.gitContext = { ...gitContext, home: this.stateDir };
     this.evidenceStore = new PrivateFileEvidenceStore(this.stateDir);
-    const schemas = compileSchemas(kitRoot);
+    // Only the runner's schemas and what they reference: the whole tree cost the service most of its startup.
+    const schemas = compileSchemas(kitRoot, RUNNER_SCHEMA_IDS);
     if (schemas.issues.some((issue) => issue.severity === "error"))
       throw new Error("runner cannot compile charter schema");
     const charterSchema = schemas.ajv.getSchema<Charter>("https://agent-kit.local/schemas/charter.schema.json");
@@ -229,12 +295,17 @@ export class Runner {
         budget_consumption: { type: "object" },
         effects: { type: "object" },
         events: { type: "object" },
+        delegates: { type: "object" },
+        procedure: { type: "object", required: ["bundle_version", "hash"] },
+        verified_base_revision: { type: "string" },
+        verdict: { type: "object", required: ["head_revision", "patch_id", "verified_base_revision"] },
         open_escalation: { type: ["object", "null"] },
         cancellation: {
           type: "object",
           required: ["by", "rationale", "at"],
           properties: { by: { type: "string" }, rationale: { type: "string" }, at: { type: "string" } },
         },
+        behavior: { type: "object" },
       },
     });
     const policySchema = schemas.ajv.compile<InvocationPolicy>({
@@ -289,10 +360,34 @@ export class Runner {
     return observed === null || (observed.revision === run.revision && observed.diff_hash === run.diff_hash);
   }
 
+  private governingProcedure(): ProcedureIdentity {
+    const manifestPath = [
+      "package.json",
+      ".codex-plugin/plugin.json",
+      ".claude-plugin/plugin.json",
+      ".kimi-plugin/plugin.json",
+      ".factory-plugin/plugin.json",
+    ]
+      .map((path) => join(this.kitRoot, path))
+      .find((path) => existsSync(path));
+    if (manifestPath === undefined) throw new Error("recorded bundle version is unavailable");
+    const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
+    if (!isVersionManifest(manifest)) throw new Error("recorded bundle version is invalid");
+    const files = ["skills/autopilot/SKILL.md", "skills/autopilot/references/checkpoints.md"];
+    const bytes = files.map((file) => `${file}\0${readFileSync(join(this.kitRoot, file), "utf8")}`).join("\0");
+    return { bundle_version: manifest.version, hash: `sha256:${sha256Hex(bytes)}` };
+  }
+
   private load(id: string): Run {
     const runValue: unknown = JSON.parse(readFileSync(this.path(id), "utf8"));
     if (!this.runSchema(runValue)) throw new Error(`runner state is invalid: ${JSON.stringify(this.runSchema.errors)}`);
     const run = runValue;
+    if (run.behavior !== undefined) {
+      const raw: unknown = run.behavior;
+      const binding = asJson(raw) ? parseBehaviorBinding(raw) : undefined;
+      if (binding === undefined) throw new Error("behavior policy snapshot is incomplete");
+      if (binding.run_id !== run.id) throw new Error("behavior policy snapshot is for a different run");
+    }
     if (run.run_state === "cancelled") return run;
     const charterValue: unknown = JSON.parse(readFileSync(run.charter_path, "utf8"));
     if (!this.validateCharter(charterValue)) throw new Error("charter no longer validates");
@@ -368,6 +463,24 @@ export class Runner {
     renameSync(partial, target);
   }
 
+  private seatsIndependent(run: Run, card: Card): boolean {
+    const seats = run.charter.supervisors.seats.map((s) => s.id);
+    return (
+      card.judgments.length === 2 &&
+      new Set(card.judgments.map((j) => j.seat)).size === 2 &&
+      new Set(card.judgments.map((j) => j.dispatch)).size === 2 &&
+      !card.judgments.some((j, i) => card.judgments.slice(i + 1).some((k) => sharesLineage(j, k))) &&
+      card.judgments.every(
+        (j) =>
+          seats.includes(j.seat) &&
+          ID.test(j.dispatch) &&
+          j.lineage.includes(j.actor) &&
+          !run.excluded_actors.some((excluded) => j.actor === excluded || j.lineage.includes(excluded)) &&
+          j.input_dispatches.length === 0,
+      )
+    );
+  }
+
   private decisionArtifact(run: Run, decision: Decision) {
     const { card, at } = decision;
     const result = decision.answer?.refusal ?? decision.result;
@@ -381,7 +494,8 @@ export class Runner {
     const declaredCheckpoint = this.covers.get(card.operation)?.covers ?? "align-answer";
     const checkpointInCharter = run.charter.checkpoints.includes(declaredCheckpoint);
     const evidencePresent = evidence.length === card.evidence.length && card.evidence.length > 0;
-    const seatsIndependent = card.judgments.length === 2 && new Set(card.judgments.map((j) => j.actor)).size === 2;
+    const seatsIndependent =
+      this.seatsIndependent(run, card) && result.escalation?.charter_rule !== "runner:seat-independence";
     const checks = {
       charter_permits: charterPermits,
       required_evidence_present: evidencePresent,
@@ -511,42 +625,41 @@ export class Runner {
     if (!this.validateCharter(charterValue))
       throw new Error(`invalid charter: ${JSON.stringify(this.validateCharter.errors)}`);
     const charter = charterValue;
-    const immutable = charter.immutability;
     const hash = charterDigest(charter);
-    if (charter.status !== "active" || immutable.hash !== hash || realpathSync(immutable.location) !== source)
-      throw new Error("charter is inactive, moved or has a mismatched hash");
-    if (!charter.approvals.some((a) => a.by === "human" && a.authority === "explicit" && a.artifact_hash === hash))
-      throw new Error("active charter lacks a human approval bound to its hash");
-    for (const sensitive of charter.sensitive_grants ?? []) {
-      const approval = sensitive.approval;
-      if (approval.artifact_hash !== hash || approval.by !== "human" || approval.authority !== "explicit")
-        throw new Error("sensitive grant lacks human approval bound to this charter");
-    }
-    if (charter.run_id !== id) throw new Error("run id does not match charter");
-    if (
-      !["runner-grants", "trusted-evidence", "independent-context"].every((capability) =>
-        charter.allowed_capabilities.includes(capability),
-      )
-    )
-      throw new Error(
-        "standing start requires charter-approved runner grants, trusted evidence and independent context",
-      );
-    if (
-      standingGrant.charter_hash !== hash ||
-      standingGrant.run_id !== id ||
-      standingGrant.covers !== "autopilot.start" ||
-      standingGrant.controller !== "firstmate" ||
-      !charter.standing_grants?.some(
-        (entry) => entry.covers === standingGrant.covers && entry.controller === standingGrant.controller,
-      )
-    )
-      throw new Error("standing grant is absent, forged or unbound to the approved charter");
+    if (!asJsonObject(charter)) throw new Error("charter is not an object");
+    const allowed = charterAllowsProtectedStart(charter, hash, {
+      charterPath: source,
+      runId: id,
+      standingGrant,
+    });
+    if (!allowed.ok) throw new Error(allowed.reason);
     try {
       this.load(id);
       throw new Error("run already exists");
     } catch (cause) {
       if (!(cause instanceof Error && "code" in cause && cause.code === "ENOENT")) throw cause;
     }
+    const createdAt = new Date().toISOString();
+    const gitFn = this.kbGit();
+    const bindingRevision = this.bindingBaseRevision(charter, revision);
+    const ticketSource = asJsonObject(charter) && asJsonObject(charter.work_source) ? charter.work_source : undefined;
+    const ticketCharter = ticketSource !== undefined && ticketSource.kind === "ticket";
+    if (ticketSource !== undefined && ticketSource.kind === "ticket" && bindingRevision !== null) {
+      const tip = this.charterBaseCommit(charter);
+      if (tip !== undefined) {
+        if (this.hasCommittedBinding(tip, gitFn) && !this.hasCommittedBinding(bindingRevision, gitFn))
+          throw new Error("the charter base tip has a knowledgebase binding the merge-base does not");
+        const ref = asJsonObject(ticketSource.ref) ? ticketSource.ref : undefined;
+        const ticketId = ref !== undefined && isJsonText(ref.id) ? ref.id : undefined;
+        if (ticketId !== undefined && this.tipRecordsDiverge(charter.project.id, ticketId, tip, bindingRevision, gitFn))
+          throw new Error("the charter base tip has a knowledgebase record the merge-base does not");
+      }
+    }
+    const work = bindingRevision === null ? undefined : this.tryWorkTicket(charter, bindingRevision, gitFn);
+    const looked =
+      bindingRevision === null
+        ? { lookup: "unbound" as const }
+        : this.projectLookup(charter.project.id, bindingRevision, gitFn, !ticketCharter);
     const run: Run = {
       id,
       charter_path: source,
@@ -557,7 +670,7 @@ export class Runner {
       excluded_actors: [...new Set([implementer, ...excludedActors])],
       revision,
       diff_hash: observed?.diff_hash ?? `sha256:${sha256Hex("")}`,
-      created_at: new Date().toISOString(),
+      created_at: createdAt,
       run_state: "created",
       next_permitted_action: "align.run",
       cards: {},
@@ -566,14 +679,363 @@ export class Runner {
       budget_consumption: {},
       effects: {},
       events: {},
+      delegates: {},
+      procedure: this.governingProcedure(),
       open_escalation: null,
+      behavior: this.bindBehavior(id, charter, hash, createdAt, work, looked),
     };
     this.save(run);
+    this.persistBehaviorEvidence(run, work);
     return run;
+  }
+
+  /** Isolated git for start-time reads at an explicit revision. Ignores refs/replace and grafts. */
+  private kbGit(): GitFn {
+    return (root, args, input) => {
+      const result = runnerGit(this.gitContext, root, args, input === undefined ? undefined : Buffer.from(input));
+      return {
+        status: result.code,
+        stdout: new TextDecoder().decode(result.stdout),
+        stderr: result.stderr,
+      };
+    };
+  }
+
+  /**
+   * Charter base commit for start, verify and verdict checks, resolved as
+   * `refs/remotes/origin/<branch>` then `refs/heads/<branch>`.
+   * The merge-base trusts the base ref, so it rests on host write isolation of
+   * `.git`. A worker that can move those refs can make the merge-base equal the
+   * start revision. Pinning a base SHA is a captain follow-up.
+   * An uncomputable merge-base, a missing base branch, or an unresolvable base
+   * ref is refused when the charter cites a ticket. Otherwise start is allowed
+   * as unbound and the working `ak.kb.yaml` is not read.
+   */
+  private charterBaseCommit(charter: Charter): string | undefined {
+    const branch = charter.repos[0]?.base_branch;
+    if (branch === undefined || branch === "") return undefined;
+    const origin = runnerGit(this.gitContext, this.workerRoot, [
+      "rev-parse",
+      "--verify",
+      `refs/remotes/origin/${branch}^{commit}`,
+    ]);
+    if (origin.code === 0 && origin.text !== "") return origin.text;
+    const local = runnerGit(this.gitContext, this.workerRoot, [
+      "rev-parse",
+      "--verify",
+      `refs/heads/${branch}^{commit}`,
+    ]);
+    if (local.code === 0 && local.text !== "") return local.text;
+    return undefined;
+  }
+
+  private verdictBase(run: Run): string {
+    const base = this.charterBaseCommit(run.charter);
+    if (base === undefined) throw new Error("cannot resolve charter verdict base branch");
+    return base;
+  }
+
+  private hasCommittedBinding(revision: string, gitFn: GitFn): boolean {
+    const projectRoot = findKbProjectRoot(this.workerRoot, revision, gitFn);
+    const loaded = loadKbBinding(projectRoot, revision, gitFn, false);
+    const bindingError = loaded.issues.find((issue) => issue.severity === "error");
+    if (bindingError !== undefined) throw new Error(bindingError.message);
+    return loaded.binding !== null;
+  }
+
+  /** Committed project and ticket at `revision`. Missing KB, project or ticket is absent, not a throw. */
+  private committedKbView(projectId: string, ticketId: string, revision: string, gitFn: GitFn) {
+    const none: FrozenBehaviorCheck[] = [];
+    const projectRoot = findKbProjectRoot(this.workerRoot, revision, gitFn);
+    const resolved = resolveKnowledgebase(projectRoot, registryPath(), revision, gitFn);
+    if (resolved.resolved === null) return { mode: "absent", project: false, ticket: false, required_checks: none };
+    const published = lookupPublishedProject(resolved.resolved, projectId, { revision, git: gitFn });
+    const project = published.status === "found";
+    const reviewed = project ? reviewMode(published.project) : "absent";
+    const mode = reviewed === "on" || reviewed === "shadow" || reviewed === "off" ? reviewed : "absent";
+    const looked = lookupCommittedArtifact(resolved.resolved, ticketId, {
+      schema: "ticket",
+      revision,
+      git: gitFn,
+    });
+    const ticket = looked.status === "found";
+    return {
+      mode,
+      project,
+      ticket,
+      required_checks: ticket
+        ? this.frozenRequiredChecks(looked.artifact, project ? published.project : undefined)
+        : none,
+    };
+  }
+
+  /**
+   * Checks bindBehaviorPolicy would freeze for this ticket at the committed
+   * project. A bind failure at mode `on` is unknown, not an empty freeze.
+   * Off and shadow still map a bind failure to an empty list.
+   */
+  private frozenRequiredChecks(ticket: JsonObject, project: JsonObject | undefined): FrozenBehaviorCheck[] | "unknown" {
+    const bound = bindBehaviorPolicy({
+      runId: "floor",
+      ticket,
+      ticketHash: `sha256:${"0".repeat(64)}`,
+      project,
+      lookup: project === undefined ? "absent" : "resolved",
+      capturedAt: "1970-01-01T00:00:00Z",
+    });
+    if (bound.ok) return bound.binding.required_checks;
+    return reviewMode(project) === "on" ? "unknown" : [];
+  }
+
+  /**
+   * True when the charter base tip's committed project mode is `on` and the
+   * merge-base's is not, or when the tip has the project or ticket and the
+   * merge-base does not, or when a required check frozen from the tip ticket
+   * is absent from the merge-base freeze, or when the tip freeze is unknown.
+   */
+  private tipRecordsDiverge(
+    projectId: string,
+    ticketId: string,
+    tip: string,
+    mergeBase: string,
+    gitFn: GitFn,
+  ): boolean {
+    const atTip = this.committedKbView(projectId, ticketId, tip, gitFn);
+    const atBase = this.committedKbView(projectId, ticketId, mergeBase, gitFn);
+    if (atTip.required_checks === "unknown") return true;
+    const baseList = atBase.required_checks === "unknown" ? [] : atBase.required_checks;
+    const baseChecks = new Set(baseList.map((check) => canonicalJson(check)));
+    return (
+      (atTip.mode === "on" && atBase.mode !== "on") ||
+      (atTip.project && !atBase.project) ||
+      (atTip.ticket && !atBase.ticket) ||
+      atTip.required_checks.some((check) => !baseChecks.has(canonicalJson(check)))
+    );
+  }
+
+  private bindingBaseRevision(charter: Charter, revision: string): string | null {
+    const raw: unknown = charter;
+    const source = asJsonObject(raw) && asJsonObject(raw.work_source) ? raw.work_source : undefined;
+    const needed = source !== undefined && source.kind === "ticket";
+    const branch = charter.repos[0]?.base_branch;
+    if (branch === undefined || branch === "") {
+      if (needed) throw new Error("charter names no base branch for the knowledgebase binding");
+      return null;
+    }
+    const base = this.charterBaseCommit(charter);
+    if (base === undefined) {
+      if (needed) throw new Error(`cannot resolve charter base branch ${branch}`);
+      return null;
+    }
+    const mergeBase = runnerGit(this.gitContext, this.workerRoot, ["merge-base", revision, base]);
+    if (mergeBase.code !== 0 || mergeBase.text.trim() === "") {
+      if (needed) throw new Error("cannot compute merge-base of the start revision and the charter base branch");
+      return null;
+    }
+    return mergeBase.text.trim();
+  }
+
+  private persistBehaviorEvidence(run: Run, work: ReturnType<Runner["tryWorkTicket"]>): void {
+    if (run.behavior === undefined) return;
+    if (work === undefined) return;
+    const ticketId = isJsonText(work.ticket.id) ? work.ticket.id : undefined;
+    if (ticketId === undefined) throw new Error("approved ticket is unnamed");
+    const ticketBytes = new TextEncoder().encode(
+      canonicalJson(Object.fromEntries(Object.entries(work.ticket).filter(([key]) => key !== "approvals"))),
+    );
+    persistFrozenRun(
+      join(this.stateDir, "evidence"),
+      {
+        run_id: run.id,
+        ticket: { id: ticketId, hash: work.hash },
+        opened_at: run.created_at,
+        branch: run.id,
+        base: run.revision,
+        schema_version: RUN_SCHEMA_VERSION,
+        behavior: run.behavior,
+      },
+      ticketBytes,
+    );
+  }
+
+  private tryWorkTicket(charter: Charter, revision: string | undefined, gitFn: GitFn) {
+    if (!asJsonObject(charter)) throw new Error("charter is not an object");
+    const source = charter.work_source;
+    if (!asJsonObject(source) || source.kind !== "ticket") return undefined;
+    return this.loadTicket(charter, revision, gitFn);
+  }
+
+  private loadTicket(charter: Charter, revision: string | undefined, gitFn: GitFn) {
+    if (!asJsonObject(charter)) throw new Error("charter is not an object");
+    const source = charter.work_source;
+    if (!asJsonObject(source) || source.kind !== "ticket") throw new Error("run work source is not an approved ticket");
+    const ref = source.ref;
+    if (!asJsonObject(ref)) throw new Error("approved ticket is unnamed");
+    const ticketId = isJsonText(ref.id) ? ref.id : undefined;
+    const expected = isJsonText(ref.hash) ? ref.hash : undefined;
+    if (ticketId === undefined) throw new Error("approved ticket is unnamed");
+    const path = join(this.stateDir, `${ticketId}.json`);
+    if (existsSync(path)) {
+      this.assertPrivatePath(path);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(readFileSync(path, "utf8"));
+      } catch {
+        throw new Error("approved ticket is malformed");
+      }
+      if (!asJsonObject(parsed) || parsed.schema !== "ticket" || parsed.id !== ticketId)
+        throw new Error("approved ticket is malformed");
+      const hash = artifactHash(parsed);
+      if (expected !== undefined && expected !== hash)
+        throw new Error("approved ticket does not match the charter work source");
+      return { ticket: parsed, hash };
+    }
+    return this.loadCommittedTicket(ticketId, expected, revision, gitFn);
+  }
+
+  private loadCommittedTicket(
+    ticketId: string,
+    expected: string | undefined,
+    revision: string | undefined,
+    gitFn: GitFn,
+  ) {
+    const projectRoot = findKbProjectRoot(this.workerRoot, revision, gitFn);
+    const loaded = loadKbBinding(projectRoot, revision, gitFn, false);
+    if (loaded.binding === null) return undefined;
+    const resolved = resolveKnowledgebase(projectRoot, registryPath(), revision, gitFn);
+    if (resolved.resolved === null || resolved.state !== "available")
+      throw new Error("the authoritative project record is unavailable; missing project cannot turn this run off");
+    const looked =
+      expected === undefined
+        ? lookupCommittedArtifact(resolved.resolved, ticketId, { schema: "ticket", revision, git: gitFn })
+        : lookupCommittedArtifact(resolved.resolved, ticketId, {
+            schema: "ticket",
+            hash: expected,
+            revision,
+            git: gitFn,
+          });
+    if (looked.status === "unavailable") throw new Error(looked.reason);
+    if (looked.status === "absent") return undefined;
+    if (looked.artifact.schema !== "ticket" || looked.artifact.id !== ticketId)
+      throw new Error("approved ticket is malformed");
+    const hash = artifactHash(looked.artifact);
+    if (expected !== undefined && expected !== hash)
+      throw new Error("approved ticket does not match the charter work source");
+    return { ticket: looked.artifact, hash };
+  }
+
+  private projectLookup(projectId: string, revision: string | undefined, gitFn: GitFn, workingFile = true) {
+    const projectRoot = findKbProjectRoot(this.workerRoot, revision, gitFn);
+    const loaded = loadKbBinding(projectRoot, revision, gitFn, workingFile);
+    const bindingError = loaded.issues.find((issue) => issue.severity === "error");
+    if (bindingError !== undefined) throw new Error(bindingError.message);
+    if (loaded.binding === null) {
+      const unbound = loaded.issues.length === 0 || loaded.issues.every((issue) => issue.rule === "kb.unbound");
+      if (unbound) return { lookup: "unbound" as const };
+      const first = loaded.issues[0];
+      throw new Error(first === undefined ? "the knowledgebase binding is unusable" : first.message);
+    }
+    const resolved = resolveKnowledgebase(projectRoot, registryPath(), revision, gitFn);
+    if (resolved.resolved === null || resolved.state !== "available") return { lookup: "unavailable" as const };
+    const published = lookupPublishedProject(resolved.resolved, projectId, { revision, git: gitFn });
+    if (published.status === "unavailable") return { lookup: "unavailable" as const };
+    if (published.status === "absent") return { lookup: "absent" as const };
+    return {
+      lookup: "resolved" as const,
+      project: published.project,
+      projectHash: projectHashOf(published.project),
+    };
+  }
+
+  private bindBehavior(
+    id: string,
+    charter: Charter,
+    charterHash: string,
+    createdAt: string,
+    work: ReturnType<Runner["tryWorkTicket"]>,
+    looked: ReturnType<Runner["projectLookup"]>,
+  ) {
+    const raw: unknown = charter;
+    const source = asJsonObject(raw) && asJsonObject(raw.work_source) ? raw.work_source : undefined;
+    if (looked.lookup === "unavailable" && source !== undefined && source.kind === "ticket")
+      throw new Error("the authoritative project record is unavailable; missing project cannot turn this run off");
+    let ticketResolution: "unresolved" | undefined;
+    if (work === undefined && source !== undefined && source.kind === "ticket") {
+      if (looked.lookup === "resolved" && reviewMode(looked.project) !== "off")
+        throw new Error("approved ticket is absent from the runner store");
+      const ref = asJsonObject(source.ref) ? source.ref : undefined;
+      const ticketId = ref !== undefined && isJsonText(ref.id) ? ref.id : "unnamed";
+      process.stderr.write(`Runner.start: ticket ${ticketId} is unresolved\n`);
+      ticketResolution = "unresolved";
+    }
+    const bound = bindBehaviorPolicy({
+      runId: id,
+      ticket: work?.ticket ?? {},
+      ticketHash: work?.hash ?? charterHash,
+      project: looked.project,
+      projectHash: looked.projectHash,
+      lookup: looked.lookup,
+      capturedAt: createdAt,
+      ticketResolution,
+    });
+    if (!bound.ok) throw new Error(bound.reason);
+    return bound.binding;
   }
 
   status(id: string): Run {
     return this.load(id);
+  }
+
+  question(
+    id: string,
+    questionId: string,
+    need: string,
+    answer?: { text: string; source: string; ref: string },
+    now = Date.now(),
+  ) {
+    const run = this.load(id);
+    if ((STOPPED.has(run.run_state) && run.run_state !== "needs-input") || !ID.test(questionId) || !need.trim())
+      throw new Error("priority question needs an active run, id and blocker text");
+    const previous = run.priority_question;
+    if (previous !== undefined && previous.id !== questionId && previous.answer === undefined)
+      throw new Error("resolve the open priority question before replacing it");
+    if (previous?.id === questionId && previous.need !== need) throw new Error("priority question changed");
+    const question: NonNullable<Run["priority_question"]> =
+      previous?.id === questionId ? previous : { id: questionId, need, started_at: new Date(now).toISOString() };
+    const resolution = answer ?? question.answer;
+    if (resolution !== undefined) {
+      if (
+        !["order", "code", "evidence"].includes(resolution.source) ||
+        !resolution.text.trim() ||
+        !resolution.ref.trim()
+      )
+        throw new Error("priority answer needs text and a reference to the order, code or authorized evidence");
+      question.answer = resolution;
+      run.priority_question = question;
+      this.save(run);
+      return { action: "continue", answer: resolution.text, evidence: resolution.ref };
+    }
+    run.priority_question = question;
+    this.save(run);
+    const deadline = Date.parse(question.started_at) + PRIORITY_QUESTION_MS;
+    return { action: now >= deadline ? "blocked" : "investigate", need, deadline_at: new Date(deadline).toISOString() };
+  }
+
+  questionDeadline(id: string): number | null {
+    const run = this.load(id);
+    const question = run.priority_question;
+    return run.run_state === "complete" ||
+      run.run_state === "cancelled" ||
+      question === undefined ||
+      question.answer !== undefined
+      ? null
+      : Date.parse(question.started_at) + PRIORITY_QUESTION_MS;
+  }
+
+  emitQuestionBlocker(id: string, emit: (text: string) => void, now = Date.now()): void {
+    const deadline = this.questionDeadline(id);
+    const question = this.load(id).priority_question;
+    if (deadline !== null && now >= deadline && question !== undefined) emit(question.need);
   }
 
   collect(id: string, evidenceId: string, sourcePath: string, revision: string, kind: string): Evidence {
@@ -605,14 +1067,106 @@ export class Runner {
     if (observed !== null && observed.revision !== revision) throw new Error("revision differs from worker checkout");
     const diffHash = observed?.diff_hash ?? run.diff_hash;
     const changed = run.revision !== revision || run.diff_hash !== diffHash;
+    let reuse = false;
+    const verdict = run.verdict;
+    if (
+      changed &&
+      verdict !== undefined &&
+      verdict.invalidated_by === undefined &&
+      verdict.head_revision === run.revision &&
+      run.run_state === "ready-to-ship"
+    ) {
+      const reason = this.verdictInvalidation(run, verdict, revision);
+      if (reason === null || reason === "merge-conflict") {
+        reuse = true;
+        const oldRevision = run.revision;
+        const oldDiff = run.diff_hash;
+        for (const evidence of Object.values(run.evidence)) {
+          if (evidence.revision === oldRevision && evidence.diff_hash === oldDiff) {
+            evidence.revision = revision;
+            evidence.diff_hash = diffHash;
+          }
+        }
+        for (const decision of run.decisions) {
+          if (decision.revision === oldRevision && decision.diff_hash === oldDiff) {
+            decision.revision = revision;
+            decision.diff_hash = diffHash;
+          }
+        }
+        verdict.reused_from = oldRevision;
+        verdict.head_revision = revision;
+      }
+      if (reason !== null) this.invalidate(run, verdict, reason);
+    }
     run.revision = revision;
     run.diff_hash = diffHash;
-    if (changed && ["verifying", "reviewing", "ready-to-ship", "pr-open"].includes(run.run_state)) {
+    if (changed && !reuse && ["verifying", "reviewing", "ready-to-ship", "pr-open"].includes(run.run_state)) {
       run.run_state = "repairing";
       run.next_permitted_action = "verify.record";
     }
     this.save(run);
     return run;
+  }
+
+  bindVerdict(id: string) {
+    const run = this.load(id);
+    if (
+      run.run_state !== "ready-to-ship" ||
+      !this.current(run) ||
+      !run.decisions.some((decision) => decision.card.operation === "review.full" && approved(decision)) ||
+      !run.decisions.some((decision) => decision.card.operation === "review.readiness" && approved(decision))
+    )
+      throw new Error("a completed review round and current head are required before verdict binding");
+    const baseRef = this.verdictBase(run);
+    const verifiedBase = run.verified_base_revision;
+    if (verifiedBase === undefined) throw new Error("verification recorded no trunk base");
+    if (!cleanCommittedTree(this.gitContext, this.workerRoot))
+      throw new Error("verdict needs a clean committed worktree");
+    if (!mergeTreeClean(this.gitContext, this.workerRoot, baseRef, run.revision))
+      throw new Error("merge-tree reports a conflict");
+    const patchId = patchIdentity(this.gitContext, this.workerRoot, baseRef, run.revision);
+    if (patchId === null) throw new Error("verdict needs a nonempty committed patch");
+    run.verdict = { head_revision: run.revision, patch_id: patchId, verified_base_revision: verifiedBase };
+    this.save(run);
+    return run.verdict;
+  }
+
+  /** The one classification of a bound verdict against a head; revision() and ship both use it. */
+  private verdictInvalidation(run: Run, verdict: PatchVerdict, head: string): VerdictInvalidation | null {
+    const baseRef = this.verdictBase(run);
+    const clean = cleanCommittedTree(this.gitContext, this.workerRoot);
+    if ((clean ? patchIdentity(this.gitContext, this.workerRoot, baseRef, head) : null) !== verdict.patch_id)
+      return "patch-changed";
+    if (ciConfigDrift(this.gitContext, this.workerRoot, verdict.verified_base_revision, baseRef))
+      return "ci-config-drift";
+    return mergeTreeClean(this.gitContext, this.workerRoot, baseRef, head) ? null : "merge-conflict";
+  }
+
+  private invalidate(run: Run, verdict: PatchVerdict, reason: VerdictInvalidation): void {
+    verdict.invalidated_by = reason;
+    if (reason === "merge-conflict") return;
+    run.run_state = "repairing";
+    run.next_permitted_action = "verify.record";
+  }
+
+  private requireCurrentVerdict(run: Run): void {
+    const verdict = run.verdict;
+    if (verdict === undefined) {
+      if (run.charter.audit_cadence_seconds === undefined) return;
+      throw new Error("current patch verdict required before unattended ship");
+    }
+    if (verdict.invalidated_by === undefined && verdict.head_revision === run.revision) {
+      const reason = this.verdictInvalidation(run, verdict, run.revision);
+      if (reason === null) return;
+      this.invalidate(run, verdict, reason);
+      this.save(run);
+      if (reason !== "merge-conflict") throw new Error(`verdict invalidated by ${reason}; verification is required`);
+    }
+    if (verdict.invalidated_by === "merge-conflict")
+      throw new Error(
+        `verdict invalidated by merge-conflict; rebase onto ${run.charter.repos[0]?.base_branch} is required`,
+      );
+    throw new Error("current patch verdict required before unattended ship");
   }
 
   syncRevision(id: string): Run {
@@ -644,6 +1198,7 @@ export class Runner {
   prepare(id: string, card: CardInput): Card {
     const run = this.load(id);
     if (STOPPED.has(run.run_state)) throw new Error("run is stopped; no new checkpoint can be prepared");
+    if (card.operation === "ship.prepare") this.requireCurrentVerdict(run);
     if (
       !ID.test(card.id) ||
       !HASH.test(card.artifact_hash) ||
@@ -662,7 +1217,7 @@ export class Runner {
       );
     const existing = run.cards[card.id];
     if (existing !== undefined) {
-      if (JSON.stringify({ ...existing, judgments: [] }) !== JSON.stringify({ ...card, judgments: [] }))
+      if (JSON.stringify(unjudged(existing)) !== JSON.stringify(unjudged(card)))
         throw new Error("checkpoint card changed");
       return existing;
     }
@@ -681,7 +1236,7 @@ export class Runner {
       throw new Error(
         "a non-approving ruling settled this artifact at this revision; revise it before preparing another",
       );
-    const prepared = { ...card, judgments: [] };
+    const prepared = unjudged(card);
     run.cards[card.id] = prepared;
     this.save(run);
     return prepared;
@@ -730,8 +1285,61 @@ export class Runner {
       )
     )
       throw new Error("seat is not independently dispatched");
+    if (card.judgments.some((j) => sharesLineage(j, { actor, lineage }))) throw new Error("invalid or excluded seat");
+    if (card.veto?.status === "answered" && sharesLineage(card.veto, { actor, lineage }))
+      throw new Error("seat shares a lineage with the blind veto seat");
     if (inputDispatches.length > 0) throw new Error("seat input includes another dispatch");
     card.judgments.push({ seat, actor, dispatch, choice, rationale, input_dispatches: inputDispatches, lineage });
+    this.save(run);
+    return card;
+  }
+
+  /** True when the charter requires a blind veto and this card's pair agreed to approve without one recorded. */
+  vetoDue(id: string, cardId: string): boolean {
+    const run = this.load(id);
+    const card = run.cards[cardId];
+    if (card === undefined) throw new Error(unknownCard(run, cardId));
+    return (
+      run.charter.council?.blind_veto === "required" &&
+      card.veto === undefined &&
+      !run.decisions.some((d) => d.card.id === cardId) &&
+      card.judgments.length === 2 &&
+      card.judgments.every((j) => j.choice === card.approve)
+    );
+  }
+
+  /**
+   * Records the blind veto seat's answer, or its unavailability, for one card
+   * (ADR-0015). The veto judges the same packet as the pair with no other
+   * judgment in its input, and is stored on the card apart from the two
+   * judgments, so the decision record keeps exactly two. Like a judgment, a
+   * record is fixed once submitted.
+   */
+  veto(id: string, cardId: string, record: VetoRecord): Card {
+    const run = this.load(id);
+    const card = run.cards[cardId];
+    if (card === undefined) throw new Error(unknownCard(run, cardId));
+    if (card.veto !== undefined) {
+      if (JSON.stringify(card.veto) === JSON.stringify(record)) return card;
+      throw new Error("blind veto changed after first submission");
+    }
+    if (STOPPED.has(run.run_state)) throw new Error("run is stopped; no new veto can be submitted");
+    if (run.charter.council?.blind_veto !== "required") throw new Error("charter does not seat a blind veto");
+    if (run.decisions.some((d) => d.card.id === cardId)) throw new Error("card is already decided");
+    if (!ID.test(record.seat) || run.charter.supervisors.seats.some((seat) => seat.id === record.seat))
+      throw new Error("blind veto seat must not be a supervisor seat");
+    if (record.status === "answered") {
+      if (
+        !card.options.includes(record.choice) ||
+        !ID.test(record.dispatch) ||
+        !record.lineage.includes(record.actor) ||
+        run.excluded_actors.some((excluded) => record.actor === excluded || record.lineage.includes(excluded))
+      )
+        throw new Error("invalid or excluded veto seat");
+      if (card.judgments.some((j) => j.dispatch === record.dispatch || sharesLineage(j, record)))
+        throw new Error("blind veto seat is not independent of the supervisor pair");
+    }
+    card.veto = record;
     this.save(run);
     return card;
   }
@@ -774,6 +1382,7 @@ export class Runner {
     if (prior !== undefined) return prior.result;
     const card = run.cards[cardId];
     if (card === undefined) throw new Error(unknownCard(run, cardId));
+    if (card.operation === "ship.prepare") this.requireCurrentVerdict(run);
     if (STOPPED.has(run.run_state)) throw new Error("run is stopped; no new checkpoint can be decided");
     const step = STAGE.get(card.operation);
     if (step === undefined || !step.from.includes(run.run_state) || run.next_permitted_action !== card.operation)
@@ -799,6 +1408,8 @@ export class Runner {
         "charter:allowed_capabilities",
         "Charter does not allow runner grants and trusted evidence",
       );
+    if (charter.audit_cadence_seconds !== undefined && !charter.allowed_capabilities.includes("event-delivery"))
+      return this.refuse(run, card, "charter:allowed_capabilities", "Charter does not allow unattended event delivery");
     const checkpoints = charter.checkpoints;
     const action = ACTION_FOR.get(card.grant.covers);
     if (
@@ -849,8 +1460,21 @@ export class Runner {
       })
     )
       return this.refuse(run, card, "runner:trusted-evidence", "Required trusted evidence is missing or stale");
-    if (card.operation === "ship.prepare" && !card.evidence.some((e) => run.evidence[e]?.kind === "verify"))
-      return this.refuse(run, card, "runner:trusted-evidence", "Ship requires runner-collected verification evidence");
+    if (card.operation === "ship.prepare") {
+      const verifyEvidence = card.evidence.flatMap((evidenceId) => {
+        const found = run.evidence[evidenceId];
+        return found?.kind === "verify" ? [found] : [];
+      });
+      if (verifyEvidence.length === 0)
+        return this.refuse(
+          run,
+          card,
+          "runner:trusted-evidence",
+          "Ship requires runner-collected verification evidence",
+        );
+      if (verifyEvidence.every((found) => isDesignReportBytes(this.evidenceStore.read(found.ref))))
+        return this.refuse(run, card, "runner:design-report", "A design report is not a verifier receipt");
+    }
     const reached = this.capReached(run, step);
     if (reached !== null) return this.cap(run, card, reached.limit, reached.value);
     const lastHumanRuling = run.decisions.findLast(
@@ -898,23 +1522,15 @@ export class Runner {
         "runner:seat-independence",
         `Supervisor seat dispatch failed: ${seatFailures.join("; ")}`.slice(0, 2000),
       );
-    const charter = run.charter;
-    const seats = charter.supervisors.seats.map((s) => s.id);
-    if (
-      card.judgments.length !== 2 ||
-      new Set(card.judgments.map((j) => j.actor)).size !== 2 ||
-      new Set(card.judgments.map((j) => j.dispatch)).size !== 2 ||
-      card.judgments.some(
-        (j) =>
-          !seats.includes(j.seat) ||
-          run.excluded_actors.some((excluded) => j.actor === excluded || j.lineage.includes(excluded)) ||
-          j.input_dispatches.length > 0,
-      )
-    )
+    if (!this.seatsIndependent(run, card))
       return this.refuse(run, card, "runner:seat-independence", "Two independent supervisor dispatches are required");
     if (card.judgments[0]?.choice !== card.judgments[1]?.choice)
       return this.refuse(run, card, "runner:supervisor-disagreement", "Supervisor seats disagreed");
     const approve = card.judgments[0]?.choice === card.approve;
+    if (approve && run.charter.council?.blind_veto === "required") {
+      const blocked = vetoRefusal(card.approve, card.veto, card.judgments, run.excluded_actors);
+      if (blocked !== null) return this.refuse(run, card, "runner:council-veto", blocked);
+    }
     const result: OperationResult = {
       operation: card.operation,
       status: "complete",
@@ -1074,6 +1690,23 @@ export class Runner {
       digest(this.evidenceStore.read(evidence.ref)) !== evidence.hash
     )
       throw new Error("current runner-collected verification receipt required");
+    const raw: unknown = run.behavior;
+    const binding = asJson(raw) ? parseBehaviorBinding(raw) : undefined;
+    if (run.behavior !== undefined && binding === undefined)
+      throw new Error("frozen behavior obligations are unavailable");
+    // Presence of a freeze is not consumption of named checks (GS-017 T03).
+    // Pre-feature and off runs do not look the ticket up; a frozen on-mode
+    // binding is the obligation, including when the worker-writable project
+    // file is gone.
+    if (binding !== undefined && binding.mode === "on") {
+      for (const check of binding.required_checks) {
+        if (check.property_ids.length === 0)
+          throw new Error(`required behavior check ${check.id} is missing its frozen definition`);
+      }
+    }
+    const base = this.charterBaseCommit(run.charter);
+    if (base !== undefined) run.verified_base_revision = base;
+    else delete run.verified_base_revision;
     run.run_state = "verifying";
     run.next_permitted_action = "review.full";
     this.save(run);
@@ -1081,20 +1714,184 @@ export class Runner {
   }
 
   event(id: string, key: string, payload: string) {
+    if (!EVENT_KEY.test(key) || ["__proto__", "prototype", "constructor"].includes(key))
+      throw new Error("invalid event key");
     const run = this.load(id);
     const duplicate = run.events[key] !== undefined;
     const payloadHash = `sha256:${sha256Hex(payload)}`;
     if (duplicate && run.events[key]?.payload_hash !== payloadHash)
       throw new Error("event key was reused with a different payload");
-    const terminal = ["complete", "cancelled", "failed", "cap-reached"].includes(run.run_state);
+    const terminal = TERMINAL.has(run.run_state);
     if (!duplicate)
       run.events[key] = {
         payload_hash: payloadHash,
+        payload,
         received_at: new Date().toISOString(),
         acted: false,
+        terminal,
       };
     this.save(run);
     return { duplicate, terminal };
+  }
+
+  pendingEvents(id: string): { key: string; payload: string }[] {
+    const run = this.load(id);
+    if (TERMINAL.has(run.run_state)) return [];
+    return Object.entries(run.events).flatMap(([key, event]) => {
+      if (event.acted || event.terminal) return [];
+      if (event.payload === undefined || `sha256:${sha256Hex(event.payload)}` !== event.payload_hash)
+        throw new Error(`event ${key} cannot be delivered: payload is missing or changed`);
+      return [{ key, payload: event.payload }];
+    });
+  }
+
+  ackEvent(id: string, key: string): void {
+    const run = this.load(id);
+    const event = run.events[key];
+    if (event === undefined || event.terminal) throw new Error("event is not deliverable");
+    if (event.acted) return;
+    if (event.payload === undefined || `sha256:${sha256Hex(event.payload)}` !== event.payload_hash)
+      throw new Error("event payload is missing or changed");
+    event.acted = true;
+    this.save(run);
+  }
+
+  registerDelegate(
+    id: string,
+    delegateId: string,
+    expectedSeconds: number,
+    parent?: string,
+    now = Date.now(),
+  ): Delegate {
+    const run = this.load(id);
+    if (
+      STOPPED.has(run.run_state) ||
+      !ID.test(delegateId) ||
+      !Number.isSafeInteger(expectedSeconds) ||
+      expectedSeconds < 1
+    )
+      throw new Error("invalid active delegate");
+    const delegates = run.delegates ?? (run.delegates = {});
+    if (delegates[delegateId] !== undefined) throw new Error("delegate id already registered");
+    if (parent !== undefined && delegates[parent]?.state !== "active") throw new Error("parent delegate is not active");
+    const delegate: Delegate = {
+      id: delegateId,
+      started_at: new Date(now).toISOString(),
+      expected_runtime_seconds: expectedSeconds,
+      state: "active",
+      progress: [],
+    };
+    if (parent !== undefined) delegate.parent = parent;
+    delegates[delegateId] = delegate;
+    this.save(run);
+    return delegate;
+  }
+
+  recordProgress(id: string, delegateId: string, kind: string, ref: string, now = Date.now()): void {
+    this.recordProgressBatch(id, [{ delegate: delegateId, kind, ref }], now);
+  }
+
+  recordProgressBatch(
+    id: string,
+    entries: readonly { delegate: string; kind: string; ref: string }[],
+    now = Date.now(),
+  ): void {
+    const run = this.load(id);
+    for (const { delegate: delegateId, kind, ref } of entries) {
+      const delegate = run.delegates?.[delegateId];
+      if (delegate?.state !== "active" || !isProgressKind(kind) || !ref)
+        throw new Error("progress must identify an active delegate and a side effect");
+      if (kind === "commit") {
+        const observed = runnerGit(this.gitContext, this.workerRoot, ["cat-file", "-t", ref]);
+        if (observed.code !== 0 || observed.text !== "commit") throw new Error("commit side effect was not observed");
+      }
+      if (!delegate.progress.some((entry) => entry.kind === kind && entry.ref === ref))
+        delegate.progress.push({ kind, ref, at: new Date(now).toISOString() });
+    }
+    this.save(run);
+  }
+
+  auditTick(id: string, now = Date.now()) {
+    const run = this.load(id);
+    if (run.charter.audit_cadence_seconds === undefined || run.procedure === undefined)
+      throw new Error("audit loop is not configured for this charter");
+    const procedure = this.governingProcedure();
+    if (procedure.bundle_version !== run.procedure.bundle_version || procedure.hash !== run.procedure.hash)
+      throw new Error("recorded bundle procedure changed; audit cannot continue");
+    const active = Object.values(run.delegates ?? {}).filter((delegate) => delegate.state === "active");
+    const replace = active
+      .filter(
+        (delegate) =>
+          now - Date.parse(delegate.progress.at(-1)?.at ?? delegate.started_at) >
+          delegate.expected_runtime_seconds * 1000,
+      )
+      .map((delegate) => delegate.id);
+    return {
+      run: id,
+      at: new Date(now).toISOString(),
+      procedure,
+      active: active.map((delegate) => delegate.id),
+      replace,
+      drained: active.length === 0,
+    };
+  }
+
+  replaceDelegate(
+    id: string,
+    oldId: string,
+    replacementId: string,
+    expectedSeconds: number,
+    now = Date.now(),
+  ): Delegate {
+    const run = this.load(id);
+    const old = run.delegates?.[oldId];
+    if (old?.state !== "active") throw new Error("delegate is not eligible for replacement");
+    if (
+      !ID.test(replacementId) ||
+      !Number.isSafeInteger(expectedSeconds) ||
+      expectedSeconds < 1 ||
+      run.delegates?.[replacementId] !== undefined
+    )
+      throw new Error("replacement id or expected runtime is invalid");
+    const tick = this.auditTick(id, now);
+    if (!tick.replace.includes(oldId)) throw new Error("delegate has not exceeded its expected runtime");
+    const replacement: Delegate = {
+      id: replacementId,
+      started_at: new Date(now).toISOString(),
+      expected_runtime_seconds: expectedSeconds,
+      state: "active",
+      progress: [],
+    };
+    if (old.parent !== undefined) replacement.parent = old.parent;
+    old.state = "replaced";
+    old.replacement = replacementId;
+    const delegates = run.delegates;
+    if (delegates === undefined) throw new Error("delegate registry is unavailable");
+    for (const child of Object.values(delegates))
+      if (child.parent === oldId && child.state === "active") child.parent = replacementId;
+    delegates[replacementId] = replacement;
+    this.save(run);
+    return replacement;
+  }
+
+  recordAuditAdapterFailure(id: string) {
+    const run = this.load(id);
+    const cap = run.charter.limits.delegate_replacements;
+    if (cap === undefined) return { cap, spent: 0, exhausted: true };
+    const current = run.budget_consumption["delegate_replacements"] ?? 0;
+    if (!Number.isSafeInteger(current) || current < 0) throw new Error("delegate replacement count is corrupt");
+    const spent = current + 1;
+    run.budget_consumption["delegate_replacements"] = spent;
+    this.save(run);
+    return { cap, spent, exhausted: spent >= cap };
+  }
+
+  finishDelegate(id: string, delegateId: string): void {
+    const run = this.load(id);
+    const delegate = run.delegates?.[delegateId];
+    if (delegate?.state !== "active") throw new Error("delegate is not active");
+    delegate.state = "finished";
+    this.save(run);
   }
 
   /** The callbacks belong to the trusted remote adapter, never to a worker request. */
@@ -1108,6 +1905,7 @@ export class Runner {
   ): Effect {
     if (!HASH.test(inputHash) || !EFFECTS.has(operation) || !target) throw new Error("invalid remote effect request");
     const run = this.load(id);
+    if (operation === "pr-open") this.requireCurrentVerdict(run);
     const key = sha256Hex(`${id}\0${operation}\0${target}\0${inputHash}`);
     const old = run.effects[key];
     const action = EFFECT_ACTION.get(operation);

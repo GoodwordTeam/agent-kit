@@ -192,14 +192,14 @@ export function parseDonorSource(text: string): DonorSource | null {
 }
 
 /** `local:<local_source_id>@sha256:<64-hex>[#L<start>-<end>]` */
-interface LocalAdaptationSource {
+export interface LocalAdaptationSource {
   id: string;
   sha256: string;
   start: number | null;
   end: number | null;
 }
 
-function parseLocalAdaptationSource(text: string): LocalAdaptationSource | null {
+export function parseLocalAdaptationSource(text: string): LocalAdaptationSource | null {
   const match = /^local:([A-Za-z0-9._-]+)@sha256:([0-9a-f]{64})(?:#L(\d+)-(\d+))?$/.exec(text.trim());
   if (match?.[1] === undefined || match[2] === undefined) return null;
   if (match[3] === undefined || match[4] === undefined) {
@@ -1009,6 +1009,19 @@ export function checkProvenance(ctx: CheckContext): Issue[] {
         `.donors/ is absent (gitignored and reproducible from upstream.lock.yaml). ${donorRows.length} donor row${donorRows.length === 1 ? "" : "s"} went unverified: no row's path was checked against the tree its pin names, so a row citing a path the pin does not contain reads exactly like one that checks out. Clone the donors and re-run before treating this run as provenance evidence.`,
       ),
     );
+  } else if (donorsPresent) {
+    for (const donor of donors.values()) {
+      if (isDir(join(root, donor.path))) continue;
+      if (!donorRows.some((row) => parseDonorSource(row.source)?.donor === donor.id)) continue;
+      issues.push(
+        skipped(
+          "provenance.donors-unavailable",
+          donor.path,
+          "donor paths at pin",
+          `${donor.path} is not a clone, so rows citing ${donor.id} went unverified against pin ${donor.commit}. Clone the donors and re-run before treating this run as provenance evidence.`,
+        ),
+      );
+    }
   }
 
   for (const row of rows) {

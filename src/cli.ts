@@ -11,13 +11,15 @@ import { isAbsolute, join } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { attach, formatAttachResult } from "./attach/index.ts";
-import { scoreDelegationFiles } from "./delegation.ts";
+import { delegationRunProblem, scoreDelegationRun } from "./delegation.ts";
 import { runFirstmate } from "./firstmate/cli.ts";
 import { readGuardStdin, runGuard } from "./guard/cli.ts";
 import { main as runLifecycle } from "./lifecycle/gate.ts";
 import { runKb } from "./kb/cli.ts";
 import { readHookStdin, runLearn } from "./learn/cli.ts";
 import { runRunner } from "./runner/cli.ts";
+import { runCouncil } from "./council/cli.ts";
+import { runReview } from "./review/cli.ts";
 import { loadCatalog } from "./catalog/load.ts";
 import type { BuildOptions } from "./packaging/build.ts";
 import { checkBundles, writeAdaptations, writeBundles } from "./packaging/build.ts";
@@ -53,20 +55,22 @@ export interface CliOptions {
 const USAGE = [
   "ak — the agent-kit contract tool",
   "",
-  "  ak validate [--profile <id>] [--host <id>] [--json]  check the tree against catalog.yaml",
+  "  ak validate [--profile <id>] [--project <record>] [--host <id>] [--json]  check the tree against catalog.yaml",
   "  ak validate --skill-style                  print only the skill-authoring style warnings",
-  "  ak build [--check] [--profile <id>|all] [--host <id>]  emit dist/<host> for all hosts, or one",
+  "  ak build [--check] [--profile <id>|all] [--project <record>] [--host <id>] [--out <dir>]  emit dist/<host> for all hosts, or one host to --out (relative --out is from the current directory)",
   "  ak attach <path-or-artifact> [--json]      select the packs an artifact activates",
-  "  ak delegation <ticket> --project <path>   compute the evidenced delegation record",
+  "  ak delegation <ticket> --project <path> [--stage merge --base <rev> [--head <rev>] [--evidence <file>]]  compute the evidenced delegation record",
   "  ak lifecycle open|record|check …           task-bound lifecycle gates for super-ship",
   "  ak firstmate <subcommand> …                stock Firstmate tools; patched binding commands deprecated",
   "  ak tracker check [<project-dir>]           check a project folder's tracker binding and secret",
   "  ak kb check|read|publish|register …        reach the project's central knowledgebase (`ak kb help`)",
-  "  ak doctor                                  inspect the installed hosts and current project",
+  "  ak doctor [--lessons <dir>]                inspect the installed hosts, current project and lesson enforcement coverage",
   "  ak update                                  refresh installed ak plugins to the published version",
   "  ak learn <area> <verb> ...                 the opt-in learning runtime (`ak learn` for help)",
   "  ak guard hook <event> ...                  the opt-in guard runtime's host hook (`ak guard` for help)",
   "  ak runner serve|call ...                   runner service and charter-bound requests",
+  "  ak council run --card <file> ...           ask the council one question; the record grants no authority",
+  "  ak review ledger add|show ... | decide ... the review convergence ledger and its verdict; the record grants no authority",
   "",
   "Exit 0 when nothing failed, non-zero on any error.",
 ];
@@ -95,9 +99,11 @@ const COMMANDS = [
   "learn",
   "guard",
   "runner",
+  "council",
+  "review",
 ];
 
-const VALUE_FLAGS = new Set(["profile", "host", "project"]);
+const VALUE_FLAGS = new Set(["profile", "host", "project", "out", "stage", "base", "head", "evidence"]);
 
 function parse(argv: readonly string[]): Parsed {
   const positional: string[] = [];
@@ -197,7 +203,9 @@ function buildOptions(parsed: Parsed): BuildOptions {
   const host = parsed.values.get("host");
   return {
     profile: parsed.values.get("profile"),
+    project: parsed.values.get("project"),
     hosts: host === undefined ? undefined : HOST_IDS.filter((id): id is HostId => id === host),
+    out: parsed.values.get("out"),
   };
 }
 
@@ -212,6 +220,9 @@ function unknownSelectors(parsed: Parsed, cwd: string): string[] {
   const problems: string[] = [];
   const host = parsed.values.get("host");
   if (host !== undefined && !HOST_IDS.some((id) => id === host)) problems.push(unknownSelector("host", host, HOST_IDS));
+  if (parsed.values.get("out") !== undefined && host === undefined) {
+    problems.push("--out requires --host <id> so the bundle is written to one directory");
+  }
   const profile = parsed.values.get("profile");
   if (profile !== undefined) {
     const { catalog } = loadCatalog(cwd);
@@ -291,7 +302,10 @@ function build(parsed: Parsed, options: CliOptions): number {
 
   const built = writeBundles(ctx, opts);
   const code = report(options.io, built.issues, "ak build", install);
-  if (code === 0) options.io.out(`ak build: wrote dist/ for profile ${built.profile}`);
+  if (code === 0) {
+    const dest = opts.out ?? "dist/";
+    options.io.out(`ak build: wrote ${dest} for profile ${built.profile}`);
+  }
   return code;
 }
 
@@ -322,8 +336,21 @@ function delegationCommand(parsed: Parsed, options: CliOptions): number {
     for (const line of USAGE) options.io.err(line);
     return 2;
   }
+  const run = {
+    ticket,
+    project,
+    stage: parsed.values.get("stage"),
+    base: parsed.values.get("base"),
+    head: parsed.values.get("head"),
+    evidence: parsed.values.get("evidence"),
+  };
+  const problem = delegationRunProblem(run);
+  if (problem !== null) {
+    options.io.err(problem);
+    return 1;
+  }
   try {
-    const record = scoreDelegationFiles(ticket, project, options.cwd);
+    const record = scoreDelegationRun(run, options.cwd);
     options.io.out(JSON.stringify(record, null, 2));
     return 0;
   } catch (cause) {
@@ -419,10 +446,14 @@ if (import.meta.main) {
   const code =
     argv[0] === "runner"
       ? await runRunner(argv.slice(1), io)
-      : argv[0] === "learn"
-        ? await runLearn(argv.slice(1), { cwd: process.cwd(), io, stdin: readHookStdin(argv) })
-        : argv[0] === "guard"
-          ? runGuard(argv.slice(1), { cwd: process.cwd(), io, stdin: readGuardStdin(argv) })
-          : runCli(argv, { cwd: process.cwd(), io });
+      : argv[0] === "council"
+        ? await runCouncil(argv.slice(1), io)
+        : argv[0] === "review"
+          ? runReview(argv.slice(1), io)
+          : argv[0] === "learn"
+            ? await runLearn(argv.slice(1), { cwd: process.cwd(), io, stdin: readHookStdin(argv) })
+            : argv[0] === "guard"
+              ? runGuard(argv.slice(1), { cwd: process.cwd(), io, stdin: readGuardStdin(argv) })
+              : runCli(argv, { cwd: process.cwd(), io });
   if (argv[0] !== "runner" || argv[1] !== "serve" || code !== 0) process.exit(code);
 }
