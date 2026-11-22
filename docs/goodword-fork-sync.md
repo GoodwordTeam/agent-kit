@@ -1,13 +1,14 @@
 # Goodword fork sync
 
-Status: curated draft; independent re-review and Chris's merge approval are required.
+Status: fork source of truth. Source-ownership and immutable marketplace changes
+remain a draft PR pending independent review and Chris's merge approval.
 
 ## Current decision
 
 Chris replaced the full-merge proposal with an explicit selection: take the audit's
 56 Relevant and 35 Neutral PRs, exclude #180 and #244, and bring over only necessary
-dependencies from excluded work. This branch starts at fork main `f1c18e48` and
-cherry-picks each selected PR's squash commit or merge commit in upstream first-parent
+dependencies from excluded work. That curated sync started at fork main `f1c18e48` and
+cherry-picked each selected PR's squash commit or merge commit in upstream first-parent
 order through `d6a98f0c`. Merge commits use their first parent as the mainline; their
 side-branch histories are not merged. The resulting 91 commits retain upstream
 source locators and the fork's original Goodword install-source patch.
@@ -42,26 +43,51 @@ curated files. The ledger records each adjustment and maps all 93 audited PRs.
 
 ## Goodword compatibility and canonical home
 
+Chris reversed the subtree decision on 22 November 2026. `GoodwordTeam/agent-kit`
+is the source of truth again; `Pibomeister/agent-kit` is Eddie's upstream.
+Make changes on feature branches here and open draft fork PRs, never push main.
+Select the Goodword fork explicitly in your GitHub client: a fork checkout can
+otherwise default to Eddie's upstream. Upstream PRs need separate authorization.
+Offer generic fixes from this fork through separate PRs back upstream; keep
+Goodword policy out of those PRs. Bring upstream changes into this fork with
+reviewed, recorded cherry-picks, preserving the exclusions and dependency ledger
+below. The fork is no longer a publication mirror of goodword-platform.
+
+Before deleting the platform subtree, its tree was compared with this release:
+both were `4af88f7d73c9536f78bf0da59595c0221eaa66b4`, and its only path-history
+commit was the original import. No monorepo-only source changes need recovery.
+
+The marketplace now pins the existing core publication at
+`21ecfb475d5ae75d4c818d0d5d5472c2ba42b4b6` with both `ref` and `sha`.
+That bundle identifies version `0.1.131-goodword.2`, has no autopilot skill,
+and registers only the opt-in semantic-lint Stop hook, not learning hooks.
+Marketplace and plugin revisions are separate pins; never replace this nested
+pin with the moving `published` branch. A future release must review and update
+both pins together. Publication and tagging are separate approved operations.
+The source version advances to `0.1.131-goodword.3` because marketplace data is
+embedded in the generated CLI and the fork's CI requires a version bump for any
+bundle change. This reserves a source version; consumers still use the reviewed
+`0.1.131-goodword.2` publication above.
+
 Keep the Goodword marketplace URLs and source-derived maintenance defaults.
 The existing tracker binding still uses the project-local Linear client, ignored
 token and ENG team. The in-repository knowledge-base reader from #229 supports
 Goodword's wiki binding and remains read-only. Validate old evidence and project
 records against current schemas before a pilot.
 
-Goodword's root and most app settings name upstream, while API names the fork;
-the inspected settings disable Agent Kit. This source PR changes no monorepo
-settings and enables no plugin. Before a pilot, align those sources and confirm
-one tested Goodword publication. Keep learning, semantic lint and autonomy off.
+The platform's separate reversal PR owns its checked-in installation settings.
+Keep learning, semantic lint and autonomy off. The core bundle excludes autonomy
+and learning hook installation. Its learning scope accepts an explicitly empty
+`AK_LEARN_REPOS` (allow nothing); an empty `AK_LIFECYCLE_POLICY` clears an inherited
+environment opt-in, but also check that platform default-branch `ak.lifecycle.json`
+does not opt in. The plugin has no supported `manual` policy value: do not invent one.
 Map delivery to Goodword's existing Mergify queue. Publication requires a matching
 release tag at the eventual approved main commit; releasing is separate work.
 
-The proposed canonical home remains an unsquashed subtree at `tools/agent-kit` in
-goodword-platform. Ordinary clones then contain the source and retain split history.
-A plain vendor copy loses history support; a submodule leaves the source outside
-the monorepo and adds checkout steps. Import the exact approved fork revision in
-a later monorepo PR, author changes there only, and export subtree branches to
-the Goodword fork for publication. Offer generic fixes to Eddie through separate,
-explicitly authorized upstream PRs. No monorepo files change in this task.
+Do not import this source into goodword-platform or export subtree branches from it.
+Terminal Claude users consume the fork's pinned marketplace; other agents follow
+the platform's AGENTS.md and use their own host adapter only when explicitly set up.
+Local installation is a convenience, not proof of review or CI verification.
 
 ## Future curated sync procedure
 
@@ -81,8 +107,6 @@ explicitly authorized upstream PRs. No monorepo files change in this task.
    Request independent re-review and Chris's merge decision; release separately.
 
 Do not merge upstream wholesale on a future sync: that would restore excluded PRs.
-For a monorepo subtree, perform this curated integration on the tracked subtree
-history before the monorepo PR, then export the approved split to the fork mirror.
 
 ## Technical appendix: evidence and decisions
 
