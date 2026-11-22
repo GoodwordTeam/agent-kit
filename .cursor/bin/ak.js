@@ -38884,7 +38884,8 @@ var marketplace_default = {
         source: "git-subdir",
         url: "https://github.com/GoodwordTeam/agent-kit.git",
         path: "dist/claude-code",
-        ref: "published"
+        ref: "21ecfb475d5ae75d4c818d0d5d5472c2ba42b4b6",
+        sha: "21ecfb475d5ae75d4c818d0d5d5472c2ba42b4b6"
       },
       license: "MIT",
       author: {
