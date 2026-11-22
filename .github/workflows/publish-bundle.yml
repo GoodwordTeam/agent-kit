@@ -7,7 +7,9 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
+  pull-requests: read
 
 concurrency:
   group: published-bundle
@@ -108,3 +110,18 @@ jobs:
             git -C "$release_dir" -c user.name=github-actions -c user.email=github-actions[bot]@users.noreply.github.com commit -m "Publish validated agent-kit bundles from $GITHUB_SHA"
             git -C "$release_dir" push origin published
           fi
+
+  release-post:
+    name: Announce published version
+    needs: publish
+    if: ${{ needs.publish.result == 'success' && startsWith(github.ref, 'refs/tags/v') }}
+    uses: GoodwordTeam/goodword-platform/.github/workflows/release-post.yml@28e1ef4172a16a30638d46d34985c9eee65a5a2f
+    with:
+      release-kind: version
+      head-sha: ${{ github.sha }}
+      version: ${{ github.ref_name }}
+      actor: ${{ github.actor }}
+      source-workflow: publish-bundle.yml
+      run-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    secrets:
+      slack-token: ${{ secrets.GOODWORD_RELEASES_SLACK_TOKEN }}
